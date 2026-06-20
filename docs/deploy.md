@@ -32,9 +32,22 @@ psql ... -f docker/initdb/04_seed_valparaiso.sql
 
 > **Importante:** No pegar SQL PostGIS en PowerShell. Usar `psql` o el SQL Editor de Supabase.
 
-## 2. Variables en Streamlit Community Cloud
+## 2. Streamlit Community Cloud — Python 3.11 (obligatorio)
 
-En [share.streamlit.io](https://share.streamlit.io), conectar `github.com/dcortez/sapi-valparaiso`:
+Streamlit Cloud **no usa** `runtime.txt`. Debes elegir la versión en el panel:
+
+1. [share.streamlit.io](https://share.streamlit.io) → tu app → **Manage app**
+2. **Settings** → sección **Python version** (o **Advanced settings** al crear la app)
+3. Selecciona **3.11** (no 3.13 ni 3.14)
+4. **Save** → **Reboot app**
+
+Si la app ya se creó con Python 3.14, los logs mostrarán fallos al compilar `pandas==2.1.4` y `psycopg2-binary`. Cambiar a 3.11 y reiniciar.
+
+Repo: `DanielCortezF002/S.A.P.I-Sistema-de-Prediccion-de-Incendios` · Main file: `app/app.py`
+
+## 3. Variables en Streamlit Community Cloud
+
+En [share.streamlit.io](https://share.streamlit.io), conectar el repositorio:
 
 | Secreto | Valor |
 |---------|-------|
@@ -43,7 +56,7 @@ En [share.streamlit.io](https://share.streamlit.io), conectar `github.com/dcorte
 
 Main file: `app/app.py`
 
-## 3. Pipeline batch en cloud (opcional)
+## 4. Pipeline batch en cloud (opcional)
 
 Ejecutar una vez con conexión directa:
 
@@ -52,7 +65,7 @@ DATABASE_URL_DIRECT="postgresql://...@db....supabase.co:5432/postgres?sslmode=re
   python -m src.pipeline.run_daily
 ```
 
-## 4. Validación demo
+## 5. Validación demo
 
 - Mapa muestra **50 celdas** de riesgo en Valparaíso
 - Popup incluye Regla 30-30-30
