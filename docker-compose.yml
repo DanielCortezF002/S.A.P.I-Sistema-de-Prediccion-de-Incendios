@@ -1,0 +1,69 @@
+services:
+  db-postgis:
+    image: postgis/postgis:15-3.4
+    container_name: sapi-db-postgis
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-sapi}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sapi_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-sapi_db}
+    ports:
+      - "5432:5432"
+    volumes:
+      - sapi_pgdata:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sapi} -d ${POSTGRES_DB:-sapi_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - sapi-net
+
+  analytics-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.analytics
+    container_name: sapi-analytics
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+      DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./reports:/app/reports
+    depends_on:
+      db-postgis:
+        condition: service_healthy
+    networks:
+      - sapi-net
+
+  web-presentation:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: sapi-web
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+      DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./models:/app/models
+    depends_on:
+      db-postgis:
+        condition: service_healthy
+    networks:
+      - sapi-net
+
+volumes:
+  sapi_pgdata:
+
+networks:
+  sapi-net:
+    driver: bridge
