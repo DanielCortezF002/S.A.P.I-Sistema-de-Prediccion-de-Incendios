@@ -31,7 +31,7 @@ MODELS_DIR: Path = BASE_DIR / os.getenv("MODELS_DIR", "models")
 
 CACHE_CONTINGENCY_DAYS: int = int(os.getenv("CACHE_CONTINGENCY_DAYS", "7"))
 GRID_CELL_SIZE_KM: float = float(os.getenv("GRID_CELL_SIZE_KM", "1.0"))
-GRID_MAX_CELLS: int = int(os.getenv("GRID_MAX_CELLS", "50"))
+GRID_MAX_CELLS: int = int(os.getenv("GRID_MAX_CELLS", "50") or "50")
 CONAF_SEED_PATH: Path = BASE_DIR / os.getenv("CONAF_SEED_PATH", "data/raw/conaf_historico_seed.json")
 
 VALPARAISO_BBOX = {

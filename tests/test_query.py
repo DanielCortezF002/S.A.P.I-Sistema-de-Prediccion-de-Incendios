@@ -17,9 +17,9 @@ def test_classify_risk_levels() -> None:
     assert PredictionQuery.classify_risk(0.9) == "alto"
 
 
-@patch("src.query.risk_map_query.fetch_available_date_range")
-@patch("src.query.risk_map_query.get_connection")
-@patch("src.query.risk_map_query.gpd.read_postgis")
+@patch("src.query.prediction_query.fetch_available_date_range")
+@patch("src.query.prediction_query.get_connection")
+@patch("src.query.prediction_query.gpd.read_postgis")
 def test_get_spatial_risk_map_exact_date(
     mock_read_postgis: MagicMock,
     mock_get_conn: MagicMock,
@@ -52,9 +52,9 @@ def test_get_spatial_risk_map_exact_date(
     assert "DISTINCT ON" not in sql_text
 
 
-@patch("src.query.risk_map_query.fetch_available_date_range")
-@patch("src.query.risk_map_query.get_connection")
-@patch("src.query.risk_map_query.gpd.read_postgis")
+@patch("src.query.prediction_query.fetch_available_date_range")
+@patch("src.query.prediction_query.get_connection")
+@patch("src.query.prediction_query.gpd.read_postgis")
 def test_fetch_spatial_risk_map_engine_version(
     mock_read_postgis: MagicMock,
     mock_get_conn: MagicMock,
@@ -80,14 +80,14 @@ def test_fetch_spatial_risk_map_engine_version(
             "geom",
         ]
     )
-    with patch("src.query.risk_map_query.log_event"):
+    with patch("src.query.prediction_query.log_event"):
         result = fetch_spatial_risk_map(date(2025, 1, 1))
     assert result.empty
 
 
-@patch("src.query.risk_map_query.fetch_available_date_range")
-@patch("src.query.risk_map_query.get_connection")
-@patch("src.query.risk_map_query.gpd.read_postgis")
+@patch("src.query.prediction_query.fetch_available_date_range")
+@patch("src.query.prediction_query.get_connection")
+@patch("src.query.prediction_query.gpd.read_postgis")
 def test_get_spatial_risk_map_empty_state(
     mock_read_postgis: MagicMock,
     mock_get_conn: MagicMock,
@@ -112,7 +112,7 @@ def test_get_spatial_risk_map_empty_state(
         ]
     )
 
-    with patch("src.query.risk_map_query.log_event"):
+    with patch("src.query.prediction_query.log_event"):
         service = PredictionQuery()
         result = service.get_spatial_risk_map(date(2025, 1, 1))
 
@@ -120,21 +120,41 @@ def test_get_spatial_risk_map_empty_state(
     assert result.empty
 
 
-@patch("src.query.risk_map_query.get_connection")
+@patch("src.query.prediction_query.fetch_available_date_range")
+@patch("src.query.prediction_query.get_connection")
+@patch("src.query.prediction_query.gpd.read_postgis")
+def test_fetch_spatial_risk_map_raises_on_db_error(
+    mock_read_postgis: MagicMock,
+    mock_get_conn: MagicMock,
+    mock_date_range: MagicMock,
+) -> None:
+    import pytest
+
+    from src.query.prediction_query import fetch_spatial_risk_map
+
+    mock_date_range.return_value = (date(2025, 2, 9), date(2025, 2, 15))
+    mock_get_conn.return_value.__enter__.return_value = MagicMock()
+    mock_read_postgis.side_effect = RuntimeError("db down")
+    with patch("src.query.prediction_query.log_event"):
+        with pytest.raises(RuntimeError, match="db down"):
+            fetch_spatial_risk_map(date(2025, 2, 15))
+
+
+@patch("src.query.prediction_query.get_connection")
 def test_fetch_available_dates(mock_get_conn: MagicMock) -> None:
-    from src.query.risk_map_query import fetch_available_dates
+    from src.query.prediction_query import fetch_available_dates
 
     mock_conn = MagicMock()
     mock_get_conn.return_value.__enter__.return_value = mock_conn
-    with patch("src.query.risk_map_query.pd.read_sql") as mock_read:
+    with patch("src.query.prediction_query.pd.read_sql") as mock_read:
         mock_read.return_value = pd.DataFrame({"fecha": [date(2025, 2, 9), date(2025, 2, 15)]})
         dates = fetch_available_dates()
     assert dates == [date(2025, 2, 9), date(2025, 2, 15)]
 
 
-@patch("src.query.risk_map_query.get_connection")
+@patch("src.query.prediction_query.get_connection")
 def test_fetch_available_date_range_empty(mock_get_conn: MagicMock) -> None:
-    from src.query.risk_map_query import fetch_available_date_range
+    from src.query.prediction_query import fetch_available_date_range
 
     mock_conn = MagicMock()
     mock_conn.execute.return_value.mappings.return_value.first.return_value = {
@@ -146,9 +166,9 @@ def test_fetch_available_date_range_empty(mock_get_conn: MagicMock) -> None:
     assert fetch_available_date_range() == (None, None)
 
 
-@patch("src.query.risk_map_query.get_connection")
+@patch("src.query.prediction_query.get_connection")
 def test_fetch_available_date_range(mock_get_conn: MagicMock) -> None:
-    from src.query.risk_map_query import fetch_available_date_range
+    from src.query.prediction_query import fetch_available_date_range
 
     mock_conn = MagicMock()
     mock_conn.execute.return_value.mappings.return_value.first.return_value = {

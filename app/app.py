@@ -17,9 +17,11 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from app.utils.map_renderer import render_folium_map
-from src.query.prediction_query import QUERY_ENGINE_VERSION, PredictionQuery
+from src.query.prediction_query import PredictionQuery
 
-APP_BUILD = "demo-50cells-v7-multiday"
+QUERY_ENGINE_VERSION = "exact-date-v1"
+
+APP_BUILD = "demo-50cells-v7-multiday-fix2"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 
