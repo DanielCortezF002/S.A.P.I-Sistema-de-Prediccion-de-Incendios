@@ -17,34 +17,34 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from app.utils.map_renderer import render_folium_map
-from src.query.prediction_query import PredictionQuery
+from src.query.prediction_query import (
+    PredictionQuery,
+    fetch_available_date_range,
+    fetch_available_dates,
+)
 
 QUERY_ENGINE_VERSION = "exact-date-v1"
 
-APP_BUILD = "demo-50cells-v7-multiday-fix2"
+APP_BUILD = "demo-50cells-v7-multiday-fix3"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 
 
-@st.cache_resource
-def _get_query() -> PredictionQuery:
-    """Instancia única del contrato de datos."""
-    return PredictionQuery()
-
-
 @st.cache_data(ttl=300)
-def _cached_date_range() -> tuple[date, date]:
+def _cached_date_range(_build: str = APP_BUILD) -> tuple[date, date]:
     """Rango de fechas disponibles en PostGIS."""
-    min_d, max_d = _get_query().get_available_date_range()
+    del _build
+    min_d, max_d = fetch_available_date_range()
     if min_d is None or max_d is None:
         return DEMO_FALLBACK_START, DEMO_FALLBACK_END
     return min_d, max_d
 
 
 @st.cache_data(ttl=300)
-def _cached_available_dates() -> list[date]:
+def _cached_available_dates(_build: str = APP_BUILD) -> list[date]:
     """Lista de fechas con predicciones."""
-    dates = _get_query().get_available_dates()
+    del _build
+    dates = fetch_available_dates()
     if not dates:
         return [DEMO_FALLBACK_START + timedelta(days=i) for i in range(7)]
     return dates
@@ -54,7 +54,7 @@ class SapiDashboard:
     """Interfaz gráfica para analistas de emergencias."""
 
     def __init__(self) -> None:
-        self.query = _get_query()
+        self.query = PredictionQuery()
 
     @st.cache_data(ttl=3600)
     def _load_risk_data(_self, fecha_str: str) -> pd.DataFrame:

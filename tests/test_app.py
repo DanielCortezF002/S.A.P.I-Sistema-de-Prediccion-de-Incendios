@@ -56,20 +56,18 @@ def test_dashboard_init():
     assert dashboard.query is not None
 
 
-@patch("app.app._get_query")
-def test_cached_date_range_fallback(mock_get_query: MagicMock) -> None:
+@patch("app.app.fetch_available_date_range", return_value=(None, None))
+def test_cached_date_range_fallback(_mock_range: MagicMock) -> None:
     from app.app import DEMO_FALLBACK_END, DEMO_FALLBACK_START, _cached_date_range
 
-    mock_get_query.return_value.get_available_date_range.return_value = (None, None)
     _cached_date_range.clear()
     assert _cached_date_range() == (DEMO_FALLBACK_START, DEMO_FALLBACK_END)
 
 
-@patch("app.app._get_query")
-def test_cached_available_dates_fallback(mock_get_query: MagicMock) -> None:
+@patch("app.app.fetch_available_dates", return_value=[])
+def test_cached_available_dates_fallback(_mock_dates: MagicMock) -> None:
     from app.app import DEMO_FALLBACK_START, _cached_available_dates
 
-    mock_get_query.return_value.get_available_dates.return_value = []
     _cached_available_dates.clear()
     dates = _cached_available_dates()
     assert len(dates) == 7
