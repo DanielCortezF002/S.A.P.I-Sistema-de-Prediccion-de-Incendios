@@ -1,0 +1,9 @@
+{
+  "baseline": {
+    "recall": 0.71
+  },
+  "xgboost": {
+    "recall": 0.78,
+    "auc_roc": 0.83
+  }
+}

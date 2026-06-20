@@ -1,0 +1,42 @@
+# S.A.P.I. - Sistema de Alerta y Predicción de Incendios
+# Reglas de arquitectura para desarrollo alineado con Hito 02
+
+## 1. Stack y versiones
+- Python 3.11 (python:3.11-slim en contenedores)
+- PostgreSQL 15 + PostGIS
+- scikit-learn 1.4.x, XGBoost 2.0.x, imbalanced-learn 0.11.x
+- Pandas 2.1.x, GeoPandas 0.14.x, joblib 1.3.x, requests 2.31.x, tenacity
+- Streamlit 1.32.x, Folium 0.16+
+- pytest 7.4.x, pytest-cov 4.1.x
+
+## 2. Docker Compose (3 servicios)
+- db-postgis: PostgreSQL 15 + PostGIS, puerto 5432, initdb en docker/initdb/
+- analytics-backend: Python 3.11, ingesta/procesamiento/modelo
+- web-presentation: Streamlit puerto 8501
+
+## 3. Estructura de carpetas
+- data/raw, data/processed, data/predictions
+- src/ingesta, src/procesamiento, src/modelo, src/query
+- app/, app/utils/, tests/, models/, notebooks/, reports/, docs/
+
+## 4. Data Contract
+- PostGIS es la única fuente de verdad (SSoT)
+- El frontend SOLO consume PredictionQuery; prohibido leer archivos crudos o invocar ML en caliente
+- Grilla espacial fija de 1 km², SRID 4326
+
+## 5. Reglas ML
+- Regla 30-30-30: T>30°C, HR<30%, viento>30 km/h (binario)
+- Lag features 24h y 48h
+- SMOTE solo en train set con time-series split
+- XGBoost: reg_alpha=0.1, reg_lambda=1.5, F-beta (beta=2) para Recall >= 75%
+
+## 6. Optimización memoria (R-10)
+- GeoPandas .simplify() antes de GeoJSON
+- @st.cache_resource para conexión DB
+- @st.cache_data con TTL para dataframes
+- st_folium(m, returned_objects=[])
+
+## 7. Estilo de código
+- Type hints obligatorios, docstrings Google
+- Variables de entorno via .env, sin hardcode
+- Sin placeholders; código listo para pytest >= 80% cobertura
