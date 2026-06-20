@@ -44,8 +44,7 @@ def test_render_folium_map_method(mock_render, mock_st_folium, _mock_range):
         crs="EPSG:4326",
     )
     dashboard = SapiDashboard()
-    with patch.object(dashboard.query, "get_spatial_risk_map", return_value=gdf):
-        dashboard.render_folium_map(date(2025, 2, 15))
+    dashboard.render_folium_map(date(2025, 2, 15), gdf=gdf)
 
     mock_render.assert_called_once()
     mock_st_folium.assert_called_once()

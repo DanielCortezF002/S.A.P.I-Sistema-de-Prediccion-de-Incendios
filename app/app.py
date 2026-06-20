@@ -12,6 +12,7 @@ if str(_REPO_ROOT) not in sys.path:
 from datetime import date, datetime
 from typing import Optional
 
+import geopandas as gpd
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
@@ -22,7 +23,7 @@ from src.query.prediction_query import PredictionQuery
 
 QUERY_ENGINE_VERSION = "exact-date-v1"
 
-APP_BUILD = "demo-50cells-v7-multiday-fix4"
+APP_BUILD = "demo-50cells-v7-multiday-fix5"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 
@@ -59,10 +60,13 @@ class SapiDashboard:
             return pd.DataFrame()
         return pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
 
-    def render_folium_map(self, fecha: Optional[date] = None) -> None:
-        _, max_d = _cached_date_range()
-        fecha = fecha or max_d
-        gdf = self.query.get_spatial_risk_map(fecha)
+    def render_folium_map(
+        self, fecha: Optional[date] = None, gdf: Optional[gpd.GeoDataFrame] = None
+    ) -> None:
+        if gdf is None:
+            _, max_d = _cached_date_range()
+            fecha = fecha or max_d
+            gdf = self.query.get_spatial_risk_map(fecha)
         folium_map = render_folium_map(gdf)
         st_folium(folium_map, width=900, height=500, returned_objects=[])
 
@@ -165,7 +169,7 @@ def main() -> None:
         "Verde: bajo (&lt;33 %) · Amarillo: medio · Rojo: alto (≥66 % o regla 30-30-30). "
         "Oeste = costa · Centro = urbano · Este = precordillera."
     )
-    dashboard.render_folium_map(selected_date)
+    dashboard.render_folium_map(selected_date, gdf=gdf)
 
     if not gdf.empty:
         st.markdown("### Detalle por celda")

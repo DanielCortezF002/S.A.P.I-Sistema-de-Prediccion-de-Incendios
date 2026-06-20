@@ -144,7 +144,11 @@ class PredictionQuery:
 
     def get_cell_detail(self, cell_id: str, fecha: Optional[date] = None) -> dict[str, Any]:
         """Obtiene detalle de una celda específica."""
-        target_date = fecha or date.today()
+        if fecha is None:
+            _, max_fecha = fetch_available_date_range()
+            target_date = max_fecha or date.today()
+        else:
+            target_date = fecha
         query = text(
             """
             SELECT * FROM predicciones_riesgo
@@ -173,7 +177,11 @@ class PredictionQuery:
 
     def get_contingency_cache(self, days: int = 7) -> gpd.GeoDataFrame:
         """Recupera último estado espacial válido (degradación controlada R-03)."""
-        cutoff = date.today() - timedelta(days=days)
+        min_fecha, max_fecha = fetch_available_date_range()
+        if min_fecha is not None:
+            cutoff = min_fecha
+        else:
+            cutoff = date.today() - timedelta(days=days)
         query = text(
             """
             SELECT DISTINCT ON (cell_id)
