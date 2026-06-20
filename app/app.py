@@ -21,7 +21,7 @@ from app.utils.map_renderer import render_folium_map
 from src.query.prediction_query import PredictionQuery
 from src.query.risk_map_query import QUERY_ENGINE_VERSION, fetch_spatial_risk_map
 
-APP_BUILD = "demo-50cells-v6-calibrated"
+APP_BUILD = "demo-50cells-v6-calibrated-table"
 
 
 class SapiDashboard:
@@ -141,8 +141,15 @@ def main() -> None:
 
     if not gdf.empty:
         st.markdown("### Detalle por celda")
-        display_df = gdf.drop(columns="geometry", errors="ignore")[
+        display_df = (
+            gdf.drop(columns="geometry", errors="ignore")
+            .sort_values("cell_id")
+            .reset_index(drop=True)
+        )
+        display_df.insert(0, "#", range(1, len(display_df) + 1))
+        display_df = display_df[
             [
+                "#",
                 "cell_id",
                 "probabilidad",
                 "nivel_riesgo",
@@ -152,7 +159,8 @@ def main() -> None:
                 "regla_30_30_30",
             ]
         ]
-        st.dataframe(display_df, use_container_width=True)
+        st.caption(f"{len(display_df)} registros (VP-001 a VP-050)")
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
 
     st.markdown("### Regla del 30-30-30")
     st.info(
