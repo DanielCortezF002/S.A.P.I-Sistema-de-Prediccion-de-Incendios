@@ -9,7 +9,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 import geopandas as gpd
@@ -23,7 +23,7 @@ from src.query.prediction_query import PredictionQuery
 
 QUERY_ENGINE_VERSION = "exact-date-v1"
 
-APP_BUILD = "demo-50cells-v7-multiday-fix5"
+APP_BUILD = "demo-50cells-v7-multiday-fix6"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 
@@ -32,18 +32,24 @@ DEMO_FALLBACK_START = date(2025, 2, 9)
 def _cached_date_range(_build: str = APP_BUILD) -> tuple[date, date]:
     """Rango de fechas disponibles en PostGIS."""
     del _build
-    return resolve_date_range(
-        PredictionQuery(), DEMO_FALLBACK_START, DEMO_FALLBACK_END
-    )
+    try:
+        return resolve_date_range(
+            PredictionQuery(), DEMO_FALLBACK_START, DEMO_FALLBACK_END
+        )
+    except Exception:
+        return DEMO_FALLBACK_START, DEMO_FALLBACK_END
 
 
 @st.cache_data(ttl=300)
 def _cached_available_dates(_build: str = APP_BUILD) -> list[date]:
     """Lista de fechas con predicciones."""
     del _build
-    return resolve_available_dates(
-        PredictionQuery(), DEMO_FALLBACK_START, DEMO_FALLBACK_END
-    )
+    try:
+        return resolve_available_dates(
+            PredictionQuery(), DEMO_FALLBACK_START, DEMO_FALLBACK_END
+        )
+    except Exception:
+        return [DEMO_FALLBACK_START + timedelta(days=i) for i in range(7)]
 
 
 class SapiDashboard:
