@@ -5,13 +5,12 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Streamlit Cloud ejecuta app/app.py; la raíz del repo debe estar en sys.path.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from datetime import date, datetime, timedelta
-from typing import Any, Optional
+from typing import Optional
 
 import pandas as pd
 import streamlit as st
@@ -19,22 +18,44 @@ from streamlit_folium import st_folium
 
 from app.utils.map_renderer import render_folium_map
 from src.query.prediction_query import PredictionQuery
-from src.query.risk_map_query import QUERY_ENGINE_VERSION, fetch_spatial_risk_map
+from src.query.risk_map_query import (
+    QUERY_ENGINE_VERSION,
+    fetch_available_date_range,
+    fetch_available_dates,
+    fetch_spatial_risk_map,
+)
 
-APP_BUILD = "demo-50cells-v6-calibrated-table"
+APP_BUILD = "demo-50cells-v7-multiday"
+DEMO_FALLBACK_END = date(2025, 2, 15)
+DEMO_FALLBACK_START = date(2025, 2, 9)
+
+
+@st.cache_data(ttl=300)
+def _cached_date_range() -> tuple[date, date]:
+    """Rango de fechas disponibles en PostGIS."""
+    min_d, max_d = fetch_available_date_range()
+    if min_d is None or max_d is None:
+        return DEMO_FALLBACK_START, DEMO_FALLBACK_END
+    return min_d, max_d
+
+
+@st.cache_data(ttl=300)
+def _cached_available_dates() -> list[date]:
+    """Lista de fechas con predicciones."""
+    dates = fetch_available_dates()
+    if not dates:
+        return [DEMO_FALLBACK_START + timedelta(days=i) for i in range(7)]
+    return dates
 
 
 class SapiDashboard:
     """Interfaz gráfica para analistas de emergencias."""
 
     def __init__(self) -> None:
-        """Inicializa dashboard con contrato de datos."""
         self.query = PredictionQuery()
 
     @st.cache_data(ttl=3600)
     def _load_risk_data(_self, fecha_str: str) -> pd.DataFrame:
-        """Carga dataframe de riesgo con TTL de 1 hora."""
-        query = PredictionQuery()
         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
         gdf = fetch_spatial_risk_map(fecha)
         if gdf.empty:
@@ -42,39 +63,33 @@ class SapiDashboard:
         return pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
 
     def render_folium_map(self, fecha: Optional[date] = None) -> None:
-        """Inyecta mapa Folium en el navegador."""
-        fecha = fecha or date.today()
+        _, max_d = _cached_date_range()
+        fecha = fecha or max_d
         gdf = fetch_spatial_risk_map(fecha)
         folium_map = render_folium_map(gdf)
         st_folium(folium_map, width=900, height=500, returned_objects=[])
 
     def export_report_pdf(self, fecha: Optional[date] = None) -> bytes:
-        """Genera reporte simple en texto para exportación.
-
-        Args:
-            fecha: Fecha del reporte.
-
-        Returns:
-            Contenido del reporte en bytes.
-        """
-        fecha = fecha or date.today()
+        _, max_d = _cached_date_range()
+        fecha = fecha or max_d
         gdf = self.query.get_spatial_risk_map(fecha)
         lines = [
             "S.A.P.I. - Reporte de Riesgo de Ignición",
-            f"Fecha: {fecha.isoformat()}",
+            f"Fecha consultada: {fecha.isoformat()}",
             f"Celdas analizadas: {len(gdf)}",
             "",
         ]
         if not gdf.empty:
-            alto = (gdf["nivel_riesgo"] == "alto").sum()
-            medio = (gdf["nivel_riesgo"] == "medio").sum()
-            bajo = (gdf["nivel_riesgo"] == "bajo").sum()
+            alto = int((gdf["nivel_riesgo"] == "alto").sum())
+            medio = int((gdf["nivel_riesgo"] == "medio").sum())
+            bajo = int((gdf["nivel_riesgo"] == "bajo").sum())
             lines.extend(
                 [
-                    f"Riesgo alto: {alto}",
-                    f"Riesgo medio: {medio}",
                     f"Riesgo bajo: {bajo}",
+                    f"Riesgo medio: {medio}",
+                    f"Riesgo alto: {alto}",
                     f"Probabilidad máxima: {gdf['probabilidad'].max():.2%}",
+                    f"Regla 30-30-30 activa: {int((gdf['regla_30_30_30'] == 1).sum())} celda(s)",
                 ]
             )
         return "\n".join(lines).encode("utf-8")
@@ -89,23 +104,26 @@ def main() -> None:
     )
 
     dashboard = SapiDashboard()
+    min_d, max_d = _cached_date_range()
+    available = _cached_available_dates()
 
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
     st.info(
         "Demo académica: 50 celdas del corredor Viña del Mar–Quilpué–Villa Alemana. "
-        "Meteo de seed zonal calibrado (no series DMC/CONAF en vivo); "
-        "no sustituye alertas oficiales CONAF/SENAPRED."
+        f"Ventana demo **{min_d.isoformat()}** a **{max_d.isoformat()}** (seed zonal calibrado). "
+        "No sustituye alertas oficiales CONAF/SENAPRED."
     )
 
     st.sidebar.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
+    st.sidebar.caption(f"Datos disponibles: {min_d} → {max_d}")
 
     selected_date = st.sidebar.date_input(
         "Fecha de consulta",
-        value=date.today(),
-        min_value=date(2020, 1, 1),
-        max_value=date.today(),
+        value=max_d,
+        min_value=min_d,
+        max_value=max_d,
     )
 
     query = PredictionQuery()
@@ -115,28 +133,41 @@ def main() -> None:
         st.error(f"Error al consultar PostGIS ({QUERY_ENGINE_VERSION}): {exc}")
         gdf = query.get_contingency_cache()
 
-    if not gdf.empty:
-        fecha_snapshot = pd.to_datetime(gdf["fecha"]).max().date()
+    if gdf.empty:
+        fechas_txt = ", ".join(d.isoformat() for d in available)
+        st.warning(
+            f"No hay predicciones para **{selected_date.isoformat()}**. "
+            f"Fechas disponibles: {fechas_txt}"
+        )
+    else:
         regla_activa = int((gdf["regla_30_30_30"] == 1).sum())
-        st.info(
-            f"Consulta al **{selected_date.isoformat()}** · "
-            f"**{len(gdf)}** celdas (VP-001 a VP-050) · "
-            f"snapshot **{fecha_snapshot}** · "
-            f"meteo zonal costa/urbano/precordillera · "
-            f"Regla 30-30-30 activa en **{regla_activa}** celda(s)."
+        bajo_n = int((gdf["nivel_riesgo"] == "bajo").sum())
+        medio_n = int((gdf["nivel_riesgo"] == "medio").sum())
+        alto_n = int((gdf["nivel_riesgo"] == "alto").sum())
+        st.success(
+            f"Datos del **{selected_date.isoformat()}** · **{len(gdf)}** celdas · "
+            f"bajo **{bajo_n}** · medio **{medio_n}** · alto **{alto_n}** · "
+            f"Regla 30-30-30: **{regla_activa}** celda(s)."
         )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Celdas monitoreadas", len(gdf))
+        st.metric("Celdas", len(gdf))
     with col2:
-        alto = int((gdf["nivel_riesgo"] == "alto").sum()) if not gdf.empty else 0
-        st.metric("Zonas riesgo alto", alto)
+        st.metric("Riesgo bajo", int((gdf["nivel_riesgo"] == "bajo").sum()) if not gdf.empty else 0)
     with col3:
-        max_prob = f"{gdf['probabilidad'].max():.1%}" if not gdf.empty else "N/A"
-        st.metric("Probabilidad máxima", max_prob)
+        st.metric("Riesgo medio", int((gdf["nivel_riesgo"] == "medio").sum()) if not gdf.empty else 0)
+    with col4:
+        st.metric(
+            "Riesgo alto",
+            int((gdf["nivel_riesgo"] == "alto").sum()) if not gdf.empty else 0,
+        )
 
     st.markdown("### Mapa de riesgo probabilístico (radio ~1 km por celda)")
+    st.caption(
+        "Verde: bajo (&lt;33 %) · Amarillo: medio · Rojo: alto (≥66 % o regla 30-30-30). "
+        "Oeste = costa · Centro = urbano · Este = precordillera."
+    )
     dashboard.render_folium_map(selected_date)
 
     if not gdf.empty:

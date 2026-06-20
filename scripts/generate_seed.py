@@ -1,16 +1,9 @@
-"""Genera seed SQL demo: 50 celdas con microclimas Valparaíso y geometría circular ~1 km².
-
-Origen de datos:
-- Geometría: grilla sintética 5×10 sobre corredor Viña del Mar–Quilpué–Villa Alemana (EPSG:4326).
-- Meteo: perfiles zonales calibrados (costa / urbano / precordillera), no series en vivo.
-  Referencia conceptual: estaciones DMC (p. ej. Quinta Normal VM) y patrones estivales
-  costeros (mar de viento, menor T y mayor HR en litoral).
-- Incendios staging: puntos ilustrativos tipo CONAF (conaf_historico_seed.json).
-"""
+"""Genera seed SQL demo: 50 celdas x N días con microclimas y geometría circular ~1 km²."""
 
 from __future__ import annotations
 
-import math
+import json
+from datetime import date, timedelta
 from pathlib import Path
 
 # Corredor Viña–Quilpué–Villa Alemana; grilla 5×10 sobre interfaz urbano-forestal
@@ -20,11 +13,12 @@ COLS = 10
 ROWS = 5
 STEP_LON = 0.008
 STEP_LAT = 0.008
-# Radio ~564 m → área circular ≈ 1 km²
 BUFFER_METERS = 564
-DEMO_FECHA = "2025-02-15"
+DEMO_START = date(2025, 2, 9)
+DEMO_END = date(2025, 2, 15)
+DEMO_DAYS = (DEMO_END - DEMO_START).days + 1
+REGLA_CELLS = (38, 49)
 
-# Perfiles microclimáticos (°C, HR %, viento km/h) — verano costero
 ZONAS = {
     "costa": {"temp": (16.0, 23.0), "hr": (62.0, 88.0), "viento": (18.0, 38.0)},
     "urbano": {"temp": (19.0, 27.0), "hr": (42.0, 62.0), "viento": (8.0, 28.0)},
@@ -33,7 +27,6 @@ ZONAS = {
 
 
 def _zone_for_col(col: int) -> str:
-    """Oeste (litoral) → este (precordillera): costa en columnas bajas de lon."""
     if col <= 2:
         return "costa"
     if col <= 6:
@@ -41,12 +34,20 @@ def _zone_for_col(col: int) -> str:
     return "precordillera"
 
 
-def _interp(zone: str, col: int, spread: float = 0.0) -> tuple[float, float, float]:
-    """Interpola meteo dentro del rango zonal con leve gradiente este-oeste."""
+def _day_progress(day_index: int) -> float:
+    """0.0 primer día → 1.0 día crítico."""
+    if DEMO_DAYS <= 1:
+        return 1.0
+    return day_index / (DEMO_DAYS - 1)
+
+
+def _interp(zone: str, col: int, spread: float, progress: float) -> tuple[float, float, float]:
     z = ZONAS[zone]
-    t = (z["temp"][0] + z["temp"][1]) / 2 + spread
-    h = (z["hr"][0] + z["hr"][1]) / 2 - spread * 2
-    w = (z["viento"][0] + z["viento"][1]) / 2 + col * 0.4
+    t_mid = (z["temp"][0] + z["temp"][1]) / 2
+    h_mid = (z["hr"][0] + z["hr"][1]) / 2
+    t = t_mid + spread + progress * 4.0
+    h = h_mid - spread * 2 - progress * 12.0
+    w = (z["viento"][0] + z["viento"][1]) / 2 + col * 0.4 + progress * 3.0
     t = max(z["temp"][0], min(z["temp"][1], round(t, 1)))
     h = max(z["hr"][0], min(z["hr"][1], round(h, 1)))
     w = max(z["viento"][0], min(z["viento"][1], round(w, 1)))
@@ -68,7 +69,6 @@ def _nivel(prob: float) -> str:
 def _prob_from_meteo(
     temp: float, hr: float, viento: float, regla: int, zone: str
 ) -> float:
-    """Heurística demo: costa baja, urbano media, precordillera moderada; pico con regla."""
     if regla:
         return 0.97
     base = {"costa": 0.20, "urbano": 0.44, "precordillera": 0.58}
@@ -87,8 +87,9 @@ def _circle_wkt(lon: float, lat: float) -> str:
     )
 
 
-def main() -> None:
-    rows_sql: list[str] = []
+def _generate_rows_for_day(fecha: date, day_index: int, is_peak: bool) -> list[str]:
+    progress = _day_progress(day_index)
+    rows: list[str] = []
     idx = 1
     for row in range(ROWS):
         for col in range(COLS):
@@ -96,10 +97,9 @@ def main() -> None:
             lon = round(BASE_LON + col * STEP_LON, 5)
             lat = round(BASE_LAT + row * STEP_LAT, 5)
             spread = (row - ROWS / 2) * 0.12
-            temp, hr, viento = _interp(zone, col, spread)
+            temp, hr, viento = _interp(zone, col, spread, progress)
 
-            # Dos celdas en columnas precordillera (oeste→este) con regla activa
-            if idx in (38, 49):
+            if is_peak and idx in REGLA_CELLS:
                 temp, hr, viento = 32.5, 24.0, 34.0
 
             regla = _regla_30_30_30(temp, hr, viento)
@@ -107,24 +107,41 @@ def main() -> None:
             nivel = _nivel(prob)
             cell_id = f"VP-{idx:03d}"
             geom = _circle_wkt(lon, lat)
-            rows_sql.append(
-                f"('{cell_id}', '{DEMO_FECHA}'::date, {prob}, '{nivel}', "
+            rows.append(
+                f"('{cell_id}', '{fecha.isoformat()}'::date, {prob}, '{nivel}', "
                 f"{temp}, {hr}, {viento}, {regla}, {geom})"
             )
             idx += 1
+    assert idx == 51
+    return rows
 
-    assert idx == 51, f"Se esperaban 50 celdas, se generaron {idx - 1}"
+
+def main() -> None:
+    all_rows: list[str] = []
+    summary_days: list[dict] = []
+
+    for day_index in range(DEMO_DAYS):
+        fecha = DEMO_START + timedelta(days=day_index)
+        is_peak = fecha == DEMO_END
+        day_rows = _generate_rows_for_day(fecha, day_index, is_peak)
+        all_rows.extend(day_rows)
+        altos = sum(1 for r in day_rows if ", 'alto'," in r or " 'alto'," in r)
+        reglas = sum(1 for r in day_rows if ", 1, ST_Buffer" in r)
+        summary_days.append(
+            {"fecha": fecha.isoformat(), "altos": altos, "regla_30_30_30": reglas}
+        )
 
     lines = [
-        "-- Seed demo corredor Viña–Quilpué–Villa Alemana: 50 celdas circulares (~1 km²)",
-        f"-- Fecha única de snapshot: {DEMO_FECHA} | Generado por scripts/generate_seed.py",
+        "-- Seed demo corredor Viña–Quilpué–Villa Alemana: 50 celdas x ventana multi-día",
+        f"-- Rango: {DEMO_START.isoformat()} .. {DEMO_END.isoformat()} ({DEMO_DAYS} días)",
+        "-- Generado por scripts/generate_seed.py",
         "",
         "TRUNCATE predicciones_riesgo RESTART IDENTITY CASCADE;",
         "",
         "INSERT INTO predicciones_riesgo (cell_id, fecha, probabilidad, nivel_riesgo, "
         "temperatura, humedad_relativa, velocidad_viento, regla_30_30_30, geom)",
         "VALUES",
-        ",\n".join(rows_sql) + ";",
+        ",\n".join(all_rows) + ";",
         "",
         "INSERT INTO staging_incendios (fecha, latitud, longitud, fuente, geom) VALUES",
     ]
@@ -134,7 +151,7 @@ def main() -> None:
         lon = round(-71.48 - i * 0.004, 5)
         suffix = "," if i < 10 else ";"
         lines.append(
-            f"('{DEMO_FECHA}'::timestamptz, {lat}, {lon}, 'conaf_seed', "
+            f"('{DEMO_END.isoformat()}'::timestamptz, {lat}, {lon}, 'conaf_seed', "
             f"ST_SetSRID(ST_MakePoint({lon}, {lat}), 4326)){suffix}"
         )
 
@@ -148,7 +165,7 @@ def main() -> None:
     for i in range(1, 11):
         suffix = "," if i < 10 else ";"
         lines.append(
-            f"(TIMESTAMP '{DEMO_FECHA} 12:00:00+00' - INTERVAL '{i} hours', "
+            f"(TIMESTAMP '{DEMO_END.isoformat()} 12:00:00+00' - INTERVAL '{i} hours', "
             f"{20 + i % 4}, {50 - i % 8}, {12 + i % 10}, "
             f"'VTM', ST_SetSRID(ST_MakePoint(-71.50, -33.04), 4326)){suffix}"
         )
@@ -158,14 +175,30 @@ def main() -> None:
             "",
             "INSERT INTO observability_logs (componente, evento, detalle, nivel)",
             "VALUES ('seed', 'init', "
-            "'Seed corredor Vina-Quilpue-Villa Alemana: 50 celdas, meteo zonal', 'INFO');",
+            f"'Seed multi-día {DEMO_START}..{DEMO_END}: {len(all_rows)} filas', 'INFO');",
             "",
         ]
     )
 
-    out = Path(__file__).parent.parent / "docker" / "initdb" / "04_seed_valparaiso.sql"
-    out.write_text("\n".join(lines), encoding="utf-8")
-    print(f"Generated {len(rows_sql)} cells (VP-001..VP-050) -> {out}")
+    root = Path(__file__).parent.parent
+    sql_path = root / "docker" / "initdb" / "04_seed_valparaiso.sql"
+    sql_path.write_text("\n".join(lines), encoding="utf-8")
+
+    summary = {
+        "start": DEMO_START.isoformat(),
+        "end": DEMO_END.isoformat(),
+        "days": DEMO_DAYS,
+        "rows_total": len(all_rows),
+        "cells_per_day": 50,
+        "by_day": summary_days,
+    }
+    reports_dir = root / "reports"
+    reports_dir.mkdir(exist_ok=True)
+    (reports_dir / "seed_summary.json").write_text(
+        json.dumps(summary, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+    print(f"Generated {len(all_rows)} rows ({DEMO_DAYS} days x 50 cells) -> {sql_path}")
 
 
 if __name__ == "__main__":

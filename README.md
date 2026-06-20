@@ -4,8 +4,8 @@
 Predice probabilidad de ignición forestal mediante XGBoost y visualiza riesgo en mapa Streamlit/Folium.
 
 > Alcance demo: **50 celdas** circulares (~1 km²) en el corredor **Viña del Mar–Quilpué–Villa Alemana**.
-> Meteo del seed es **sintético zonal calibrado** (no series DMC/CONAF en vivo).
-> Ver [docs/alcance-prototipo.md](docs/alcance-prototipo.md) para delimitar prototipo vs informe.
+> Ventana multi-fecha demo: **2025-02-09 → 2025-02-15** (seed zonal calibrado, sin APIs en vivo).
+> Ver [docs/alcance-prototipo.md](docs/alcance-prototipo.md) y [docs/entrega-prototipo.md](docs/entrega-prototipo.md).
 
 ## Arquitectura
 
@@ -13,7 +13,7 @@ Predice probabilidad de ignición forestal mediante XGBoost y visualiza riesgo e
 - **analytics-backend**: Bucle 24h ingesta → procesamiento → ML
 - **web-presentation**: Dashboard Streamlit (puerto 8501)
 
-Ver [docs/arquitectura.md](docs/arquitectura.md) y [docs/deploy.md](docs/deploy.md).
+Ver [docs/arquitectura.md](docs/arquitectura.md), [docs/deploy.md](docs/deploy.md) y [docs/manual-uso-presentacion.md](docs/manual-uso-presentacion.md) (guion para defensa).
 
 ## Inicio rápido (Docker)
 

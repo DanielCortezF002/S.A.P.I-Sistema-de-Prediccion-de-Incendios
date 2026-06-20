@@ -28,7 +28,7 @@ Los datos mostrados en el dashboard cloud provienen del **seed demo** generado p
 | Topografía DEM | No en seed demo | Altitud, pendiente, orientación por celda |
 | Cobertura espacial | **50 celdas** (~1 km² circular cada una) | 100% Región de Valparaíso |
 
-El seed usa **una fecha única de snapshot** (`2025-02-15`) para facilitar la defensa y la validación visual.
+El seed usa una **ventana multi-fecha** (`2025-02-09` → `2025-02-15`, 7 días × 50 celdas = 350 filas) para demostrar evolución del riesgo en el selector de fecha del dashboard. La consulta PostGIS filtra por **fecha exacta** (`exact-date-v1`).
 
 ## Límite espacial: corredor Viña–Quilpué–Villa Alemana
 

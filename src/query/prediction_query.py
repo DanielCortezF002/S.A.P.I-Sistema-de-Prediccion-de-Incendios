@@ -33,8 +33,7 @@ class PredictionQuery:
     def get_spatial_risk_map(self, fecha: Optional[date] = None) -> gpd.GeoDataFrame:
         """Extrae mapa de riesgo territorial para una fecha.
 
-        Usa DISTINCT ON por cell_id para el último snapshot por celda
-        hasta la fecha consultada (grilla demo GRID_MAX_CELLS).
+        Usa consulta por fecha exacta (grilla demo GRID_MAX_CELLS).
 
         Args:
             fecha: Fecha de consulta. Usa la más reciente disponible si es None.
@@ -59,11 +58,7 @@ class PredictionQuery:
         query = text(
             """
             SELECT * FROM predicciones_riesgo
-            WHERE cell_id = :cell_id
-              AND fecha = (
-                  SELECT MAX(fecha) FROM predicciones_riesgo
-                  WHERE cell_id = :cell_id AND fecha <= :fecha
-              )
+            WHERE cell_id = :cell_id AND fecha = :fecha
             LIMIT 1
             """
         )
