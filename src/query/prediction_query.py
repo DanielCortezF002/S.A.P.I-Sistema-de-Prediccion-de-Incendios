@@ -32,8 +32,8 @@ class PredictionQuery:
     def get_spatial_risk_map(self, fecha: Optional[date] = None) -> gpd.GeoDataFrame:
         """Extrae mapa de riesgo territorial para una fecha.
 
-        Usa una CTE para resolver el frente temporal más reciente y explotar
-        el índice compuesto (fecha DESC, cell_id) sobre predicciones_riesgo.
+        Usa DISTINCT ON por cell_id para el último snapshot por celda
+        hasta la fecha consultada (grilla demo GRID_MAX_CELLS).
 
         Args:
             fecha: Fecha de consulta. Usa la más reciente disponible si es None.

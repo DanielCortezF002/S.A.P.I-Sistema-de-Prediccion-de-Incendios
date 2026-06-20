@@ -20,6 +20,8 @@ from streamlit_folium import st_folium
 from app.utils.map_renderer import render_folium_map
 from src.query.prediction_query import PredictionQuery
 
+APP_BUILD = "demo-50cells-v3"
+
 
 class SapiDashboard:
     """Interfaz gráfica para analistas de emergencias."""
@@ -29,7 +31,7 @@ class SapiDashboard:
         self.query = PredictionQuery()
 
     @st.cache_resource
-    def load_cached_resources(_self) -> PredictionQuery:
+    def load_cached_resources(_self, _build: str = APP_BUILD) -> PredictionQuery:
         """Singleton de conexión a serving layer."""
         return PredictionQuery()
 
@@ -96,7 +98,8 @@ def main() -> None:
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
-    col1, col2, col3 = st.columns(3)
+    st.sidebar.caption(f"Build: `{APP_BUILD}`")
+    st.sidebar.caption("Si ves 8 celdas, pulsa ⋮ → Clear cache y Reboot app.")
     selected_date = st.sidebar.date_input(
         "Fecha de consulta",
         value=date.today(),
