@@ -21,7 +21,7 @@ from app.utils.map_renderer import render_folium_map
 from src.query.prediction_query import PredictionQuery
 from src.query.risk_map_query import QUERY_ENGINE_VERSION, fetch_spatial_risk_map
 
-APP_BUILD = "demo-50cells-v5-zonal"
+APP_BUILD = "demo-50cells-v6-calibrated"
 
 
 class SapiDashboard:

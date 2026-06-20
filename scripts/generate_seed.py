@@ -32,10 +32,11 @@ ZONAS = {
 }
 
 
-def _zone_for_row(row: int) -> str:
-    if row == 0:
+def _zone_for_col(col: int) -> str:
+    """Oeste (litoral) → este (precordillera): costa en columnas bajas de lon."""
+    if col <= 2:
         return "costa"
-    if row <= 2:
+    if col <= 6:
         return "urbano"
     return "precordillera"
 
@@ -64,15 +65,19 @@ def _nivel(prob: float) -> str:
     return "alto"
 
 
-def _prob_from_meteo(temp: float, hr: float, viento: float, regla: int) -> float:
-    """Heurística demo alineada con mayor riesgo en precordillera seca y ventosa."""
-    score = 0.25
-    score += max(0, (temp - 18) / 40)
-    score += max(0, (55 - hr) / 80)
-    score += min(0.2, viento / 200)
+def _prob_from_meteo(
+    temp: float, hr: float, viento: float, regla: int, zone: str
+) -> float:
+    """Heurística demo: costa baja, urbano media, precordillera moderada; pico con regla."""
     if regla:
-        score += 0.25
-    return round(min(0.97, max(0.08, score)), 2)
+        return 0.97
+    base = {"costa": 0.20, "urbano": 0.44, "precordillera": 0.58}
+    score = base[zone]
+    score += max(0, (temp - 20) / 120)
+    score += max(0, (48 - hr) / 250)
+    score += min(0.06, viento / 400)
+    caps = {"costa": 0.32, "urbano": 0.62, "precordillera": 0.64}
+    return round(min(caps[zone], max(0.10, score)), 2)
 
 
 def _circle_wkt(lon: float, lat: float) -> str:
@@ -86,19 +91,19 @@ def main() -> None:
     rows_sql: list[str] = []
     idx = 1
     for row in range(ROWS):
-        zone = _zone_for_row(row)
         for col in range(COLS):
+            zone = _zone_for_col(col)
             lon = round(BASE_LON + col * STEP_LON, 5)
             lat = round(BASE_LAT + row * STEP_LAT, 5)
-            spread = (col - COLS / 2) * 0.15
+            spread = (row - ROWS / 2) * 0.12
             temp, hr, viento = _interp(zone, col, spread)
 
-            # Dos celdas precordillera con regla activa (demo defensa)
-            if idx in (37, 43):
+            # Dos celdas en columnas precordillera (oeste→este) con regla activa
+            if idx in (38, 49):
                 temp, hr, viento = 32.5, 24.0, 34.0
 
             regla = _regla_30_30_30(temp, hr, viento)
-            prob = _prob_from_meteo(temp, hr, viento, regla)
+            prob = _prob_from_meteo(temp, hr, viento, regla, zone)
             nivel = _nivel(prob)
             cell_id = f"VP-{idx:03d}"
             geom = _circle_wkt(lon, lat)
