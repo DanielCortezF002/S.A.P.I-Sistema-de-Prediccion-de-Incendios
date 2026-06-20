@@ -2,6 +2,14 @@
 
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+# Streamlit Cloud ejecuta app/app.py; la raíz del repo debe estar en sys.path.
+_REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
