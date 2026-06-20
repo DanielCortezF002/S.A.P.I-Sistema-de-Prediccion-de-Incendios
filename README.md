@@ -3,8 +3,9 @@
 **Prototipo funcional de demostración académica** para la Región de Valparaíso, Chile.
 Predice probabilidad de ignición forestal mediante XGBoost y visualiza riesgo en mapa Streamlit/Folium.
 
-> Alcance demo: **50 celdas** de 1 km². Todo el pipeline y PostGIS corren en **Docker Linux**;
-> no ejecutar SQL ni bash directamente en PowerShell.
+> Alcance demo: **50 celdas** circulares (~1 km²) en el corredor **Viña del Mar–Quilpué–Villa Alemana**.
+> Meteo del seed es **sintético zonal calibrado** (no series DMC/CONAF en vivo).
+> Ver [docs/alcance-prototipo.md](docs/alcance-prototipo.md) para delimitar prototipo vs informe.
 
 ## Arquitectura
 
@@ -51,7 +52,7 @@ Instrucciones: [docs/deploy.md](docs/deploy.md).
 ## Métricas objetivo (prototipo)
 
 - Recall XGBoost ≥ 75%
-- Mapa semafórico 50 celdas Valparaíso
+- Mapa semafórico 50 celdas (corredor Viña–Quilpué–Villa Alemana)
 - Cobertura pytest ≥ 80%
 
 ## Licencia

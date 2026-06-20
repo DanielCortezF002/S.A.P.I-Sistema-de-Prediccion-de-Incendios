@@ -21,7 +21,7 @@ from app.utils.map_renderer import render_folium_map
 from src.query.prediction_query import PredictionQuery
 from src.query.risk_map_query import QUERY_ENGINE_VERSION, fetch_spatial_risk_map
 
-APP_BUILD = "demo-50cells-v4"
+APP_BUILD = "demo-50cells-v5-zonal"
 
 
 class SapiDashboard:
@@ -93,6 +93,12 @@ def main() -> None:
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
+    st.info(
+        "Demo académica: 50 celdas del corredor Viña del Mar–Quilpué–Villa Alemana. "
+        "Meteo de seed zonal calibrado (no series DMC/CONAF en vivo); "
+        "no sustituye alertas oficiales CONAF/SENAPRED."
+    )
+
     st.sidebar.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
 
     selected_date = st.sidebar.date_input(
@@ -110,13 +116,13 @@ def main() -> None:
         gdf = query.get_contingency_cache()
 
     if not gdf.empty:
-        fecha_min = pd.to_datetime(gdf["fecha"]).min().date()
-        fecha_max = pd.to_datetime(gdf["fecha"]).max().date()
+        fecha_snapshot = pd.to_datetime(gdf["fecha"]).max().date()
         regla_activa = int((gdf["regla_30_30_30"] == 1).sum())
         st.info(
             f"Consulta al **{selected_date.isoformat()}** · "
-            f"**{len(gdf)}** celdas (grilla demo 1 km²) · "
-            f"snapshots por celda entre **{fecha_min}** y **{fecha_max}** · "
+            f"**{len(gdf)}** celdas (VP-001 a VP-050) · "
+            f"snapshot **{fecha_snapshot}** · "
+            f"meteo zonal costa/urbano/precordillera · "
             f"Regla 30-30-30 activa en **{regla_activa}** celda(s)."
         )
 
@@ -130,7 +136,7 @@ def main() -> None:
         max_prob = f"{gdf['probabilidad'].max():.1%}" if not gdf.empty else "N/A"
         st.metric("Probabilidad máxima", max_prob)
 
-    st.markdown("### Mapa de riesgo probabilístico (grilla 1 km²)")
+    st.markdown("### Mapa de riesgo probabilístico (radio ~1 km por celda)")
     dashboard.render_folium_map(selected_date)
 
     if not gdf.empty:

@@ -33,11 +33,13 @@ psql ... -f docker/initdb/04_seed_valparaiso.sql
 > **Importante:** No pegar SQL PostGIS en PowerShell. Usar `psql` o el SQL Editor de Supabase.
 > En Windows sin `psql`, usar Docker contra el **pooler puerto 5432** (ver sección anterior del chat).
 
-4. Si el seed ya estaba cargado, aplicar parche demo de regla 30-30-30:
+4. Si el seed ya estaba cargado (v1 cuadrados/aleatorio), **reemplazar** con seed v2:
 
 ```bash
-psql ... -f docker/initdb/05_patch_demo_regla.sql
+psql ... -f docker/initdb/04_seed_valparaiso.sql
 ```
+
+El seed v2 (`scripts/generate_seed.py`) usa microclimas costa/urbano/precordillera y celdas circulares ~1 km² (no series MeteoChile en vivo).
 
 ## 2. Streamlit Community Cloud — Python 3.11 (obligatorio)
 
