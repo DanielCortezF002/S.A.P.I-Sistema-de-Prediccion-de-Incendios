@@ -34,18 +34,18 @@ def test_export_report_pdf():
 
 
 @patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))
-@patch("app.app.fetch_spatial_risk_map")
 @patch("app.app.st_folium")
 @patch("app.app.render_folium_map")
-def test_render_folium_map_method(mock_render, mock_st_folium, mock_fetch, _mock_range):
+def test_render_folium_map_method(mock_render, mock_st_folium, _mock_range):
     mock_render.return_value = MagicMock()
-    mock_fetch.return_value = gpd.GeoDataFrame(
+    gdf = gpd.GeoDataFrame(
         {"cell_id": ["VP-001"], "probabilidad": [0.5], "nivel_riesgo": ["medio"]},
         geometry=[box(-71.58, -33.05, -71.57, -33.04)],
         crs="EPSG:4326",
     )
     dashboard = SapiDashboard()
-    dashboard.render_folium_map(date.today())
+    with patch.object(dashboard.query, "get_spatial_risk_map", return_value=gdf):
+        dashboard.render_folium_map(date(2025, 2, 15))
 
     mock_render.assert_called_once()
     mock_st_folium.assert_called_once()
@@ -56,18 +56,20 @@ def test_dashboard_init():
     assert dashboard.query is not None
 
 
-@patch("app.app.fetch_available_date_range", return_value=(None, None))
-def test_cached_date_range_fallback(mock_range: MagicMock) -> None:
+@patch("app.app._get_query")
+def test_cached_date_range_fallback(mock_get_query: MagicMock) -> None:
     from app.app import DEMO_FALLBACK_END, DEMO_FALLBACK_START, _cached_date_range
 
+    mock_get_query.return_value.get_available_date_range.return_value = (None, None)
     _cached_date_range.clear()
     assert _cached_date_range() == (DEMO_FALLBACK_START, DEMO_FALLBACK_END)
 
 
-@patch("app.app.fetch_available_dates", return_value=[])
-def test_cached_available_dates_fallback(mock_dates: MagicMock) -> None:
+@patch("app.app._get_query")
+def test_cached_available_dates_fallback(mock_get_query: MagicMock) -> None:
     from app.app import DEMO_FALLBACK_START, _cached_available_dates
 
+    mock_get_query.return_value.get_available_dates.return_value = []
     _cached_available_dates.clear()
     dates = _cached_available_dates()
     assert len(dates) == 7

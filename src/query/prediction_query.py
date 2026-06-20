@@ -13,6 +13,48 @@ from src.config import RISK_THRESHOLDS
 from src.db import get_connection, log_event
 from src.query.risk_map_query import fetch_spatial_risk_map
 
+try:
+    from src.query.risk_map_query import (
+        QUERY_ENGINE_VERSION,
+        fetch_available_date_range,
+        fetch_available_dates,
+    )
+except ImportError:
+    QUERY_ENGINE_VERSION = "exact-date-v1"
+
+    _DATE_RANGE_SQL = """
+    SELECT MIN(fecha) AS min_fecha, MAX(fecha) AS max_fecha
+    FROM predicciones_riesgo
+    """
+
+    _AVAILABLE_DATES_SQL = """
+    SELECT DISTINCT fecha
+    FROM predicciones_riesgo
+    ORDER BY fecha
+    """
+
+    def fetch_available_date_range() -> tuple[Optional[date], Optional[date]]:
+        try:
+            with get_connection() as conn:
+                row = conn.execute(text(_DATE_RANGE_SQL)).mappings().first()
+            if not row or row["min_fecha"] is None:
+                return None, None
+            return row["min_fecha"], row["max_fecha"]
+        except Exception as exc:
+            log_event("PredictionQuery", "date_range_error", str(exc), "WARN")
+            return None, None
+
+    def fetch_available_dates() -> list[date]:
+        try:
+            with get_connection() as conn:
+                df = pd.read_sql(text(_AVAILABLE_DATES_SQL), conn)
+            if df.empty:
+                return []
+            return [d.date() if hasattr(d, "date") else d for d in df["fecha"].tolist()]
+        except Exception as exc:
+            log_event("PredictionQuery", "dates_list_error", str(exc), "WARN")
+            return []
+
 _EMPTY_MAP_COLUMNS = [
     "cell_id",
     "fecha",
@@ -41,8 +83,15 @@ class PredictionQuery:
         Returns:
             GeoDataFrame con celdas, probabilidad y nivel de riesgo.
         """
-        target_date = fecha or date.today()
-        return fetch_spatial_risk_map(target_date)
+        return fetch_spatial_risk_map(fecha)
+
+    def get_available_date_range(self) -> tuple[Optional[date], Optional[date]]:
+        """Rango de fechas con predicciones en PostGIS."""
+        return fetch_available_date_range()
+
+    def get_available_dates(self) -> list[date]:
+        """Lista de fechas con predicciones cargadas."""
+        return fetch_available_dates()
 
     def get_cell_detail(self, cell_id: str, fecha: Optional[date] = None) -> dict[str, Any]:
         """Obtiene detalle de una celda específica.

@@ -17,23 +17,23 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from app.utils.map_renderer import render_folium_map
-from src.query.prediction_query import PredictionQuery
-from src.query.risk_map_query import (
-    QUERY_ENGINE_VERSION,
-    fetch_available_date_range,
-    fetch_available_dates,
-    fetch_spatial_risk_map,
-)
+from src.query.prediction_query import QUERY_ENGINE_VERSION, PredictionQuery
 
 APP_BUILD = "demo-50cells-v7-multiday"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 
 
+@st.cache_resource
+def _get_query() -> PredictionQuery:
+    """Instancia única del contrato de datos."""
+    return PredictionQuery()
+
+
 @st.cache_data(ttl=300)
 def _cached_date_range() -> tuple[date, date]:
     """Rango de fechas disponibles en PostGIS."""
-    min_d, max_d = fetch_available_date_range()
+    min_d, max_d = _get_query().get_available_date_range()
     if min_d is None or max_d is None:
         return DEMO_FALLBACK_START, DEMO_FALLBACK_END
     return min_d, max_d
@@ -42,7 +42,7 @@ def _cached_date_range() -> tuple[date, date]:
 @st.cache_data(ttl=300)
 def _cached_available_dates() -> list[date]:
     """Lista de fechas con predicciones."""
-    dates = fetch_available_dates()
+    dates = _get_query().get_available_dates()
     if not dates:
         return [DEMO_FALLBACK_START + timedelta(days=i) for i in range(7)]
     return dates
@@ -52,12 +52,12 @@ class SapiDashboard:
     """Interfaz gráfica para analistas de emergencias."""
 
     def __init__(self) -> None:
-        self.query = PredictionQuery()
+        self.query = _get_query()
 
     @st.cache_data(ttl=3600)
     def _load_risk_data(_self, fecha_str: str) -> pd.DataFrame:
         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-        gdf = fetch_spatial_risk_map(fecha)
+        gdf = _self.query.get_spatial_risk_map(fecha)
         if gdf.empty:
             return pd.DataFrame()
         return pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
@@ -65,7 +65,7 @@ class SapiDashboard:
     def render_folium_map(self, fecha: Optional[date] = None) -> None:
         _, max_d = _cached_date_range()
         fecha = fecha or max_d
-        gdf = fetch_spatial_risk_map(fecha)
+        gdf = self.query.get_spatial_risk_map(fecha)
         folium_map = render_folium_map(gdf)
         st_folium(folium_map, width=900, height=500, returned_objects=[])
 
@@ -104,6 +104,7 @@ def main() -> None:
     )
 
     dashboard = SapiDashboard()
+    query = dashboard.query
     min_d, max_d = _cached_date_range()
     available = _cached_available_dates()
 
@@ -126,9 +127,8 @@ def main() -> None:
         max_value=max_d,
     )
 
-    query = PredictionQuery()
     try:
-        gdf = fetch_spatial_risk_map(selected_date)
+        gdf = query.get_spatial_risk_map(selected_date)
     except Exception as exc:
         st.error(f"Error al consultar PostGIS ({QUERY_ENGINE_VERSION}): {exc}")
         gdf = query.get_contingency_cache()
