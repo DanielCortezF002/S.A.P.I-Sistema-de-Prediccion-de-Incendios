@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import geopandas as gpd
@@ -56,7 +56,7 @@ def test_dashboard_init():
     assert dashboard.query is not None
 
 
-@patch("app.app.fetch_available_date_range", return_value=(None, None))
+@patch("app.app.resolve_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))
 def test_cached_date_range_fallback(_mock_range: MagicMock) -> None:
     from app.app import DEMO_FALLBACK_END, DEMO_FALLBACK_START, _cached_date_range
 
@@ -64,10 +64,11 @@ def test_cached_date_range_fallback(_mock_range: MagicMock) -> None:
     assert _cached_date_range() == (DEMO_FALLBACK_START, DEMO_FALLBACK_END)
 
 
-@patch("app.app.fetch_available_dates", return_value=[])
-def test_cached_available_dates_fallback(_mock_dates: MagicMock) -> None:
+@patch("app.app.resolve_available_dates")
+def test_cached_available_dates_fallback(mock_resolve: MagicMock) -> None:
     from app.app import DEMO_FALLBACK_START, _cached_available_dates
 
+    mock_resolve.return_value = [DEMO_FALLBACK_START + timedelta(days=i) for i in range(7)]
     _cached_available_dates.clear()
     dates = _cached_available_dates()
     assert len(dates) == 7
