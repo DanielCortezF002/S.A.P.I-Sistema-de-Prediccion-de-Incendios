@@ -19,8 +19,9 @@ from streamlit_folium import st_folium
 
 from app.utils.map_renderer import render_folium_map
 from src.query.prediction_query import PredictionQuery
+from src.query.risk_map_query import QUERY_ENGINE_VERSION, fetch_spatial_risk_map
 
-APP_BUILD = "demo-50cells-v3"
+APP_BUILD = "demo-50cells-v4"
 
 
 class SapiDashboard:
@@ -30,17 +31,12 @@ class SapiDashboard:
         """Inicializa dashboard con contrato de datos."""
         self.query = PredictionQuery()
 
-    @st.cache_resource
-    def load_cached_resources(_self, _build: str = APP_BUILD) -> PredictionQuery:
-        """Singleton de conexión a serving layer."""
-        return PredictionQuery()
-
     @st.cache_data(ttl=3600)
     def _load_risk_data(_self, fecha_str: str) -> pd.DataFrame:
         """Carga dataframe de riesgo con TTL de 1 hora."""
         query = PredictionQuery()
         fecha = datetime.strptime(fecha_str, "%Y-%m-%d").date()
-        gdf = query.get_spatial_risk_map(fecha)
+        gdf = fetch_spatial_risk_map(fecha)
         if gdf.empty:
             return pd.DataFrame()
         return pd.DataFrame(gdf.drop(columns="geometry", errors="ignore"))
@@ -48,8 +44,7 @@ class SapiDashboard:
     def render_folium_map(self, fecha: Optional[date] = None) -> None:
         """Inyecta mapa Folium en el navegador."""
         fecha = fecha or date.today()
-        query = self.load_cached_resources()
-        gdf = query.get_spatial_risk_map(fecha)
+        gdf = fetch_spatial_risk_map(fecha)
         folium_map = render_folium_map(gdf)
         st_folium(folium_map, width=900, height=500, returned_objects=[])
 
@@ -98,8 +93,8 @@ def main() -> None:
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
-    st.sidebar.caption(f"Build: `{APP_BUILD}`")
-    st.sidebar.caption("Si ves 8 celdas, pulsa ⋮ → Clear cache y Reboot app.")
+    st.sidebar.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
+
     selected_date = st.sidebar.date_input(
         "Fecha de consulta",
         value=date.today(),
@@ -107,8 +102,12 @@ def main() -> None:
         max_value=date.today(),
     )
 
-    query = dashboard.load_cached_resources()
-    gdf = query.get_spatial_risk_map(selected_date)
+    query = PredictionQuery()
+    try:
+        gdf = fetch_spatial_risk_map(selected_date)
+    except Exception as exc:
+        st.error(f"Error al consultar PostGIS ({QUERY_ENGINE_VERSION}): {exc}")
+        gdf = query.get_contingency_cache()
 
     if not gdf.empty:
         fecha_min = pd.to_datetime(gdf["fecha"]).min().date()

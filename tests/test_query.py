@@ -17,8 +17,8 @@ def test_classify_risk_levels() -> None:
     assert PredictionQuery.classify_risk(0.9) == "alto"
 
 
-@patch("src.query.prediction_query.get_connection")
-@patch("src.query.prediction_query.gpd.read_postgis")
+@patch("src.query.risk_map_query.get_connection")
+@patch("src.query.risk_map_query.gpd.read_postgis")
 def test_get_spatial_risk_map_distinct_on_per_cell(
     mock_read_postgis: MagicMock, mock_get_conn: MagicMock
 ) -> None:
@@ -45,11 +45,38 @@ def test_get_spatial_risk_map_distinct_on_per_cell(
     assert len(result) == 50
     sql_text = str(mock_read_postgis.call_args[0][0])
     assert "DISTINCT ON" in sql_text
-    assert mock_read_postgis.call_args[1]["params"]["grid_max"] == 50
 
 
-@patch("src.query.prediction_query.get_connection")
-@patch("src.query.prediction_query.gpd.read_postgis")
+@patch("src.query.risk_map_query.get_connection")
+@patch("src.query.risk_map_query.gpd.read_postgis")
+def test_fetch_spatial_risk_map_engine_version(
+    mock_read_postgis: MagicMock, mock_get_conn: MagicMock
+) -> None:
+    from src.query.risk_map_query import QUERY_ENGINE_VERSION, fetch_spatial_risk_map
+
+    assert QUERY_ENGINE_VERSION == "distinct-on-v2"
+    mock_conn = MagicMock()
+    mock_get_conn.return_value.__enter__.return_value = mock_conn
+    mock_read_postgis.return_value = pd.DataFrame(
+        columns=[
+            "cell_id",
+            "fecha",
+            "probabilidad",
+            "nivel_riesgo",
+            "temperatura",
+            "humedad_relativa",
+            "velocidad_viento",
+            "regla_30_30_30",
+            "modelo_version",
+            "geom",
+        ]
+    )
+    result = fetch_spatial_risk_map(date(2026, 6, 20))
+    assert result.empty
+
+
+@patch("src.query.risk_map_query.get_connection")
+@patch("src.query.risk_map_query.gpd.read_postgis")
 def test_get_spatial_risk_map_empty_state(
     mock_read_postgis: MagicMock, mock_get_conn: MagicMock
 ) -> None:
@@ -71,7 +98,7 @@ def test_get_spatial_risk_map_empty_state(
         ]
     )
 
-    with patch("src.query.prediction_query.log_event"):
+    with patch("src.query.risk_map_query.log_event"):
         service = PredictionQuery()
         result = service.get_spatial_risk_map(date.today())
 

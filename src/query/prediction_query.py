@@ -9,8 +9,9 @@ import geopandas as gpd
 import pandas as pd
 from sqlalchemy import text
 
-from src.config import GRID_MAX_CELLS, RISK_THRESHOLDS
+from src.config import RISK_THRESHOLDS
 from src.db import get_connection, log_event
+from src.query.risk_map_query import fetch_spatial_risk_map
 
 _EMPTY_MAP_COLUMNS = [
     "cell_id",
@@ -42,54 +43,7 @@ class PredictionQuery:
             GeoDataFrame con celdas, probabilidad y nivel de riesgo.
         """
         target_date = fecha or date.today()
-        query = text(
-            """
-            SELECT * FROM (
-                SELECT DISTINCT ON (p.cell_id)
-                    p.cell_id,
-                    p.fecha,
-                    p.probabilidad,
-                    p.nivel_riesgo,
-                    p.temperatura,
-                    p.humedad_relativa,
-                    p.velocidad_viento,
-                    p.regla_30_30_30,
-                    p.modelo_version,
-                    p.geom
-                FROM predicciones_riesgo p
-                WHERE p.fecha <= :fecha
-                ORDER BY p.cell_id, p.fecha DESC
-            ) ultimo_por_celda
-            ORDER BY cell_id
-            LIMIT :grid_max
-            """
-        )
-        try:
-            with get_connection() as conn:
-                df = gpd.read_postgis(
-                    query,
-                    conn,
-                    geom_col="geom",
-                    params={"fecha": target_date, "grid_max": GRID_MAX_CELLS},
-                )
-        except Exception as exc:
-            log_event(
-                "PredictionQuery",
-                "query_error",
-                f"Fallo consulta mapa espacial: {exc}",
-                "ERROR",
-            )
-            return self.get_contingency_cache()
-
-        if df.empty:
-            log_event("PredictionQuery", "empty_map", f"Sin datos para {target_date}", "WARN")
-            return gpd.GeoDataFrame(
-                columns=_EMPTY_MAP_COLUMNS,
-                geometry="geometry",
-                crs="EPSG:4326",
-            )
-        gdf = gpd.GeoDataFrame(df, geometry="geom", crs="EPSG:4326")
-        return gdf.rename_geometry("geometry")
+        return fetch_spatial_risk_map(target_date)
 
     def get_cell_detail(self, cell_id: str, fecha: Optional[date] = None) -> dict[str, Any]:
         """Obtiene detalle de una celda específica.
