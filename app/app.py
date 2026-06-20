@@ -100,12 +100,23 @@ def main() -> None:
     selected_date = st.sidebar.date_input(
         "Fecha de consulta",
         value=date.today(),
-        min_value=date.today() - timedelta(days=30),
+        min_value=date(2020, 1, 1),
         max_value=date.today(),
     )
 
     query = dashboard.load_cached_resources()
     gdf = query.get_spatial_risk_map(selected_date)
+
+    if not gdf.empty:
+        fecha_min = pd.to_datetime(gdf["fecha"]).min().date()
+        fecha_max = pd.to_datetime(gdf["fecha"]).max().date()
+        regla_activa = int((gdf["regla_30_30_30"] == 1).sum())
+        st.info(
+            f"Consulta al **{selected_date.isoformat()}** · "
+            f"**{len(gdf)}** celdas (grilla demo 1 km²) · "
+            f"snapshots por celda entre **{fecha_min}** y **{fecha_max}** · "
+            f"Regla 30-30-30 activa en **{regla_activa}** celda(s)."
+        )
 
     with col1:
         st.metric("Celdas monitoreadas", len(gdf))
@@ -141,7 +152,7 @@ def main() -> None:
 
     report = dashboard.export_report_pdf(selected_date)
     st.download_button(
-        label="Descargar reporte",
+        label="Descargar reporte (TXT)",
         data=report,
         file_name=f"sapi_reporte_{selected_date.isoformat()}.txt",
         mime="text/plain",

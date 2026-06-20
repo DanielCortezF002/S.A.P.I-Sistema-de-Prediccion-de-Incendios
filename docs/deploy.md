@@ -31,6 +31,13 @@ psql ... -f docker/initdb/04_seed_valparaiso.sql
 ```
 
 > **Importante:** No pegar SQL PostGIS en PowerShell. Usar `psql` o el SQL Editor de Supabase.
+> En Windows sin `psql`, usar Docker contra el **pooler puerto 5432** (ver sección anterior del chat).
+
+4. Si el seed ya estaba cargado, aplicar parche demo de regla 30-30-30:
+
+```bash
+psql ... -f docker/initdb/05_patch_demo_regla.sql
+```
 
 ## 2. Streamlit Community Cloud — Python 3.11 (obligatorio)
 

@@ -19,6 +19,37 @@ def test_classify_risk_levels() -> None:
 
 @patch("src.query.prediction_query.get_connection")
 @patch("src.query.prediction_query.gpd.read_postgis")
+def test_get_spatial_risk_map_distinct_on_per_cell(
+    mock_read_postgis: MagicMock, mock_get_conn: MagicMock
+) -> None:
+    """Valida consulta por celda con límite GRID_MAX_CELLS."""
+    mock_conn = MagicMock()
+    mock_get_conn.return_value.__enter__.return_value = mock_conn
+    mock_read_postgis.return_value = pd.DataFrame(
+        {
+            "cell_id": [f"VP-{i:03d}" for i in range(1, 51)],
+            "fecha": [date(2025, 6, 1)] * 50,
+            "probabilidad": [0.5] * 50,
+            "nivel_riesgo": ["medio"] * 50,
+            "temperatura": [25.0] * 50,
+            "humedad_relativa": [40.0] * 50,
+            "velocidad_viento": [15.0] * 50,
+            "regla_30_30_30": [0] * 50,
+            "modelo_version": ["xgboost_v1.0"] * 50,
+            "geom": [None] * 50,
+        }
+    )
+
+    result = PredictionQuery().get_spatial_risk_map(date(2026, 6, 20))
+
+    assert len(result) == 50
+    sql_text = str(mock_read_postgis.call_args[0][0])
+    assert "DISTINCT ON" in sql_text
+    assert mock_read_postgis.call_args[1]["params"]["grid_max"] == 50
+
+
+@patch("src.query.prediction_query.get_connection")
+@patch("src.query.prediction_query.gpd.read_postgis")
 def test_get_spatial_risk_map_empty_state(
     mock_read_postgis: MagicMock, mock_get_conn: MagicMock
 ) -> None:

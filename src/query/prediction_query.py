@@ -9,7 +9,7 @@ import geopandas as gpd
 import pandas as pd
 from sqlalchemy import text
 
-from src.config import RISK_THRESHOLDS
+from src.config import GRID_MAX_CELLS, RISK_THRESHOLDS
 from src.db import get_connection, log_event
 
 _EMPTY_MAP_COLUMNS = [
@@ -44,24 +44,24 @@ class PredictionQuery:
         target_date = fecha or date.today()
         query = text(
             """
-            WITH ultimo_frente_temporal AS (
-                SELECT MAX(fecha) AS max_fecha
-                FROM predicciones_riesgo
-                WHERE fecha <= :fecha
-            )
-            SELECT
-                p.cell_id,
-                p.fecha,
-                p.probabilidad,
-                p.nivel_riesgo,
-                p.temperatura,
-                p.humedad_relativa,
-                p.velocidad_viento,
-                p.regla_30_30_30,
-                p.modelo_version,
-                p.geom
-            FROM predicciones_riesgo p
-            INNER JOIN ultimo_frente_temporal u ON p.fecha = u.max_fecha
+            SELECT * FROM (
+                SELECT DISTINCT ON (p.cell_id)
+                    p.cell_id,
+                    p.fecha,
+                    p.probabilidad,
+                    p.nivel_riesgo,
+                    p.temperatura,
+                    p.humedad_relativa,
+                    p.velocidad_viento,
+                    p.regla_30_30_30,
+                    p.modelo_version,
+                    p.geom
+                FROM predicciones_riesgo p
+                WHERE p.fecha <= :fecha
+                ORDER BY p.cell_id, p.fecha DESC
+            ) ultimo_por_celda
+            ORDER BY cell_id
+            LIMIT :grid_max
             """
         )
         try:
@@ -70,7 +70,7 @@ class PredictionQuery:
                     query,
                     conn,
                     geom_col="geom",
-                    params={"fecha": target_date},
+                    params={"fecha": target_date, "grid_max": GRID_MAX_CELLS},
                 )
         except Exception as exc:
             log_event(
