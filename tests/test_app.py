@@ -31,6 +31,21 @@ def test_export_report_pdf():
     content = report.decode("utf-8")
     assert "S.A.P.I." in content
     assert "Riesgo alto" in content
+    assert "Recall XGBoost" in content
+    assert "AUC-ROC" in content
+
+
+def test_export_report_empty():
+    dashboard = SapiDashboard()
+    empty = gpd.GeoDataFrame(
+        columns=["cell_id", "probabilidad", "nivel_riesgo"],
+        geometry=[],
+        crs="EPSG:4326",
+    )
+    with patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))):
+        with patch.object(dashboard.query, "get_spatial_risk_map", return_value=empty):
+            report = dashboard.export_report_pdf(date(2025, 2, 9))
+    assert b"Celdas analizadas: 0" in report
 
 
 @patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))

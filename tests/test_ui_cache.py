@@ -36,3 +36,23 @@ def test_render_folium_map_empty():
     gdf = gpd.GeoDataFrame(geometry=[], crs="EPSG:4326")
     m = render_folium_map(gdf)
     assert m is not None
+
+
+def test_cell_center_empty_geometry():
+    from shapely.geometry import Polygon
+
+    from app.utils.map_renderer import _cell_center
+
+    lat, lon = _cell_center(Polygon())
+    assert lat == -33.04
+    assert lon == -71.45
+
+
+def test_cell_center_point():
+    from shapely.geometry import Point
+
+    from app.utils.map_renderer import _cell_center
+
+    lat, lon = _cell_center(Point(-71.5, -33.04))
+    assert lat == -33.04
+    assert lon == -71.5

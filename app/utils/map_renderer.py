@@ -8,6 +8,8 @@ import folium
 import geopandas as gpd
 from branca.colormap import LinearColormap
 
+from app.utils.cell_zones import zone_label_for_cell
+
 RISK_COLORS = {
     "bajo": "#2ecc71",
     "medio": "#f1c40f",
@@ -36,17 +38,6 @@ def _cell_center(geometry) -> tuple[float, float]:
         return geometry.y, geometry.x
     centroid = geometry.centroid
     return centroid.y, centroid.x
-
-
-def _zone_label(row: dict) -> str:
-    """Etiqueta de zona climática según temperatura/humedad."""
-    temp = float(row.get("temperatura") or 0)
-    hr = float(row.get("humedad_relativa") or 0)
-    if hr >= 60 and temp <= 24:
-        return "Costa (marítimo)"
-    if temp >= 28 and hr <= 45:
-        return "Precordillera (continental)"
-    return "Urbano (transición)"
 
 
 def render_folium_map(
@@ -87,7 +78,7 @@ def render_folium_map(
         color = RISK_COLORS.get(str(nivel), "#95a5a6")
         prob = float(row.get("probabilidad", 0))
         lat, lon = _cell_center(row.geometry)
-        zona = _zone_label(row)
+        zona = zone_label_for_cell(str(row.get("cell_id", "")))
         popup_html = (
             f"<b>Celda:</b> {row.get('cell_id', 'N/A')}<br>"
             f"<b>Zona climática:</b> {zona}<br>"

@@ -52,3 +52,18 @@ def test_resolve_available_dates_fallback_without_methods() -> None:
     query = object()
     dates = resolve_available_dates(query, date(2025, 2, 9), date(2025, 2, 15))
     assert len(dates) == 7
+
+
+def test_call_date_range_fn_handles_exception() -> None:
+    from app.utils.date_helpers import _call_date_range_fn
+
+    def _boom() -> tuple[None, None]:
+        raise RuntimeError("db")
+
+    assert _call_date_range_fn(_boom) is None
+
+
+def test_call_date_range_fn_none_values() -> None:
+    from app.utils.date_helpers import _call_date_range_fn
+
+    assert _call_date_range_fn(lambda: (None, None)) is None

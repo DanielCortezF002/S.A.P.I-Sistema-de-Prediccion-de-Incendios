@@ -231,3 +231,25 @@ def test_get_cell_detail_empty(mock_get_conn: MagicMock) -> None:
 
     detail = PredictionQuery().get_cell_detail("VP-999")
     assert detail == {}
+
+
+@patch("src.query.prediction_query.fetch_available_date_range")
+def test_get_cell_detail_uses_max_fecha(mock_range: MagicMock) -> None:
+    mock_range.return_value = (date(2025, 2, 9), date(2025, 2, 15))
+    with patch("src.query.prediction_query.get_connection") as mock_get_conn:
+        mock_conn = MagicMock()
+        mock_conn.execute.return_value.mappings.return_value.first.return_value = {
+            "cell_id": "VP-001",
+            "fecha": date(2025, 2, 15),
+        }
+        mock_get_conn.return_value.__enter__.return_value = mock_conn
+        detail = PredictionQuery().get_cell_detail("VP-001")
+    assert detail["cell_id"] == "VP-001"
+
+
+@patch("src.query.prediction_query.fetch_available_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))
+def test_prediction_query_date_helpers(mock_range: MagicMock) -> None:
+    service = PredictionQuery()
+    assert service.get_available_date_range() == (date(2025, 2, 9), date(2025, 2, 15))
+    with patch("src.query.prediction_query.fetch_available_dates", return_value=[date(2025, 2, 15)]):
+        assert service.get_available_dates() == [date(2025, 2, 15)]

@@ -8,7 +8,7 @@ Documento de cierre para defensa de titulación. Resume qué demostrar, cómo va
 |----|----------|-----------|
 | **OE1** Pipeline ETL + PostGIS SSoT | Ingesta, procesamiento, persistencia espacial | `src/ingesta/`, `src/procesamiento/`, Docker Compose, tablas `staging_*` y `predicciones_riesgo` |
 | **OE2** ML con Recall ≥ 75% | RF + XGBoost + SMOTE, validación temporal | `reports/metrics.json` (Recall XGBoost **0.78**, AUC **0.83**) |
-| **OE3** Dashboard Streamlit + Folium | UI desacoplada, caché, mapa interactivo | Streamlit Cloud, `app/app.py`, build `demo-50cells-v7-multiday` |
+| **OE3** Dashboard Streamlit + Folium | UI desacoplada, caché, mapa interactivo | Streamlit Cloud, `app/app.py`, build `demo-50cells-v8-professional` |
 
 ## Demo multi-fecha (2025-02-09 → 2025-02-15)
 
@@ -29,7 +29,7 @@ Resumen JSON generado por el seed: [`reports/seed_summary.json`](../reports/seed
 ## Checklist pre-defensa
 
 - [ ] Streamlit Cloud en **Python 3.11**, estado *Running*
-- [ ] Build sidebar: `demo-50cells-v7-multiday`
+- [ ] Build sidebar: `demo-50cells-v8-professional`
 - [ ] Query sidebar: `exact-date-v1`
 - [ ] Cambiar fecha **modifica** mapa y KPIs (probar 2025-02-09 vs 2025-02-15)
 - [ ] Día 15: 50 celdas, 2 alto, regla en VP-038 y VP-049

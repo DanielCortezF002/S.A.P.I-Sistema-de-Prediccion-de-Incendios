@@ -68,8 +68,10 @@ Abrir `http://localhost:8501`.
 
 | Elemento | Significado |
 |----------|-------------|
-| **Build** | Versión del prototipo demo (ej. `demo-50cells-v7-multiday`). |
+| **Build** | Versión del prototipo demo (ej. `demo-50cells-v8-professional`). |
 | **Query** | Motor de consulta PostGIS (`exact-date-v1`). |
+| **Métricas ML** | Panel sidebar: Recall XGBoost 0.78, AUC 0.83 (informe). |
+| **Recorrido demo** | Slider de 7 días + calendario acotado al rango PostGIS. |
 | **Fecha de consulta** | Día exacto con predicciones cargadas. Rango demo: **2025-02-09** a **2025-02-15**. Default: **2025-02-15** (último día). |
 
 ### 4.2 Banners informativos
@@ -207,7 +209,8 @@ Detalle técnico: [`docs/alcance-prototipo.md`](alcance-prototipo.md).
 - [ ] Streamlit Cloud en **Python 3.11** y app en estado *Running*.
 - [ ] URL del dashboard abierta en pestaña de respaldo.
 - [ ] Fechas probadas: **2025-02-09** (0 rojos) y **2025-02-15** (2 rojos).
-- [ ] Build `demo-50cells-v7-multiday`, Query `exact-date-v1`.
+- [ ] Build `demo-50cells-v8-professional`, Query `exact-date-v1`.
+- [ ] Panel ML sidebar visible (Recall 0.78, AUC 0.83).
 - [ ] Mapa con gradiente oeste→este y 2 rojos (VP-038, VP-049).
 - [ ] Tabla con columna # 1–50.
 - [ ] Reporte TXT descarga correctamente.
