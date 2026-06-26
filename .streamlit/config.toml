@@ -6,3 +6,9 @@ enableXsrfProtection = true
 
 [browser]
 gatherUsageStats = false
+
+[runner]
+fastReruns = true
+
+[client]
+showSidebarNavigation = false

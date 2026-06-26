@@ -190,29 +190,41 @@ class DataProcessor:
             df = df.assign(cell_id=[f"VP-{i:03d}" for i in range(1, len(df) + 1)])
         return df.groupby("cell_id", as_index=False).mean(numeric_only=True)
 
+    # Parámetros de grilla alineados con scripts/generate_seed.py
+    # Grilla compacta 10 cols × 5 filas = 50 celdas (~1 km² cada una)
+    # Corredor Viña del Mar – Quilpué – Villa Alemana
+    _GRID_BASE_LON = -71.535
+    _GRID_BASE_LAT = -33.062
+    _GRID_COLS = 10
+    _GRID_ROWS = 5
+    _GRID_STEP_LON = 0.010   # ~930 m por columna
+    _GRID_STEP_LAT = 0.009   # ~1000 m por fila
+
     def _build_grid(self) -> pd.DataFrame:
-        """Construye grilla regular ~1 km² sobre Valparaíso (procesamiento por lotes)."""
-        step = GRID_CELL_SIZE_KM * 0.009
+        """Construye grilla 10×5 idéntica a scripts/generate_seed.py.
+
+        Itera filas × columnas (mismo orden que el seed) para garantizar que
+        VP-001..VP-010 correspondan a la fila sur y los cell_id coincidan
+        con las geometrías almacenadas en PostGIS.
+        """
         cells: list[dict] = []
-        lon = VALPARAISO_BBOX["min_lon"]
         idx = 1
-        while lon < VALPARAISO_BBOX["max_lon"] and idx <= GRID_MAX_CELLS:
-            lat = VALPARAISO_BBOX["min_lat"]
-            while lat < VALPARAISO_BBOX["max_lat"] and idx <= GRID_MAX_CELLS:
-                cell_geom = box(lon, lat, lon + step, lat + step)
-                if cell_geom.intersects(self.bbox):
-                    cells.append(
-                        {
-                            "cell_id": f"VP-{idx:03d}",
-                            "min_lon": lon,
-                            "min_lat": lat,
-                            "max_lon": lon + step,
-                            "max_lat": lat + step,
-                        }
-                    )
-                    idx += 1
-                lat += step
-            lon += step
+        for row in range(self._GRID_ROWS):
+            for col in range(self._GRID_COLS):
+                if idx > GRID_MAX_CELLS:
+                    break
+                lon = round(self._GRID_BASE_LON + col * self._GRID_STEP_LON, 5)
+                lat = round(self._GRID_BASE_LAT + row * self._GRID_STEP_LAT, 5)
+                cells.append(
+                    {
+                        "cell_id": f"VP-{idx:03d}",
+                        "min_lon": lon,
+                        "min_lat": lat,
+                        "max_lon": round(lon + self._GRID_STEP_LON, 5),
+                        "max_lat": round(lat + self._GRID_STEP_LAT, 5),
+                    }
+                )
+                idx += 1
         return pd.DataFrame(cells)
 
     def _add_topography(self, df: pd.DataFrame) -> pd.DataFrame:

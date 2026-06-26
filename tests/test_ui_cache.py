@@ -30,6 +30,8 @@ def test_render_folium_map_with_data():
     )
     m = render_folium_map(gdf)
     assert m is not None
+    m_selected = render_folium_map(gdf, selected_cell_id="VP-001")
+    assert m_selected is not None
 
 
 def test_render_folium_map_empty():

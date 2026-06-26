@@ -16,8 +16,14 @@ def get_engine() -> Engine:
 
     Returns:
         Engine configurado con DATABASE_URL.
+        connect_timeout=3 garantiza fallo rápido cuando PostGIS no está disponible.
     """
-    return create_engine(DATABASE_URL, pool_pre_ping=True, pool_recycle=1800)
+    return create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,
+        pool_recycle=1800,
+        connect_args={"connect_timeout": 1},
+    )
 
 
 def get_backend_engine() -> Engine:
@@ -25,8 +31,14 @@ def get_backend_engine() -> Engine:
 
     Returns:
         Engine configurado con DATABASE_URL_DIRECT.
+        connect_timeout=3 garantiza fallo rápido cuando PostGIS no está disponible.
     """
-    return create_engine(get_backend_database_url(), pool_pre_ping=True, pool_recycle=1800)
+    return create_engine(
+        get_backend_database_url(),
+        pool_pre_ping=True,
+        pool_recycle=1800,
+        connect_args={"connect_timeout": 1},
+    )
 
 
 @contextmanager

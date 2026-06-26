@@ -5,7 +5,7 @@ Predice probabilidad de ignición forestal mediante XGBoost y visualiza riesgo e
 
 > Alcance demo: **50 celdas** circulares (~1 km²) en el corredor **Viña del Mar–Quilpué–Villa Alemana**.
 > Ventana multi-fecha demo: **2025-02-09 → 2025-02-15** (seed zonal calibrado, sin APIs en vivo).
-> Ver [docs/alcance-prototipo.md](docs/alcance-prototipo.md) y [docs/entrega-prototipo.md](docs/entrega-prototipo.md).
+> Ver [docs/alcance-prototipo.md](docs/alcance-prototipo.md), [docs/entrega-prototipo.md](docs/entrega-prototipo.md) y [docs/guia-funcionamiento-completo.md](docs/guia-funcionamiento-completo.md).
 
 ## Arquitectura
 

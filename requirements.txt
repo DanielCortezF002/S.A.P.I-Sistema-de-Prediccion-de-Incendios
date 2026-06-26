@@ -10,7 +10,7 @@ tenacity==8.2.3
 psycopg2-binary==2.9.10
 sqlalchemy==2.0.29
 geoalchemy2==0.14.4
-streamlit==1.32.2
+streamlit==1.35.0
 folium==0.16.0
 streamlit-folium==0.18.0
 python-dotenv==1.0.1

@@ -10,8 +10,14 @@ ZONE_LABELS = {
 
 
 def zone_for_col(col: int) -> str:
-    """Clasifica columna oeste→este en costa / urbano / precordillera."""
-    if col <= 2:
+    """Clasifica columna oeste→este en costa / urbano / precordillera.
+
+    Grilla alineada con el corredor real Viña del Mar – Quilpué – Villa Alemana:
+      Cols 0-1  (lon ≈-71.58 a -71.50): Costa litoróneo Viña del Mar
+      Cols 2-6  (lon ≈-71.47 a -71.29): Interfaz urbano-forestal (Quilpué / Villa Alemana)
+      Cols 7-9  (lon ≈-71.25 a -71.21): Precordillera / cerros orientales
+    """
+    if col <= 1:
         return "costa"
     if col <= 6:
         return "urbano"

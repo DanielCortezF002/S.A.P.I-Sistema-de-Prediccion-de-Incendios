@@ -51,23 +51,91 @@ def test_export_report_empty():
 @patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))
 @patch("app.app.st_folium")
 @patch("app.app.render_folium_map")
-def test_render_folium_map_method(mock_render, mock_st_folium, _mock_range):
+def test_render_folium_map_fetches_gdf_when_missing(mock_render, mock_st_folium, _mock_range):
     mock_render.return_value = MagicMock()
+    mock_st_folium.return_value = {}
     gdf = gpd.GeoDataFrame(
         {"cell_id": ["VP-001"], "probabilidad": [0.5], "nivel_riesgo": ["medio"]},
         geometry=[box(-71.58, -33.05, -71.57, -33.04)],
         crs="EPSG:4326",
     )
     dashboard = SapiDashboard()
-    dashboard.render_folium_map(date(2025, 2, 15), gdf=gdf)
+    with patch.object(dashboard.query, "get_spatial_risk_map", return_value=gdf) as mock_query:
+        dashboard.render_folium_map(date(2025, 2, 15))
 
-    mock_render.assert_called_once()
+    mock_query.assert_called_once_with(date(2025, 2, 15))
+    mock_render.assert_called_once_with(gdf, selected_cell_id=None)
+
+
+@patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))
+@patch("app.app.st_folium")
+@patch("app.app.render_folium_map")
+def test_render_folium_map_method(mock_render, mock_st_folium, _mock_range):
+    mock_render.return_value = MagicMock()
+    mock_st_folium.return_value = {"last_object_clicked_tooltip": "VP-001"}
+    gdf = gpd.GeoDataFrame(
+        {"cell_id": ["VP-001"], "probabilidad": [0.5], "nivel_riesgo": ["medio"]},
+        geometry=[box(-71.58, -33.05, -71.57, -33.04)],
+        crs="EPSG:4326",
+    )
+    dashboard = SapiDashboard()
+    output = dashboard.render_folium_map(
+        date(2025, 2, 15), gdf=gdf, selected_cell_id="VP-001"
+    )
+
+    mock_render.assert_called_once_with(gdf, selected_cell_id="VP-001")
     mock_st_folium.assert_called_once()
+    assert output["last_object_clicked_tooltip"] == "VP-001"
 
 
 def test_dashboard_init():
     dashboard = SapiDashboard()
     assert dashboard.query is not None
+
+
+def test_is_db_connection_error() -> None:
+    assert _is_db_connection_error(Exception("connection refused on localhost:5432"))
+    assert _is_db_connection_error(Exception("OperationalError: could not connect"))
+    assert not _is_db_connection_error(Exception("column fecha does not exist"))
+
+
+@patch("app.app.st.markdown")
+def test_render_risk_legend(mock_markdown: MagicMock) -> None:
+    from app.app import _render_risk_legend
+
+    _render_risk_legend()
+    mock_markdown.assert_called_once()
+
+
+@patch("app.app._cached_ml_metrics", return_value={"xgboost": {"recall": 0.78, "auc_roc": 0.83}, "baseline": {"recall": 0.71}})
+@patch("app.app.st.sidebar")
+def test_render_sidebar_ml_panel(mock_sidebar: MagicMock, _mock_metrics: MagicMock) -> None:
+    from app.app import _render_sidebar_ml_panel
+
+    _render_sidebar_ml_panel()
+    mock_sidebar.markdown.assert_called_once()
+    assert mock_sidebar.metric.call_count == 3
+
+
+@patch("app.app.st.sidebar")
+def test_pick_demo_date_uses_calendar_when_available(mock_sidebar: MagicMock) -> None:
+    from app.app import _pick_demo_date
+
+    available = [date(2025, 2, 9), date(2025, 2, 15)]
+    mock_sidebar.select_slider.return_value = date(2025, 2, 9)
+    mock_sidebar.date_input.return_value = date(2025, 2, 15)
+    assert _pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 15)
+
+
+@patch("app.app.st.sidebar")
+def test_pick_demo_date_falls_back_to_slider(mock_sidebar: MagicMock) -> None:
+    from app.app import _pick_demo_date
+
+    available = [date(2025, 2, 9), date(2025, 2, 15)]
+    mock_sidebar.select_slider.return_value = date(2025, 2, 9)
+    mock_sidebar.date_input.return_value = date(2025, 2, 10)
+    assert _pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 9)
+    mock_sidebar.caption.assert_called_once()
 
 
 @patch("app.app.resolve_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15)))

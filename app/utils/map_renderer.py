@@ -8,16 +8,12 @@ import folium
 import geopandas as gpd
 from branca.colormap import LinearColormap
 
-from app.utils.cell_zones import zone_label_for_cell
+from utils.cell_zones import zone_label_for_cell
 
-RISK_COLORS = {
-    "bajo": "#2ecc71",
-    "medio": "#f1c40f",
-    "alto": "#e74c3c",
-}
+from utils.risk_colors import RISK_COLORS, map_selection_style
 
-# Radio visual alineado con ST_Buffer(~564 m) del seed PostGIS
-CELL_RADIUS_METERS = 564
+# Radio visual sincronizado con BUFFER_METERS=490 del seed (celdas contiguas ~1 km²)
+CELL_RADIUS_METERS = 490
 
 
 def build_risk_colormap() -> LinearColormap:
@@ -44,6 +40,7 @@ def render_folium_map(
     gdf: gpd.GeoDataFrame,
     center: Optional[tuple[float, float]] = None,
     zoom: int = 12,
+    selected_cell_id: Optional[str] = None,
 ) -> folium.Map:
     """Renderiza mapa con radios de influencia por celda (~1 km²).
 
@@ -74,13 +71,16 @@ def render_folium_map(
     colormap = build_risk_colormap()
 
     for _, row in gdf.iterrows():
+        cell_id = str(row.get("cell_id", ""))
         nivel = row.get("nivel_riesgo", "bajo")
         color = RISK_COLORS.get(str(nivel), "#95a5a6")
         prob = float(row.get("probabilidad", 0))
         lat, lon = _cell_center(row.geometry)
-        zona = zone_label_for_cell(str(row.get("cell_id", "")))
+        zona = zone_label_for_cell(cell_id)
+        is_selected = selected_cell_id is not None and cell_id == selected_cell_id
+        sel = map_selection_style(str(nivel), color) if is_selected else None
         popup_html = (
-            f"<b>Celda:</b> {row.get('cell_id', 'N/A')}<br>"
+            f"<b>Celda:</b> {cell_id or 'N/A'}<br>"
             f"<b>Zona climática:</b> {zona}<br>"
             f"<b>Probabilidad:</b> {prob:.2%}<br>"
             f"<b>Nivel:</b> {nivel}<br>"
@@ -93,22 +93,25 @@ def render_folium_map(
             location=[lat, lon],
             radius=CELL_RADIUS_METERS,
             popup=folium.Popup(popup_html, max_width=320),
-            color=color,
+            tooltip=cell_id,
+            color=sel["stroke"] if sel else color,
             fill=True,
             fill_color=color,
-            fill_opacity=0.45,
-            weight=1,
+            fill_opacity=sel["fill_opacity"] if sel else 0.45,
+            weight=sel["weight"] if sel else 1,
         ).add_to(m)
         folium.CircleMarker(
             location=[lat, lon],
-            radius=3,
-            color="#2c3e50",
+            radius=sel["marker_radius"] if sel else 3,
+            color=sel["marker_color"] if sel else "#2c3e50",
             fill=True,
-            fill_color="#2c3e50",
-            fill_opacity=0.9,
-            popup=folium.Popup(f"<b>{row.get('cell_id')}</b>", max_width=120),
+            fill_color=sel["marker_color"] if sel else "#2c3e50",
+            fill_opacity=0.95,
+            tooltip=cell_id,
+            popup=folium.Popup(f"<b>{cell_id}</b>", max_width=120),
         ).add_to(m)
 
     colormap.add_to(m)
     folium.LayerControl().add_to(m)
+
     return m

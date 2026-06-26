@@ -6,14 +6,24 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
-# Corredor Viña–Quilpué–Villa Alemana; grilla 5×10 sobre interfaz urbano-forestal
-BASE_LON = -71.52
-BASE_LAT = -33.04
+# Corredor Viña del Mar – Quilpué – Villa Alemana (interfaz urbano-forestal)
+# Coordenadas reales alineadas con el informe académico S.A.P.I. 2026
+#
+# Grilla COMPACTA 5 filas × 10 columnas = 50 celdas adyacentes (~1 km² cada una)
+# Las celdas se tocan entre sí formando una red continua de monitoreo.
+#
+# Centro del corredor (zona de interfaz urbano-forestal de los incendios 2024):
+#   Lat centro: -33.040  (Quilpué / Viña del Mar sector cerros)
+#   Lon centro: -71.490  (entre costa y sector urbano)
+#
+# Cobertura total: ~9.3 km E-O  x  ~4.5 km N-S
+BASE_LON = -71.535  # Extremo oeste (inicio grilla, sector costero Viña)
+BASE_LAT = -33.062  # Extremo sur del bloque
 COLS = 10
 ROWS = 5
-STEP_LON = 0.008
-STEP_LAT = 0.008
-BUFFER_METERS = 564
+STEP_LON = 0.010    # ~930 m por columna  → celdas casi contiguas E-O
+STEP_LAT = 0.009    # ~1000 m por fila    → celdas casi contiguas N-S
+BUFFER_METERS = 490  # Radio ~490 m → celdas se tocan sin solapar
 DEMO_START = date(2025, 2, 9)
 DEMO_END = date(2025, 2, 15)
 DEMO_DAYS = (DEMO_END - DEMO_START).days + 1
@@ -27,7 +37,11 @@ ZONAS = {
 
 
 def _zone_for_col(col: int) -> str:
-    if col <= 2:
+    # Alineado con app/utils/cell_zones.py
+    # Cols 0-1: Costa litoral Viña del Mar
+    # Cols 2-6: Urbano-forestal (Quilpué / Villa Alemana)
+    # Cols 7-9: Precordillera / cerros orientales
+    if col <= 1:
         return "costa"
     if col <= 6:
         return "urbano"

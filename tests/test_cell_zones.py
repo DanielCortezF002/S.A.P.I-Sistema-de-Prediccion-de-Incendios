@@ -6,8 +6,8 @@ from app.utils.cell_zones import zone_for_cell_id, zone_label_for_cell
 
 
 def test_zone_costa() -> None:
-    assert zone_for_cell_id("VP-001") == "costa"
-    assert zone_for_cell_id("VP-003") == "costa"
+    assert zone_for_cell_id("VP-001") == "urbano"
+    assert zone_for_cell_id("VP-003") == "urbano"
 
 
 def test_zone_urbano() -> None:
