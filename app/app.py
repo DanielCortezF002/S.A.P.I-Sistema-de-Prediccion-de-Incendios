@@ -50,7 +50,7 @@ RECALL_TARGET = 0.75
 def _cached_date_range(_build: str = APP_BUILD) -> tuple[date, date]:
     """Rango de fechas desde seed en-memoria. TTL=24h, nunca expira en demo."""
     del _build
-    from app.utils.demo_seed import get_all_demo_dates
+    from utils.demo_seed import get_all_demo_dates  # path relativo — compatible Streamlit Cloud
     dates = get_all_demo_dates()
     if dates:
         return dates[0], dates[-1]
@@ -61,7 +61,7 @@ def _cached_date_range(_build: str = APP_BUILD) -> tuple[date, date]:
 def _cached_available_dates(_build: str = APP_BUILD) -> list[date]:
     """Lista de fechas demo. TTL=24h, inmune a inactividad."""
     del _build
-    from app.utils.demo_seed import get_all_demo_dates
+    from utils.demo_seed import get_all_demo_dates  # path relativo — compatible Streamlit Cloud
     return get_all_demo_dates()
 
 
@@ -266,10 +266,11 @@ def main() -> None:
     # Carga todos los días del seed en lru_cache y st.cache_data en background
     # para que los cambios de fecha sean instantáneos sin importar inactividad.
     if "cache_warmed" not in st.session_state:
-        from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
-        for _d in get_all_demo_dates():
-            get_demo_gdf(_d)              # lru_cache permanente en RAM
-            _cached_display_df(_d.isoformat())   # st.cache_data 24h
+        # Usa las importaciones del top-level — no re-importar con prefijo 'app.'
+        # ya que en Streamlit Cloud ese path no resuelve y causa UnboundLocalError.
+        for _d in _cached_available_dates():
+            get_demo_gdf(_d)                      # lru_cache permanente en RAM
+            _cached_display_df(_d.isoformat())    # st.cache_data 24h
         st.session_state.cache_warmed = True
     # ─────────────────────────────────────────────────────────────────────────
 
