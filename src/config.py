@@ -1,4 +1,4 @@
-﻿"""Configuración centralizada del sistema S.A.P.I."""
+"""Configuración centralizada del sistema S.A.P.I."""
 
 from __future__ import annotations
 
@@ -22,6 +22,10 @@ DMC_API_BASE_URL: str = os.getenv(
     "DMC_API_BASE_URL",
     "https://climatologia.meteochile.gob.cl",
 )
+# La API de climatología DMC autentica por querystring (?usuario=...&token=...),
+# no por header. Registro en: https://climatologia.meteochile.gob.cl/application/usuario/registroUsuario
+DMC_USUARIO: str = os.getenv("DMC_USUARIO", "")
+DMC_TOKEN: str = os.getenv("DMC_TOKEN", "")
 CONAF_DATA_URL: str = os.getenv("CONAF_DATA_URL", "https://www.conaf.cl")
 
 DATA_RAW_DIR: Path = BASE_DIR / os.getenv("DATA_RAW_DIR", "data/raw")
@@ -40,6 +44,15 @@ VALPARAISO_BBOX = {
     "min_lat": -33.65,
     "max_lat": -32.00,
 }
+
+# Códigos nacionales de estaciones DMC (getCatastroEstacionesGeo) dentro del
+# corredor de interfaz urbano-forestal de mayor vulnerabilidad (Viña del Mar,
+# Quilpué, Villa Alemana — ver Alcances Técnicos del portafolio). Pendiente:
+# confirmar contra getCatastroEstacionesGeo cuál está activa hoy (el catastro
+# cambia sin aviso) antes de correr la ingesta real.
+DMC_ESTACIONES_VALPARAISO: list[str] = [
+    s for s in os.getenv("DMC_ESTACIONES_VALPARAISO", "").split(",") if s
+]
 
 RISK_THRESHOLDS = {"bajo": 0.33, "medio": 0.66, "alto": 1.0}
 

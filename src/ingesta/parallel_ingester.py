@@ -19,6 +19,9 @@ from src.config import (
     CONAF_SEED_PATH,
     DATA_RAW_DIR,
     DMC_API_BASE_URL,
+    DMC_ESTACIONES_VALPARAISO,
+    DMC_TOKEN,
+    DMC_USUARIO,
     NASA_FIRMS_API_KEY,
     VALPARAISO_BBOX,
 )
@@ -168,13 +171,34 @@ class ParallelIngester:
             return self._degrade_source("nasa_firms", "staging_incendios", out_path, exc)
 
     def _ingest_dmc(self) -> dict[str, Any]:
-        """Descarga telemetría meteorológica DMC."""
+        """Descarga telemetría meteorológica DMC (últimas 12h por estación).
+
+        Usa getDatosRecientesEma/{codigoEstacion}, el endpoint real de la API
+        de climatología DMC (autenticación por querystring usuario+token).
+        Itera sobre DMC_ESTACIONES_VALPARAISO porque el endpoint es por
+        estación individual, no un agregado regional.
+        """
         out_path = self.raw_dir / f"dmc_meteo_{datetime.utcnow().date().isoformat()}.json"
-        try:
-            response = self._download_with_retry(
-                f"{DMC_API_BASE_URL}/application/user/productos/informacion-sinoptica"
+        if not (DMC_USUARIO and DMC_TOKEN):
+            exc = RuntimeError("DMC_USUARIO / DMC_TOKEN no configurados (ver src/config.py)")
+            log_event("ParallelIngester", "dmc_fail", str(exc), "WARN")
+            return self._degrade_source("dmc_meteo", "staging_meteo", out_path, exc)
+        if not DMC_ESTACIONES_VALPARAISO:
+            exc = RuntimeError(
+                "DMC_ESTACIONES_VALPARAISO vacío — confirmar códigos contra "
+                "getCatastroEstacionesGeo antes de ingerir"
             )
-            payload = response.json()
+            log_event("ParallelIngester", "dmc_fail", str(exc), "WARN")
+            return self._degrade_source("dmc_meteo", "staging_meteo", out_path, exc)
+
+        payload: dict[str, Any] = {}
+        try:
+            for codigo in DMC_ESTACIONES_VALPARAISO:
+                response = self._download_with_retry(
+                    f"{DMC_API_BASE_URL}/application/servicios/getDatosRecientesEma/{codigo}",
+                    {"usuario": DMC_USUARIO, "token": DMC_TOKEN},
+                )
+                payload[codigo] = response.json()
             out_path.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
             log_event("ParallelIngester", "dmc_ok", str(out_path))
             return {"status": "success", "degraded": False, "path": str(out_path)}
