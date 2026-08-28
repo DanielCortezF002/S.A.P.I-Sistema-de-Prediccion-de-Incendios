@@ -101,8 +101,7 @@ El clasificador XGBoost supera consistentemente al modelo baseline Random Forest
 | Métrica | Baseline (Random Forest) | **Modelo Final (XGBoost)** | Objetivo |
 |---------|--------------------------|---------------------------|----------|
 | Recall (Sensibilidad) | 71% | **78%** ✅ | ≥ 75% |
-| Precision | 68% | **73%** ✅ | ≥ 70% |
-| AUC-ROC | 0.76 | **0.83** ✅ | ≥ 0.80 |
+| AUC-ROC | — (no calculado en el baseline) | **0.83** ✅ | ≥ 0.80 |
 
 > **¿Por qué priorizar Recall?** En contextos de emergencia, un falso negativo (zona de alto riesgo no alertada) tiene consecuencias humanas irreversibles. El sistema está calibrado para que ningún cuadrante crítico quede sin alertar.
 
