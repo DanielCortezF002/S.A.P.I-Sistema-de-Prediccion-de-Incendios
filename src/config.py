@@ -45,11 +45,17 @@ VALPARAISO_BBOX = {
     "max_lat": -32.00,
 }
 
-# Códigos nacionales de estaciones DMC (getCatastroEstacionesGeo) dentro del
-# corredor de interfaz urbano-forestal de mayor vulnerabilidad (Viña del Mar,
-# Quilpué, Villa Alemana — ver Alcances Técnicos del portafolio). Pendiente:
-# confirmar contra getCatastroEstacionesGeo cuál está activa hoy (el catastro
-# cambia sin aviso) antes de correr la ingesta real.
+# Códigos de estación DMC confirmados contra getCatastroEstacionesGeo
+# (consultado 2026-08-29, ver .env para credenciales). El catastro real
+# devuelve 77 estaciones con numeroRegion=5 (Valparaíso); de esas, se
+# tomó una por cada comuna del corredor de interfaz urbano-forestal que
+# define el portafolio (Alcances Técnicos: Viña del Mar, Quilpué, Villa
+# Alemana) — verificado que las 3 comunas objetivo quedan cubiertas
+# exactamente, sin solapamiento. Cada comuna tenía más de una estación
+# disponible; esta es una selección razonable, no la única válida —
+# no se verificó elevación real ni cercanía exacta a zona de interfaz
+# de cada estación individual, solo pertenencia a la comuna correcta.
+# Si se requiere mayor densidad espacial, ampliar desde el catastro completo.
 DMC_ESTACIONES_VALPARAISO: list[str] = [
     s for s in os.getenv("DMC_ESTACIONES_VALPARAISO", "").split(",") if s
 ]

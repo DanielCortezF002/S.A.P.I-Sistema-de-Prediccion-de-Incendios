@@ -144,30 +144,47 @@ class ParallelIngester:
             return pd.DataFrame()
 
     def _ingest_nasa_firms(self) -> dict[str, Any]:
-        """Descarga focos térmicos NASA FIRMS para zona Valparaíso."""
-        end_date = datetime.utcnow().date()
-        url = "https://firms.modaps.eosdis.nasa.gov/api/area/csv"
-        params: dict[str, Any] = {
-            "source": "VIIRS_SNPP_NRT",
-            "area": (
-                f"{VALPARAISO_BBOX['min_lon']},{VALPARAISO_BBOX['min_lat']},"
-                f"{VALPARAISO_BBOX['max_lon']},{VALPARAISO_BBOX['max_lat']}"
-            ),
-            "dayrange": 5,
-            "date": end_date.isoformat(),
-        }
-        if NASA_FIRMS_API_KEY:
-            params["MAP_KEY"] = NASA_FIRMS_API_KEY
+        """Descarga focos térmicos NASA FIRMS para zona Valparaíso.
 
+        La API FIRMS NO acepta querystring genérico — usa una ruta
+        posicional: /api/area/csv/{MAP_KEY}/{SOURCE}/{AREA}/{DAY_RANGE}
+        con AREA como "west,south,east,north" (ver documentación oficial,
+        firms.modaps.eosdis.nasa.gov/api/area/csv). El formato anterior
+        (params={"area": ..., "dayrange": ...}) producía HTTP 400
+        "Invalid area" / "Invalid day range" porque esos parámetros no
+        existen en el contrato real de la API.
+        """
+        end_date = datetime.utcnow().date()
         out_path = self.raw_dir / f"nasa_firms_{end_date.isoformat()}.csv"
+
+        if not NASA_FIRMS_API_KEY:
+            exc = RuntimeError("NASA_FIRMS_API_KEY no configurada (ver src/config.py)")
+            log_event("ParallelIngester", "nasa_firms_fail", str(exc), "WARN")
+            return self._degrade_source("nasa_firms", "staging_incendios", out_path, exc)
+
+        source = "VIIRS_SNPP_NRT"
+        area = (
+            f"{VALPARAISO_BBOX['min_lon']},{VALPARAISO_BBOX['min_lat']},"
+            f"{VALPARAISO_BBOX['max_lon']},{VALPARAISO_BBOX['max_lat']}"
+        )
+        day_range = 5  # rango válido: 1..5 (confirmado por el mensaje de error real del servidor)
+        url = (
+            f"https://firms.modaps.eosdis.nasa.gov/api/area/csv/"
+            f"{NASA_FIRMS_API_KEY}/{source}/{area}/{day_range}"
+        )
         try:
-            response = self._download_with_retry(url, params)
+            response = self._download_with_retry(url)
             content = response.text
             out_path.write_text(content, encoding="utf-8")
             log_event("ParallelIngester", "nasa_firms_ok", str(out_path))
             return {"status": "success", "degraded": False, "path": str(out_path)}
         except requests.RequestException as exc:
-            log_event("ParallelIngester", "nasa_firms_fail", str(exc), "WARN")
+            # La MAP_KEY vive en la ruta de la URL (formato posicional real de
+            # FIRMS); str(exc) de un HTTPError incluye la URL completa, así
+            # que la redactamos antes de loguear para no exponerla en la
+            # tabla de observabilidad ni en logs de consola.
+            mensaje_seguro = str(exc).replace(NASA_FIRMS_API_KEY, "[MAP_KEY_REDACTADA]")
+            log_event("ParallelIngester", "nasa_firms_fail", mensaje_seguro, "WARN")
             return self._degrade_source("nasa_firms", "staging_incendios", out_path, exc)
 
     def _ingest_dmc(self) -> dict[str, Any]:
