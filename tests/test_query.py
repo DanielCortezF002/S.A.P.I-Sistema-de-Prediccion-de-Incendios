@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import geopandas as gpd
@@ -253,3 +253,81 @@ def test_prediction_query_date_helpers(mock_range: MagicMock) -> None:
     assert service.get_available_date_range() == (date(2025, 2, 9), date(2025, 2, 15))
     with patch("src.query.prediction_query.fetch_available_dates", return_value=[date(2025, 2, 15)]):
         assert service.get_available_dates() == [date(2025, 2, 15)]
+
+
+@patch("src.query.prediction_query.get_connection")
+def test_fetch_available_date_range_logs_and_returns_none_on_db_error(mock_get_conn: MagicMock) -> None:
+    from src.query.prediction_query import fetch_available_date_range
+
+    mock_get_conn.side_effect = RuntimeError("db down")
+    with patch("src.query.prediction_query.log_event") as mock_log:
+        assert fetch_available_date_range() == (None, None)
+    mock_log.assert_called_once()
+
+
+@patch("src.query.prediction_query.get_connection")
+def test_fetch_available_dates_returns_empty_list_when_sql_empty(mock_get_conn: MagicMock) -> None:
+    from src.query.prediction_query import fetch_available_dates
+
+    mock_conn = MagicMock()
+    mock_get_conn.return_value.__enter__.return_value = mock_conn
+    with patch("src.query.prediction_query.pd.read_sql", return_value=pd.DataFrame(columns=["fecha"])):
+        assert fetch_available_dates() == []
+
+
+@patch("src.query.prediction_query.get_connection")
+def test_fetch_available_dates_logs_and_returns_empty_on_db_error(mock_get_conn: MagicMock) -> None:
+    from src.query.prediction_query import fetch_available_dates
+
+    mock_get_conn.side_effect = RuntimeError("db down")
+    with patch("src.query.prediction_query.log_event") as mock_log:
+        assert fetch_available_dates() == []
+    mock_log.assert_called_once()
+
+
+@patch("src.query.prediction_query.get_connection")
+def test_get_cell_detail_with_explicit_fecha(mock_get_conn: MagicMock) -> None:
+    mock_conn = MagicMock()
+    mock_conn.execute.return_value.mappings.return_value.first.return_value = {
+        "cell_id": "VP-002",
+        "fecha": date(2025, 2, 10),
+    }
+    mock_get_conn.return_value.__enter__.return_value = mock_conn
+
+    detail = PredictionQuery().get_cell_detail("VP-002", fecha=date(2025, 2, 10))
+    assert detail["cell_id"] == "VP-002"
+    params = mock_conn.execute.call_args[0][1]
+    assert params["fecha"] == date(2025, 2, 10)
+
+
+@patch("src.query.prediction_query.fetch_available_date_range", return_value=(None, None))
+@patch("src.query.prediction_query.get_connection")
+@patch("src.query.prediction_query.gpd.read_postgis")
+def test_get_contingency_cache_uses_days_fallback_when_no_min_fecha(
+    mock_read_postgis: MagicMock,
+    mock_get_conn: MagicMock,
+    _mock_range: MagicMock,
+) -> None:
+    mock_conn = MagicMock()
+    mock_get_conn.return_value.__enter__.return_value = mock_conn
+    mock_read_postgis.return_value = pd.DataFrame(
+        columns=[
+            "cell_id",
+            "fecha",
+            "probabilidad",
+            "nivel_riesgo",
+            "temperatura",
+            "humedad_relativa",
+            "velocidad_viento",
+            "regla_30_30_30",
+            "modelo_version",
+            "geom",
+        ]
+    )
+
+    with patch("src.query.prediction_query.log_event"):
+        result = PredictionQuery().get_contingency_cache(days=3)
+
+    assert result.empty
+    cutoff = mock_read_postgis.call_args.kwargs["params"]["cutoff"]
+    assert cutoff == date.today() - timedelta(days=3)

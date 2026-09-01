@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 from app.utils.date_helpers import demo_date_window, resolve_available_dates, resolve_date_range
@@ -10,9 +10,9 @@ from app.utils.date_helpers import demo_date_window, resolve_available_dates, re
 
 def test_demo_date_window_seven_days() -> None:
     start = date(2025, 2, 9)
-    end = date(2026, 6, 24)
+    end = start + timedelta(days=6)
     dates = demo_date_window(start, end)
-    assert len(dates) == 8
+    assert len(dates) == 7
     assert dates[0] == start
     assert dates[-1] == end
 
@@ -25,7 +25,11 @@ def test_resolve_date_range_from_query() -> None:
     assert max_d == date(2026, 6, 24)
 
 
-def test_resolve_date_range_fallback_without_methods() -> None:
+@patch("src.query.prediction_query.fetch_available_date_range", side_effect=RuntimeError("db"))
+@patch("app.utils.date_helpers._module_fetch_date_range", side_effect=RuntimeError("db"))
+def test_resolve_date_range_fallback_without_methods(
+    _mock_module: MagicMock, _mock_pq: MagicMock
+) -> None:
     query = object()
     min_d, max_d = resolve_date_range(query, date(2025, 2, 9), date(2026, 6, 24))
     assert min_d == date(2025, 2, 9)
@@ -34,9 +38,10 @@ def test_resolve_date_range_fallback_without_methods() -> None:
 
 def test_resolve_date_range_module_fallback() -> None:
     query = MagicMock(spec=[])
-    with patch("app.utils.date_helpers._module_fetch_date_range") as mock_mod:
-        mock_mod.return_value = (date(2025, 2, 9), date(2025, 2, 14))
-        min_d, max_d = resolve_date_range(query, date(2025, 2, 9), date(2026, 6, 24))
+    with patch("src.query.prediction_query.fetch_available_date_range", side_effect=RuntimeError("db")):
+        with patch("app.utils.date_helpers._module_fetch_date_range") as mock_mod:
+            mock_mod.return_value = (date(2025, 2, 9), date(2025, 2, 14))
+            min_d, max_d = resolve_date_range(query, date(2025, 2, 9), date(2026, 6, 24))
     assert min_d == date(2025, 2, 9)
     assert max_d == date(2025, 2, 14)
 
@@ -48,10 +53,16 @@ def test_resolve_available_dates_from_query() -> None:
     assert dates == [date(2025, 2, 9), date(2026, 6, 24)]
 
 
-def test_resolve_available_dates_fallback_without_methods() -> None:
+@patch("src.query.prediction_query.fetch_available_dates", side_effect=RuntimeError("db"))
+@patch("app.utils.date_helpers._module_fetch_dates", side_effect=RuntimeError("db"))
+def test_resolve_available_dates_fallback_without_methods(
+    _mock_module: MagicMock, _mock_pq: MagicMock
+) -> None:
     query = object()
-    dates = resolve_available_dates(query, date(2025, 2, 9), date(2026, 6, 24))
-    assert len(dates) == 8
+    dates = resolve_available_dates(query, date(2025, 2, 9), date(2025, 2, 15))
+    assert len(dates) == 7
+    assert dates[0] == date(2025, 2, 9)
+    assert dates[-1] == date(2025, 2, 15)
 
 
 def test_call_date_range_fn_handles_exception() -> None:
@@ -67,3 +78,50 @@ def test_call_date_range_fn_none_values() -> None:
     from app.utils.date_helpers import _call_date_range_fn
 
     assert _call_date_range_fn(lambda: (None, None)) is None
+
+
+def test_module_fetch_date_range_returns_query_values() -> None:
+    from app.utils.date_helpers import _module_fetch_date_range
+
+    with patch("src.query.prediction_query.fetch_available_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))):
+        assert _module_fetch_date_range() == (date(2025, 2, 9), date(2025, 2, 15))
+
+
+def test_module_fetch_dates_returns_query_list() -> None:
+    from app.utils.date_helpers import _module_fetch_dates
+
+    expected = [date(2025, 2, 9), date(2025, 2, 15)]
+    with patch("src.query.prediction_query.fetch_available_dates", return_value=expected):
+        assert _module_fetch_dates() == expected
+
+
+def test_resolve_date_range_uses_module_fetch_when_instance_missing() -> None:
+    query = MagicMock(spec=[])
+    with patch("src.query.prediction_query.fetch_available_date_range", return_value=(date(2025, 3, 1), date(2025, 3, 7))):
+        min_d, max_d = resolve_date_range(query, date(2025, 2, 9), date(2025, 2, 15))
+    assert (min_d, max_d) == (date(2025, 3, 1), date(2025, 3, 7))
+
+
+def test_resolve_available_dates_uses_module_fetch_when_instance_missing() -> None:
+    query = MagicMock(spec=[])
+    expected = [date(2025, 2, 10), date(2025, 2, 11)]
+    with patch("src.query.prediction_query.fetch_available_dates", return_value=expected):
+        dates = resolve_available_dates(query, date(2025, 2, 9), date(2025, 2, 15))
+    assert dates == expected
+
+
+def test_resolve_date_range_skips_broken_prediction_query_import() -> None:
+    import builtins
+
+    real_import = builtins.__import__
+
+    def guarded_import(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "src.query" and fromlist and "prediction_query" in fromlist:
+            raise ImportError("blocked for test")
+        return real_import(name, globals, locals, fromlist, level)
+
+    query = MagicMock(spec=[])
+    with patch("builtins.__import__", side_effect=guarded_import):
+        with patch("src.query.prediction_query.fetch_available_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))):
+            min_d, max_d = resolve_date_range(query, date(2025, 1, 1), date(2025, 1, 7))
+    assert (min_d, max_d) == (date(2025, 2, 9), date(2025, 2, 15))

@@ -72,8 +72,16 @@ def test_ingest_all_sources_tracks_degraded(
 @patch("src.ingesta.parallel_ingester.ParallelIngester._download_with_retry")
 def test_conaf_loads_institutional_seed_on_failure(mock_download: MagicMock, tmp_path) -> None:
     mock_download.side_effect = requests.exceptions.ConnectionError("CONAF no disponible")
+    seed_path = tmp_path / "conaf_historico_seed.json"
+    seed_path.write_text(
+        '[{"latitud": -33.05, "longitud": -71.55, "fecha": "2024-01-15"}]',
+        encoding="utf-8",
+    )
     ingester = ParallelIngester(raw_dir=tmp_path)
     ingester._recuperar_payload_fallback = MagicMock(return_value=pd.DataFrame())
-    result = ingester._ingest_conaf()
+    with patch("src.ingesta.parallel_ingester.CONAF_SEED_PATH", seed_path):
+        result = ingester._ingest_conaf()
     assert result["degraded"] is True
-    assert result.get("source") == "institutional_seed" or result["path"]
+    assert result["status"] == "degraded"
+    assert result["source"] == "institutional_seed"
+    assert result["path"]

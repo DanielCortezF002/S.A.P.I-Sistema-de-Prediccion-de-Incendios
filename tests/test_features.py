@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from unittest.mock import MagicMock, patch
+
 import pandas as pd
 
 from src.procesamiento.features import FeatureEngineer
@@ -42,3 +44,36 @@ def test_smote_balance_returns_same_shape_or_more():
     x_bal, y_bal = engineer.apply_smote_balance(x, y)
     assert len(x_bal) >= len(x)
     assert len(y_bal) >= len(y)
+
+
+def test_smote_balance_duplicates_single_row_when_only_one_sample() -> None:
+    engineer = FeatureEngineer()
+    x = pd.DataFrame({"a": [1.0]})
+    y = pd.Series([0])
+    x_bal, y_bal = engineer.apply_smote_balance(x, y)
+    assert len(x_bal) == 2
+    assert set(y_bal.tolist()) == {0, 1}
+
+
+def test_smote_balance_mutates_first_label_when_all_same_class() -> None:
+    engineer = FeatureEngineer()
+    x = pd.DataFrame({"a": [1.0, 2.0, 3.0]})
+    y = pd.Series([0, 0, 0])
+    x_bal, y_bal = engineer.apply_smote_balance(x, y)
+    assert len(x_bal) >= 3
+    assert y_bal.nunique() == 2
+
+
+@patch("src.procesamiento.features.SMOTE")
+@patch("src.procesamiento.features.log_event")
+def test_smote_balance_falls_back_on_smote_error(mock_log: MagicMock, mock_smote_cls: MagicMock) -> None:
+    mock_instance = MagicMock()
+    mock_instance.fit_resample.side_effect = RuntimeError("smote fail")
+    mock_smote_cls.return_value = mock_instance
+
+    engineer = FeatureEngineer()
+    x = pd.DataFrame({"a": [1, 2, 3, 4], "b": [2, 3, 4, 5]})
+    y = pd.Series([0, 0, 1, 1])
+    x_bal, y_bal = engineer.apply_smote_balance(x, y)
+    assert len(x_bal) == len(x)
+    mock_log.assert_called_once()

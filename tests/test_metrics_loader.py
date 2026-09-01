@@ -34,3 +34,24 @@ def test_load_ml_metrics_from_repo() -> None:
     root = Path(__file__).resolve().parent.parent
     loaded = load_ml_metrics(root)
     assert loaded["xgboost"]["recall"] >= 0.75
+
+
+def test_sanitize_replaces_invalid_floats_with_defaults() -> None:
+    from app.utils.metrics_loader import _sanitize
+
+    raw = {
+        "xgboost": {"recall": float("nan"), "auc_roc": float("inf"), "precision": 0.0},
+        "baseline": "not-a-dict",
+    }
+    cleaned = _sanitize(raw)
+    assert cleaned["xgboost"]["recall"] == 0.78
+    assert cleaned["xgboost"]["auc_roc"] == 0.83
+    assert "precision" not in cleaned["xgboost"]
+    assert "baseline" not in cleaned
+
+
+def test_sanitize_fills_missing_critical_defaults() -> None:
+    from app.utils.metrics_loader import _sanitize
+
+    cleaned = _sanitize({"xgboost": {"recall": 0.9}})
+    assert cleaned["xgboost"]["auc_roc"] == 0.83
