@@ -18,3 +18,14 @@ models/*.pkl
 reports/*.html
 .DS_Store
 *.log
+
+# Scripts de investigación / verificación manual en raíz (no son parte de la suite pytest en tests/)
+/check_estaciones.py
+/inspect_dmc_json.py
+/inspect_nasa_error.py
+/run_ingest_real.py
+/test_persistence_postgis.py
+/test_prediction_query_real.py
+/test_raw_parser.py
+/test_spatial_join.py
+/coverage_run.txt

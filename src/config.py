@@ -22,6 +22,38 @@ DMC_API_BASE_URL: str = os.getenv(
     "DMC_API_BASE_URL",
     "https://climatologia.meteochile.gob.cl",
 )
+# Contrato API DMC — getDatosRecientesEma (validado spike 30-08-2026, estación 330007).
+#
+# Reciente (últimas ~12 h, ingesta diaria en parallel_ingester._ingest_dmc):
+#   GET {DMC_API_BASE_URL}/application/servicios/getDatosRecientesEma/{codigoEstacion}
+#       ?usuario={DMC_USUARIO}&token={DMC_TOKEN}
+#
+# Histórico mensual (SAPI-28 opción B; muestra en data/raw/dmc_historico_330007_2025-02.json):
+#   GET {DMC_API_BASE_URL}/application/servicios/getDatosRecientesEma/{codigoEstacion}/{año}/{mes}
+#       ?usuario={DMC_USUARIO}&token={DMC_TOKEN}
+#   Cadencia: lecturas cada ~15 min del mes solicitado (doc. MeteoChile getDocumento/2).
+#   Nota: el campo JSON "producto" puede seguir diciendo "últimas 12 horas" aunque el
+#   payload sea histórico mensual; confiar en "momento" de cada fila, no en ese texto.
+#
+# Estructura de respuesta (misma forma reciente e histórico):
+#   raíz: organismo, pais, fechaCreacion, timezone, producto, registros (int = conteo),
+#         status, datosEstaciones{ estacion{...}, datos[...] }
+#   Cada elemento de datosEstaciones.datos[] incluye, entre otros:
+#     momento          -> "YYYY-MM-DD HH:MM:SS" (UTC según timezone de cabecera)
+#     temperatura      -> string con unidad, ej. "18.8 °C"
+#     humedadRelativa  -> string con unidad, ej. "72 %"
+#     fuerzaDelViento  -> string con unidad, ej. "8.5 kt"
+#     presionEstacion  -> string con unidad, ej. "973.7 hPas."
+#     (más campos opcionales/null: temperatura02Mts, aguaCaidaDelMinuto, etc.)
+#
+# Los valores meteorológicos vienen como strings con unidad embebida, NO como float.
+# Requieren parseo numérico antes de cualquier comparación (p. ej. regla 30-30-30:
+# T>30°C, HR<30%, viento>30 km/h). Ver src/procesamiento/raw_parser._clean_float.
+#
+# Archivos raw multi-estación (ingesta diaria) usan dict por código:
+#   {"330007": {<respuesta API>}, "330004": {...}, ...}
+# El histórico de muestra sigue el mismo envoltorio para compatibilidad con raw_parser.
+#
 # La API de climatología DMC autentica por querystring (?usuario=...&token=...),
 # no por header. Registro en: https://climatologia.meteochile.gob.cl/application/usuario/registroUsuario
 DMC_USUARIO: str = os.getenv("DMC_USUARIO", "")
@@ -61,6 +93,11 @@ DMC_ESTACIONES_VALPARAISO: list[str] = [
 ]
 
 RISK_THRESHOLDS = {"bajo": 0.33, "medio": 0.66, "alto": 1.0}
+
+# Modo de datos del dashboard (SAPI-44). Valores soportados:
+#   demo_seed         — escenario sembrado en memoria (Hito 1 / demo académica)
+#   postgis_inference — predicciones desde PostGIS + inference_engine (Sprint 2)
+SAPI_DATA_MODE: str = os.getenv("SAPI_DATA_MODE", "demo_seed").strip() or "demo_seed"
 
 
 def get_backend_database_url() -> str:
