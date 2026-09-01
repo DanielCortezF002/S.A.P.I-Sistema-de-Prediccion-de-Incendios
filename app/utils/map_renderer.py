@@ -8,9 +8,9 @@ import folium
 import geopandas as gpd
 from branca.colormap import LinearColormap
 
-from utils.cell_zones import zone_label_for_cell
+from app.utils.cell_zones import zone_label_for_cell
 
-from utils.risk_colors import RISK_COLORS, map_selection_style
+from app.utils.risk_colors import RISK_COLORS, map_selection_style
 
 # Radio visual sincronizado con BUFFER_METERS=490 del seed (celdas contiguas ~1 km²)
 CELL_RADIUS_METERS = 490

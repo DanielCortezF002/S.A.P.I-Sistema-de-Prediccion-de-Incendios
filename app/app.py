@@ -17,12 +17,12 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
-from utils.cell_zones import zone_label_for_cell
-from utils.date_helpers import resolve_available_dates, resolve_date_range
-from utils.map_renderer import render_folium_map
-from utils.metrics_loader import load_ml_metrics
-from utils.demo_seed import get_demo_gdf
-from utils.cell_table import (
+from app.utils.cell_zones import zone_label_for_cell
+from app.utils.date_helpers import resolve_available_dates, resolve_date_range
+from app.utils.map_renderer import render_folium_map
+from app.utils.metrics_loader import load_ml_metrics
+from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
+from app.utils.cell_table import (
     DEFAULT_MAP_PANEL_PCT,
     PANEL_HEIGHT_PX,
     SESSION_CELL_KEY,
@@ -31,11 +31,12 @@ from utils.cell_table import (
     set_selected_cell,
     table_widget_key,
 )
-from utils.risk_colors import (
+from app.utils.risk_colors import (
     format_cell_summary_html,
     inject_table_checkbox_colors,
     style_display_dataframe,
 )
+from src.config import SAPI_DATA_MODE
 from src.query.prediction_query import PredictionQuery
 
 QUERY_ENGINE_VERSION = "exact-date-v1"
@@ -50,7 +51,6 @@ RECALL_TARGET = 0.75
 def _cached_date_range(_build: str = APP_BUILD) -> tuple[date, date]:
     """Rango de fechas desde seed en-memoria. TTL=24h, nunca expira en demo."""
     del _build
-    from utils.demo_seed import get_all_demo_dates  # path relativo — compatible Streamlit Cloud
     dates = get_all_demo_dates()
     if dates:
         return dates[0], dates[-1]
@@ -61,7 +61,6 @@ def _cached_date_range(_build: str = APP_BUILD) -> tuple[date, date]:
 def _cached_available_dates(_build: str = APP_BUILD) -> list[date]:
     """Lista de fechas demo. TTL=24h, inmune a inactividad."""
     del _build
-    from utils.demo_seed import get_all_demo_dates  # path relativo — compatible Streamlit Cloud
     return get_all_demo_dates()
 
 
@@ -95,6 +94,37 @@ def _build_folium_map(fecha: date):
     """Construye mapa Folium desde GDF en lru_cache (sin hit a disco ni DB)."""
     gdf = get_demo_gdf(fecha)  # lru_cache permanente — 0ms tras primer acceso
     return render_folium_map(gdf, selected_cell_id=None)
+
+
+def _render_data_mode_badge() -> None:
+    """Badge visible en sidebar: fuente de datos del dashboard (SAPI-44)."""
+    if SAPI_DATA_MODE == "demo_seed":
+        st.sidebar.markdown("### 🟡 Modo Demo")
+        st.sidebar.caption(
+            "`SAPI_DATA_MODE=demo_seed` — probabilidades y niveles de riesgo provienen "
+            "del escenario sembrado (`demo_seed`), no de inferencia XGBoost en runtime."
+        )
+    elif SAPI_DATA_MODE == "postgis_inference":
+        st.sidebar.markdown("### 🟢 Inferencia PostGIS")
+        st.sidebar.caption(
+            "`SAPI_DATA_MODE=postgis_inference` — predicciones desde `predicciones_riesgo`."
+        )
+    else:
+        st.sidebar.warning(f"Modo de datos no reconocido: `{SAPI_DATA_MODE}`")
+
+
+def _render_demo_scope_banner(min_d: date, max_d: date) -> None:
+    """Banner superior: alcance demo y aclaración VP-038 / VP-049 (escenario sembrado)."""
+    st.info(
+        f"**Demo académica** (`SAPI_DATA_MODE={SAPI_DATA_MODE}`): 50 celdas del corredor "
+        f"Viña del Mar–Quilpué–Villa Alemana. Ventana **{min_d.isoformat()}** a "
+        f"**{max_d.isoformat()}** (escenario sembrado calibrado por zona). "
+        "Los valores mostrados **no** son salida del modelo en tiempo real. "
+        "En particular, **VP-038** y **VP-049** el día **2025-02-15** (riesgo alto y regla "
+        "30-30-30 activa) son un **escenario sembrado** para la presentación — no predicción "
+        "del XGBoost en runtime. Arquitectura lista para DMC/CONAF en producción. "
+        "No sustituye alertas oficiales CONAF/SENAPRED."
+    )
 
 
 def _render_sidebar_ml_panel() -> None:
@@ -249,6 +279,14 @@ class SapiDashboard:
                     "Nota: seed zonal demo (no alerta oficial CONAF/SENAPRED).",
                 ]
             )
+        lines.extend(
+            [
+                "",
+                "---",
+                "data_source=demo_seed",
+                f"SAPI_DATA_MODE={SAPI_DATA_MODE}",
+            ]
+        )
         return "\n".join(lines).encode("utf-8")
 
 
@@ -282,6 +320,7 @@ def main() -> None:
 
     st.sidebar.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
     st.sidebar.caption(f"Datos disponibles: {min_d} → {max_d}")
+    _render_data_mode_badge()
     _render_sidebar_ml_panel()
 
     st.sidebar.markdown("---")
@@ -303,12 +342,7 @@ def main() -> None:
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
-    st.info(
-        "Demo académica: 50 celdas del corredor Viña del Mar–Quilpué–Villa Alemana. "
-        f"Ventana demo **{min_d.isoformat()}** a **{max_d.isoformat()}** (seed zonal calibrado). "
-        "Datos sintéticos multi-día; arquitectura lista para DMC/CONAF en producción. "
-        "No sustituye alertas oficiales CONAF/SENAPRED."
-    )
+    _render_demo_scope_banner(min_d, max_d)
 
     # ── Carga de datos: seed in-memory (lru_cached, sin latencia) ──
     gdf = get_demo_gdf(selected_date)

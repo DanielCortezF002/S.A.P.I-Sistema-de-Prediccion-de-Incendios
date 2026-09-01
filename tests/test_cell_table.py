@@ -32,6 +32,24 @@ def test_build_display_dataframe_columns():
     assert "zona" in df.columns
 
 
+def test_build_display_dataframe_formats_invalid_regla_value() -> None:
+    gdf = gpd.GeoDataFrame(
+        {
+            "cell_id": ["VP-001"],
+            "probabilidad": [0.5],
+            "nivel_riesgo": ["medio"],
+            "temperatura": [20.0],
+            "humedad_relativa": [50.0],
+            "velocidad_viento": [10.0],
+            "regla_30_30_30": ["invalido"],
+        },
+        geometry=[Point(-71.58, -33.05)],
+        crs="EPSG:4326",
+    )
+    df = build_display_dataframe(gdf)
+    assert df.iloc[0]["regla 30-30-30"] == "invalido"
+
+
 def test_cell_id_from_tooltip():
     valid = {"VP-038", "VP-049"}
     output = {"last_object_clicked_tooltip": "VP-038"}

@@ -10,7 +10,7 @@ import geopandas as gpd
 import pandas as pd
 import streamlit as st
 
-from utils.cell_zones import zone_label_for_cell
+from app.utils.cell_zones import zone_label_for_cell
 
 # Orden para nivel_riesgo en la tabla
 _NIVEL_ORDER = {"bajo": 0, "medio": 1, "alto": 2}
@@ -130,7 +130,7 @@ def cell_id_from_folium_output(
 
     clicked = output.get("last_object_clicked")
     if gdf is not None and clicked and "lat" in clicked and "lng" in clicked:
-        from utils.map_renderer import _cell_center
+        from app.utils.map_renderer import _cell_center
 
         click_lat = float(clicked["lat"])
         click_lon = float(clicked["lng"])
