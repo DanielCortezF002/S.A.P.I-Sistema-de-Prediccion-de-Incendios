@@ -12,11 +12,11 @@ S.A.P.I. es una plataforma de **apoyo a la decisión preventiva** que:
 2. Estima **probabilidad de ignición** por celda territorial (~1 km²).
 3. Visualiza el riesgo en un **mapa interactivo** antes de que ocurra un foco visible.
 
-En **esta demo académica**:
+En **esta demo académica** (`SAPI_DATA_MODE=demo_seed` por defecto en [`src/config.py`](../src/config.py)):
 
-- El mapa lee predicciones ya guardadas en **PostgreSQL + PostGIS** (no ejecuta ML en el navegador).
-- Los datos del dashboard provienen de un **seed sintético multi-fecha** (7 días × 50 celdas).
-- El modelo XGBoost está entrenado y documentado (`reports/metrics.json`), pero **las celdas del mapa cloud/local usan el seed SQL**, no una corrida en vivo del modelo.
+- El mapa lee el **escenario sembrado en memoria** (`demo_seed` vía `get_demo_gdf`), no ejecuta ML en el navegador.
+- Los datos del dashboard son un **seed sintético multi-fecha** (7 días × 50 celdas), calibrado por zona climática.
+- El modelo XGBoost está entrenado y documentado (`reports/metrics.json`); las celdas del mapa **no** son salida del modelo en runtime. En particular, **VP-038** y **VP-049** el **2025-02-15** son escenario sembrado para la presentación.
 
 **No sustituye** alertas oficiales CONAF/SENAPRED ni el Botón Rojo.
 
@@ -99,40 +99,38 @@ Regla blindada por `tests/test_architecture.py`: `app/` **no puede** importar in
 
 ## 4. Flujo exacto de una consulta en el dashboard
 
-### Paso a paso (usuario cambia fecha)
+> **Runtime Hito 1:** `SAPI_DATA_MODE=demo_seed` (default). El flujo PostGIS descrito al final aplica solo con `postgis_inference` (Sprint 2).
 
-1. **Inicio** — `main()` en `app/app.py` crea `SapiDashboard` y `PredictionQuery()`.
+### Paso a paso (usuario cambia fecha) — modo `demo_seed`
 
-2. **Rango de fechas** — `_cached_date_range()` llama a `resolve_date_range()`:
-   - Intenta `PredictionQuery.get_available_date_range()` → SQL `MIN(fecha)`, `MAX(fecha)` en `predicciones_riesgo`.
-   - Si falla la BD: fallback **2025-02-09** … **2025-02-15**.
+1. **Inicio** — `main()` en `app/app.py` crea `SapiDashboard` (incluye `PredictionQuery()` para compatibilidad futura, pero **no lo usa** para cargar el mapa en demo).
 
-3. **Lista de días** — `_cached_available_dates()` devuelve fechas distintas con datos o las 7 fechas demo.
+2. **Rango de fechas** — `_cached_date_range()` lee `get_all_demo_dates()` del seed en memoria → **2025-02-09** … **2025-02-15**.
 
-4. **Selector** — Sidebar:
-   - **Slider** `select_slider` sobre fechas disponibles.
-   - **Calendario** `date_input` acotado al rango.
-   - Si el calendario elige un día sin filas, se usa el valor del slider.
+3. **Lista de días** — `_cached_available_dates()` devuelve las 7 fechas del seed demo.
 
-5. **Consulta del mapa** — `query.get_spatial_risk_map(selected_date)`:
-   - SQL (`exact-date-v1`): `WHERE p.fecha = :fecha` (fecha **exacta**, no “último snapshot ≤ fecha”).
-   - `LIMIT GRID_MAX_CELLS` (50).
-   - Retorna `GeoDataFrame` EPSG:4326 con geometría circular desde `geom`.
+4. **Selector** — Sidebar: slider + calendario acotado al rango demo.
 
-6. **Error de red/BD** — `try/except` muestra error y llama `get_contingency_cache()` (último estado por celda en ventana desde `MIN(fecha)` del seed).
+5. **Carga del mapa** — `get_demo_gdf(selected_date)` (lru_cache en RAM). **No** hay SQL ni PostGIS en este paso.
 
-7. **KPIs y banner** — Conteos `bajo` / `medio` / `alto`, probabilidad máxima, regla 30-30-30.
+6. **KPIs y banner** — Conteos `bajo` / `medio` / `alto`, probabilidad máxima, regla 30-30-30. Banner azul (`_render_demo_scope_banner`) indica `SAPI_DATA_MODE`, ventana demo y aclara que **VP-038** / **VP-049** el 15-feb son **escenario sembrado**, no predicción XGBoost en runtime. Badge sidebar (`_render_data_mode_badge`) declara fuente del mapa.
 
-8. **Mapa** — `render_folium_map(gdf)`:
-   - Un `folium.Circle` por celda, radio **564 m** (≈ 1 km²).
+7. **Mapa** — `render_folium_map(gdf)`:
+   - Un `folium.Circle` por celda, radio **490 m** (≈ 1 km²).
    - Color por `nivel_riesgo`: verde / amarillo / rojo.
    - Popup: celda, zona climática, meteo, regla.
 
-9. **Tabla** — 50 filas, columna `#` 1–50, `zona_climatica` derivada de `cell_id`.
+8. **Tabla** — 50 filas, columna `#` 1–50, `zona_climatica` derivada de `cell_id`.
 
-10. **Reporte TXT** — Bytes con fecha, build, métricas ML y conteos por nivel.
+9. **Reporte TXT** — Bytes con fecha, build, métricas ML, conteos por nivel y footer `data_source=demo_seed` + `SAPI_DATA_MODE`.
 
-11. **Logs** — `get_observability_logs(20)` desde `observability_logs`.
+10. **Logs** — En demo: tabla vacía con mensaje “Sin conexión a PostGIS activa”.
+
+### Flujo alternativo — modo `postgis_inference` (Sprint 2)
+
+1. `PredictionQuery.get_available_date_range()` → SQL `MIN(fecha)`, `MAX(fecha)` en `predicciones_riesgo`.
+2. `query.get_spatial_risk_map(selected_date)` con contrato `exact-date-v1` (`WHERE p.fecha = :fecha`, `LIMIT GRID_MAX_CELLS`).
+3. Fallback `get_contingency_cache()` si falla la BD.
 
 ### Caché Streamlit
 
@@ -183,9 +181,9 @@ Los círculos en el mapa **se superponen** porque el diámetro (~1,1 km) es mayo
 |-------|-----------|-------|----------------|
 | 2025-02-09 | Perfil suave, costa húmeda | 0 | 0 |
 | 2025-02-10 … 14 | Calentamiento / sequedad progresiva hacia el este | 0 | 0 |
-| **2025-02-15** | Día crítico demo | **2** | **2** (VP-038, VP-049) |
+| **2025-02-15** | Día crítico demo (escenario sembrado) | **2** | **2** (VP-038, VP-049) |
 
-Meteo por día: función `_interp()` con progresión `_day_progress()`. Solo el día pico fuerza T=32.5 °C, HR=24 %, viento=34 km/h en celdas 38 y 49.
+Meteo por día: función `_interp()` con progresión `_day_progress()`. Solo el día pico fuerza T=32.5 °C, HR=24 %, viento=34 km/h en celdas 38 y 49. Esos dos puntos rojos **no** provienen de una corrida del XGBoost en el dashboard; están definidos en el seed para ilustrar la regla 30-30-30.
 
 ### 5.4 Probabilidad y nivel de riesgo
 
@@ -227,7 +225,8 @@ Mensaje para defensa: *“Métricas ML verificables en offline; serving layer de
 | Elemento | Función |
 |----------|---------|
 | Build / Query | Versión deploy (`demo-50cells-v8-professional`, `exact-date-v1`) |
-| Datos disponibles | Rango min → max desde PostGIS |
+| Datos disponibles | Rango min → max del seed demo |
+| **Modo Demo** (badge) | `SAPI_DATA_MODE=demo_seed` — fuente escenario sembrado, no inferencia en runtime |
 | Modelo ML | Recall, AUC, RF baseline |
 | Recorrido demo | Slider de 7 fechas |
 | Calendario | Selección alternativa |
@@ -236,13 +235,13 @@ Mensaje para defensa: *“Métricas ML verificables en offline; serving layer de
 
 | Bloque | Contenido |
 |--------|-----------|
-| Banner azul | Alcance demo, ventana de fechas, disclaimer institucional |
+| Banner azul | Alcance demo, `SAPI_DATA_MODE`, ventana de fechas, VP-038/VP-049 como escenario sembrado, disclaimer institucional |
 | Banner verde/amarillo | Resumen del día consultado |
 | 5 métricas | Celdas, bajo, medio, alto, prob. máxima |
 | Mapa Folium | 50 círculos, leyenda oeste→este |
 | Tabla | Detalle auditables VP-001…050 |
 | Regla 30-30-30 | Texto explicativo |
-| Descarga TXT | Reporte ejecutivo |
+| Descarga TXT | Reporte ejecutivo con footer `data_source=demo_seed` |
 | Logs | Auditoría `observability_logs` |
 
 ---

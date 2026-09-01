@@ -69,14 +69,15 @@ Abrir `http://localhost:8501`.
 | Elemento | Significado |
 |----------|-------------|
 | **Build** | Versión del prototipo demo (ej. `demo-50cells-v8-professional`). |
-| **Query** | Motor de consulta PostGIS (`exact-date-v1`). |
+| **Query** | Motor de consulta PostGIS (`exact-date-v1`) — activo cuando `SAPI_DATA_MODE=postgis_inference`. |
+| **Modo Demo** (badge) | `SAPI_DATA_MODE=demo_seed`: probabilidades y niveles provienen del **escenario sembrado**, no de inferencia XGBoost en runtime. |
 | **Métricas ML** | Panel sidebar: Recall XGBoost 0.78, AUC 0.83 (informe). |
 | **Recorrido demo** | Slider de 7 días + calendario acotado al rango PostGIS. |
 | **Fecha de consulta** | Día exacto con predicciones cargadas. Rango demo: **2025-02-09** a **2025-02-15**. Default: **2025-02-15** (último día). |
 
 ### 4.2 Banners informativos
 
-- **Banner azul superior:** aclara demo académica, 50 celdas, ventana **2025-02-09 → 2025-02-15**, datos sintéticos calibrados.
+- **Banner azul superior:** aclara demo académica, `SAPI_DATA_MODE=demo_seed`, 50 celdas, ventana **2025-02-09 → 2025-02-15**, datos sintéticos calibrados. **Importante:** **VP-038** y **VP-049** el **2025-02-15** son un **escenario sembrado** para la presentación — **no** salida del modelo XGBoost en tiempo real.
 - **Banner de consulta:** resume celdas cargadas, conteos bajo/medio/alto y regla 30-30-30 para la **fecha exacta** seleccionada.
 
 ### 4.3 Indicadores (KPIs)
@@ -122,6 +123,7 @@ En demo, solo **VP-038** y **VP-049** cumplen las tres (32.5 °C, 24 %, 34 km/h)
 ### 4.7 Descarga de reporte
 
 - Botón **“Descargar reporte (TXT)”**: resumen ejecutivo (fecha, conteo por nivel, probabilidad máxima).
+- Pie del archivo: `data_source=demo_seed` y `SAPI_DATA_MODE=demo_seed` (trazabilidad de fuente).
 - Útil para simular envío a comité de emergencia cuando no hay conectividad al dashboard.
 
 ### 4.8 Logs de observabilidad
@@ -143,7 +145,7 @@ Enfatizar: **la UI no ejecuta el modelo en caliente**; lee predicciones ya guard
 
 ### Minuto 4–8 — Demo en vivo (cambio de fecha)
 
-1. Abrir dashboard; señalar banner de demo académica y rango de fechas.
+1. Abrir dashboard; señalar badge **Modo Demo** y banner de demo académica (VP-038/VP-049 = escenario sembrado).
 2. Fecha: **2025-02-09** → mapa mayormente verde/amarillo, **0 rojos**, KPI alto = 0.
 3. Cambiar a **2025-02-15** → mapa evoluciona; **2 rojos** (VP-038, VP-049), regla activa.
 4. Verificar KPIs: **50 celdas**, **2 alto**, conteos bajo/medio coherentes.
@@ -186,7 +188,8 @@ Tener preparadas las respuestas de la sección 7.
 | ¿Cubre toda la región? | No. **50 celdas** en corredor crítico. El informe proyecta cobertura completa. |
 | ¿Sustituye al Botón Rojo? | No. Lo **complementa** con resolución fina y probabilidad por celda. |
 | ¿Quién decide el despacho? | Siempre el **analista institucional** (human-in-the-loop). |
-| ¿Por qué solo 2 celdas rojas? | Por diseño del seed corregido: solo 2 cumplen regla 30-30-30; el resto refleja microclimas costa/urbano. |
+| ¿Por qué solo 2 celdas rojas? | Por diseño del **escenario sembrado**: solo VP-038 y VP-049 cumplen regla 30-30-30 el 15-feb; no es predicción del XGBoost en runtime. |
+| ¿VP-049 es predicción del modelo? | **No.** Es celda del seed demo calibrada para ilustrar riesgo alto + regla activa en precordillera. |
 | ¿Qué pasa si falla una API? | En producción: degradación con último snapshot válido (escenario 2 del informe). |
 | ¿Cómo se validó el modelo? | RF baseline + XGBoost, SMOTE en train, validación temporal; Recall XGBoost 0.78. |
 
@@ -209,11 +212,12 @@ Detalle técnico: [`docs/alcance-prototipo.md`](alcance-prototipo.md).
 - [ ] Streamlit Cloud en **Python 3.11** y app en estado *Running*.
 - [ ] URL del dashboard abierta en pestaña de respaldo.
 - [ ] Fechas probadas: **2025-02-09** (0 rojos) y **2025-02-15** (2 rojos).
+- [ ] Badge **Modo Demo** visible (`SAPI_DATA_MODE=demo_seed`).
 - [ ] Build `demo-50cells-v8-professional`, Query `exact-date-v1`.
 - [ ] Panel ML sidebar visible (Recall 0.78, AUC 0.83).
 - [ ] Mapa con gradiente oeste→este y 2 rojos (VP-038, VP-049).
 - [ ] Tabla con columna # 1–50.
-- [ ] Reporte TXT descarga correctamente.
+- [ ] Reporte TXT descarga correctamente (footer `data_source=demo_seed`).
 - [ ] Diapositiva con métricas ML (Recall 0.78, AUC 0.83).
 - [ ] Frase de cierre: *“Prototipo de viabilidad técnica; arquitectura transferible a operación institucional.”*
 
