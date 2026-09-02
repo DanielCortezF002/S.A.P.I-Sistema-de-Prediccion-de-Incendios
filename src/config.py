@@ -60,6 +60,17 @@ DMC_USUARIO: str = os.getenv("DMC_USUARIO", "")
 DMC_TOKEN: str = os.getenv("DMC_TOKEN", "")
 CONAF_DATA_URL: str = os.getenv("CONAF_DATA_URL", "https://www.conaf.cl")
 
+# DEM (Copernicus GLO-30) vía OpenTopography — API_Key gratuita, ver .env.
+# Contrato: GET https://portal.opentopography.org/API/globaldem
+#   ?demtype=COP30&south=..&north=..&west=..&east=..&outputFormat=GTiff&API_Key=..
+# Verificado 2026-09-01 contra opentopography.org/developers y el código
+# fuente de bmi-topography (demtype COP30 confirmado como código válido).
+OPENTOPO_API_KEY: str = os.getenv("OPENTOPO_API_KEY", "")
+OPENTOPO_DEM_TYPE: str = os.getenv("OPENTOPO_DEM_TYPE", "COP30")
+# Límites del tier gratuito (no-académico), mismo chequeo del 2026-09-01:
+OPENTOPO_MAX_AREA_KM2 = 450
+OPENTOPO_DAILY_CALL_LIMIT = 50
+
 DATA_RAW_DIR: Path = BASE_DIR / os.getenv("DATA_RAW_DIR", "data/raw")
 DATA_PROCESSED_DIR: Path = BASE_DIR / os.getenv("DATA_PROCESSED_DIR", "data/processed")
 DATA_PREDICTIONS_DIR: Path = BASE_DIR / os.getenv("DATA_PREDICTIONS_DIR", "data/predictions")
@@ -75,6 +86,25 @@ VALPARAISO_BBOX = {
     "max_lon": -70.25,
     "min_lat": -33.65,
     "max_lat": -32.00,
+}
+
+# Bbox acotado exclusivo para el DEM (Copernicus GLO-30 / COP30).
+# NO reusar VALPARAISO_BBOX de arriba: cubre ~25.500 km², muy por encima
+# del límite de OPENTOPO_MAX_AREA_KM2 (450 km²) por llamada del tier
+# gratuito de OpenTopography para datasets de 30m — la llamada fallaría.
+# Este bbox cubre el corredor de interfaz urbano-forestal del portafolio
+# (Viña del Mar, Quilpué, Villa Alemana) con margen, dentro del límite:
+#   ancho ≈ 23 km × alto ≈ 17 km ≈ 390 km² (< 450 km²), una sola llamada.
+# Centros de comuna de referencia (búsqueda geográfica, 2026-09-01):
+# Viña del Mar (-33.02451, -71.55181), Villa Alemana (-33.04419, -71.37255);
+# Quilpué queda geográficamente entre ambas. No se verificó el límite
+# administrativo exacto de cada comuna, solo que sus centros y un margen
+# de ~3 km alrededor quedan cubiertos.
+VALPARAISO_DEM_BBOX = {
+    "min_lon": -71.59,
+    "max_lon": -71.34,
+    "min_lat": -33.11,
+    "max_lat": -32.96,
 }
 
 # Códigos de estación DMC confirmados contra getCatastroEstacionesGeo

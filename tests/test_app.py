@@ -138,6 +138,27 @@ def test_render_sidebar_ml_panel(mock_sidebar: MagicMock, _mock_metrics: MagicMo
     assert mock_sidebar.metric.call_count == 3
 
 
+@patch(
+    "app.app._cached_ml_metrics",
+    return_value={"xgboost": {"recall": None, "auc_roc": None}, "baseline": {"recall": None}},
+)
+@patch("app.app.st.sidebar")
+def test_render_sidebar_ml_panel_shows_dash_when_no_real_run(
+    mock_sidebar: MagicMock, _mock_metrics: MagicMock
+) -> None:
+    """Sin corrida real (recall/auc_roc en None), el panel debe mostrar '—'
+    en vez de fabricar un número — ver hallazgo 2026-09-01 en metrics_loader.py.
+    """
+    from app.app import _render_sidebar_ml_panel
+
+    _render_sidebar_ml_panel()
+    mock_sidebar.markdown.assert_called_once()
+    assert mock_sidebar.metric.call_count == 3
+
+    displayed_values = [call.args[1] for call in mock_sidebar.metric.call_args_list]
+    assert displayed_values == ["—", "—", "—"]
+
+
 @patch("app.app.st.sidebar")
 def test_pick_demo_date_uses_calendar_when_available(mock_sidebar: MagicMock) -> None:
     from app.app import _pick_demo_date

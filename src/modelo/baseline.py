@@ -30,6 +30,12 @@ class BaselineModel:
         "regla_30_30_30",
         "lag_temp_24h",
         "lag_temp_48h",
+        # orientacion (grados brújula) no va cruda: es un ángulo circular
+        # (350°≈10°, pero numéricamente opuestos) — FeatureEngineer la
+        # descompone en seno/coseno antes de llegar acá (ver
+        # features.py::_encode_orientacion_circular).
+        "orientacion_sin",
+        "orientacion_cos",
     ]
 
     def __init__(self, n_estimators: int = 100, random_state: int = 42) -> None:

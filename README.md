@@ -98,10 +98,14 @@ El sistema integra únicamente fuentes públicas y de acceso abierto — sin dep
 
 El clasificador XGBoost supera consistentemente al modelo baseline Random Forest, priorizando la minimización de falsos negativos:
 
+> ⚠️ **Nota (2026-09-01):** los valores 71% / 78% / 0.83 citados históricamente acá son valores de mock de `tests/test_pipeline.py`, copiados a `reports/metrics.json` en el mismo commit (`30c8a26`, 20-jun-2026) que agregó ese código — **nunca hubo una corrida real del pipeline detrás**, y el archivo nunca se regeneró desde entonces (confirmado por historial de git). Una corrida real el 2026-09-01 con datos de invierno dio `recall=0.0` / `auc-roc=nan`, correctamente, por ausencia real de casos positivos en esa ventana de datos. Falta una corrida con datos de temporada de incendios (verano) para tener una métrica real. La tabla de abajo deliberadamente **no** compara esos números fabricados contra el objetivo.
+
 | Métrica | Baseline (Random Forest) | **Modelo Final (XGBoost)** | Objetivo |
 |---------|--------------------------|---------------------------|----------|
-| Recall (Sensibilidad) | 71% | **78%** ✅ | ≥ 75% |
-| AUC-ROC | — (no calculado en el baseline) | **0.83** ✅ | ≥ 0.80 |
+| Recall (Sensibilidad) | pendiente de corrida real¹ | pendiente de corrida real¹ | ≥ 75% |
+| AUC-ROC | — (no calculado en el baseline) | pendiente de corrida real¹ | ≥ 0.80 |
+
+¹ Valor histórico sin corrida real detrás (71% / 78% / 0.83) — ver nota arriba. No se muestra en esta tabla para que no se lea como comparable contra el objetivo.
 
 > **¿Por qué priorizar Recall?** En contextos de emergencia, un falso negativo (zona de alto riesgo no alertada) tiene consecuencias humanas irreversibles. El sistema está calibrado para que ningún cuadrante crítico quede sin alertar.
 

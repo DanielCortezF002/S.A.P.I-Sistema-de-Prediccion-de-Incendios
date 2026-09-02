@@ -7,8 +7,10 @@ Documento de cierre para defensa de titulación. Resume qué demostrar, cómo va
 | OE | Criterio | Evidencia |
 |----|----------|-----------|
 | **OE1** Pipeline ETL + PostGIS SSoT | Ingesta, procesamiento, persistencia espacial | `src/ingesta/`, `src/procesamiento/`, Docker Compose, tablas `staging_*` y `predicciones_riesgo` |
-| **OE2** ML con Recall ≥ 75% | RF + XGBoost + SMOTE, validación temporal | `reports/metrics.json` (Recall XGBoost **0.78**, AUC **0.83**) |
+| **OE2** ML con Recall ≥ 75% | RF + XGBoost + SMOTE, validación temporal | ⚠️ **Pendiente de corrida real** — ver nota debajo |
 | **OE3** Dashboard Streamlit + Folium | UI desacoplada, caché, mapa interactivo | Streamlit Cloud, `app/app.py`, build `demo-50cells-v8-professional` |
+
+> **Nota sobre OE2 (2026-09-01):** los valores históricos citados antes acá (Recall 0.78, AUC 0.83) resultaron ser valores de mock de `tests/test_pipeline.py` copiados a `reports/metrics.json` en el commit `30c8a26` (20-jun-2026) — nunca hubo una corrida real del pipeline detrás, y el archivo nunca se regeneró desde entonces (confirmado por historial de git). El pipeline de entrenamiento (RF + XGBoost + SMOTE, validación temporal) está implementado y funciona — una corrida real el 2026-09-01 con datos de invierno dio `recall=0.0`/`auc-roc=nan`, correctamente, por ausencia real de casos positivos en esa ventana. Falta una corrida con datos de temporada de incendios (verano) para tener una métrica real que respalde este objetivo.
 
 ## Demo multi-fecha (2025-02-09 → 2025-02-15)
 

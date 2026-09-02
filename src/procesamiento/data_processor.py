@@ -20,6 +20,8 @@ from src.config import (
     VALPARAISO_BBOX,
 )
 from src.db import get_backend_connection, log_event
+from src.procesamiento.dem_features import sample_grid_topography
+from src.procesamiento.raw_parser import parse_dmc_json
 
 CRITICAL_VARIABLES = [
     "temperatura",
@@ -106,6 +108,10 @@ class DataProcessor:
         Returns:
             DataFrame limpio con Z-Score aplicado a variables numéricas.
         """
+        # "orientacion" (aspect) queda fuera a propósito: es un ángulo circular
+        # (0-360°, brújula) y un z-score sobre el valor crudo en grados trata
+        # 359° y 1° como extremos opuestos en vez de valores casi idénticos —
+        # el mismo problema que motivó la media circular en dem_features.py.
         numeric_cols = [
             "temperatura",
             "humedad_relativa",
@@ -164,17 +170,29 @@ class DataProcessor:
         return pd.DataFrame(records)
 
     def _load_meteo(self) -> pd.DataFrame:
-        """Agrega telemetría meteorológica por celda."""
+        """Agrega telemetría meteorológica por celda.
+
+        Usa parse_dmc_json (raw_parser.py) para leer el formato real de
+        dmc_meteo_*.json — un dict por código de estación, con las lecturas
+        anidadas en datosEstaciones.datos[] y valores como string con unidad
+        embebida (ver contrato documentado en src/config.py). La versión
+        anterior asumía top-level {"temperatura": <float>, ...} plano, que
+        no es la forma real de la respuesta de DMC — como esa clave nunca
+        existía en la raíz, cada fila caía siempre al default hardcodeado
+        (25.0/40.0/15.0) sin ningún error visible, dejando la telemetría
+        con varianza cero sin importar los datos reales descargados.
+        """
         records: list[dict] = []
         for path in self.raw_dir.glob("dmc_meteo_*.json"):
-            data = json.loads(path.read_text(encoding="utf-8"))
-            items = data if isinstance(data, list) else [data]
-            for item in items:
+            parsed = parse_dmc_json(path)
+            if parsed.empty:
+                continue
+            for _, row in parsed.iterrows():
                 records.append(
                     {
-                        "temperatura": float(item.get("temperatura", 25.0)),
-                        "humedad_relativa": float(item.get("humedad_relativa", 40.0)),
-                        "velocidad_viento": float(item.get("velocidad_viento", 15.0)),
+                        "temperatura": row["temperatura"],
+                        "humedad_relativa": row["humedad_relativa"],
+                        "velocidad_viento": row["velocidad_viento_kmh"],
                     }
                 )
         if not records:
@@ -228,11 +246,47 @@ class DataProcessor:
         return pd.DataFrame(cells)
 
     def _add_topography(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Añade variables topográficas estáticas (DEM simplificado para demo)."""
+        """Añade altitud/pendiente/orientación reales desde el DEM procesado.
+
+        No dispara descargas ni reprocesa el DEM acá — solo lee los GeoTIFF
+        ya generados en data/processed/dem_terrain/ (ver dem_ingester.py +
+        dem_terrain.py, corridos aparte, igual que el backfill de FIRMS es
+        un paso explícito separado de la ingesta diaria). Si todavía no
+        existen, cae a la aproximación sintética anterior — pero lo deja
+        logueado como degradación (R-03), no como error silencioso.
+        """
         result = df.copy()
-        result["altitud"] = np.linspace(50, 800, len(result)).astype("float32")
+        terrain_dir = self.processed_dir / "dem_terrain"
+        dem_matches = sorted(terrain_dir.glob("*_utm19s.tif"))
+        slope_matches = sorted(terrain_dir.glob("*_slope.tif"))
+        aspect_matches = sorted(terrain_dir.glob("*_aspect.tif"))
+
+        if dem_matches and slope_matches and aspect_matches:
+            topo = sample_grid_topography(
+                result, dem_matches[0], slope_matches[0], aspect_matches[0]
+            )
+            result["altitud"] = topo["altitud"]
+            result["pendiente"] = topo["pendiente"]
+            result["orientacion"] = topo["orientacion"]
+            log_event(
+                "DataProcessor",
+                "topography_real",
+                f"DEM real: {dem_matches[0].name}",
+            )
+        else:
+            log_event(
+                "DataProcessor",
+                "topography_fallback",
+                "Sin DEM procesado en data/processed/dem_terrain/ — usando aproximación "
+                "sintética. Correr DemIngester + DemTerrainProcessor antes de process_all() "
+                "para datos reales.",
+                "WARN",
+            )
+            result["altitud"] = np.linspace(50, 800, len(result)).astype("float32")
+            rng = np.random.default_rng(42)
+            result["pendiente"] = rng.uniform(5, 35, len(result)).astype("float32")
+
         rng = np.random.default_rng(42)
-        result["pendiente"] = rng.uniform(5, 35, len(result)).astype("float32")
         result["ndvi"] = rng.uniform(0.2, 0.8, len(result)).astype("float32")
         return result
 
@@ -275,10 +329,10 @@ class DataProcessor:
                         """
                         INSERT INTO matriz_features (
                             cell_id, fecha, temperatura, humedad_relativa, velocidad_viento,
-                            altitud, pendiente, ndvi, geom
+                            altitud, pendiente, orientacion, ndvi, geom
                         ) VALUES (
                             :cell_id, CURRENT_DATE, :temp, :hum, :wind,
-                            :alt, :pend, :ndvi, ST_GeomFromText(:wkt, 4326)
+                            :alt, :pend, :orient, :ndvi, ST_GeomFromText(:wkt, 4326)
                         )
                         ON CONFLICT (cell_id, fecha) DO UPDATE SET
                             temperatura = EXCLUDED.temperatura,
@@ -293,6 +347,10 @@ class DataProcessor:
                         "wind": row.get("velocidad_viento"),
                         "alt": row.get("altitud"),
                         "pend": row.get("pendiente"),
+                        # Ausente si _add_topography cayó al fallback sintético
+                        # (esa rama no genera la columna) -> None -> NULL,
+                        # coherente con orientacion siendo nullable.
+                        "orient": row.get("orientacion"),
                         "ndvi": row.get("ndvi"),
                         "wkt": wkt,
                     },

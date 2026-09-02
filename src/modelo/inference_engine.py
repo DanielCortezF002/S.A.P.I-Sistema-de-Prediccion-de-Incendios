@@ -65,7 +65,7 @@ def run_daily_inference(fecha: str | date) -> gpd.GeoDataFrame:
     query = text(
         """
         SELECT cell_id, fecha, temperatura, humedad_relativa, velocidad_viento,
-               regla_30_30_30, altitud, pendiente, ndvi,
+               regla_30_30_30, altitud, pendiente, orientacion, ndvi,
                lag_temp_24h, lag_temp_48h, geom
         FROM matriz_features
         WHERE fecha = :fecha

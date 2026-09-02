@@ -30,13 +30,23 @@ class FeatureEngineer:
         result = df.copy()
         result = self._encode_rule_30_30_30(result)
         result = self._add_lag_features(result)
+        result = self._encode_orientacion_circular(result)
         result = self._optimize_dtypes(result)
         log_event("FeatureEngineer", "features_computed", f"rows={len(result)}")
         return result
 
     def _encode_rule_30_30_30(self, df: pd.DataFrame) -> pd.DataFrame:
-        """Codifica regla meteorológica crítica como indicador binario."""
+        """Codifica regla meteorológica crítica como indicador binario.
+
+        Si falta alguna de las tres variables (no solo si viene en NULL, que
+        ya maneja bien la comparación con NaN), degrada a 0 en vez de fallar
+        con KeyError — mismo criterio que _add_lag_features.
+        """
         result = df.copy()
+        required = {"temperatura", "humedad_relativa", "velocidad_viento"}
+        if not required.issubset(result.columns):
+            result["regla_30_30_30"] = np.int8(0)
+            return result
         result["regla_30_30_30"] = (
             (result["temperatura"] > self.TEMP_THRESHOLD)
             & (result["humedad_relativa"] < self.HUMIDITY_THRESHOLD)
@@ -56,6 +66,25 @@ class FeatureEngineer:
             )
         return result
 
+    def _encode_orientacion_circular(self, df: pd.DataFrame) -> pd.DataFrame:
+        """Codifica orientación de ladera (grados, 0-360) como seno/coseno.
+
+        `orientacion` es un ángulo circular (mismo motivo que la media
+        circular en dem_features.py): 350° y 10° son casi el mismo rumbo
+        físico pero numéricamente están en extremos opuestos. Pasarlo crudo
+        en grados a un modelo de árboles no lo rompe tan feo como una media
+        aritmética, pero sigue siendo subóptimo — la práctica estándar en ML
+        para variables cíclicas (hora del día, dirección del viento) es
+        descomponerla en seno/coseno, que sí son continuos alrededor de la
+        vuelta completa.
+        """
+        result = df.copy()
+        if "orientacion" in result.columns:
+            radians = np.radians(result["orientacion"])
+            result["orientacion_sin"] = np.sin(radians)
+            result["orientacion_cos"] = np.cos(radians)
+        return result
+
     def _optimize_dtypes(self, df: pd.DataFrame) -> pd.DataFrame:
         """Reduce consumo de memoria con tipos compactos."""
         result = df.copy()
@@ -68,6 +97,8 @@ class FeatureEngineer:
             "ndvi",
             "lag_temp_24h",
             "lag_temp_48h",
+            "orientacion_sin",
+            "orientacion_cos",
         ]
         for col in float_cols:
             if col in result.columns:

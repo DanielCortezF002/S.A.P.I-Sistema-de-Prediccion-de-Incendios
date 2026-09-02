@@ -128,21 +128,29 @@ def _render_demo_scope_banner(min_d: date, max_d: date) -> None:
 
 
 def _render_sidebar_ml_panel() -> None:
-    """Panel de métricas del informe (validación temporal)."""
+    """Panel de métricas del informe (validación temporal).
+
+    Sin una corrida real detrás (ver metrics_loader.py, hallazgo
+    2026-09-01), muestra "—" en vez de un número fabricado.
+    """
     metrics = _cached_ml_metrics()
     xgb = metrics.get("xgboost", {})
     rf = metrics.get("baseline", {})
-    recall = float(xgb.get("recall", 0.78))
-    auc = float(xgb.get("auc_roc", 0.83))
+    recall = xgb.get("recall")
+    auc = xgb.get("auc_roc")
+    rf_recall = rf.get("recall")
     st.sidebar.markdown("### Modelo ML (informe)")
-    st.sidebar.metric(
-        "Recall XGBoost",
-        f"{recall:.0%}",
-        delta=f"meta ≥{RECALL_TARGET:.0%}",
-        delta_color="normal" if recall >= RECALL_TARGET else "inverse",
-    )
-    st.sidebar.metric("AUC-ROC", f"{auc:.2f}")
-    st.sidebar.metric("Recall RF baseline", f"{float(rf.get('recall', 0.71)):.0%}")
+    if recall is None:
+        st.sidebar.metric("Recall XGBoost", "—", delta="sin corrida real todavía")
+    else:
+        st.sidebar.metric(
+            "Recall XGBoost",
+            f"{recall:.0%}",
+            delta=f"meta ≥{RECALL_TARGET:.0%}",
+            delta_color="normal" if recall >= RECALL_TARGET else "inverse",
+        )
+    st.sidebar.metric("AUC-ROC", f"{auc:.2f}" if auc is not None else "—")
+    st.sidebar.metric("Recall RF baseline", f"{rf_recall:.0%}" if rf_recall is not None else "—")
     st.sidebar.caption("Validación temporal · SMOTE en train · ver `reports/metrics.json`")
 
 
@@ -252,6 +260,8 @@ class SapiDashboard:
         gdf = gdf_precargado if gdf_precargado is not None else get_demo_gdf(fecha)
         ml = metrics or _cached_ml_metrics()
         xgb = ml.get("xgboost", {})
+        recall_val = xgb.get("recall")
+        auc_val = xgb.get("auc_roc")
         lines = [
             "S.A.P.I. - Reporte de Riesgo de Ignición",
             f"Fecha consultada: {fecha.isoformat()}",
@@ -259,8 +269,8 @@ class SapiDashboard:
             f"Celdas analizadas: {len(gdf)}",
             "",
             "Métricas ML (validación temporal):",
-            f"  Recall XGBoost: {float(xgb.get('recall', 0.78)):.0%}",
-            f"  AUC-ROC: {float(xgb.get('auc_roc', 0.83)):.2f}",
+            f"  Recall XGBoost: {f'{recall_val:.0%}' if recall_val is not None else 'sin corrida real todavía'}",
+            f"  AUC-ROC: {f'{auc_val:.2f}' if auc_val is not None else 'sin corrida real todavía'}",
             "",
         ]
         if not gdf.empty:
