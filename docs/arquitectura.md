@@ -45,6 +45,5 @@ flowchart LR
 
 ## ML (prototipo)
 
-- Baseline: Random Forest (~71% Recall)
-- Producción demo: XGBoost (Recall ≥ 75%, AUC ≥ 0.80)
-- SMOTE solo en train split temporal
+- Baseline: Random Forest; producción demo: XGBoost + SMOTE (train split temporal) — pipeline implementado y funcional
+- Recall/AUC-ROC de producción: **sin corrida real todavía** (hallazgo de métricas fabricadas en `reports/metrics.json`, corregido en commit `c22c9a1` — ver [`docs/matriz-riesgo.md`](matriz-riesgo.md), R-ETIQUETA-01)

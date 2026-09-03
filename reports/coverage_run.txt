@@ -95,4 +95,4 @@ src\query\risk_map_query.py                  3      0   100%
 TOTAL                                     2116    337    84%
 
 Required test coverage of 80% reached. Total coverage: 84.07%
-221 passed, 1188 warnings in 230.12s (0:03:50)
+221 passed, 1188 warnings in 222.73s (0:03:42)

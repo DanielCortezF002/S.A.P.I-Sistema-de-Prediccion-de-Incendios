@@ -10,11 +10,10 @@ Este documento delimita qué demuestra el **prototipo académico** frente a la *
 | **OE2** RF + XGBoost + SMOTE, Recall ≥ 75% | [`src/modelo/baseline.py`](../src/modelo/baseline.py), [`src/modelo/optimizer.py`](../src/modelo/optimizer.py), [`reports/metrics.json`](../reports/metrics.json) |
 | **OE3** Streamlit + Folium + caché | [`app/app.py`](../app/app.py), [`app/utils/map_renderer.py`](../app/utils/map_renderer.py), `@st.cache_data` / `@st.cache_resource` |
 
-Métricas de referencia (conjunto de prueba temporal):
+Estado de métricas (02-09-2026):
 
-- Recall XGBoost: **0.78**
-- AUC-ROC: **0.83**
-- Cobertura pytest: **≥ 80%**
+- Recall XGBoost / AUC-ROC: **sin corrida real de producción todavía** — el 0.78/0.83 citado acá hasta el 01-09-2026 era un valor de mock de test copiado a `reports/metrics.json` en el commit `30c8a26`, nunca una corrida real del pipeline (hallazgo y corrección: commit `c22c9a1`). Ver [`docs/matriz-riesgo.md`](matriz-riesgo.md), R-ETIQUETA-01.
+- Cobertura pytest: **84.07%** (221 tests, corrida real 02-09-2026)
 
 ## Qué es sintético (no producción)
 
