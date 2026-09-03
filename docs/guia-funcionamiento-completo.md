@@ -209,12 +209,12 @@ El **informe** describe esas fuentes; el **prototipo** demuestra arquitectura y 
 | Aspecto | Estado en repo |
 |---------|----------------|
 | Entrenamiento | `src/modelo/baseline.py`, `optimizer.py` |
-| Métricas | `reports/metrics.json`: RF Recall 0.71, XGBoost Recall **0.78**, AUC **0.83** |
+| Métricas | `reports/metrics.json`: **sin corrida real de recall/AUC-ROC todavía** (0.71/0.78/0.83 eran mock de test en `tests/test_pipeline.py`, hallazgo y corrección en `c22c9a1`). Exploratorio R-ETIQUETA-01 (n=12, Sprint 2): percentil de riesgo 92-99 en los 3 casos sin fuga de datos, sin calibración suficiente para umbral de decisión. |
 | Validación | Temporal + SMOTE solo en train |
 | Panel UI | Sidebar lee `metrics.json` (no reentrena) |
 | Mapa cloud | Lee `predicciones_riesgo` del **seed SQL** |
 
-Mensaje para defensa: *“Métricas ML verificables en offline; serving layer desacoplada lista para recibir predicciones batch reales.”*
+Mensaje para defensa: *”Pipeline ML implementado y funcional (RF + XGBoost + SMOTE, validación temporal); métrica real de recall/AUC-ROC pendiente de una corrida en temporada de incendios (hallazgo de métricas fabricadas corregido en `c22c9a1`); serving layer desacoplada lista para recibir predicciones batch reales.”*
 
 ---
 
@@ -252,7 +252,7 @@ Mensaje para defensa: *“Métricas ML verificables en offline; serving layer de
 2. **2025-02-15** — Último día: **2 rojos** (este), regla activa, prob. máx ~97 %.
 3. Clic **VP-038** — Popup precordillera, regla activa.
 4. Tabla — Filas **#38** y **#49**, columna `regla_30_30_30 = 1`.
-5. Sidebar — Recall 0.78 ≥ meta 0.75.
+5. Sidebar — muestra "sin corrida real todavía" (no 0.78/0.83); si preguntan, mencionar el hallazgo de métricas fabricadas (`c22c9a1`) y el exploratorio R-ETIQUETA-01.
 6. Descargar reporte TXT y abrirlo.
 7. Cierre — *“Seed sintético calibrado; arquitectura PostGIS + contrato de datos listos para DMC en producción.”*
 

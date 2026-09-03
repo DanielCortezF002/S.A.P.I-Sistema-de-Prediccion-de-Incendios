@@ -7,8 +7,8 @@
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-PostGIS-336791?style=flat-square&logo=postgresql&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.32-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
 ![License](https://img.shields.io/badge/Licencia-MIT-green?style=flat-square)
-![Coverage](https://img.shields.io/badge/Cobertura_Tests-81.66%25-brightgreen?style=flat-square)
-![Tests](https://img.shields.io/badge/Tests-34_passed-brightgreen?style=flat-square)
+![Coverage](https://img.shields.io/badge/Cobertura_Tests-84.07%25-brightgreen?style=flat-square)
+![Tests](https://img.shields.io/badge/Tests-221_passed-brightgreen?style=flat-square)
 
 **Sistema de software geoespacial basado en Machine Learning para la predicción probabilística de focos de ignición forestal en la Región de Valparaíso, Chile.**
 
@@ -126,8 +126,8 @@ El riesgo técnico crítico era la latencia de renderizado cartográfico en inst
 ```
 pytest tests/ -v --cov=src --cov=app
 
-34 passed in 4.12s
-Total Test Coverage: 81.66%  ✅ (umbral mínimo: 80%)
+221 passed in 253s
+Total Test Coverage: 84.07%  ✅ (umbral mínimo: 80%) — corrida real 2026-09-02, ver reports/coverage_run.txt
 ```
 
 ---
@@ -167,7 +167,7 @@ sapi-valparaiso/
 │   ├── modelo/                 # Entrenamiento, optimización y serialización
 │   └── query/                  # Contrato de datos y abstracción PostGIS
 │
-├── tests/                      # Suite automatizada (34 tests, 81.66% coverage)
+├── tests/                      # Suite automatizada (221 tests, 84.07% coverage)
 │   ├── test_ingesta.py
 │   ├── test_procesamiento.py
 │   ├── test_modelo.py
@@ -248,7 +248,7 @@ Cada `push` o `pull request` hacia `main` dispara automáticamente el pipeline d
 ```
 [git push] → [Pre-commit hooks: flake8 + black] → [GitHub Actions CI]
                                                           ↓
-                                              pytest 34 tests + coverage
+                                              pytest 221 tests + coverage
                                                           ↓
                                          ┌── PASS (≥80%) → Deploy automático
                                          └── FAIL (<80%) → Merge bloqueado

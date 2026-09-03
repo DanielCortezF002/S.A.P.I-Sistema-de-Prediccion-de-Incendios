@@ -71,7 +71,7 @@ Abrir `http://localhost:8501`.
 | **Build** | Versión del prototipo demo (ej. `demo-50cells-v8-professional`). |
 | **Query** | Motor de consulta PostGIS (`exact-date-v1`) — activo cuando `SAPI_DATA_MODE=postgis_inference`. |
 | **Modo Demo** (badge) | `SAPI_DATA_MODE=demo_seed`: probabilidades y niveles provienen del **escenario sembrado**, no de inferencia XGBoost en runtime. |
-| **Métricas ML** | Panel sidebar: Recall XGBoost 0.78, AUC 0.83 (informe). |
+| **Métricas ML** | Panel sidebar: **sin corrida real de recall/AUC-ROC todavía** (el 0.78/0.83 citado antes era mock de test en `reports/metrics.json`, corregido en `c22c9a1`). Exploratorio R-ETIQUETA-01 (n=12, Sprint 2): percentil de riesgo 92-99 en los 3 casos sin fuga de datos, sin calibración suficiente para umbral de decisión. |
 | **Recorrido demo** | Slider de 7 días + calendario acotado al rango PostGIS. |
 | **Fecha de consulta** | Día exacto con predicciones cargadas. Rango demo: **2025-02-09** a **2025-02-15**. Default: **2025-02-15** (último día). |
 
@@ -156,7 +156,7 @@ Enfatizar: **la UI no ejecuta el modelo en caliente**; lee predicciones ya guard
 
 ### Minuto 8–10 — Métricas ML y alcance
 
-> “XGBoost alcanza Recall **0.78** (umbral informe ≥ 0.75) y AUC **0.83** sobre validación temporal. Este despliegue usa **50 celdas sintéticas** del corredor Viña–Quilpué–Villa Alemana; la arquitectura escala a región completa con las mismas APIs del informe.”
+> “Encontramos y corregimos un hallazgo de ingeniería: `reports/metrics.json` citaba Recall 0.78 / AUC 0.83 desde junio, pero eran valores de mock de `tests/test_pipeline.py` — nunca hubo una corrida real detrás (commit `c22c9a1`). Hoy no tenemos una métrica de recall/AUC-ROC de producción; sí una exploración honesta con los 12 incendios reales confirmados disponibles: en los ÚNICOS 3 casos disponibles sin fuga de datos (de un total de apenas 12), el modelo ubicó al incendio real por encima del percentil 90 frente a los negativos de ese fold — un indicio, no una validación, dado el tamaño de muestra. Queda como investigación abierta para Sprint 2 (R-ETIQUETA-01). Este despliegue usa **50 celdas sintéticas** del corredor Viña–Quilpué–Villa Alemana; la arquitectura escala a región completa con las mismas APIs del informe.”
 
 Ver [`reports/metrics.json`](../reports/metrics.json) y [`docs/alcance-prototipo.md`](alcance-prototipo.md).
 
@@ -191,7 +191,7 @@ Tener preparadas las respuestas de la sección 7.
 | ¿Por qué solo 2 celdas rojas? | Por diseño del **escenario sembrado**: solo VP-038 y VP-049 cumplen regla 30-30-30 el 15-feb; no es predicción del XGBoost en runtime. |
 | ¿VP-049 es predicción del modelo? | **No.** Es celda del seed demo calibrada para ilustrar riesgo alto + regla activa en precordillera. |
 | ¿Qué pasa si falla una API? | En producción: degradación con último snapshot válido (escenario 2 del informe). |
-| ¿Cómo se validó el modelo? | RF baseline + XGBoost, SMOTE en train, validación temporal; Recall XGBoost 0.78. |
+| ¿Cómo se validó el modelo? | RF baseline + XGBoost, SMOTE en train, validación temporal — implementado y funcional, pero **sin corrida real de recall/AUC-ROC todavía** (el 0.78 citado antes era mock de test, corregido en `c22c9a1`). Exploratorio honesto (n=12 incendios reales, Sprint 2): percentil de riesgo 92-99 en los 3 casos sin fuga de datos, sin calibración suficiente para una decisión binaria. |
 
 ---
 
@@ -214,11 +214,11 @@ Detalle técnico: [`docs/alcance-prototipo.md`](alcance-prototipo.md).
 - [ ] Fechas probadas: **2025-02-09** (0 rojos) y **2025-02-15** (2 rojos).
 - [ ] Badge **Modo Demo** visible (`SAPI_DATA_MODE=demo_seed`).
 - [ ] Build `demo-50cells-v8-professional`, Query `exact-date-v1`.
-- [ ] Panel ML sidebar visible (Recall 0.78, AUC 0.83).
+- [ ] Panel ML sidebar visible (muestra "sin corrida real todavía", **no** 0.78/0.83).
 - [ ] Mapa con gradiente oeste→este y 2 rojos (VP-038, VP-049).
 - [ ] Tabla con columna # 1–50.
 - [ ] Reporte TXT descarga correctamente (footer `data_source=demo_seed`).
-- [ ] Diapositiva con métricas ML (Recall 0.78, AUC 0.83).
+- [ ] Diapositiva con el hallazgo de métricas fabricadas (commit `c22c9a1`) y el exploratorio R-ETIQUETA-01 (percentil >90, n=3 sin fuga de 12) — no Recall/AUC como si fueran de producción.
 - [ ] Frase de cierre: *“Prototipo de viabilidad técnica; arquitectura transferible a operación institucional.”*
 
 ---
