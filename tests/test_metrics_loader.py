@@ -34,9 +34,13 @@ def test_load_ml_metrics_invalid_json(tmp_path: Path) -> None:
 
 
 def test_load_ml_metrics_from_repo() -> None:
+    """El repo real no tiene una corrida real de recall/AUC-ROC todavía
+    (ver hallazgo commit c22c9a1, reports/metrics.json)."""
     root = Path(__file__).resolve().parent.parent
     loaded = load_ml_metrics(root)
-    assert loaded["xgboost"]["recall"] >= 0.75
+    assert loaded["xgboost"]["recall"] is None
+    assert loaded["xgboost"]["auc_roc"] is None
+    assert loaded["baseline"]["recall"] is None
 
 
 def test_sanitize_does_not_mask_real_zero_or_nan_values() -> None:

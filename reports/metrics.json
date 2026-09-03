@@ -1,9 +1,15 @@
 {
-  "baseline": {
-    "recall": 0.71
-  },
   "xgboost": {
-    "recall": 0.78,
-    "auc_roc": 0.83
+    "recall": null,
+    "auc_roc": null
+  },
+  "baseline": {
+    "recall": null
+  },
+  "_nota": "recall/auc_roc en null = sin corrida real de produccion todavia; no se reemplazan por un valor plausible (ver app/utils/metrics_loader.py). Los valores 0.71 (baseline)/0.78 (xgboost)/0.83 (auc_roc) citados en este archivo hasta 2026-09-01 son historicos: un mock de tests/test_pipeline.py copiado aqui en el commit 30c8a26 (20-jun-2026) -- nunca hubo una corrida real del pipeline detras. Hallazgo y correccion: commit c22c9a1 (2026-09-01). Exploratorio honesto disponible (n=12 incendios reales, 3 sin fuga de datos, Sprint 2): ver docs/matriz-riesgo.md, R-ETIQUETA-01.",
+  "_valores_historicos_fabricados_no_usar": {
+    "baseline_recall": 0.71,
+    "xgboost_recall": 0.78,
+    "xgboost_auc_roc": 0.83
   }
 }
