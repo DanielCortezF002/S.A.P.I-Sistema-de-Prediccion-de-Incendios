@@ -87,6 +87,36 @@ def build_display_dataframe(gdf: gpd.GeoDataFrame) -> pd.DataFrame:
     return df[DISPLAY_COLUMNS]
 
 
+def top_risk_cell(gdf: gpd.GeoDataFrame) -> Optional[dict[str, Any]]:
+    """Celda de mayor riesgo del día: la fila más crítica del gdf.
+
+    Orden: nivel_riesgo (alto > medio > bajo) primero, probabilidad
+    descendente como desempate. Pensado para el banner de alerta que
+    encabeza el panel principal (lo primero que ve un brigadista, antes
+    del título) — no cambia la selección por clic en mapa/tabla, solo
+    calcula qué celda destacar por defecto. Devuelve None si el gdf está
+    vacío.
+    """
+    if gdf is None or gdf.empty:
+        return None
+    df = gdf.copy()
+    df["_nivel_ord"] = df["nivel_riesgo"].map(_NIVEL_ORDER).fillna(-1)
+    top = df.sort_values(["_nivel_ord", "probabilidad"], ascending=[False, False]).iloc[0]
+    try:
+        regla_activa = int(top["regla_30_30_30"]) == 1
+    except (ValueError, TypeError):
+        regla_activa = False
+    cell_id = str(top["cell_id"])
+    zona_full = zone_label_for_cell(cell_id)
+    return {
+        "cell_id": cell_id,
+        "zona": _ZONA_CORTA.get(zona_full, zona_full),
+        "nivel_riesgo": str(top["nivel_riesgo"]),
+        "probabilidad": float(top["probabilidad"]),
+        "regla_30_30_30": regla_activa,
+    }
+
+
 def row_index_for_cell(display_df: pd.DataFrame, cell_id: Optional[str]) -> Optional[int]:
     """Índice de fila (posición en display_df) para una celda."""
     if not cell_id:

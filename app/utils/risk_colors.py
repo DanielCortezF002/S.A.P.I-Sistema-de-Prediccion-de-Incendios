@@ -26,6 +26,19 @@ RISK_ROW_STYLE: dict[str, str] = {
     "alto": "background-color: rgba(231, 76, 60, 0.32); color: #fdedec",
 }
 
+# Texto legible sobre un fondo RISK_COLORS sólido (el banner de mayor riesgo
+# usa el color de riesgo como fondo, no como acento): el amarillo #f1c40f
+# necesita texto oscuro; verde/rojo funcionan con texto claro.
+RISK_BANNER_TEXT: dict[str, str] = {
+    "bajo": "#0d3d20",
+    "medio": "#4a3b04",
+    "alto": "#fdecea",
+}
+
+# Mismo emoji que la leyenda del mapa (_render_risk_legend en app.py) —
+# refuerza el semáforo verde/amarillo/rojo en el banner de alerta.
+RISK_EMOJI: dict[str, str] = {"bajo": "🟢", "medio": "🟡", "alto": "🔴"}
+
 
 def risk_color(nivel: str) -> str:
     """Color principal según nivel de riesgo."""
@@ -43,6 +56,31 @@ def format_cell_summary_html(row: pd.Series) -> str:
         f'border-left:4px solid {color}; background:rgba(0,0,0,0.15); '
         f'border-radius:0 4px 4px 0;">'
         f'{row["cell_id"]} · {row["zona_climatica"]} · {nivel} · {prob:.0%}'
+        f"</div>"
+    )
+
+
+def format_top_risk_banner_html(top: dict[str, Any]) -> str:
+    """HTML del banner de mayor riesgo (primero en el panel principal, antes
+    del título): fondo sólido del color de riesgo — mismo semáforo verde/
+    amarillo/rojo que ya usan mapa y tabla, no una paleta nueva.
+
+    `top` es el dict que devuelve `app.utils.cell_table.top_risk_cell`:
+    cell_id, zona, nivel_riesgo, probabilidad, regla_30_30_30 (bool).
+    """
+    nivel = str(top["nivel_riesgo"])
+    bg = risk_color(nivel)
+    fg = RISK_BANNER_TEXT.get(nivel, "#1c1712")
+    emoji = RISK_EMOJI.get(nivel, "")
+    prob = float(top["probabilidad"])
+    regla_txt = "Regla 30-30-30 ACTIVA" if top.get("regla_30_30_30") else "Regla 30-30-30 no activa"
+    return (
+        f'<div style="background:{bg}; color:{fg}; border-radius:8px; '
+        f'padding:0.8rem 1.1rem; margin-bottom:0.6rem; font-weight:700; '
+        f'display:flex; flex-wrap:wrap; align-items:baseline; gap:0.35rem 0.6rem;">'
+        f'<span style="font-size:1.05rem;">{emoji} Celda de mayor riesgo ahora: {top["cell_id"]}</span>'
+        f'<span style="font-weight:500;">· {top["zona"]} · {nivel.upper()} · {prob:.0%}</span>'
+        f'<span style="font-weight:700; margin-left:auto;">{regla_txt}</span>'
         f"</div>"
     )
 

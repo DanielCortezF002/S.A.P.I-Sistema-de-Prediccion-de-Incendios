@@ -30,9 +30,11 @@ from app.utils.cell_table import (
     cell_id_from_folium_output,
     set_selected_cell,
     table_widget_key,
+    top_risk_cell,
 )
 from app.utils.risk_colors import (
     format_cell_summary_html,
+    format_top_risk_banner_html,
     inject_table_checkbox_colors,
     style_display_dataframe,
 )
@@ -152,6 +154,22 @@ def _render_sidebar_ml_panel() -> None:
     st.sidebar.metric("AUC-ROC", f"{auc:.2f}" if auc is not None else "—")
     st.sidebar.metric("Recall RF baseline", f"{rf_recall:.0%}" if rf_recall is not None else "—")
     st.sidebar.caption("Validación temporal · SMOTE en train · ver `reports/metrics.json`")
+
+
+def _render_technical_details_expander(min_d: date, max_d: date) -> None:
+    """Metadata de trazabilidad técnica — colapsada al fondo del sidebar.
+
+    Build/versión de query, rango de fechas del seed y el string crudo de
+    SAPI_DATA_MODE no son información que un brigadista bajo presión
+    necesite en los primeros 3 segundos; siguen disponibles acá para
+    trazabilidad académica, un clic más adentro. El aviso "Modo Demo" en
+    lenguaje operativo (_render_data_mode_badge) es otra cosa — honestidad
+    sobre demo vs. producción — y se queda visible arriba, sin colapsar.
+    """
+    with st.sidebar.expander("Detalles técnicos"):
+        st.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
+        st.caption(f"Datos disponibles: {min_d} → {max_d}")
+        st.caption(f"`SAPI_DATA_MODE={SAPI_DATA_MODE}`")
 
 
 def _pick_demo_date(available: list[date], min_d: date, max_d: date) -> date:
@@ -447,13 +465,11 @@ def main() -> None:
     min_d, max_d = _cached_date_range()
     available = _cached_available_dates()
 
-
-    st.sidebar.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
-    st.sidebar.caption(f"Datos disponibles: {min_d} → {max_d}")
+    # ── Sidebar: Modo Demo primero (honestidad operativa, sin colapsar) →
+    # selector de fecha → panel ML (informe) → Detalles técnicos al fondo,
+    # colapsado. Jerarquía pensada para un brigadista, no para quien depura
+    # la app (hallazgo "jerarquía de información para brigadista", 2026-09-04). ──
     _render_data_mode_badge()
-    _render_sidebar_ml_panel()
-
-    st.sidebar.markdown("---")
 
     # Session state para celda seleccionada
     if "selected_cell_id" not in st.session_state:
@@ -469,13 +485,25 @@ def main() -> None:
         st.session_state._table_epoch = int(st.session_state.get("_table_epoch", 0)) + 1
     st.session_state._last_query_date = selected_date.isoformat()
 
+    _render_sidebar_ml_panel()
+    st.sidebar.markdown("---")
+    _render_technical_details_expander(min_d, max_d)
+
+    # ── Carga de datos: seed in-memory (lru_cached, sin latencia) ──
+    gdf = get_demo_gdf(selected_date)
+
+    # ── Lo primero que se ve, antes del título: la celda de mayor riesgo
+    # ahora mismo, con su nivel y si la regla 30-30-30 está activa. Un
+    # brigadista bajo presión no debería tener que hacer scroll ni clic
+    # para obtener esto. ──
+    top_risk = top_risk_cell(gdf)
+    if top_risk is not None:
+        st.markdown(format_top_risk_banner_html(top_risk), unsafe_allow_html=True)
+
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
     _render_demo_scope_banner(min_d, max_d)
-
-    # ── Carga de datos: seed in-memory (lru_cached, sin latencia) ──
-    gdf = get_demo_gdf(selected_date)
 
     prob_max = float(gdf["probabilidad"].max()) if not gdf.empty else 0.0
 

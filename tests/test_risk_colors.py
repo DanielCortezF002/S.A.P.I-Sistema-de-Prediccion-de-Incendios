@@ -8,6 +8,7 @@ import pandas as pd
 
 from app.utils.risk_colors import (
     format_cell_summary_html,
+    format_top_risk_banner_html,
     inject_table_checkbox_colors,
     map_selection_style,
     risk_color,
@@ -39,6 +40,34 @@ def test_format_cell_summary_html_contains_color():
     assert "#e74c3c" in html
     assert "VP-038" in html
     assert "97%" in html
+
+
+def test_format_top_risk_banner_html_alto_shows_bg_color_and_regla_activa():
+    top = {
+        "cell_id": "VP-038",
+        "zona": "Precordillera",
+        "nivel_riesgo": "alto",
+        "probabilidad": 0.82,
+        "regla_30_30_30": True,
+    }
+    html = format_top_risk_banner_html(top)
+    assert "background:#e74c3c" in html
+    assert "VP-038" in html
+    assert "82%" in html
+    assert "ACTIVA" in html
+
+
+def test_format_top_risk_banner_html_regla_no_activa():
+    top = {
+        "cell_id": "VP-021",
+        "zona": "Urbano",
+        "nivel_riesgo": "medio",
+        "probabilidad": 0.54,
+        "regla_30_30_30": False,
+    }
+    html = format_top_risk_banner_html(top)
+    assert "background:#f1c40f" in html
+    assert "no activa" in html
 
 
 def test_style_display_dataframe_highlights_selected_row():
