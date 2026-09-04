@@ -200,6 +200,46 @@ def _inject_css() -> None:
             outline: none !important;
             box-shadow: none !important;
         }
+
+        /* ── Vista móvil (SAPI-XX, hallazgo docs/acta-pruebas-aceptacion-usuario.md) ── */
+
+        /* (1) Mapa Folium: forzar ancho relativo al contenedor. st_folium calcula el
+           ancho del iframe vía JS al montar el componente; si esa medición corre antes
+           de que el navegador termine de aplicar este mismo CSS, puede quedar fijado en
+           px y no ajustarse al reflow posterior. Este !important gana sobre el atributo
+           width del iframe en cualquier viewport. overflow-x:hidden es red de seguridad:
+           si algún componente igual desborda, se recorta en vez de correr toda la página. */
+        section.main .block-container { overflow-x: hidden; }
+        iframe[title="streamlit_folium.st_folium"] {
+            width: 100% !important;
+            max-width: 100% !important;
+        }
+
+        /* (2) Controles de fecha: en pantallas angostas, el dropdown (control principal,
+           cubre todo el rango de fechas demo) alcanza solo; se oculta el calendario
+           secundario para no competir por espacio en el sidebar angosto. */
+        @media (max-width: 480px) {
+            section[data-testid="stSidebar"] div[data-testid="stDateInput"] {
+                display: none;
+            }
+        }
+
+        /* (3) Layout de columnas (mapa/detalle, métricas, header+botón "Limpiar"):
+           Streamlit 1.35 ya reacomoda columnas angostas vía flex-wrap (verificado con
+           Playwright), pero sin cambiar flex-direction — el apilado queda sujeto a que
+           cada columna decida envolver por su cuenta, columna por columna, no garantizado
+           para todos los anchos/combinaciones. Esta regla lo hace explícito y determinista:
+           fuerza columna vertical de forma directa, primer nivel y anidadas por igual. */
+        @media (max-width: 640px) {
+            div[data-testid="stHorizontalBlock"] {
+                flex-direction: column !important;
+            }
+            div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
+                width: 100% !important;
+                min-width: 100% !important;
+                flex: 1 1 100% !important;
+            }
+        }
         </style>
         """,
         unsafe_allow_html=True,
