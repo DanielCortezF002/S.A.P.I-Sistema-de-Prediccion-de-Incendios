@@ -281,12 +281,22 @@ def _inject_css() -> None:
             border-color: rgba(255,255,255,0.22) !important;
             color: #eef2f6 !important;
         }
+        /* Los <code> inline (backticks en markdown: `demo-50cells-v8`,
+           `SAPI_DATA_MODE=demo_seed`) traen su propio fondo claro por defecto;
+           con el texto forzado a blanco arriba quedaban ilegibles (blanco sobre
+           claro). Fondo + texto propios, legibles sobre navy. */
+        section[data-testid="stSidebar"] code {
+            background: rgba(255,255,255,0.14) !important;
+            color: #eef2f6 !important;
+        }
 
         /* Métricas del panel principal: tarjeta blanca con reborde, como en la
            dirección elegida (acento de color por nivel de riesgo va en el borde
            superior, no en el número — mejor contraste que texto en amarillo/
-           verde puro sobre blanco). */
-        div[data-testid="stMetric"] {
+           verde puro sobre blanco). Acotado al contenido principal: dentro del
+           sidebar (fondo navy + texto forzado a blanco arriba) una tarjeta
+           blanca dejaría el texto blanco sobre blanco. */
+        section.main div[data-testid="stMetric"] {
             background: #ffffff;
             border: 1px solid #e3ddd0;
             border-radius: 6px;
