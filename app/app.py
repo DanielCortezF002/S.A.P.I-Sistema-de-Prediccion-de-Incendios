@@ -240,6 +240,76 @@ def _inject_css() -> None:
                 flex: 1 1 100% !important;
             }
         }
+
+        /* ── Dirección de diseño "B — Claridad Institucional" (exploración SAPI) ──
+           Solo paleta/tipografía/espaciado. El mapa Folium/Leaflet y su lógica
+           de renderizado no se tocan — esto es CSS sobre los mismos componentes
+           Streamlit ya existentes (sidebar, métricas, tarjetas, tabla). */
+        @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        h1, h2, h3, h4 { font-weight: 700 !important; letter-spacing: -0.01em; }
+
+        /* Sidebar: navy institucional. secondaryBackgroundColor del theme se dejó
+           neutro (afecta también widgets fuera del sidebar); el navy va aparte,
+           acotado a section[data-testid="stSidebar"]. */
+        section[data-testid="stSidebar"] {
+            background: #1e3348;
+        }
+        section[data-testid="stSidebar"] * {
+            color: #eef2f6;
+        }
+        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+        section[data-testid="stSidebar"] small,
+        section[data-testid="stSidebar"] .stCaption {
+            color: #a9b7c6 !important;
+        }
+        section[data-testid="stSidebar"] hr {
+            border-color: rgba(255,255,255,0.14);
+        }
+        section[data-testid="stSidebar"] div[data-testid="stMetricValue"] {
+            color: #eef2f6 !important;
+        }
+        section[data-testid="stSidebar"] div[data-testid="stMetricLabel"] {
+            color: #cbd6e1 !important;
+        }
+        section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+        section[data-testid="stSidebar"] input {
+            background: rgba(255,255,255,0.07) !important;
+            border-color: rgba(255,255,255,0.22) !important;
+            color: #eef2f6 !important;
+        }
+
+        /* Métricas del panel principal: tarjeta blanca con reborde, como en la
+           dirección elegida (acento de color por nivel de riesgo va en el borde
+           superior, no en el número — mejor contraste que texto en amarillo/
+           verde puro sobre blanco). */
+        div[data-testid="stMetric"] {
+            background: #ffffff;
+            border: 1px solid #e3ddd0;
+            border-radius: 6px;
+            padding: 0.9rem 1rem;
+        }
+
+        /* Tarjetas informativas (banner demo, resumen de datos, regla 30-30-30):
+           reborde sutil en vez del bloque de color plano por defecto, para que
+           combinen con las métricas y no compitan visualmente con el semáforo
+           de riesgo del mapa/tabla. */
+        div[data-testid="stAlert"] {
+            border-radius: 6px;
+            border: 1px solid #e3ddd0;
+        }
+
+        /* Botones y controles: radio más cerrado, acorde al resto de tarjetas. */
+        button, div[data-baseweb="select"] > div, div[data-testid="stDateInput"] input {
+            border-radius: 4px !important;
+        }
+
+        section.main .block-container {
+            padding-top: 1.5rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
