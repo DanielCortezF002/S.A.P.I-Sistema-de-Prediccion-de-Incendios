@@ -6,8 +6,16 @@ import sys
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_REPO_ROOT_STR = str(_REPO_ROOT)
+# Se fuerza siempre al indice 0 (no basta con "insertar si falta"): al
+# invocar `python -m streamlit run app/app.py`, el propio "-m" ya deja la
+# raiz del repo en sys.path (en un indice > 0) antes de que streamlit
+# inserte el directorio de este script (app/) por delante. Si el guard
+# solo verifica presencia, la raiz del repo queda detras de app/, y
+# "import app" resuelve al archivo app/app.py en vez del paquete real.
+if _REPO_ROOT_STR in sys.path:
+    sys.path.remove(_REPO_ROOT_STR)
+sys.path.insert(0, _REPO_ROOT_STR)
 
 from datetime import date, datetime, timedelta
 from typing import Any, Optional
