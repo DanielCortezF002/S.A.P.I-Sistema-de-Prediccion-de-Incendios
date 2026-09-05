@@ -129,33 +129,56 @@ def test_render_risk_legend(mock_markdown: MagicMock) -> None:
 
 
 @patch("app.app._cached_ml_metrics", return_value={"xgboost": {"recall": 0.78, "auc_roc": 0.83}, "baseline": {"recall": 0.71}})
+@patch("app.app.st.metric")
+@patch("app.app.st.caption")
+@patch("app.app.st.markdown")
 @patch("app.app.st.sidebar")
-def test_render_sidebar_ml_panel(mock_sidebar: MagicMock, _mock_metrics: MagicMock) -> None:
-    from app.app import _render_sidebar_ml_panel
+def test_render_technical_details_expander_includes_ml_panel(
+    mock_sidebar: MagicMock,
+    mock_markdown: MagicMock,
+    mock_caption: MagicMock,
+    mock_metric: MagicMock,
+    _mock_metrics: MagicMock,
+) -> None:
+    """El panel ML (Recall XGBoost, AUC-ROC, Recall RF baseline) vive dentro
+    del expander 'Detalles técnicos', junto a Build/Query/SAPI_DATA_MODE —
+    no como sección aparte del sidebar.
+    """
+    from app.app import _render_technical_details_expander
 
-    _render_sidebar_ml_panel()
-    mock_sidebar.markdown.assert_called_once()
-    assert mock_sidebar.metric.call_count == 3
+    _render_technical_details_expander(date(2025, 2, 9), date(2025, 2, 15))
+
+    mock_sidebar.expander.assert_called_once_with("Detalles técnicos")
+    assert mock_metric.call_count == 3
+    captions = [call.args[0] for call in mock_caption.call_args_list]
+    assert any("Build" in c for c in captions)
+    assert any("SAPI_DATA_MODE" in c for c in captions)
 
 
 @patch(
     "app.app._cached_ml_metrics",
     return_value={"xgboost": {"recall": None, "auc_roc": None}, "baseline": {"recall": None}},
 )
+@patch("app.app.st.metric")
+@patch("app.app.st.caption")
+@patch("app.app.st.markdown")
 @patch("app.app.st.sidebar")
-def test_render_sidebar_ml_panel_shows_dash_when_no_real_run(
-    mock_sidebar: MagicMock, _mock_metrics: MagicMock
+def test_render_technical_details_expander_shows_dash_when_no_real_run(
+    mock_sidebar: MagicMock,
+    mock_markdown: MagicMock,
+    mock_caption: MagicMock,
+    mock_metric: MagicMock,
+    _mock_metrics: MagicMock,
 ) -> None:
     """Sin corrida real (recall/auc_roc en None), el panel debe mostrar '—'
     en vez de fabricar un número — ver hallazgo 2026-09-01 en metrics_loader.py.
     """
-    from app.app import _render_sidebar_ml_panel
+    from app.app import _render_technical_details_expander
 
-    _render_sidebar_ml_panel()
-    mock_sidebar.markdown.assert_called_once()
-    assert mock_sidebar.metric.call_count == 3
+    _render_technical_details_expander(date(2025, 2, 9), date(2025, 2, 15))
 
-    displayed_values = [call.args[1] for call in mock_sidebar.metric.call_args_list]
+    assert mock_metric.call_count == 3
+    displayed_values = [call.args[1] for call in mock_metric.call_args_list]
     assert displayed_values == ["—", "—", "—"]
 
 
@@ -178,6 +201,88 @@ def test_pick_demo_date_falls_back_to_slider(mock_sidebar: MagicMock) -> None:
     mock_sidebar.date_input.return_value = date(2025, 2, 10)
     assert _pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 9)
     mock_sidebar.caption.assert_called_once()
+
+
+@patch("app.app.st")
+def test_ensure_default_selection_shows_top_risk_ficha_on_initial_load(mock_st: MagicMock) -> None:
+    """Al cargar la página sin ninguna selección previa, el panel de detalle
+    debe mostrar la ficha completa de la celda de mayor riesgo — no un
+    estado vacío a la espera de un clic en mapa/tabla.
+    """
+    from app.app import _ensure_default_selection
+    from app.utils.cell_table import SESSION_CELL_KEY, top_risk_cell
+    from app.utils.risk_colors import format_cell_summary_html
+
+    gdf = gpd.GeoDataFrame(
+        {
+            "cell_id": ["VP-001", "VP-002", "VP-003"],
+            "probabilidad": [0.20, 0.90, 0.55],
+            "nivel_riesgo": ["bajo", "alto", "medio"],
+            "regla_30_30_30": [0, 1, 0],
+        },
+        geometry=[
+            box(-71.58, -33.05, -71.57, -33.04),
+            box(-71.57, -33.05, -71.56, -33.04),
+            box(-71.56, -33.05, -71.55, -33.04),
+        ],
+        crs="EPSG:4326",
+    )
+    mock_st.session_state = {}  # sesión recién abierta, sin clic todavía
+    top_risk = top_risk_cell(gdf)
+
+    _ensure_default_selection(top_risk)
+
+    selected_id = mock_st.session_state.get(SESSION_CELL_KEY)
+    assert selected_id == "VP-002"  # única celda "alto" -> mayor riesgo del día
+
+    gdf_row = gdf.loc[gdf["cell_id"] == selected_id].iloc[0].copy()
+    gdf_row["zona_climatica"] = "Urbano (transición)"
+    ficha_html = format_cell_summary_html(gdf_row)
+    assert "VP-002" in ficha_html
+    assert "alto" in ficha_html
+
+
+@patch("app.app.st")
+def test_ensure_default_selection_noop_without_top_risk(mock_st: MagicMock) -> None:
+    """gdf vacío -> top_risk_cell devuelve None -> no hay nada que preseleccionar."""
+    from app.app import _ensure_default_selection
+    from app.utils.cell_table import SESSION_CELL_KEY
+
+    mock_st.session_state = {}
+    _ensure_default_selection(None)
+    assert mock_st.session_state.get(SESSION_CELL_KEY) is None
+    assert mock_st.session_state["_top_risk_preselected"] is True
+
+
+@patch("app.app.st")
+def test_ensure_default_selection_respects_explicit_click(mock_st: MagicMock) -> None:
+    """Si ya hay una celda seleccionada (clic previo), no se sobreescribe."""
+    from app.app import _ensure_default_selection
+    from app.utils.cell_table import SESSION_CELL_KEY
+
+    mock_st.session_state = {SESSION_CELL_KEY: "VP-007"}
+    top_risk = {"cell_id": "VP-002", "zona": "Urbano", "nivel_riesgo": "alto", "probabilidad": 0.9, "regla_30_30_30": True}
+
+    _ensure_default_selection(top_risk)
+
+    assert mock_st.session_state[SESSION_CELL_KEY] == "VP-007"
+
+
+@patch("app.app.st")
+def test_ensure_default_selection_skips_after_limpiar(mock_st: MagicMock) -> None:
+    """El botón 'Limpiar' pone la selección en None y marca la ronda como ya
+    preseleccionada; en el rerun que sigue, la ficha debe seguir vacía en
+    vez de que la preselección la vuelva a llenar.
+    """
+    from app.app import _ensure_default_selection
+    from app.utils.cell_table import SESSION_CELL_KEY
+
+    mock_st.session_state = {SESSION_CELL_KEY: None, "_top_risk_preselected": True}
+    top_risk = {"cell_id": "VP-002", "zona": "Urbano", "nivel_riesgo": "alto", "probabilidad": 0.9, "regla_30_30_30": True}
+
+    _ensure_default_selection(top_risk)
+
+    assert mock_st.session_state[SESSION_CELL_KEY] is None
 
 
 def test_cached_date_range_from_demo_seed() -> None:

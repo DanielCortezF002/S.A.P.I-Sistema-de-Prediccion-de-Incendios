@@ -10,7 +10,7 @@ if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
 from datetime import date, datetime, timedelta
-from typing import Optional
+from typing import Any, Optional
 
 import geopandas as gpd
 import pandas as pd
@@ -30,9 +30,11 @@ from app.utils.cell_table import (
     cell_id_from_folium_output,
     set_selected_cell,
     table_widget_key,
+    top_risk_cell,
 )
 from app.utils.risk_colors import (
     format_cell_summary_html,
+    format_top_risk_banner_html,
     inject_table_checkbox_colors,
     style_display_dataframe,
 )
@@ -127,11 +129,20 @@ def _render_demo_scope_banner(min_d: date, max_d: date) -> None:
     )
 
 
-def _render_sidebar_ml_panel() -> None:
-    """Panel de métricas del informe (validación temporal).
+def _render_technical_details_expander(min_d: date, max_d: date) -> None:
+    """Metadata de trazabilidad técnica y métricas del informe — colapsadas
+    al fondo del sidebar.
 
-    Sin una corrida real detrás (ver metrics_loader.py, hallazgo
-    2026-09-01), muestra "—" en vez de un número fabricado.
+    Panel ML (Recall XGBoost, AUC-ROC, Recall RF baseline), Build/versión de
+    query, rango de fechas del seed y el string crudo de SAPI_DATA_MODE no
+    son información que un brigadista bajo presión necesite en los primeros
+    3 segundos; siguen disponibles acá para trazabilidad académica, un clic
+    más adentro. El aviso "Modo Demo" en lenguaje operativo
+    (_render_data_mode_badge) es otra cosa — honestidad sobre demo vs.
+    producción — y se queda visible arriba, sin colapsar.
+
+    Sin una corrida ML real detrás (ver metrics_loader.py, hallazgo
+    2026-09-01), las métricas muestran "—" en vez de un número fabricado.
     """
     metrics = _cached_ml_metrics()
     xgb = metrics.get("xgboost", {})
@@ -139,19 +150,24 @@ def _render_sidebar_ml_panel() -> None:
     recall = xgb.get("recall")
     auc = xgb.get("auc_roc")
     rf_recall = rf.get("recall")
-    st.sidebar.markdown("### Modelo ML (informe)")
-    if recall is None:
-        st.sidebar.metric("Recall XGBoost", "—", delta="sin corrida real todavía")
-    else:
-        st.sidebar.metric(
-            "Recall XGBoost",
-            f"{recall:.0%}",
-            delta=f"meta ≥{RECALL_TARGET:.0%}",
-            delta_color="normal" if recall >= RECALL_TARGET else "inverse",
-        )
-    st.sidebar.metric("AUC-ROC", f"{auc:.2f}" if auc is not None else "—")
-    st.sidebar.metric("Recall RF baseline", f"{rf_recall:.0%}" if rf_recall is not None else "—")
-    st.sidebar.caption("Validación temporal · SMOTE en train · ver `reports/metrics.json`")
+    with st.sidebar.expander("Detalles técnicos"):
+        st.markdown("**Modelo ML (informe)**")
+        if recall is None:
+            st.metric("Recall XGBoost", "—", delta="sin corrida real todavía")
+        else:
+            st.metric(
+                "Recall XGBoost",
+                f"{recall:.0%}",
+                delta=f"meta ≥{RECALL_TARGET:.0%}",
+                delta_color="normal" if recall >= RECALL_TARGET else "inverse",
+            )
+        st.metric("AUC-ROC", f"{auc:.2f}" if auc is not None else "—")
+        st.metric("Recall RF baseline", f"{rf_recall:.0%}" if rf_recall is not None else "—")
+        st.caption("Validación temporal · SMOTE en train · ver `reports/metrics.json`")
+        st.markdown("---")
+        st.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
+        st.caption(f"Datos disponibles: {min_d} → {max_d}")
+        st.caption(f"`SAPI_DATA_MODE={SAPI_DATA_MODE}`")
 
 
 def _pick_demo_date(available: list[date], min_d: date, max_d: date) -> date:
@@ -240,10 +256,106 @@ def _inject_css() -> None:
                 flex: 1 1 100% !important;
             }
         }
+
+        /* ── Dirección de diseño "B — Claridad Institucional" (exploración SAPI) ──
+           Solo paleta/tipografía/espaciado. El mapa Folium/Leaflet y su lógica
+           de renderizado no se tocan — esto es CSS sobre los mismos componentes
+           Streamlit ya existentes (sidebar, métricas, tarjetas, tabla). */
+        @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        h1, h2, h3, h4 { font-weight: 700 !important; letter-spacing: -0.01em; }
+
+        /* Sidebar: navy institucional. secondaryBackgroundColor del theme se dejó
+           neutro (afecta también widgets fuera del sidebar); el navy va aparte,
+           acotado a section[data-testid="stSidebar"]. */
+        section[data-testid="stSidebar"] {
+            background: #1e3348;
+        }
+        section[data-testid="stSidebar"] * {
+            color: #eef2f6;
+        }
+        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
+        section[data-testid="stSidebar"] small,
+        section[data-testid="stSidebar"] .stCaption {
+            color: #a9b7c6 !important;
+        }
+        section[data-testid="stSidebar"] hr {
+            border-color: rgba(255,255,255,0.14);
+        }
+        section[data-testid="stSidebar"] div[data-testid="stMetricValue"] {
+            color: #eef2f6 !important;
+        }
+        section[data-testid="stSidebar"] div[data-testid="stMetricLabel"] {
+            color: #cbd6e1 !important;
+        }
+        section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
+        section[data-testid="stSidebar"] input {
+            background: rgba(255,255,255,0.07) !important;
+            border-color: rgba(255,255,255,0.22) !important;
+            color: #eef2f6 !important;
+        }
+        /* Los <code> inline (backticks en markdown: `demo-50cells-v8`,
+           `SAPI_DATA_MODE=demo_seed`) traen su propio fondo claro por defecto;
+           con el texto forzado a blanco arriba quedaban ilegibles (blanco sobre
+           claro). Fondo + texto propios, legibles sobre navy. */
+        section[data-testid="stSidebar"] code {
+            background: rgba(255,255,255,0.14) !important;
+            color: #eef2f6 !important;
+        }
+
+        /* Métricas del panel principal: tarjeta blanca con reborde, como en la
+           dirección elegida (acento de color por nivel de riesgo va en el borde
+           superior, no en el número — mejor contraste que texto en amarillo/
+           verde puro sobre blanco). Acotado al contenido principal: dentro del
+           sidebar (fondo navy + texto forzado a blanco arriba) una tarjeta
+           blanca dejaría el texto blanco sobre blanco. */
+        section.main div[data-testid="stMetric"] {
+            background: #ffffff;
+            border: 1px solid #e3ddd0;
+            border-radius: 6px;
+            padding: 0.9rem 1rem;
+        }
+
+        /* Tarjetas informativas (banner demo, resumen de datos, regla 30-30-30):
+           reborde sutil en vez del bloque de color plano por defecto, para que
+           combinen con las métricas y no compitan visualmente con el semáforo
+           de riesgo del mapa/tabla. */
+        div[data-testid="stAlert"] {
+            border-radius: 6px;
+            border: 1px solid #e3ddd0;
+        }
+
+        /* Botones y controles: radio más cerrado, acorde al resto de tarjetas. */
+        button, div[data-baseweb="select"] > div, div[data-testid="stDateInput"] input {
+            border-radius: 4px !important;
+        }
+
+        section.main .block-container {
+            padding-top: 1.5rem;
+        }
         </style>
         """,
         unsafe_allow_html=True,
     )
+
+
+def _ensure_default_selection(top_risk: Optional[dict[str, Any]]) -> None:
+    """Preselecciona la celda de mayor riesgo cuando no hay ninguna selección.
+
+    Se aplica una sola vez por "ronda" (carga inicial de la página o cambio
+    de fecha, marcada con `_top_risk_preselected`) — no en cada rerun — para
+    que un clic en el mapa/tabla o el botón "Limpiar" sigan mandando sobre
+    esta preselección en la misma ronda. Reutiliza el `top_risk` ya calculado
+    para el banner (no vuelve a llamar a `top_risk_cell`).
+    """
+    if st.session_state.get("_top_risk_preselected"):
+        return
+    st.session_state["_top_risk_preselected"] = True
+    if st.session_state.get(SESSION_CELL_KEY) is None and top_risk is not None:
+        st.session_state[SESSION_CELL_KEY] = top_risk["cell_id"]
 
 
 @st.cache_resource
@@ -367,19 +479,20 @@ def main() -> None:
     min_d, max_d = _cached_date_range()
     available = _cached_available_dates()
 
-
-    st.sidebar.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
-    st.sidebar.caption(f"Datos disponibles: {min_d} → {max_d}")
+    # ── Sidebar: Modo Demo primero (honestidad operativa, sin colapsar) →
+    # selector de fecha → Detalles técnicos al fondo, colapsado (incluye el
+    # panel ML del informe). Jerarquía pensada para un brigadista, no para
+    # quien depura la app (hallazgo "jerarquía de información para
+    # brigadista", 2026-09-04). ──
     _render_data_mode_badge()
-    _render_sidebar_ml_panel()
-
-    st.sidebar.markdown("---")
 
     # Session state para celda seleccionada
     if "selected_cell_id" not in st.session_state:
         st.session_state.selected_cell_id = None
     if "_table_epoch" not in st.session_state:
         st.session_state._table_epoch = 0
+    if "_top_risk_preselected" not in st.session_state:
+        st.session_state._top_risk_preselected = False
 
     selected_date = _pick_demo_date(available, min_d, max_d)
 
@@ -387,15 +500,33 @@ def main() -> None:
     if st.session_state.get("_last_query_date") != selected_date.isoformat():
         st.session_state.selected_cell_id = None
         st.session_state._table_epoch = int(st.session_state.get("_table_epoch", 0)) + 1
+        st.session_state._top_risk_preselected = False
     st.session_state._last_query_date = selected_date.isoformat()
+
+    st.sidebar.markdown("---")
+    _render_technical_details_expander(min_d, max_d)
+
+    # ── Carga de datos: seed in-memory (lru_cached, sin latencia) ──
+    gdf = get_demo_gdf(selected_date)
+
+    # ── Lo primero que se ve, antes del título: la celda de mayor riesgo
+    # ahora mismo, con su nivel y si la regla 30-30-30 está activa. Un
+    # brigadista bajo presión no debería tener que hacer scroll ni clic
+    # para obtener esto. ──
+    top_risk = top_risk_cell(gdf)
+    if top_risk is not None:
+        st.markdown(format_top_risk_banner_html(top_risk), unsafe_allow_html=True)
+
+    # ── La ficha de detalle tampoco debería arrancar vacía a la espera de
+    # un clic: sin selección previa, se preselecciona la celda de mayor
+    # riesgo (misma que el banner) para que su ficha completa ya esté
+    # visible al cargar la página. ──
+    _ensure_default_selection(top_risk)
 
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
 
     _render_demo_scope_banner(min_d, max_d)
-
-    # ── Carga de datos: seed in-memory (lru_cached, sin latencia) ──
-    gdf = get_demo_gdf(selected_date)
 
     prob_max = float(gdf["probabilidad"].max()) if not gdf.empty else 0.0
 

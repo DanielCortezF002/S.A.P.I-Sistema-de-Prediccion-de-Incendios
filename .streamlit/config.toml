@@ -12,3 +12,16 @@ fastReruns = true
 
 [client]
 showSidebarNavigation = false
+
+# Dirección de diseño "B — Claridad Institucional" (exploración SAPI, ver
+# canvas de mockups). Paleta/tipografía únicamente — la lógica del mapa
+# Folium/Leaflet no cambia. secondaryBackgroundColor queda neutro (no navy)
+# porque Streamlit lo aplica también a fondos de widgets fuera del sidebar;
+# el navy del sidebar se aplica aparte vía CSS en _inject_css().
+[theme]
+base = "light"
+primaryColor = "#3b6ea5"
+backgroundColor = "#faf9f6"
+secondaryBackgroundColor = "#f4f1ea"
+textColor = "#20242b"
+font = "sans serif"
