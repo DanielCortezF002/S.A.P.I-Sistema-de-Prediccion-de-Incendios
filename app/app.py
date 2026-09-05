@@ -27,6 +27,7 @@ from streamlit_folium import st_folium
 
 from app.utils.cell_zones import zone_label_for_cell
 from app.utils.date_helpers import resolve_available_dates, resolve_date_range
+from app.utils.dmc_live import fetch_rodelillo_live
 from app.utils.map_renderer import render_folium_map
 from app.utils.metrics_loader import load_ml_metrics
 from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
@@ -202,6 +203,35 @@ def _pick_demo_date(available: list[date], min_d: date, max_d: date) -> date:
     if calendar_date not in available:
         st.sidebar.caption("Sin predicciones en esa fecha; usa el selector de días.")
     return selected
+
+
+def _render_dmc_live_card() -> None:
+    """Tarjeta "Clima actual en Rodelillo" — dato en vivo de la red DMC.
+
+    Independiente del sistema de riesgo por celdas (demo_seed): no participa
+    en top_risk_cell(), en el banner de mayor riesgo ni en ningún cálculo de
+    nivel_riesgo/probabilidad. Se ubica entre la fila de métricas del seed y
+    el mapa — separada de ambos — para que quede claro que es una fuente de
+    datos distinta, no una 6ª celda del sistema de riesgo.
+    """
+    st.markdown("#### 🌡️ Clima actual en Rodelillo (estación DMC 330007)")
+    st.caption(
+        "Dato en vivo de la red DMC, independiente del sistema de riesgo "
+        "por celdas (`demo_seed`) — cacheado 5 minutos."
+    )
+    resultado = fetch_rodelillo_live()
+    if resultado["ok"]:
+        col1, col2, col3 = st.columns(3)
+        col1.metric("Temperatura", f"{resultado['temperatura_c']:.1f} °C")
+        col2.metric("Humedad relativa", f"{resultado['humedad_pct']:.0f} %")
+        viento = resultado["viento_kmh"]
+        col3.metric("Viento", f"{viento:.1f} km/h" if viento is not None else "—")
+        st.caption(f"Lectura DMC: {resultado['momento']} · consultado {resultado['checked_at']}")
+    else:
+        st.info(
+            f"⚠️ Sin conexión con DMC en este momento "
+            f"(intentado a las {resultado['checked_at']})."
+        )
 
 
 def _render_risk_legend() -> None:
@@ -565,6 +595,10 @@ def main() -> None:
         )
     with col5:
         st.metric("Prob. máxima", f"{prob_max:.0%}")
+
+    st.markdown("---")
+    _render_dmc_live_card()
+    st.markdown("---")
 
     # ── Mapa (izq) + Detalle por celda (der) ──
     st.markdown("### Mapa de riesgo probabilístico (radio ~1 km por celda)")
