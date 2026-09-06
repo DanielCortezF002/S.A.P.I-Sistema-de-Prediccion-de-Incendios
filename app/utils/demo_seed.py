@@ -14,14 +14,20 @@ import pandas as pd
 from shapely.geometry import Point
 
 # ──────────────────────────────────────────────
-# Parámetros de grilla (alineados con generate_seed.py)
+# Parámetros de grilla
 # ──────────────────────────────────────────────
-BASE_LON = -71.535
-BASE_LAT = -33.062
-COLS = 10
-ROWS = 5
-STEP_LON = 0.010
-STEP_LAT = 0.009
+# La geometría vive en app/utils/grid.py, que es la fuente única y de donde
+# también salen el radio de dibujo y la tolerancia de clic. Se reexporta acá
+# porque varios módulos ya importaban estas constantes desde demo_seed.
+from app.utils.grid import (  # noqa: E402
+    BASE_LAT,
+    BASE_LON,
+    COLS,
+    ROWS,
+    STEP_LAT,
+    STEP_LON,
+)
+
 DEMO_START = date(2025, 2, 9)
 DEMO_END = date(2025, 2, 15)
 DEMO_DAYS = (DEMO_END - DEMO_START).days + 1
