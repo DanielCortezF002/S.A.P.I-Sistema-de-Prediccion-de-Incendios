@@ -1,4 +1,4 @@
--- Seed demo corredor Viña–Quilpué–Villa Alemana: 50 celdas x ventana multi-día
+-- Seed demo corredor Viña–Quilpué: 50 celdas x ventana multi-día
 -- Rango: 2025-02-09 .. 2025-02-15 (7 días)
 -- Generado por scripts/generate_seed.py
 

@@ -210,7 +210,7 @@ class DataProcessor:
 
     # Parámetros de grilla alineados con scripts/generate_seed.py
     # Grilla compacta 10 cols × 5 filas = 50 celdas (~1 km² cada una)
-    # Corredor Viña del Mar – Quilpué – Villa Alemana
+    # Corredor Viña del Mar – Quilpué
     _GRID_BASE_LON = -71.535
     _GRID_BASE_LAT = -33.062
     _GRID_COLS = 10

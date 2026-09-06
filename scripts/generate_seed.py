@@ -6,7 +6,7 @@ import json
 from datetime import date, timedelta
 from pathlib import Path
 
-# Corredor Viña del Mar – Quilpué – Villa Alemana (interfaz urbano-forestal)
+# Corredor Viña del Mar – Quilpué (interfaz urbano-forestal)
 # Coordenadas reales alineadas con el informe académico S.A.P.I. 2026
 #
 # Grilla COMPACTA 5 filas × 10 columnas = 50 celdas adyacentes (~1 km² cada una)
@@ -39,7 +39,7 @@ ZONAS = {
 def _zone_for_col(col: int) -> str:
     # Alineado con app/utils/cell_zones.py
     # Cols 0-1: Costa litoral Viña del Mar
-    # Cols 2-6: Urbano-forestal (Quilpué / Villa Alemana)
+    # Cols 2-6: Urbano-forestal (Quilpué)
     # Cols 7-9: Precordillera / cerros orientales
     if col <= 1:
         return "costa"
@@ -146,7 +146,7 @@ def main() -> None:
         )
 
     lines = [
-        "-- Seed demo corredor Viña–Quilpué–Villa Alemana: 50 celdas x ventana multi-día",
+        "-- Seed demo corredor Viña–Quilpué: 50 celdas x ventana multi-día",
         f"-- Rango: {DEMO_START.isoformat()} .. {DEMO_END.isoformat()} ({DEMO_DAYS} días)",
         "-- Generado por scripts/generate_seed.py",
         "",
