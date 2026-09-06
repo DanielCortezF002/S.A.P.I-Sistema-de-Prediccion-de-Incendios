@@ -1,4 +1,16 @@
-"""Paleta de riesgo compartida entre mapa, tabla y ficha de celda."""
+"""Paleta de riesgo compartida entre mapa, tabla y ficha de celda.
+
+Los colores ya no viven acá: se leen de `app.theme.tokens`, que es la fuente
+única. Este módulo queda como la capa de presentación de esa paleta — el HTML
+y los estilos concretos que consumen mapa, tabla y ficha.
+
+Desaparecieron cuatro diccionarios paralelos (`RISK_STROKE`, `RISK_ROW_STYLE`,
+`RISK_BANNER_TEXT`, `RISK_EMOJI`) indexados todos por el mismo string de
+nivel. Eran una invitación a que uno quedara desincronizado de los otros, y
+`RISK_BANNER_TEXT` en particular existía solo para parchear que el amarillo
+del nivel medio no admitía texto claro encima. Con los roles explícitos de
+`tokens.RiskPalette` el parche ya no hace falta.
+"""
 
 from __future__ import annotations
 
@@ -6,43 +18,33 @@ from typing import Any
 
 import pandas as pd
 
-RISK_COLORS: dict[str, str] = {
-    "bajo": "#2ecc71",
-    "medio": "#f1c40f",
-    "alto": "#e74c3c",
-}
+from app.theme.contrast import parse_hex
+from app.theme.tokens import (
+    RISK,
+    RISK_GLYPH,
+    RISK_UNKNOWN,
+    ROW_TINT_ALPHA,
+    RiskPalette,
+    risk_palette,
+)
 
-# Borde más oscuro del mismo tono para resaltar selección en el mapa
-RISK_STROKE: dict[str, str] = {
-    "bajo": "#1a7a42",
-    "medio": "#b7950b",
-    "alto": "#a93226",
-}
-
-# Fondo de fila seleccionada en la tabla (mismo tono que el radio)
-RISK_ROW_STYLE: dict[str, str] = {
-    "bajo": "background-color: rgba(46, 204, 113, 0.32); color: #eafaf1",
-    "medio": "background-color: rgba(241, 196, 15, 0.32); color: #fef9e7",
-    "alto": "background-color: rgba(231, 76, 60, 0.32); color: #fdedec",
-}
-
-# Texto legible sobre un fondo RISK_COLORS sólido (el banner de mayor riesgo
-# usa el color de riesgo como fondo, no como acento): el amarillo #f1c40f
-# necesita texto oscuro; verde/rojo funcionan con texto claro.
-RISK_BANNER_TEXT: dict[str, str] = {
-    "bajo": "#0d3d20",
-    "medio": "#4a3b04",
-    "alto": "#fdecea",
-}
-
-# Mismo emoji que la leyenda del mapa (_render_risk_legend en app.py) —
-# refuerza el semáforo verde/amarillo/rojo en el banner de alerta.
-RISK_EMOJI: dict[str, str] = {"bajo": "🟢", "medio": "🟡", "alto": "🔴"}
+# Se mantiene para los consumidores que solo necesitan el color de relleno
+# (`app.utils.map_renderer`, `scripts/preview_real_cells_map.py`).
+RISK_COLORS: dict[str, str] = {nivel: p.surface for nivel, p in RISK.items()}
 
 
 def risk_color(nivel: str) -> str:
-    """Color principal según nivel de riesgo."""
-    return RISK_COLORS.get(str(nivel), "#95a5a6")
+    """Color de relleno según nivel de riesgo; neutral si no se reconoce."""
+    return risk_palette(str(nivel)).surface
+
+
+def _row_style_css(palette: RiskPalette) -> str:
+    """Fondo tintado y texto de la fila resaltada, derivados de la paleta."""
+    red, green, blue = parse_hex(palette.surface)
+    return (
+        f"background-color: rgba({red}, {green}, {blue}, {ROW_TINT_ALPHA}); "
+        f"color: {palette.row_text}"
+    )
 
 
 def format_cell_summary_html(row: pd.Series) -> str:
@@ -62,23 +64,23 @@ def format_cell_summary_html(row: pd.Series) -> str:
 
 def format_top_risk_banner_html(top: dict[str, Any]) -> str:
     """HTML del banner de mayor riesgo (primero en el panel principal, antes
-    del título): fondo sólido del color de riesgo — mismo semáforo verde/
-    amarillo/rojo que ya usan mapa y tabla, no una paleta nueva.
+    del título): fondo sólido del color de riesgo — mismo semáforo que ya usan
+    mapa y tabla, no una paleta nueva.
 
     `top` es el dict que devuelve `app.utils.cell_table.top_risk_cell`:
     cell_id, zona, nivel_riesgo, probabilidad, regla_30_30_30 (bool).
     """
     nivel = str(top["nivel_riesgo"])
-    bg = risk_color(nivel)
-    fg = RISK_BANNER_TEXT.get(nivel, "#1c1712")
-    emoji = RISK_EMOJI.get(nivel, "")
+    palette = risk_palette(nivel)
+    glyph = RISK_GLYPH.get(nivel, "")
     prob = float(top["probabilidad"])
     regla_txt = "Regla 30-30-30 ACTIVA" if top.get("regla_30_30_30") else "Regla 30-30-30 no activa"
     return (
-        f'<div style="background:{bg}; color:{fg}; border-radius:8px; '
+        f'<div style="background:{palette.surface}; color:{palette.on_solid}; '
+        f'border-radius:8px; '
         f'padding:0.8rem 1.1rem; margin-bottom:0.6rem; font-weight:700; '
         f'display:flex; flex-wrap:wrap; align-items:baseline; gap:0.35rem 0.6rem;">'
-        f'<span style="font-size:1.05rem;">{emoji} Celda de mayor riesgo ahora: {top["cell_id"]}</span>'
+        f'<span style="font-size:1.05rem;">{glyph} Celda de mayor riesgo ahora: {top["cell_id"]}</span>'
         f'<span style="font-weight:500;">· {top["zona"]} · {nivel.upper()} · {prob:.0%}</span>'
         f'<span style="font-weight:700; margin-left:auto;">{regla_txt}</span>'
         f"</div>"
@@ -94,8 +96,11 @@ def style_display_dataframe(
     def _row_style(row: pd.Series) -> list[str]:
         if selected_cell_id and str(row["cell_id"]) == selected_cell_id:
             nivel = str(row["nivel_riesgo"])
-            css = RISK_ROW_STYLE.get(nivel, RISK_ROW_STYLE["bajo"])
-            return [css] * len(row)
+            # Un nivel no reconocido cae al estilo de `bajo`, no al neutral:
+            # el resalte solo indica "esta fila es la seleccionada", y el gris
+            # se confundiría con una fila deshabilitada.
+            palette = RISK.get(nivel, RISK["bajo"])
+            return [_row_style_css(palette)] * len(row)
         return [""] * len(row)
 
     return display_df.style.apply(_row_style, axis=1)
@@ -103,7 +108,8 @@ def style_display_dataframe(
 
 def map_selection_style(nivel: str, base_color: str) -> dict[str, Any]:
     """Estilo Folium para círculo seleccionado según nivel."""
-    stroke = RISK_STROKE.get(str(nivel), base_color)
+    palette = RISK.get(str(nivel))
+    stroke = palette.stroke if palette else base_color
     return {
         "stroke": stroke,
         "fill_opacity": 0.78,
@@ -184,3 +190,17 @@ def inject_table_checkbox_colors(
         """,
         height=0,
     )
+
+
+__all__ = [
+    "RISK_COLORS",
+    "RISK_GLYPH",
+    "RISK_UNKNOWN",
+    "format_cell_summary_html",
+    "format_top_risk_banner_html",
+    "inject_table_checkbox_colors",
+    "map_selection_style",
+    "risk_color",
+    "risk_palette",
+    "style_display_dataframe",
+]

@@ -13,11 +13,15 @@ fastReruns = true
 [client]
 showSidebarNavigation = false
 
-# Dirección de diseño "B — Claridad Institucional" (exploración SAPI, ver
-# canvas de mockups). Paleta/tipografía únicamente — la lógica del mapa
-# Folium/Leaflet no cambia. secondaryBackgroundColor queda neutro (no navy)
-# porque Streamlit lo aplica también a fondos de widgets fuera del sidebar;
-# el navy del sidebar se aplica aparte vía CSS en _inject_css().
+# Estos cuatro colores están duplicados a propósito: Streamlit lee este bloque
+# al arrancar, antes de que corra Python, así que no puede importarlos de
+# `app/theme/tokens.py`. Ese módulo es la fuente única y
+# `tests/test_theme.py::test_theme_config_matches_tokens` falla si los dos se
+# desincronizan — no edites acá sin editar allá.
+#
+# secondaryBackgroundColor queda neutro (no navy) porque Streamlit lo aplica
+# también a fondos de widgets fuera del sidebar; el navy del sidebar se aplica
+# aparte vía CSS, acotado con un selector.
 [theme]
 base = "light"
 primaryColor = "#3b6ea5"
