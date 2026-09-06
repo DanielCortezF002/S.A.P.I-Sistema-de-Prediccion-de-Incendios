@@ -231,11 +231,22 @@ streamlit run app/app.py
 
 > *Capturas de pantalla del dashboard en producción — próximamente.*
 
-El sistema genera cada madrugada un mapa coroplético de la Región de Valparaíso donde cada celda de 1 km² aparece coloreada según su probabilidad de ignición predicha:
+En la versión objetivo, el sistema genera cada madrugada un mapa coroplético de la Región de Valparaíso donde cada celda de 1 km² aparece coloreada según su probabilidad de ignición predicha:
 
 - 🟢 **Verde** — Riesgo bajo
-- 🟡 **Amarillo** — Riesgo medio
+- 🟠 **Ámbar** — Riesgo medio
 - 🔴 **Rojo** — Riesgo alto
+
+La demo de esta entrega no cubre la región completa ni alcanza esa resolución:
+son 50 celdas de ~11,5 km² sobre el corredor Viña del Mar – Quilpué – Villa
+Alemana. Ver [`docs/alcance-prototipo.md`](docs/alcance-prototipo.md).
+
+El nivel medio era amarillo hasta la centralización de tokens de diseño. Se
+cambió a ámbar porque el amarillo daba 1,66:1 de contraste sobre el mapa base,
+por debajo del mínimo de 3:1 que WCAG 2.1 pide para un elemento gráfico: el
+relleno de una celda de riesgo medio era prácticamente invisible. La paleta
+completa vive en `app/theme/tokens.py` y sus umbrales los verifica
+`tests/test_theme.py`.
 
 Al hacer clic en cualquier zona, el analista obtiene la probabilidad exacta de ignición y el desglose de las variables dominantes (temperatura, humedad, viento, pendiente topográfica).
 

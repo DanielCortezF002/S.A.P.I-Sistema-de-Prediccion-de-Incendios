@@ -25,7 +25,7 @@ Los datos mostrados en el dashboard cloud provienen del **seed demo** generado p
 | Incendios históricos | Puntos ilustrativos en `staging_incendios` | Histórico CONAF 5 años |
 | Satélite NDVI/EVI | No incluido en seed | NASA FIRMS integrado en pipeline |
 | Topografía DEM | No en seed demo | Altitud, pendiente, orientación por celda |
-| Cobertura espacial | **50 celdas** (~1 km² circular cada una) | 100% Región de Valparaíso |
+| Cobertura espacial | **50 celdas** (~11,5 km² circular cada una) | 100% Región de Valparaíso |
 | Ingesta NASA/DMC en `data/raw/` | Puede existir por `parallel_ingester` (focos FIRMS, telemetría DMC reciente) | Ingesta automatizada 24 h |
 | **Mapa del dashboard (Hito 1)** | **`demo_seed` en memoria** — no lee `data/raw/` ni join SAPI-28 | `postgis_inference` o predicciones batch reales |
 
@@ -55,6 +55,46 @@ La grilla demo 5×10 (VP-001 a VP-050) está centrada en el corredor de interfaz
 - Villa Alemana (este)
 
 No representa cobertura regional completa ni sustituye el Botón Rojo ni los sistemas oficiales CONAF/SENAPRED.
+
+## Deuda técnica: dos grillas conviviendo (Sprint 2)
+
+El repositorio contiene **dos definiciones de grilla que no coinciden**, y esta
+entrega usa una sola de ellas.
+
+| | Grilla de la demo (`app/`) | Grilla del pipeline PostGIS (`src/`) |
+|---|---|---|
+| Definida en | `app/utils/grid.py` | `src/procesamiento/data_processor.py`, `scripts/generate_seed.py` |
+| Ancla (lon, lat) | −71.58, −33.14 | −71.535, −33.062 |
+| Paso | 0.0411° / 0.035° (~3,8 km) | 0.010° / 0.009° (~0,93 / ~1,0 km) |
+| Extensión | 34,5 × 15,6 km | 8,4 × 4,0 km |
+| Área por celda | ~11,5 km² (radio 1.917 m) | ~0,75 km² (radio 490 m) |
+| Comunas con detecciones reales | Viña del Mar, Quilpué, Valparaíso, Limache, Villa Alemana | Viña del Mar, Quilpué |
+| Cobertura del incendio 2024-02-03 | 75% de 348 detecciones | 17% |
+
+**Qué usa cada cosa.** Con `SAPI_DATA_MODE=demo_seed` —el modo de esta
+entrega— el dashboard lee `app/utils/demo_seed.py`, que importa su geometría
+de `app/utils/grid.py`. La grilla de `src/` alimenta únicamente el camino
+`postgis_inference` y el seed de `docker/initdb/`, que en esta entrega no se
+ejecutan.
+
+**Por qué divergieron.** La grilla de la demo se ensanchó al detectar que la
+original afirmaba cubrir el corredor completo mientras generaba celdas sobre
+8,4 × 4,0 km dentro de Viña del Mar, conteniendo apenas el 17% de las
+detecciones reales del incendio del 2024-02-03. La extensión nueva está
+verificada contra NASA FIRMS y contra el shapefile comunal DPA 2023 (SUBDERE);
+ver [`tests/test_grid.py`](../tests/test_grid.py). El pipeline de `src/` no se
+migró: hacerlo obliga a regenerar el seed de PostGIS y a revalidar la matriz de
+features, y se decidió no abrir eso antes de la entrega.
+
+**Consecuencia mientras la deuda esté abierta.** Cualquier comparación entre
+una corrida `demo_seed` y una `postgis_inference` es inválida: `VP-038` no
+designa la misma porción de territorio en las dos. Las cifras de área y
+resolución de este documento y del manual de presentación describen la grilla
+de la demo.
+
+**Cierre previsto.** Sprint 2: unificar ambas capas sobre `app/utils/grid.py`
+como fuente única, regenerar el seed de PostGIS y revalidar la matriz de
+features contra la grilla nueva.
 
 ## Trazabilidad informe → código
 

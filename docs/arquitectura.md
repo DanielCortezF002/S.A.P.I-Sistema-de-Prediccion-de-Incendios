@@ -1,7 +1,7 @@
 # Arquitectura S.A.P.I. — Prototipo Funcional UAT
 
 Sistema de Alerta y Predicción de Incendios para la Región de Valparaíso.
-Prototipo académico con **50 celdas** de demo (1 km²) optimizado para latencia < 0.2s.
+Prototipo académico con **50 celdas** de demo (~11,5 km² c/u) optimizado para latencia < 0.2s.
 
 ## Contenedores Docker Compose
 

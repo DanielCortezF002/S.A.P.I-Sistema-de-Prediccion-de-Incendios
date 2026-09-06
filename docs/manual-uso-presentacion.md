@@ -68,11 +68,11 @@ Abrir `http://localhost:8501`.
 
 | Elemento | Significado |
 |----------|-------------|
-| **Build** | Versión del prototipo demo (ej. `demo-50cells-v8-professional`). |
+| **Build** | Versión del prototipo demo (ej. `demo-corredor-50cells-v9`), dentro de “Detalles técnicos”. |
 | **Query** | Motor de consulta PostGIS (`exact-date-v1`) — activo cuando `SAPI_DATA_MODE=postgis_inference`. |
 | **Modo Demo** (badge) | `SAPI_DATA_MODE=demo_seed`: probabilidades y niveles provienen del **escenario sembrado**, no de inferencia XGBoost en runtime. |
 | **Métricas ML** | Panel sidebar: **sin corrida real de recall/AUC-ROC todavía** (el 0.78/0.83 citado antes era mock de test en `reports/metrics.json`, corregido en `c22c9a1`). Exploratorio R-ETIQUETA-01 (n=12, Sprint 2): percentil de riesgo 92-99 en los 3 casos sin fuga de datos, sin calibración suficiente para umbral de decisión. |
-| **Recorrido demo** | Slider de 7 días + calendario acotado al rango PostGIS. |
+| **Recorrido demo** | Selector de los 7 días con datos + calendario acotado a esa ventana. |
 | **Fecha de consulta** | Día exacto con predicciones cargadas. Rango demo: **2025-02-09** a **2025-02-15**. Default: **2025-02-15** (último día). |
 
 ### 4.2 Banners informativos
@@ -84,24 +84,25 @@ Abrir `http://localhost:8501`.
 
 | KPI | Interpretación operativa |
 |-----|--------------------------|
-| **Celdas monitoreadas** | Cuántos cuadrantes de ~1 km² hay en la grilla (50 en demo). |
+| **Celdas monitoreadas** | Cuántos cuadrantes de ~11,5 km² hay en la grilla (50 en demo). |
 | **Riesgo bajo / medio / alto** | Conteo por nivel para la fecha seleccionada. |
 | **Día 2025-02-15** | 15 bajo · 33 medio · **2 alto** (VP-038, VP-049). |
-| **Día 2025-02-09** | Sin celdas rojas; mayoría verde/amarillo. |
+| **Día 2025-02-09** | Sin celdas rojas; mayoría verde/ámbar. |
 
 ### 4.4 Mapa interactivo
 
-- Cada **círculo** ≈ 1 km² de radio de influencia.
+- Cada **círculo** ≈ 11,5 km² de radio de influencia (radio 1.917 m).
 - **Verde:** riesgo bajo (costa / condiciones húmedas).
-- **Amarillo:** riesgo medio (zona urbana de transición).
+- **Ámbar:** riesgo medio (zona urbana de transición).
 - **Rojo:** riesgo alto (precordillera con condiciones extremas).
 - **Clic en una celda:** popup con celda (`VP-XXX`), zona climática, probabilidad, temperatura, humedad, viento y estado de la regla 30-30-30.
-- Controles: zoom (+/−), capas OpenStreetMap.
+- Controles: zoom (+/−) y capa opcional con las detecciones NASA FIRMS del 2024-02-03. Mapa base Esri World Light Gray.
+- El mapa y la tabla están en **pestañas** (“Mapa de riesgo” / “Detalle por celda”), no lado a lado — así el mapa usa el ancho completo y la vista funciona en teléfono.
 
 **Distribución esperada en demo (2025-02-15):**
 
 - Oeste (litoral): mayormente verde.
-- Centro: amarillo.
+- Centro: ámbar.
 - Este (precordillera): solo **VP-038** y **VP-049** en rojo con regla activa.
 
 ### 4.5 Tabla “Detalle por celda”
@@ -136,7 +137,7 @@ En demo, solo **VP-038** y **VP-049** cumplen las tres (32.5 °C, 24 %, 34 km/h)
 
 ### Minuto 0–2 — Problema y propuesta
 
-> “Hoy las alertas suelen ser reactivas y a escala comunal. S.A.P.I. anticipa **dónde** es más probable una ignición mañana, a resolución de 1 km², para apoyar el posicionamiento preventivo de brigadas.”
+> “Hoy las alertas suelen ser reactivas y a escala comunal. S.A.P.I. anticipa **dónde** es más probable una ignición mañana, a resolución objetivo de 1 km², para apoyar el posicionamiento preventivo de brigadas. La demo que van a ver usa 50 celdas de ~11,5 km² sobre el corredor, para que el corredor completo entre en pantalla.”
 
 ### Minuto 2–4 — Arquitectura (una diapositiva)
 
@@ -146,10 +147,10 @@ Enfatizar: **la UI no ejecuta el modelo en caliente**; lee predicciones ya guard
 ### Minuto 4–8 — Demo en vivo (cambio de fecha)
 
 1. Abrir dashboard; señalar badge **Modo Demo** y banner de demo académica (VP-038/VP-049 = escenario sembrado).
-2. Fecha: **2025-02-09** → mapa mayormente verde/amarillo, **0 rojos**, KPI alto = 0.
+2. Fecha: **2025-02-09** → mapa mayormente verde/ámbar, **0 rojos**, KPI alto = 0.
 3. Cambiar a **2025-02-15** → mapa evoluciona; **2 rojos** (VP-038, VP-049), regla activa.
 4. Verificar KPIs: **50 celdas**, **2 alto**, conteos bajo/medio coherentes.
-5. Mapa: oeste verde → centro amarillo → este dos rojos.
+5. Mapa: oeste verde → centro ámbar → este dos rojos.
 6. Clic en **VP-038**: leer popup (precordillera, regla activa).
 7. Tabla: scroll a **# 38** y **# 49**; mostrar columna `regla_30_30_30`.
 8. Descargar reporte TXT (incluye fecha consultada) y abrirlo 5 segundos.
@@ -173,7 +174,7 @@ Tener preparadas las respuestas de la sección 7.
 1. El analista abre S.A.P.I. y selecciona la fecha del día.
 2. Identifica **VP-038** y **VP-049** en precordillera con regla 30-30-30 activa.
 3. Comunica al jefe de operaciones: “Dos cuadrantes al este de Quilpué con condición extrema; recomiendo reforzar patrullaje antes de las 10:00.”
-4. El resto de la grilla permanece en verde/amarillo → no dispersar brigadas en toda la provincia.
+4. El resto de la grilla permanece en verde/ámbar → no dispersar brigadas en toda la provincia.
 5. A las 07:00, adjunta el **reporte TXT** al acta del comité.
 
 **Mensaje clave:** el sistema **prioriza** recursos; no emite órdenes automáticas.
@@ -213,7 +214,7 @@ Detalle técnico: [`docs/alcance-prototipo.md`](alcance-prototipo.md).
 - [ ] URL del dashboard abierta en pestaña de respaldo.
 - [ ] Fechas probadas: **2025-02-09** (0 rojos) y **2025-02-15** (2 rojos).
 - [ ] Badge **Modo Demo** visible (`SAPI_DATA_MODE=demo_seed`).
-- [ ] Build `demo-50cells-v8-professional`, Query `exact-date-v1`.
+- [ ] Build `demo-corredor-50cells-v9`, Query `exact-date-v1` (en “Detalles técnicos”).
 - [ ] Panel ML sidebar visible (muestra "sin corrida real todavía", **no** 0.78/0.83).
 - [ ] Mapa con gradiente oeste→este y 2 rojos (VP-038, VP-049).
 - [ ] Tabla con columna # 1–50.

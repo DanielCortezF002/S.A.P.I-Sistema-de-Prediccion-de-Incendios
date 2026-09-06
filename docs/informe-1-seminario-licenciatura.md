@@ -76,7 +76,7 @@ El prototipo distingue explícitamente qué es demostración de arquitectura y q
 |---------|---------------------|------------------------------|
 | Meteo | Perfiles zonalmente calibrados en el seed demo | Ingesta horaria DMC en vivo |
 | Topografía | DEM real (Copernicus GLO-30) implementado y procesado — altitud/pendiente/orientación reales por celda | Cobertura regional completa |
-| Cobertura espacial | 50 celdas (~1 km² c/u), corredor VP-001 a VP-050 | 100% Región de Valparaíso |
+| Cobertura espacial | 50 celdas (~11,5 km² c/u), corredor VP-001 a VP-050 | 100% Región de Valparaíso |
 | Mapa del dashboard (Hito 1) | `SAPI_DATA_MODE=demo_seed` — escenario sembrado en memoria | `postgis_inference` (Sprint 2) |
 
 Esta distinción no es cosmética: existe un mecanismo de software (`SAPI_DATA_MODE`) y una constante verificada en código (`_render_data_mode_badge()`) que declara qué fuente alimenta el mapa en cada momento — evita que el prototipo aparente ser más de lo que es.

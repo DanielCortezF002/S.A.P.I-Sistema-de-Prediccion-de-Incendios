@@ -29,7 +29,7 @@ En **esta demo académica** (`SAPI_DATA_MODE=demo_seed` por defecto en [`src/con
 1. Abrir la URL de **Streamlit Community Cloud** (rama `main`, entrada `app/app.py`).
 2. Python **3.11** en configuración de la app.
 3. Secrets: `DATABASE_URL` (Supabase pooler **6543**) y `GRID_MAX_CELLS=50`.
-4. Verificar sidebar: build `demo-50cells-v8-professional`, query `exact-date-v1`.
+4. Verificar sidebar, dentro de “Detalles técnicos”: build `demo-corredor-50cells-v9`, query `exact-date-v1`.
 
 ### 2.2 Demo local (Chrome)
 
@@ -109,15 +109,15 @@ Regla blindada por `tests/test_architecture.py`: `app/` **no puede** importar in
 
 3. **Lista de días** — `_cached_available_dates()` devuelve las 7 fechas del seed demo.
 
-4. **Selector** — Sidebar: slider + calendario acotado al rango demo.
+4. **Selector** — Sidebar: `selectbox` de días con datos + calendario acotado al rango demo.
 
 5. **Carga del mapa** — `get_demo_gdf(selected_date)` (lru_cache en RAM). **No** hay SQL ni PostGIS en este paso.
 
 6. **KPIs y banner** — Conteos `bajo` / `medio` / `alto`, probabilidad máxima, regla 30-30-30. Banner azul (`_render_demo_scope_banner`) indica `SAPI_DATA_MODE`, ventana demo y aclara que **VP-038** / **VP-049** el 15-feb son **escenario sembrado**, no predicción XGBoost en runtime. Badge sidebar (`_render_data_mode_badge`) declara fuente del mapa.
 
 7. **Mapa** — `render_folium_map(gdf)`:
-   - Un `folium.Circle` por celda, radio **490 m** (≈ 1 km²).
-   - Color por `nivel_riesgo`: verde / amarillo / rojo.
+   - Un `folium.Circle` por celda, radio **1.917 m** (≈ 11,5 km²), derivado de `app/utils/grid.py`.
+   - Color por `nivel_riesgo`: verde / ámbar / rojo.
    - Popup: celda, zona climática, meteo, regla.
 
 8. **Tabla** — 50 filas, columna `#` 1–50, `zona_climatica` derivada de `cell_id`.
@@ -163,17 +163,23 @@ python scripts/generate_seed.py
 python scripts/validate_seed.py
 ```
 
-### 5.2 Grilla espacial (50 celdas)
+### 5.2 Grilla espacial del seed PostGIS (50 celdas)
+
+> Esta tabla describe la grilla del **seed de PostGIS** (`scripts/generate_seed.py`),
+> que **no** es la que usa el dashboard en modo `demo_seed`. El dashboard toma su
+> geometría de `app/utils/grid.py` (celdas de ~11,5 km² sobre 34,5 × 15,6 km).
+> Ver *Deuda técnica: dos grillas conviviendo* en
+> [`alcance-prototipo.md`](alcance-prototipo.md).
 
 | Parámetro | Valor | Significado |
 |-----------|-------|-------------|
 | Diseño | 5 filas × 10 columnas | VP-001 … VP-050 |
-| Ancla | lon -71.52, lat -33.04 | Corredor Viña–Quilpué–Villa Alemana |
-| Paso | 0.008° (~740–890 m) | Centros de celda |
-| Geometría | `ST_Buffer(564 m)` | Círculo ≈ 1 km² de área |
-| Zonas (columnas) | 0–2 costa, 3–6 urbano, 7–9 precordillera | Microclimas sintéticos |
+| Ancla | lon -71.535, lat -33.062 | Corredor Viña–Quilpué |
+| Paso | 0.010° / 0.009° (~930 m / ~1.000 m) | Centros de celda |
+| Geometría | `ST_Buffer(490 m)` | Círculo ≈ 0,75 km² de área |
+| Zonas (columnas) | 0–1 costa, 2–6 urbano, 7–9 precordillera | Microclimas sintéticos |
 
-Los círculos en el mapa **se superponen** porque el diámetro (~1,1 km) es mayor que la separación entre centros. En producción se usaría un teselado regional sin solape; aquí cada círculo es un **radio de influencia** demo.
+Los círculos **se superponen** en el eje este-oeste porque el diámetro (980 m) es mayor que la separación entre centros (~930 m). En producción se usaría un teselado regional sin solape; aquí cada círculo es un **radio de influencia** demo.
 
 ### 5.3 Ventana temporal (7 días)
 
@@ -222,33 +228,44 @@ Mensaje para defensa: *”Pipeline ML implementado y funcional (RF + XGBoost + S
 
 ### Sidebar
 
+De arriba abajo, en el orden en que aparecen:
+
 | Elemento | Función |
 |----------|---------|
-| Build / Query | Versión deploy (`demo-50cells-v8-professional`, `exact-date-v1`) |
-| Datos disponibles | Rango min → max del seed demo |
-| **Modo Demo** (badge) | `SAPI_DATA_MODE=demo_seed` — fuente escenario sembrado, no inferencia en runtime |
-| Modelo ML | Recall, AUC, RF baseline |
-| Recorrido demo | Slider de 7 fechas |
-| Calendario | Selección alternativa |
+| **Modo Demo** (badge) | Primero y sin colapsar: `SAPI_DATA_MODE=demo_seed` — fuente escenario sembrado, no inferencia en runtime |
+| Recorrido demo | `selectbox` con los 7 días que tienen datos (no un slider) |
+| Calendario | Selección alternativa, acotada al rango del seed |
+| **Detalles técnicos** (colapsado) | Al fondo: panel ML (Recall XGBoost, AUC-ROC, Recall RF baseline — muestran `—` mientras no haya una corrida real), Build / Query, rango de fechas y el valor crudo de `SAPI_DATA_MODE` |
+
+La jerarquía es deliberada: lo que declara si los datos son reales va arriba y
+visible; la metadata de trazabilidad académica va un clic más adentro.
 
 ### Área principal
 
 | Bloque | Contenido |
 |--------|-----------|
-| Banner azul | Alcance demo, `SAPI_DATA_MODE`, ventana de fechas, VP-038/VP-049 como escenario sembrado, disclaimer institucional |
-| Banner verde/amarillo | Resumen del día consultado |
-| 5 métricas | Celdas, bajo, medio, alto, prob. máxima |
-| Mapa Folium | 50 círculos, leyenda oeste→este |
-| Tabla | Detalle auditables VP-001…050 |
+| Banner de mayor riesgo | **Antes del título**: la celda más crítica del día, con fondo del color de su nivel y el estado de la regla 30-30-30 |
+| Título y subtítulo | S.A.P.I. — Región de Valparaíso |
+| Banner azul de alcance | Alcance demo, `SAPI_DATA_MODE`, extensión y resolución de la grilla, comunas con evidencia real de detecciones, VP-038/VP-049 como escenario sembrado, disclaimer institucional |
+| 2 métricas + caption | Celdas en riesgo alto y probabilidad máxima; la distribución completa (bajo/medio/alto y regla activa) va en el caption inmediatamente debajo |
+| Orientación del corredor | Caption oeste→este: costa de Viña del Mar · interfaz urbano-forestal (Quilpué) · precordillera |
+| Pestaña **“Mapa de riesgo”** | 50 círculos sobre mapa base Esri World Light Gray, leyenda del semáforo anclada al mapa como control Leaflet, y capa opcional con las detecciones NASA FIRMS del 2024-02-03 |
+| Pestaña **“Detalle por celda”** | Ficha de la celda seleccionada, botón “Limpiar selección” y tabla auditable VP-001…050 |
 | Regla 30-30-30 | Texto explicativo |
 | Descarga TXT | Reporte ejecutivo con footer `data_source=demo_seed` |
-| Logs | Auditoría `observability_logs` |
+| Logs | Auditoría `observability_logs` (vacía en demo: no hay PostGIS activo) |
+
+El mapa y el detalle están en **pestañas**, no en dos columnas lado a lado. El
+layout anterior partía la pantalla 48/52, y en un teléfono dejaba el mapa a
+media pantalla con una tabla de 8 columnas al lado, ilegible — es el hallazgo
+de usabilidad móvil del acta de UAT. Las pestañas lo resuelven de forma nativa
+y, en escritorio, le dan al mapa el ancho completo.
 
 ---
 
 ## 8. Guion de demostración (8 min)
 
-1. **2025-02-09** — Slider al primer día: mayoría verde/amarillo, **0 rojos**, KPI alto = 0.
+1. **2025-02-09** — Selector al primer día: mayoría verde/ámbar, **0 rojos**, KPI alto = 0.
 2. **2025-02-15** — Último día: **2 rojos** (este), regla activa, prob. máx ~97 %.
 3. Clic **VP-038** — Popup precordillera, regla activa.
 4. Tabla — Filas **#38** y **#49**, columna `regla_30_30_30 = 1`.
@@ -306,7 +323,7 @@ Tras deploy: **Reboot app** en Streamlit Cloud.
 | ¿Son datos reales de hoy? | No. Seed zonal multi-fecha calibrado para demo. |
 | ¿Por qué cambia el mapa al mover la fecha? | Consulta `fecha = :fecha` sobre 7 snapshots distintos. |
 | ¿El modelo corre en Streamlit? | No. UI solo lee `predicciones_riesgo`. |
-| ¿Por qué se solapan los círculos? | Radio ~1 km² con centros cada ~0,8 km; demo de influencia, no teselado oficial. |
+| ¿Por qué quedan huecos entre los círculos? | El radio (1.917 m) es la mitad de la separación entre centros (~3,8 km): se tocan en los bordes y dejan hueco en las esquinas. Radio de influencia demo, no teselado oficial. |
 | ¿Cubre toda la región? | No. 50 celdas en corredor Viña–Quilpué–Villa Alemana. |
 
 ---
