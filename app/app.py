@@ -5,30 +5,47 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+# La raíz del repo tiene que ir primera, no solo estar presente. Streamlit
+# antepone el directorio del script (app/) a sys.path, y ahí vive este mismo
+# archivo: con app/ por delante, `import app` resuelve al módulo app/app.py
+# en vez del paquete app/, y `app.utils` falla con "'app' is not a package".
+# El guard anterior (`if not in sys.path`) no alcanzaba: la raíz ya estaba en
+# la lista, solo que detrás de app/, así que no hacía nada.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
-if str(_REPO_ROOT) not in sys.path:
-    sys.path.insert(0, str(_REPO_ROOT))
+_REPO_ROOT_STR = str(_REPO_ROOT)
+if _REPO_ROOT_STR in sys.path:
+    sys.path.remove(_REPO_ROOT_STR)
+sys.path.insert(0, _REPO_ROOT_STR)
 
 from datetime import date, datetime, timedelta
-from typing import Any, Optional
+from typing import Optional
 
 import geopandas as gpd
 import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
+from app.state import (
+    cache_is_warm,
+    clear_selection,
+    ensure_default_selection,
+    init_session,
+    mark_cache_warm,
+    reset_selection_on_date_change,
+    select_cell,
+    selected_cell,
+)
+from app.theme.css import build_stylesheet
 from app.utils.cell_zones import zone_label_for_cell
 from app.utils.date_helpers import resolve_available_dates, resolve_date_range
+from app.utils.grid import CELL_COUNT, cell_step_meters, grid_extent_km
 from app.utils.map_renderer import render_folium_map
 from app.utils.metrics_loader import load_ml_metrics
 from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
 from app.utils.cell_table import (
-    DEFAULT_MAP_PANEL_PCT,
     PANEL_HEIGHT_PX,
-    SESSION_CELL_KEY,
     build_display_dataframe,
     cell_id_from_folium_output,
-    set_selected_cell,
     table_widget_key,
     top_risk_cell,
 )
@@ -43,7 +60,7 @@ from src.query.prediction_query import PredictionQuery
 
 QUERY_ENGINE_VERSION = "exact-date-v1"
 
-APP_BUILD = "demo-50cells-v8-professional"
+APP_BUILD = "demo-corredor-50cells-v9"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 RECALL_TARGET = 0.75
@@ -116,10 +133,33 @@ def _render_data_mode_badge() -> None:
 
 
 def _render_demo_scope_banner(min_d: date, max_d: date) -> None:
-    """Banner superior: alcance demo y aclaración VP-038 / VP-049 (escenario sembrado)."""
+    """Banner superior: alcance demo y aclaración VP-038 / VP-049 (escenario sembrado).
+
+    La extensión y la resolución se calculan desde `app.utils.grid` en vez de
+    escribirse a mano: el banner afirmaba cubrir el corredor completo mientras
+    la grilla generaba 8,4 x 4,0 km dentro de Viña del Mar.
+
+    Las comunas nombradas reflejan evidencia real, no geometría: contención
+    espacial estricta de las 348 detecciones NASA FIRMS del 2024-02-03 contra
+    las 50 celdas de esta grilla, con la comuna de cada celda resultante
+    verificada contra el shapefile oficial DPA 2023 (SUBDERE), 05-09-2026.
+    Villa Alemana había quedado nombrada antes solo porque su coordenada cae
+    dentro del bounding box de la grilla — sin ninguna detección real ahí
+    verificada en ese momento. Con el dataset completo sí aparece (2 celdas,
+    5 focos, 1.9% del total), junto con Valparaíso (32 focos) y Limache (17),
+    que no estaban mencionadas en ningún texto anterior del proyecto. Ver
+    tests/test_app.py::test_demo_banner_names_localities_with_real_detection_evidence.
+    """
+    step_x, _ = cell_step_meters()
+    ancho_km, alto_km = grid_extent_km()
     st.info(
-        f"**Demo académica** (`SAPI_DATA_MODE={SAPI_DATA_MODE}`): 50 celdas del corredor "
-        f"Viña del Mar–Quilpué–Villa Alemana. Ventana **{min_d.isoformat()}** a "
+        f"**Demo académica** (`SAPI_DATA_MODE={SAPI_DATA_MODE}`): {CELL_COUNT} celdas de "
+        f"~{step_x / 1000:.1f} km sobre el corredor de interfaz urbano-forestal de la "
+        f"Región de Valparaíso ({ancho_km:.0f} × {alto_km:.0f} km) — evidencia real de "
+        "detecciones NASA FIRMS (2024-02-03) principalmente en Viña del Mar y Quilpué "
+        "(79% de los focos reales), con presencia menor confirmada en Valparaíso, "
+        "Limache y Villa Alemana. "
+        f"Ventana **{min_d.isoformat()}** a "
         f"**{max_d.isoformat()}** (escenario sembrado calibrado por zona). "
         "Los valores mostrados **no** son salida del modelo en tiempo real. "
         "En particular, **VP-038** y **VP-049** el día **2025-02-15** (riesgo alto y regla "
@@ -197,165 +237,53 @@ def _pick_demo_date(available: list[date], min_d: date, max_d: date) -> date:
 
 
 def _render_risk_legend() -> None:
-    st.markdown(
-        """
-        **Leyenda:** 🟢 Bajo (&lt;33 %) · 🟡 Medio · 🔴 Alto (≥66 % o regla 30-30-30)  
-        **Oeste → Este:** Costa (marítimo) · Urbano (transición) · Precordillera (continental)
-        """
+    """Orientación geográfica del corredor, oeste a este.
+
+    El semáforo de riesgo ya no se duplica acá: vive anclado al mapa
+    (`build_risk_legend_html`), donde se lee sin desviar la vista. Lo que
+    queda es la única información que el mapa no da solo — qué comuna
+    corresponde a cada banda climática.
+    """
+    st.caption(
+        "Oeste → Este: costa de Viña del Mar · interfaz urbano-forestal "
+        "(Quilpué) · precordillera y cerros orientales"
+    )
+
+
+def _render_headline_metrics(gdf: gpd.GeoDataFrame, prob_max: float) -> None:
+    """Cifras del día: dos métricas destacadas y la distribución en texto.
+
+    Dos columnas y no cinco: es el máximo que entra legible en un teléfono
+    sin forzar `flex-direction` por CSS contra los internals de Streamlit.
+    """
+    conteos = {
+        nivel: int((gdf["nivel_riesgo"] == nivel).sum()) if not gdf.empty else 0
+        for nivel in ("bajo", "medio", "alto")
+    }
+    regla_activa = int((gdf["regla_30_30_30"] == 1).sum()) if not gdf.empty else 0
+
+    alto_col, prob_col = st.columns(2)
+    with alto_col:
+        st.metric("Celdas en riesgo alto", conteos["alto"])
+    with prob_col:
+        st.metric("Probabilidad máxima", f"{prob_max:.0%}")
+
+    st.caption(
+        f"{len(gdf)} celdas · bajo {conteos['bajo']} · medio {conteos['medio']} · "
+        f"alto {conteos['alto']} · regla 30-30-30 activa en {regla_activa}"
     )
 
 
 def _inject_css() -> None:
-    st.markdown(
-        """
-        <style>
-        section.main .block-container { max-width: 100%; padding-left: 0.75rem; padding-right: 0.75rem; }
-        div[data-testid="stDataFrame"] div[role="gridcell"][aria-selected="true"],
-        div[data-testid="stDataFrame"] [data-selected="true"] {
-            background-color: transparent !important;
-            outline: none !important;
-            box-shadow: none !important;
-        }
+    """Inyecta la hoja de estilo única, construida desde `app.theme.tokens`.
 
-        /* ── Vista móvil (SAPI-XX, hallazgo docs/acta-pruebas-aceptacion-usuario.md) ── */
-
-        /* (1) Mapa Folium: forzar ancho relativo al contenedor. st_folium calcula el
-           ancho del iframe vía JS al montar el componente; si esa medición corre antes
-           de que el navegador termine de aplicar este mismo CSS, puede quedar fijado en
-           px y no ajustarse al reflow posterior. Este !important gana sobre el atributo
-           width del iframe en cualquier viewport. overflow-x:hidden es red de seguridad:
-           si algún componente igual desborda, se recorta en vez de correr toda la página. */
-        section.main .block-container { overflow-x: hidden; }
-        iframe[title="streamlit_folium.st_folium"] {
-            width: 100% !important;
-            max-width: 100% !important;
-        }
-
-        /* (2) Controles de fecha: en pantallas angostas, el dropdown (control principal,
-           cubre todo el rango de fechas demo) alcanza solo; se oculta el calendario
-           secundario para no competir por espacio en el sidebar angosto. */
-        @media (max-width: 480px) {
-            section[data-testid="stSidebar"] div[data-testid="stDateInput"] {
-                display: none;
-            }
-        }
-
-        /* (3) Layout de columnas (mapa/detalle, métricas, header+botón "Limpiar"):
-           Streamlit 1.35 ya reacomoda columnas angostas vía flex-wrap (verificado con
-           Playwright), pero sin cambiar flex-direction — el apilado queda sujeto a que
-           cada columna decida envolver por su cuenta, columna por columna, no garantizado
-           para todos los anchos/combinaciones. Esta regla lo hace explícito y determinista:
-           fuerza columna vertical de forma directa, primer nivel y anidadas por igual. */
-        @media (max-width: 640px) {
-            div[data-testid="stHorizontalBlock"] {
-                flex-direction: column !important;
-            }
-            div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {
-                width: 100% !important;
-                min-width: 100% !important;
-                flex: 1 1 100% !important;
-            }
-        }
-
-        /* ── Dirección de diseño "B — Claridad Institucional" (exploración SAPI) ──
-           Solo paleta/tipografía/espaciado. El mapa Folium/Leaflet y su lógica
-           de renderizado no se tocan — esto es CSS sobre los mismos componentes
-           Streamlit ya existentes (sidebar, métricas, tarjetas, tabla). */
-        @import url('https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap');
-
-        html, body, [class*="css"] {
-            font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        }
-        h1, h2, h3, h4 { font-weight: 700 !important; letter-spacing: -0.01em; }
-
-        /* Sidebar: navy institucional. secondaryBackgroundColor del theme se dejó
-           neutro (afecta también widgets fuera del sidebar); el navy va aparte,
-           acotado a section[data-testid="stSidebar"]. */
-        section[data-testid="stSidebar"] {
-            background: #1e3348;
-        }
-        section[data-testid="stSidebar"] * {
-            color: #eef2f6;
-        }
-        section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
-        section[data-testid="stSidebar"] small,
-        section[data-testid="stSidebar"] .stCaption {
-            color: #a9b7c6 !important;
-        }
-        section[data-testid="stSidebar"] hr {
-            border-color: rgba(255,255,255,0.14);
-        }
-        section[data-testid="stSidebar"] div[data-testid="stMetricValue"] {
-            color: #eef2f6 !important;
-        }
-        section[data-testid="stSidebar"] div[data-testid="stMetricLabel"] {
-            color: #cbd6e1 !important;
-        }
-        section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
-        section[data-testid="stSidebar"] input {
-            background: rgba(255,255,255,0.07) !important;
-            border-color: rgba(255,255,255,0.22) !important;
-            color: #eef2f6 !important;
-        }
-        /* Los <code> inline (backticks en markdown: `demo-50cells-v8`,
-           `SAPI_DATA_MODE=demo_seed`) traen su propio fondo claro por defecto;
-           con el texto forzado a blanco arriba quedaban ilegibles (blanco sobre
-           claro). Fondo + texto propios, legibles sobre navy. */
-        section[data-testid="stSidebar"] code {
-            background: rgba(255,255,255,0.14) !important;
-            color: #eef2f6 !important;
-        }
-
-        /* Métricas del panel principal: tarjeta blanca con reborde, como en la
-           dirección elegida (acento de color por nivel de riesgo va en el borde
-           superior, no en el número — mejor contraste que texto en amarillo/
-           verde puro sobre blanco). Acotado al contenido principal: dentro del
-           sidebar (fondo navy + texto forzado a blanco arriba) una tarjeta
-           blanca dejaría el texto blanco sobre blanco. */
-        section.main div[data-testid="stMetric"] {
-            background: #ffffff;
-            border: 1px solid #e3ddd0;
-            border-radius: 6px;
-            padding: 0.9rem 1rem;
-        }
-
-        /* Tarjetas informativas (banner demo, resumen de datos, regla 30-30-30):
-           reborde sutil en vez del bloque de color plano por defecto, para que
-           combinen con las métricas y no compitan visualmente con el semáforo
-           de riesgo del mapa/tabla. */
-        div[data-testid="stAlert"] {
-            border-radius: 6px;
-            border: 1px solid #e3ddd0;
-        }
-
-        /* Botones y controles: radio más cerrado, acorde al resto de tarjetas. */
-        button, div[data-baseweb="select"] > div, div[data-testid="stDateInput"] input {
-            border-radius: 4px !important;
-        }
-
-        section.main .block-container {
-            padding-top: 1.5rem;
-        }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-def _ensure_default_selection(top_risk: Optional[dict[str, Any]]) -> None:
-    """Preselecciona la celda de mayor riesgo cuando no hay ninguna selección.
-
-    Se aplica una sola vez por "ronda" (carga inicial de la página o cambio
-    de fecha, marcada con `_top_risk_preselected`) — no en cada rerun — para
-    que un clic en el mapa/tabla o el botón "Limpiar" sigan mandando sobre
-    esta preselección en la misma ronda. Reutiliza el `top_risk` ya calculado
-    para el banner (no vuelve a llamar a `top_risk_cell`).
+    Las reglas vivían acá como un bloque literal de ~115 líneas con los
+    colores escritos a mano, duplicados de `.streamlit/config.toml` y de
+    `app/utils/risk_colors.py`. Ahora las construye `app.theme.css` desde los
+    tokens, así que cambiar la paleta es editar un archivo en vez de tres y
+    verificar a mano que no quedó ninguno atrás.
     """
-    if st.session_state.get("_top_risk_preselected"):
-        return
-    st.session_state["_top_risk_preselected"] = True
-    if st.session_state.get(SESSION_CELL_KEY) is None and top_risk is not None:
-        st.session_state[SESSION_CELL_KEY] = top_risk["cell_id"]
+    st.markdown(build_stylesheet(), unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -465,13 +393,13 @@ def main() -> None:
     # ── Precalentamiento de caché (se ejecuta UNA sola vez por sesión) ──────
     # Carga todos los días del seed en lru_cache y st.cache_data en background
     # para que los cambios de fecha sean instantáneos sin importar inactividad.
-    if "cache_warmed" not in st.session_state:
+    if not cache_is_warm():
         # Usa las importaciones del top-level — no re-importar con prefijo 'app.'
         # ya que en Streamlit Cloud ese path no resuelve y causa UnboundLocalError.
         for _d in _cached_available_dates():
             get_demo_gdf(_d)                      # lru_cache permanente en RAM
             _cached_display_df(_d.isoformat())    # st.cache_data 24h
-        st.session_state.cache_warmed = True
+        mark_cache_warm()
     # ─────────────────────────────────────────────────────────────────────────
 
     dashboard = _get_dashboard()
@@ -486,22 +414,10 @@ def main() -> None:
     # brigadista", 2026-09-04). ──
     _render_data_mode_badge()
 
-    # Session state para celda seleccionada
-    if "selected_cell_id" not in st.session_state:
-        st.session_state.selected_cell_id = None
-    if "_table_epoch" not in st.session_state:
-        st.session_state._table_epoch = 0
-    if "_top_risk_preselected" not in st.session_state:
-        st.session_state._top_risk_preselected = False
+    init_session()
 
     selected_date = _pick_demo_date(available, min_d, max_d)
-
-    # Resetear selección al cambiar fecha
-    if st.session_state.get("_last_query_date") != selected_date.isoformat():
-        st.session_state.selected_cell_id = None
-        st.session_state._table_epoch = int(st.session_state.get("_table_epoch", 0)) + 1
-        st.session_state._top_risk_preselected = False
-    st.session_state._last_query_date = selected_date.isoformat()
+    reset_selection_on_date_change(selected_date)
 
     st.sidebar.markdown("---")
     _render_technical_details_expander(min_d, max_d)
@@ -521,7 +437,7 @@ def main() -> None:
     # un clic: sin selección previa, se preselecciona la celda de mayor
     # riesgo (misma que el banner) para que su ficha completa ya esté
     # visible al cargar la página. ──
-    _ensure_default_selection(top_risk)
+    ensure_default_selection(top_risk)
 
     st.title("S.A.P.I.")
     st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
@@ -532,65 +448,52 @@ def main() -> None:
 
     if gdf.empty:
         st.warning(f"No hay predicciones para **{selected_date.isoformat()}**.")
-    else:
-        regla_activa = int((gdf["regla_30_30_30"] == 1).sum())
-        bajo_n = int((gdf["nivel_riesgo"] == "bajo").sum())
-        medio_n = int((gdf["nivel_riesgo"] == "medio").sum())
-        alto_n = int((gdf["nivel_riesgo"] == "alto").sum())
-        st.success(
-            f"Datos del **{selected_date.isoformat()}** · **{len(gdf)}** celdas · "
-            f"bajo **{bajo_n}** · medio **{medio_n}** · alto **{alto_n}** · "
-            f"máx **{prob_max:.0%}** · Regla 30-30-30: **{regla_activa}** celda(s)."
-        )
 
-    col1, col2, col3, col4, col5 = st.columns(5)
-    with col1:
-        st.metric("Celdas", len(gdf))
-    with col2:
-        st.metric("Riesgo bajo", int((gdf["nivel_riesgo"] == "bajo").sum()) if not gdf.empty else 0)
-    with col3:
-        st.metric("Riesgo medio", int((gdf["nivel_riesgo"] == "medio").sum()) if not gdf.empty else 0)
-    with col4:
-        st.metric(
-            "Riesgo alto",
-            int((gdf["nivel_riesgo"] == "alto").sum()) if not gdf.empty else 0,
-        )
-    with col5:
-        st.metric("Prob. máxima", f"{prob_max:.0%}")
+    # ── Dos números al frente, el resto en una línea de contexto ──
+    # Antes eran cinco métricas del mismo tamaño más un st.success que repetía
+    # exactamente las mismas cinco cifras: sin jerarquía y, en pantalla
+    # angosta, cinco columnas que se desarmaban. De las cinco, solo dos
+    # deciden algo para quien mira — cuántas celdas están en rojo y cuán alto
+    # llega el riesgo. La distribución completa queda debajo, en texto.
+    _render_headline_metrics(gdf, prob_max)
 
     # ── Mapa (izq) + Detalle por celda (der) ──
-    st.markdown("### Mapa de riesgo probabilístico (radio ~1 km por celda)")
+    st.markdown(
+        f"### Mapa de riesgo probabilístico "
+        f"(resolución ~{cell_step_meters()[0] / 1000:.1f} km por celda)"
+    )
     _render_risk_legend()
 
     if not gdf.empty:
         display_df = _cached_display_df(selected_date.isoformat())
         valid_cell_ids = set(display_df["cell_id"].astype(str))
 
-        map_col, detail_col = st.columns(
-            [DEFAULT_MAP_PANEL_PCT, 100 - DEFAULT_MAP_PANEL_PCT], gap="small"
-        )
+        # ── Pestañas en vez de dos columnas ──
+        # El hallazgo de usabilidad móvil del acta UAT venía de partir la
+        # pantalla 48/52: en un teléfono el mapa quedaba en media pantalla y
+        # la tabla de 8 columnas al lado, ilegible. Las media queries que
+        # forzaban `flex-direction: column` sobre `stHorizontalBlock` eran un
+        # parche sobre ese layout. Las pestañas resuelven el caso angosto de
+        # forma nativa y, en escritorio, dan al mapa el ancho completo.
+        map_tab, detail_tab = st.tabs(["Mapa de riesgo", "Detalle por celda"])
 
-        with map_col:
+        with map_tab:
             st.caption("Clic en un círculo para seleccionar la celda")
             map_output = dashboard.render_folium_map(
                 selected_date,
                 gdf=gdf,
             )
             clicked_cell = cell_id_from_folium_output(map_output, valid_cell_ids, gdf)
-            if clicked_cell and clicked_cell != st.session_state.selected_cell_id:
-                set_selected_cell(clicked_cell, "map")
+            if clicked_cell and clicked_cell != selected_cell():
+                select_cell(clicked_cell, "map")
 
-        with detail_col:
-            header_col, clear_col = st.columns([4, 1])
-            with header_col:
-                st.markdown("**Detalle por celda**")
-                st.caption(f"{len(display_df)} registros · clic en fila o en el mapa")
-            with clear_col:
-                if st.button("Limpiar", use_container_width=True):
-                    set_selected_cell(None, "clear")
-                    st.rerun()
+        with detail_tab:
+            st.caption(f"{len(display_df)} registros · clic en fila o en el mapa")
+            if st.button("Limpiar selección"):
+                clear_selection()
+                st.rerun()
 
-            selected_id = st.session_state.get(SESSION_CELL_KEY)
+            selected_id = selected_cell()
 
             # Ficha de celda seleccionada
             if selected_id and selected_id in valid_cell_ids:
@@ -616,8 +519,8 @@ def main() -> None:
             if table_event.selection and table_event.selection.rows:
                 row_idx = int(table_event.selection.rows[0])
                 table_cell = str(display_df.iloc[row_idx]["cell_id"])
-                if table_cell != st.session_state.get(SESSION_CELL_KEY):
-                    set_selected_cell(table_cell, "table")
+                if table_cell != selected_cell():
+                    select_cell(table_cell, "table")
                     st.rerun()
     else:
         st.caption("Sin geometrías para mostrar el mapa.")

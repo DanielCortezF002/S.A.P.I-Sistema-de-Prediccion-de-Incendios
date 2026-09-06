@@ -120,12 +120,62 @@ def test_dashboard_init():
     assert dashboard.query is not None
 
 
-@patch("app.app.st.markdown")
-def test_render_risk_legend(mock_markdown: MagicMock) -> None:
+@patch("app.app.st.info")
+def test_demo_banner_names_localities_with_real_detection_evidence(mock_info: MagicMock) -> None:
+    """El banner nombra comunas por evidencia real de detecciones, no por
+    geometría de la grilla.
+
+    Reemplaza test_demo_banner_only_names_localities_the_grid_covers, que
+    verificaba que una coordenada cayera dentro del bounding box de la
+    grilla ancha — y por eso institucionalizó nombrar Villa Alemana ahí sin
+    ninguna detección real verificada en ese momento (hallazgo 05-09-2026).
+
+    La contención espacial estricta de las 348 detecciones NASA FIRMS del
+    2024-02-03 (app/data/incendio_2024-02-03.csv) contra las 50 celdas de la
+    grilla ancha, seguida del point-in-polygon oficial contra el shapefile
+    DPA 2023 (SUBDERE), da esta distribución real: Viña del Mar 120 focos,
+    Quilpué 89, Valparaíso 32, Limache 17, Villa Alemana 5 — las cinco con
+    evidencia real, ninguna en cero. El test es simétrico: falla si falta
+    nombrar una comuna con evidencia real, y falla igual si aparece nombrada
+    una sin ninguna.
+    """
+    from app.app import _render_demo_scope_banner
+
+    # Focos reales por comuna: contención estricta de las 348 detecciones
+    # 2024-02-03 contra la grilla ancha, comuna verificada contra DPA 2023
+    # (SUBDERE) — ver docs/matriz-riesgo.md, avance SAPI-32 y hallazgo 05-09-2026.
+    focos_reales_por_comuna = {
+        "Viña del Mar": 120,
+        "Quilpué": 89,
+        "Valparaíso": 32,
+        "Limache": 17,
+        "Villa Alemana": 5,
+    }
+    comuna_sin_evidencia_real = "Concón"  # 0 detecciones en el evento verificado
+
+    _render_demo_scope_banner(date(2025, 2, 9), date(2025, 2, 15))
+    texto = mock_info.call_args[0][0]
+
+    for comuna in focos_reales_por_comuna:
+        assert comuna in texto, f"El banner no nombra {comuna}, que sí tiene evidencia real"
+    assert comuna_sin_evidencia_real not in texto, (
+        f"El banner nombra {comuna_sin_evidencia_real} sin ninguna detección real verificada"
+    )
+
+
+@patch("app.app.st.caption")
+def test_render_risk_legend(mock_caption: MagicMock) -> None:
+    """La leyenda de texto orienta geográficamente y no repite el semáforo.
+
+    El semáforo vive anclado al mapa; duplicarlo acá obligaba a leer la misma
+    información en dos lugares.
+    """
     from app.app import _render_risk_legend
 
     _render_risk_legend()
-    mock_markdown.assert_called_once()
+    texto = mock_caption.call_args[0][0]
+    assert "Viña del Mar" in texto
+    assert "Quilpué" in texto
 
 
 @patch("app.app._cached_ml_metrics", return_value={"xgboost": {"recall": 0.78, "auc_roc": 0.83}, "baseline": {"recall": 0.71}})
@@ -203,14 +253,14 @@ def test_pick_demo_date_falls_back_to_slider(mock_sidebar: MagicMock) -> None:
     mock_sidebar.caption.assert_called_once()
 
 
-@patch("app.app.st")
+@patch("app.state.st")
 def test_ensure_default_selection_shows_top_risk_ficha_on_initial_load(mock_st: MagicMock) -> None:
     """Al cargar la página sin ninguna selección previa, el panel de detalle
     debe mostrar la ficha completa de la celda de mayor riesgo — no un
     estado vacío a la espera de un clic en mapa/tabla.
     """
-    from app.app import _ensure_default_selection
-    from app.utils.cell_table import SESSION_CELL_KEY, top_risk_cell
+    from app.state import SESSION_CELL_KEY, ensure_default_selection
+    from app.utils.cell_table import top_risk_cell
     from app.utils.risk_colors import format_cell_summary_html
 
     gdf = gpd.GeoDataFrame(
@@ -230,7 +280,7 @@ def test_ensure_default_selection_shows_top_risk_ficha_on_initial_load(mock_st: 
     mock_st.session_state = {}  # sesión recién abierta, sin clic todavía
     top_risk = top_risk_cell(gdf)
 
-    _ensure_default_selection(top_risk)
+    ensure_default_selection(top_risk)
 
     selected_id = mock_st.session_state.get(SESSION_CELL_KEY)
     assert selected_id == "VP-002"  # única celda "alto" -> mayor riesgo del día
@@ -242,45 +292,42 @@ def test_ensure_default_selection_shows_top_risk_ficha_on_initial_load(mock_st: 
     assert "alto" in ficha_html
 
 
-@patch("app.app.st")
+@patch("app.state.st")
 def test_ensure_default_selection_noop_without_top_risk(mock_st: MagicMock) -> None:
     """gdf vacío -> top_risk_cell devuelve None -> no hay nada que preseleccionar."""
-    from app.app import _ensure_default_selection
-    from app.utils.cell_table import SESSION_CELL_KEY
+    from app.state import SESSION_CELL_KEY, ensure_default_selection
 
     mock_st.session_state = {}
-    _ensure_default_selection(None)
+    ensure_default_selection(None)
     assert mock_st.session_state.get(SESSION_CELL_KEY) is None
     assert mock_st.session_state["_top_risk_preselected"] is True
 
 
-@patch("app.app.st")
+@patch("app.state.st")
 def test_ensure_default_selection_respects_explicit_click(mock_st: MagicMock) -> None:
     """Si ya hay una celda seleccionada (clic previo), no se sobreescribe."""
-    from app.app import _ensure_default_selection
-    from app.utils.cell_table import SESSION_CELL_KEY
+    from app.state import SESSION_CELL_KEY, ensure_default_selection
 
     mock_st.session_state = {SESSION_CELL_KEY: "VP-007"}
     top_risk = {"cell_id": "VP-002", "zona": "Urbano", "nivel_riesgo": "alto", "probabilidad": 0.9, "regla_30_30_30": True}
 
-    _ensure_default_selection(top_risk)
+    ensure_default_selection(top_risk)
 
     assert mock_st.session_state[SESSION_CELL_KEY] == "VP-007"
 
 
-@patch("app.app.st")
+@patch("app.state.st")
 def test_ensure_default_selection_skips_after_limpiar(mock_st: MagicMock) -> None:
     """El botón 'Limpiar' pone la selección en None y marca la ronda como ya
     preseleccionada; en el rerun que sigue, la ficha debe seguir vacía en
     vez de que la preselección la vuelva a llenar.
     """
-    from app.app import _ensure_default_selection
-    from app.utils.cell_table import SESSION_CELL_KEY
+    from app.state import SESSION_CELL_KEY, ensure_default_selection
 
     mock_st.session_state = {SESSION_CELL_KEY: None, "_top_risk_preselected": True}
     top_risk = {"cell_id": "VP-002", "zona": "Urbano", "nivel_riesgo": "alto", "probabilidad": 0.9, "regla_30_30_30": True}
 
-    _ensure_default_selection(top_risk)
+    ensure_default_selection(top_risk)
 
     assert mock_st.session_state[SESSION_CELL_KEY] is None
 
