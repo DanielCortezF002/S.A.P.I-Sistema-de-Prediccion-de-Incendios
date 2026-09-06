@@ -8,9 +8,15 @@ from typing import Any, Optional
 
 import geopandas as gpd
 import pandas as pd
-import streamlit as st
 
+from app.state import (
+    SESSION_CELL_KEY,
+    SESSION_TABLE_EPOCH_KEY,
+    select_cell as set_selected_cell,
+    table_epoch,
+)
 from app.utils.cell_zones import zone_label_for_cell
+from app.utils.grid import CLICK_MATCH_TOLERANCE_SQ
 
 # Orden para nivel_riesgo en la tabla
 _NIVEL_ORDER = {"bajo": 0, "medio": 1, "alto": 2}
@@ -28,9 +34,11 @@ DISPLAY_COLUMNS = [
 ]
 
 PANEL_HEIGHT_PX = 520
-DEFAULT_MAP_PANEL_PCT = 48
-SESSION_CELL_KEY = "selected_cell_id"
-SESSION_TABLE_EPOCH_KEY = "_table_epoch"
+
+# `SESSION_CELL_KEY`, `SESSION_TABLE_EPOCH_KEY` y `set_selected_cell` se
+# reexportan desde `app.state`, que es donde vive el estado de sesión. Se
+# mantienen accesibles acá porque son parte de la interfaz que ya consumen
+# `app/app.py` y los tests de la tabla.
 
 # Etiquetas cortas para que no se trunquen en la tabla
 _ZONA_CORTA = {
@@ -127,17 +135,7 @@ def row_index_for_cell(display_df: pd.DataFrame, cell_id: Optional[str]) -> Opti
 
 def table_widget_key(selected_date: date) -> str:
     """Clave del widget tabla; cambia al seleccionar desde mapa para resetear checkboxes."""
-    epoch = int(st.session_state.get(SESSION_TABLE_EPOCH_KEY, 0))
-    return f"cell_detail_{selected_date.isoformat()}_{epoch}"
-
-
-def set_selected_cell(cell_id: Optional[str], source: str) -> None:
-    """Actualiza celda activa. Mapa/limpiar reinician el widget de tabla."""
-    st.session_state[SESSION_CELL_KEY] = cell_id
-    if source in ("map", "clear"):
-        st.session_state[SESSION_TABLE_EPOCH_KEY] = (
-            int(st.session_state.get(SESSION_TABLE_EPOCH_KEY, 0)) + 1
-        )
+    return f"cell_detail_{selected_date.isoformat()}_{table_epoch()}"
 
 
 def cell_id_from_folium_output(
@@ -175,7 +173,7 @@ def cell_id_from_folium_output(
             if dist < best_dist:
                 best_dist = dist
                 best_id = cell_id
-        if best_id is not None and best_dist < 0.0004:
+        if best_id is not None and best_dist < CLICK_MATCH_TOLERANCE_SQ:
             return best_id
 
     return None

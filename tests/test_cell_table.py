@@ -223,7 +223,9 @@ def test_set_selected_cell_increments_epoch_on_map(monkeypatch):
             return super().get(key, default)
 
     fake = FakeSessionState(state)
-    monkeypatch.setattr("app.utils.cell_table.st.session_state", fake)
+    # El estado de sesión vive en `app.state`; `cell_table` solo reexporta los
+    # nombres que ya consumían app.py y estos tests.
+    monkeypatch.setattr("app.state.st.session_state", fake)
 
     set_selected_cell("VP-002", "map")
     assert fake[SESSION_CELL_KEY] == "VP-002"
