@@ -49,12 +49,17 @@ def _fake_result(freshness: str, age_hours: float) -> GridScoreResult:
     )
 
 
-def _mock_columns(mock_st: MagicMock, n: int) -> None:
-    cols = tuple(MagicMock() for _ in range(n))
-    for col in cols:
-        col.__enter__ = MagicMock(return_value=col)
-        col.__exit__ = MagicMock(return_value=False)
-    mock_st.columns.return_value = cols
+def _markdown_blob(mock_st: MagicMock) -> str:
+    return "\n".join(
+        str(call.args[0]) for call in mock_st.markdown.call_args_list if call.args
+    )
+
+
+def _mock_expander(mock_st: MagicMock) -> None:
+    ctx = MagicMock()
+    ctx.__enter__ = MagicMock(return_value=ctx)
+    ctx.__exit__ = MagicMock(return_value=False)
+    mock_st.expander.return_value = ctx
 
 
 # ---- clasificación de freshness (pura, sin Streamlit) ----
@@ -100,14 +105,25 @@ def test_stale_banner_appears_only_when_historical(mock_st: MagicMock) -> None:
 
 @patch("app.components.prototype_view.st")
 def test_stale_banner_shows_the_real_weather_timestamp(mock_st: MagicMock) -> None:
-    """El timestamp de la observación real debe quedar visible en el
-    propio texto del banner, no solo implícito en el estado interno."""
-    from app.components.prototype_view import _render_stale_data_banner
+    """El timestamp ISO de la observación queda en Información técnica,
+    no en el warning compacto del cuerpo principal."""
+    from app.components.prototype_view import (
+        _render_stale_data_banner,
+        _render_tech_expander,
+    )
 
     result = _fake_result(FRESHNESS_HISTORICAL, 150.0)
     _render_stale_data_banner(result)
     banner_text = mock_st.warning.call_args[0][0]
-    assert result.weather_timestamp.strftime("%d/%m/%Y %H:%M") in banner_text
+    assert f"{result.age_hours:.0f} h" in banner_text
+    assert result.weather_timestamp.strftime("%d/%m/%Y %H:%M") not in banner_text
+
+    _mock_expander(mock_st)
+    _render_tech_expander(result)
+    tech_text = _markdown_blob(mock_st)
+    assert str(result.weather_timestamp) in tech_text
+    assert "Forecast time:" in tech_text
+    assert "Ventana evaluada:" in tech_text
 
 
 # ---- nunca etiquetar como "actual" una inferencia >24h antigua ----
@@ -115,35 +131,40 @@ def test_stale_banner_shows_the_real_weather_timestamp(mock_st: MagicMock) -> No
 
 @patch("app.components.prototype_view.st")
 def test_header_never_labels_a_stale_inference_as_proximas_horas(mock_st: MagicMock) -> None:
-    """Regla explícita de la corrección: con freshness != RECIENTE, el
-    header debe mostrar la ventana T -> T+horizon en vez de "Horizonte:
-    próximas N horas" — esa frase implicaría un pronóstico vigente que no
-    existe cuando la meteorología usada tiene horas o días de atraso."""
+    """Con freshness != RECIENTE el header usa la ventana humana T → T+h,
+    nunca "próximas N horas" ni timestamps ISO en el cuerpo principal."""
     from app.components.prototype_view import _render_header
 
-    _mock_columns(mock_st, 3)
     _render_header(_fake_result(FRESHNESS_HISTORICAL, 150.0))
-    caption_text = mock_st.caption.call_args[0][0]
-    assert "próximas" not in caption_text.lower()
-    assert "Ventana evaluada:" in caption_text
+    header_text = _markdown_blob(mock_st)
+    assert "próximas" not in header_text.lower()
+    assert "Forecast time:" not in header_text
+    assert "Ventana evaluada:" not in header_text
+    assert "12:00 → 18:00 UTC" in header_text
+    assert "DATOS HISTÓRICOS / DESACTUALIZADOS" not in header_text
+    assert header_text.count("DATOS HISTÓRICOS") == 1
+    assert "PROTOTIPO EXPLORATORIO" in header_text
 
 
 @patch("app.components.prototype_view.st")
 def test_header_never_labels_delayed_data_as_proximas_horas(mock_st: MagicMock) -> None:
     from app.components.prototype_view import _render_header
 
-    _mock_columns(mock_st, 3)
     _render_header(_fake_result(FRESHNESS_DELAYED, 18.0))
-    caption_text = mock_st.caption.call_args[0][0]
-    assert "próximas" not in caption_text.lower()
-    assert "Ventana evaluada:" in caption_text
+    header_text = _markdown_blob(mock_st)
+    assert "próximas" not in header_text.lower()
+    assert "Forecast time:" not in header_text
+    assert "Ventana evaluada:" not in header_text
+    assert "12:00 → 18:00 UTC" in header_text
+    assert "DATOS HISTÓRICOS" not in header_text
 
 
 @patch("app.components.prototype_view.st")
-def test_header_uses_proximas_horas_label_only_when_data_is_recent(mock_st: MagicMock) -> None:
+def test_header_uses_human_window_when_data_is_recent(mock_st: MagicMock) -> None:
     from app.components.prototype_view import _render_header
 
-    _mock_columns(mock_st, 3)
     _render_header(_fake_result(FRESHNESS_RECENT, 1.0))
-    caption_text = mock_st.caption.call_args[0][0]
-    assert "Horizonte del prototipo: próximas 6 horas" in caption_text
+    header_text = _markdown_blob(mock_st)
+    assert "Forecast time:" not in header_text
+    assert "12:00 → 18:00 UTC" in header_text
+    assert "DMC Rodelillo · 330007" in header_text
