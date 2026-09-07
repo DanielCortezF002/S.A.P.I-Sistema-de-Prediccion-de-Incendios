@@ -136,6 +136,8 @@ def _inject_metric_contrast_css() -> None:
         div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
             color: {value_color} !important;
             font-weight: 700 !important;
+            white-space: pre-line !important;
+            line-height: 1.25 !important;
         }}
         </style>
         """,
@@ -151,7 +153,13 @@ def _render_meteo_cards(result: GridScoreResult) -> None:
     c2.metric("Humedad relativa", f"{m['humedad_relativa']:.0f} %")
     c3.metric("Viento", f"{m['velocidad_viento_kmh']:.1f} km/h")
     c4.metric("Regla 30-30-30", "ACTIVA" if m["regla_30_30_30"] else "inactiva")
-    c5.metric("Hora observación", pd.Timestamp(m["momento_observacion"]).strftime("%Y-%m-%d %H:%M UTC"))
+    obs_ts = pd.Timestamp(m["momento_observacion"])
+    # Formato compacto (2026-09-08): "2026-09-01 00:00 UTC" (20 caracteres)
+    # quedaba truncado en la tarjeta angosta; DD/MM/YYYY + hora en líneas
+    # separadas es igual de preciso y cabe sin cortarse. "UTC" se mueve al
+    # label (siempre visible completo) en vez de competir por espacio en
+    # el valor.
+    c5.metric("Hora observación (UTC)", f"{obs_ts.strftime('%d/%m/%Y')}\n{obs_ts.strftime('%H:%M')}")
     c6.metric("Celdas evaluadas", str(len(result.cells)))
 
 
@@ -195,6 +203,33 @@ def _render_map(result: GridScoreResult) -> None:
             popup=folium.Popup(popup, max_width=250),
         ).add_to(fmap)
     st_folium(fmap, height=480, use_container_width=True, key="prototype_map")
+    _render_map_legend(n_cells)
+
+
+def _render_map_legend(n_cells: int) -> None:
+    """Leyenda del color del mapa (2026-09-08): deliberadamente NO usa
+    lenguaje de alerta oficial ("peligro"/"seguro") — el score no está
+    calibrado, así que el color codifica únicamente la POSICIÓN relativa
+    dentro del ranking exploratorio, nunca un nivel de riesgo absoluto."""
+    n_steps = 5
+    stops = [1 + round(i * (n_cells - 1) / (n_steps - 1)) for i in range(n_steps)]
+    swatches = "".join(
+        f'<span style="display:inline-block;width:28px;height:12px;background:{_score_to_color(r, n_cells)};'
+        f'margin-right:2px;border-radius:2px;"></span>'
+        for r in stops
+    )
+    st.markdown(
+        f"""
+        <div style="font-size:0.8rem;margin-top:0.3rem;">
+            <b>Mayor score relativo</b> {swatches} <b>Menor score relativo</b>
+        </div>
+        <div style="font-size:0.72rem;opacity:0.75;margin-top:0.15rem;">
+            El color codifica la posición dentro del ranking exploratorio de esta
+            corrida, no un nivel de alerta oficial ni una probabilidad calibrada.
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 
 def _priority_cells(cells: list, min_n: int = _TOP_N_PRIORITY) -> list:

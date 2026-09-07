@@ -17,7 +17,12 @@ import pytest
 
 from src.inference.prototype_service import (
     MODEL_PATH,
+    STATION_ID,
     PrototypeUnavailableError,
+    _resolve_forecast_time,
+    _resolve_meteo_row,
+    build_feature_matrix,
+    load_regional_meteo_series,
     score_current_grid,
 )
 from src.procesamiento.pipeline_validators import FORBIDDEN_LEGACY_REFERENCES, validate_pipeline_isolation
@@ -100,6 +105,89 @@ def test_map_uses_a_tile_provider_that_needs_no_api_key() -> None:
     assert "tile.openstreetmap.org" in html
     for forbidden in ("stadiamaps", "stamen", "api_key", "apikey", "cartocdn"):
         assert forbidden not in html.lower()
+
+
+def _real_feature_matrix() -> pd.DataFrame:
+    meteo_series = load_regional_meteo_series(STATION_ID)
+    forecast_time = _resolve_forecast_time(None, meteo_series)
+    meteo_row = _resolve_meteo_row(forecast_time, meteo_series)
+    return build_feature_matrix(forecast_time, meteo_row)
+
+
+def test_feature_matrix_has_fifty_unique_cell_ids_and_no_missing_or_duplicate() -> None:
+    """Sección 3 de la auditoría 2026-09-08: cobertura exacta del ranking
+    — exactamente 50 cell_id únicos, ninguno perdido, ninguno duplicado."""
+    features_df = _real_feature_matrix()
+    from src.geo.grid import all_cells
+
+    expected_ids = {c["cell_id"] for c in all_cells()}
+    assert len(features_df) == 50
+    assert features_df.index.nunique() == 50
+    assert not features_df.index.duplicated().any()
+    assert set(features_df.index) == expected_ids
+
+
+def test_reordering_features_df_does_not_desync_cell_id_and_score() -> None:
+    """Sección 2 de la auditoría 2026-09-08: si `build_feature_matrix` o
+    `score_current_grid` alguna vez pasaran a usar arrays/posiciones en
+    vez del índice `cell_id` de pandas, un reordenamiento del DataFrame
+    desalinearía silenciosamente celda <-> score. Este test construye la
+    matriz real, la baraja explícitamente, y confirma que el score de
+    cada `cell_id` es IDÉNTICO sin importar el orden de las filas."""
+    import joblib
+
+    payload = joblib.load(MODEL_PATH)
+    model = payload["model"]
+    feature_columns = payload["metadata"]["feature_columns"]
+
+    features_df = _real_feature_matrix()
+    x_original = features_df[feature_columns]
+    scores_original = pd.Series(model.predict_proba(x_original)[:, 1], index=x_original.index)
+
+    shuffled = features_df.sample(frac=1.0, random_state=42)  # mismas filas, orden distinto
+    x_shuffled = shuffled[feature_columns]
+    scores_shuffled = pd.Series(model.predict_proba(x_shuffled)[:, 1], index=x_shuffled.index)
+
+    # Comparar alineado por cell_id (índice), no por posición.
+    aligned = scores_shuffled.reindex(scores_original.index)
+    assert (aligned == scores_original).all(), "El score de al menos una celda cambió solo por reordenar filas"
+
+
+def test_feature_rows_are_mostly_distinct_even_though_scores_tie() -> None:
+    """Sección 1 de la auditoría 2026-09-08 ('¿por qué 41 celdas tienen el
+    mismo score?'): ancla la evidencia de que el empate es del MODELO, no
+    del pipeline de datos — las filas de features de esas celdas son
+    mayormente distintas (historial/topografía varían), solo la
+    meteorología regional (idéntica por diseño para las 50 celdas en un
+    mismo T) se repite. Si esta prueba empezara a fallar (features
+    también colapsando a un puñado de filas idénticas), eso SÍ apuntaría
+    a un bug de pipeline, no a un empate legítimo del modelo."""
+    import joblib
+
+    payload = joblib.load(MODEL_PATH)
+    feature_columns = payload["metadata"]["feature_columns"]
+    features_df = _real_feature_matrix()
+    x = features_df[feature_columns]
+
+    n_unique_rows = len(x.drop_duplicates())
+    # Con 50 celdas, un pipeline roto (broadcasting, fila reusada, merge
+    # que perdió cell_id) produciría un puñado de filas idénticas (p. ej.
+    # <=5). Un valor sustancialmente mayor confirma que cada celda sigue
+    # aportando su propio historial/topografía real.
+    assert n_unique_rows >= 30, f"Solo {n_unique_rows} filas de feature distintas entre 50 celdas — revisar pipeline"
+
+    # La meteorología regional (compartida por diseño) es la única familia
+    # de columnas que DEBE ser idéntica en las 50 filas.
+    meteo_cols = [c for c in feature_columns if c.startswith("meteo_")]
+    for col in meteo_cols:
+        assert x[col].nunique(dropna=False) == 1, f"{col} varía entre celdas — no debería (misma estación regional)"
+
+    # historial y topografía SÍ deben variar entre celdas (no todas NaN,
+    # no todas el mismo valor) -- si colapsaran a 1 valor único, indicaría
+    # datos repetidos por accidente en vez de missingness real.
+    for col in ("historial_firms_count", "elevacion"):
+        non_null = x[col].dropna()
+        assert non_null.nunique() > 1, f"{col} no varía entre celdas con dato real — posible bug de pipeline"
 
 
 def test_scores_are_finite() -> None:

@@ -135,6 +135,76 @@ def _latest_forecast_time(meteo_series: pd.DataFrame) -> pd.Timestamp:
     return bucketed.index.max()
 
 
+def _resolve_forecast_time(
+    forecast_time: Optional[Union[str, pd.Timestamp]], meteo_series: pd.DataFrame
+) -> pd.Timestamp:
+    if forecast_time is None:
+        return _latest_forecast_time(meteo_series)
+    forecast_time = pd.Timestamp(forecast_time)
+    if forecast_time.tzinfo is None:
+        forecast_time = forecast_time.tz_localize("UTC")
+    if forecast_time > meteo_series["momento"].max():
+        raise PrototypeUnavailableError(
+            f"forecast_time={forecast_time} es posterior a la última lectura meteorológica real "
+            f"({meteo_series['momento'].max()}) — el servicio no inventa meteorología futura."
+        )
+    return forecast_time
+
+
+def _resolve_meteo_row(forecast_time: pd.Timestamp, meteo_series: pd.DataFrame) -> pd.Series:
+    meteo_feats = build_regional_meteo_features([forecast_time], meteo_series, lag_hours=LAG_HOURS)
+    if meteo_feats.empty or bool(meteo_feats.iloc[0]["meteo_actual_missing"]):
+        raise PrototypeUnavailableError(
+            f"No hay una lectura meteorológica real suficientemente cercana a {forecast_time} "
+            "para generar el ranking."
+        )
+    return meteo_feats.iloc[0]
+
+
+def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> pd.DataFrame:
+    """Construye la matriz de features (índice = cell_id, una fila por
+    celda) para un `forecast_time`/`meteo_row` ya resueltos. Extraída como
+    función propia (auditoría 2026-09-08) para poder inspeccionar/testear
+    exactamente lo que llega a `predict_proba` — cero cambio de
+    comportamiento respecto a antes, solo testabilidad.
+
+    Reusa `historial_firms_features` (la misma función que
+    `scripts/build_temporal_dataset.py`) para historial por celda;
+    `meteo_row` ya viene calculado una sola vez por el llamador. La
+    meteorología regional es, por diseño, IDÉNTICA para las 50 celdas en
+    un mismo T (una sola estación regional, nunca reetiquetada por
+    celda); historial FIRMS y topografía sí varían por celda.
+    """
+    if not FIRES_CSV.exists():
+        raise PrototypeUnavailableError(f"No existe el histórico FIRMS en {FIRES_CSV.relative_to(REPO_ROOT)}.")
+    fires = pd.read_csv(FIRES_CSV)
+    episodes = assign_episodes(fires)
+    arrivals = first_arrival_by_cell(episodes)
+    arrivals_by_cell = {cell: group["first_arrival"] for cell, group in arrivals.groupby("cell_id")}
+
+    grid_cells = all_cells()
+    cell_ids = [c["cell_id"] for c in grid_cells]
+    topo = load_grid_topography(grid_cells, DEM_TERRAIN_DIR).set_index("cell_id")
+
+    rows = []
+    for cell_id in cell_ids:
+        hist = historial_firms_features(cell_id, forecast_time, arrivals_by_cell.get(cell_id, _EMPTY_ARRIVALS))
+        row = {"cell_id": cell_id, **hist}
+        for col in meteo_row.index:
+            if col != "forecast_time":
+                row[col] = meteo_row[col]
+        t = topo.loc[cell_id]
+        row["elevacion"] = t["elevacion"]
+        row["pendiente"] = t["pendiente"]
+        row["orientacion"] = t["orientacion"]
+        rows.append(row)
+    # `set_index("cell_id")` DEBE ser lo último: cualquier reordenamiento
+    # posterior de `features_df` (p. ej. un `.sort_values` sobre una
+    # columna de feature) seguiría llevando el cell_id correcto consigo
+    # mismo vía el índice — nunca se vuelve a alinear por posición entera.
+    return pd.DataFrame(rows).set_index("cell_id")
+
+
 def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None) -> GridScoreResult:
     """Puntúa las 50 celdas de la grilla para un `forecast_time` T.
 
@@ -152,59 +222,25 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
             f"No hay datos meteorológicos reales para la estación {STATION_ID} en data/raw/."
         )
 
-    if forecast_time is None:
-        forecast_time = _latest_forecast_time(meteo_series)
-    else:
-        forecast_time = pd.Timestamp(forecast_time)
-        if forecast_time.tzinfo is None:
-            forecast_time = forecast_time.tz_localize("UTC")
-        if forecast_time > meteo_series["momento"].max():
-            raise PrototypeUnavailableError(
-                f"forecast_time={forecast_time} es posterior a la última lectura meteorológica real "
-                f"({meteo_series['momento'].max()}) — el servicio no inventa meteorología futura."
-            )
-
-    meteo_feats = build_regional_meteo_features([forecast_time], meteo_series, lag_hours=LAG_HOURS)
-    if meteo_feats.empty or bool(meteo_feats.iloc[0]["meteo_actual_missing"]):
-        raise PrototypeUnavailableError(
-            f"No hay una lectura meteorológica real suficientemente cercana a {forecast_time} "
-            "para generar el ranking."
-        )
-    meteo_row = meteo_feats.iloc[0]
-
-    if not FIRES_CSV.exists():
-        raise PrototypeUnavailableError(f"No existe el histórico FIRMS en {FIRES_CSV.relative_to(REPO_ROOT)}.")
-    fires = pd.read_csv(FIRES_CSV)
-    episodes = assign_episodes(fires)
-    arrivals = first_arrival_by_cell(episodes)
-    arrivals_by_cell = {cell: group["first_arrival"] for cell, group in arrivals.groupby("cell_id")}
+    forecast_time = _resolve_forecast_time(forecast_time, meteo_series)
+    meteo_row = _resolve_meteo_row(forecast_time, meteo_series)
+    features_df = build_feature_matrix(forecast_time, meteo_row)
 
     grid_cells = all_cells()
-    cell_ids = [c["cell_id"] for c in grid_cells]
     grid_by_id = {c["cell_id"]: c for c in grid_cells}
-    topo = load_grid_topography(grid_cells, DEM_TERRAIN_DIR).set_index("cell_id")
-
-    rows = []
-    for cell_id in cell_ids:
-        hist = historial_firms_features(cell_id, forecast_time, arrivals_by_cell.get(cell_id, _EMPTY_ARRIVALS))
-        row = {"cell_id": cell_id, **hist}
-        for col in meteo_row.index:
-            if col != "forecast_time":
-                row[col] = meteo_row[col]
-        t = topo.loc[cell_id]
-        row["elevacion"] = t["elevacion"]
-        row["pendiente"] = t["pendiente"]
-        row["orientacion"] = t["orientacion"]
-        rows.append(row)
-    features_df = pd.DataFrame(rows).set_index("cell_id")
 
     missing_cols = [c for c in feature_columns if c not in features_df.columns]
     if missing_cols:
         raise PrototypeUnavailableError(f"Faltan columnas de feature para inferir: {missing_cols}")
 
+    # `x` conserva el índice cell_id de `features_df` — pandas alinea por
+    # ese índice (nunca por posición entera) en cada paso siguiente
+    # (`pd.Series(scores, index=x.index)`, `.loc[cell_id]`), así que un
+    # reordenamiento de filas nunca puede desalinear cell_id -> score (ver
+    # test_reordering_features_df_does_not_desync_cell_id_and_score).
     x = features_df[feature_columns]
     scores = model.predict_proba(x)[:, 1]
-    score_by_cell = pd.Series(scores, index=features_df.index, dtype=float)
+    score_by_cell = pd.Series(scores, index=x.index, dtype=float)
     ranking = score_by_cell.sort_values(ascending=False)
 
     # Empates reales del modelo (2026-09-07, corrección de honestidad
