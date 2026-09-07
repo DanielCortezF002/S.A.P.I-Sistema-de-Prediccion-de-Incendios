@@ -64,6 +64,44 @@ def test_ranks_are_one_to_n() -> None:
     assert [c.rank for c in result.cells] == ranks
 
 
+def test_ties_share_display_rank_but_internal_rank_stays_unique() -> None:
+    """Corrección de honestidad científica (2026-09-07): con pocos
+    positivos históricos, decenas de celdas caen en el mismo score exacto.
+    `rank` (contrato interno, 1..N único) no debe cambiar; `display_rank`
+    debe agrupar los empates con el MISMO número (method='min')."""
+    result = score_current_grid()
+    ranks = sorted(c.rank for c in result.cells)
+    assert ranks == list(range(1, len(result.cells) + 1))  # contrato interno intacto
+
+    by_score: dict[float, set[int]] = {}
+    for c in result.cells:
+        by_score.setdefault(c.score, set()).add(c.display_rank)
+        assert c.tie_group_size >= 1
+    for score, display_ranks in by_score.items():
+        assert len(display_ranks) == 1, f"score {score} tiene más de un display_rank: {display_ranks}"
+
+    by_display_rank: dict[int, set[float]] = {}
+    for c in result.cells:
+        by_display_rank.setdefault(c.display_rank, set()).add(round(c.score, 10))
+    for dr, scores in by_display_rank.items():
+        assert len(scores) == 1, f"display_rank {dr} agrupa scores distintos: {scores}"
+
+
+def test_map_uses_a_tile_provider_that_needs_no_api_key() -> None:
+    """Regresión del watermark 'API KEY REQUIRED' visto en la demo
+    (2026-09-07): el mapa debe usar OpenStreetMap estándar, nunca un
+    proveedor que exija clave (Stadia/Stamen/etc.)."""
+    import folium
+
+    from app.components.prototype_view import _render_map  # noqa: F401 (confirma que el módulo importa sin tocar red)
+
+    fmap = folium.Map(location=[-33.05, -71.55], zoom_start=11, tiles="OpenStreetMap")
+    html = fmap._repr_html_()
+    assert "tile.openstreetmap.org" in html
+    for forbidden in ("stadiamaps", "stamen", "api_key", "apikey", "cartocdn"):
+        assert forbidden not in html.lower()
+
+
 def test_scores_are_finite() -> None:
     result = score_current_grid()
     for c in result.cells:

@@ -14,9 +14,22 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
-from src.inference.prototype_service import GridScoreResult, PrototypeUnavailableError, score_current_grid
+from app.state import appearance
+from src.inference.prototype_service import (
+    FRESHNESS_DELAYED,
+    FRESHNESS_HISTORICAL,
+    FRESHNESS_RECENT,
+    GridScoreResult,
+    PrototypeUnavailableError,
+    score_current_grid,
+)
 
 _TOP_N_PRIORITY = 5
+_FRESHNESS_BADGE_COLOR = {
+    FRESHNESS_RECENT: "#16a34a",
+    FRESHNESS_DELAYED: "#d97706",
+    FRESHNESS_HISTORICAL: "#dc2626",
+}
 
 
 @st.cache_data(ttl=300, show_spinner="Calculando ranking de riesgo exploratorio...")
@@ -39,10 +52,37 @@ def _score_to_color(rank: int, n_cells: int) -> str:
     return f"#{red:02x}{green:02x}40"
 
 
+def _render_stale_data_banner(result: GridScoreResult) -> None:
+    """Corrección UX/semántica (2026-09-07): si la meteorología real usada
+    tiene más de 24h de antigüedad respecto al momento en que se abre el
+    dashboard, la UI debe decirlo explícitamente — nunca insinuar que el
+    ranking es un pronóstico vigente de "las próximas 6 horas de hoy"."""
+    if result.freshness != FRESHNESS_HISTORICAL:
+        return
+    st.warning(
+        "⚠ DATOS HISTÓRICOS\n\n"
+        "Última observación meteorológica disponible: "
+        f"{result.weather_timestamp.strftime('%d/%m/%Y %H:%M UTC')} "
+        f"({result.age_hours:.0f} horas atrás).\n\n"
+        "El ranking mostrado corresponde a ese instante histórico y NO "
+        "representa el riesgo actual."
+    )
+
+
+def _render_freshness_badge(result: GridScoreResult) -> None:
+    color = _FRESHNESS_BADGE_COLOR[result.freshness]
+    st.markdown(
+        f'<span style="background:{color};color:white;padding:2px 8px;'
+        f'border-radius:6px;font-weight:600;font-size:0.75rem;">'
+        f"{result.freshness}</span>",
+        unsafe_allow_html=True,
+    )
+
+
 def _render_header(result: GridScoreResult) -> None:
     st.markdown("## 🔥 S.A.P.I.")
     st.markdown("**Sistema de Alerta y Priorización de Riesgo de Incendios**")
-    badge_col, meta_col = st.columns([1, 3])
+    badge_col, freshness_col, meta_col = st.columns([1, 1, 3])
     with badge_col:
         st.markdown(
             '<span style="background:#7c3aed;color:white;padding:4px 10px;'
@@ -50,15 +90,61 @@ def _render_header(result: GridScoreResult) -> None:
             "PROTOTIPO EXPLORATORIO</span>",
             unsafe_allow_html=True,
         )
+    with freshness_col:
+        _render_freshness_badge(result)
     with meta_col:
+        # Horizonte vs. Ventana evaluada: con datos recientes, "próximas 6
+        # horas" es una lectura razonable del horizonte del prototipo. Con
+        # datos con retraso/históricos, esa frase implicaría un pronóstico
+        # vigente que no existe — se muestra la ventana T -> T+horizon
+        # explícita en su lugar, sin ambigüedad sobre "cuándo es ahora".
+        if result.freshness == FRESHNESS_RECENT:
+            horizonte_txt = f"Horizonte del prototipo: próximas {result.horizon_hours} horas"
+        else:
+            window_end = result.forecast_time + pd.Timedelta(hours=result.horizon_hours)
+            horizonte_txt = f"Ventana evaluada: {result.forecast_time} → {window_end}"
         st.caption(
-            f"Horizonte: próximas {result.horizon_hours} horas · "
+            f"{horizonte_txt} · "
             f"Forecast time: {result.forecast_time} · "
             f"Estación DMC: {result.station_name} {result.station_id}"
         )
 
 
+def _inject_metric_contrast_css() -> None:
+    """Corrección de contraste (2026-09-07): las 6 tarjetas de meteorología
+    se veían apagadas en modo oscuro para una presentación proyectada.
+    Refuerza explícitamente título/valor de cada métrica — sin tocar el
+    resto del layout ni el tema global."""
+    if appearance() == "oscuro":
+        label_color, value_color, bg, border = "#d7dce3", "#ffffff", "#2c333d", "#3d4552"
+    else:
+        label_color, value_color, bg, border = "#33394a", "#0f1115", "#f4f6f8", "#d7dce3"
+    st.markdown(
+        f"""
+        <style>
+        div[data-testid="stMetric"] {{
+            background: {bg} !important;
+            border: 1px solid {border} !important;
+            border-radius: 8px;
+            padding: 0.6rem 0.8rem;
+        }}
+        div[data-testid="stMetric"] [data-testid="stMetricLabel"] {{
+            color: {label_color} !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+        }}
+        div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
+            color: {value_color} !important;
+            font-weight: 700 !important;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
 def _render_meteo_cards(result: GridScoreResult) -> None:
+    _inject_metric_contrast_css()
     m = result.meteo_actual
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("Temperatura regional", f"{m['temperatura']:.1f} °C")
@@ -74,16 +160,25 @@ def _render_map(result: GridScoreResult) -> None:
     lats = [c.geometry["min_lat"] for c in result.cells] + [c.geometry["max_lat"] for c in result.cells]
     lons = [c.geometry["min_lon"] for c in result.cells] + [c.geometry["max_lon"] for c in result.cells]
     center = [sum(lats) / len(lats), sum(lons) / len(lons)]
-    fmap = folium.Map(location=center, zoom_start=11, tiles="CartoDB positron")
+    # OpenStreetMap estándar (tile.openstreetmap.org) — el único proveedor
+    # que Folium resuelve sin requerir ninguna API key (ver auditoría
+    # 2026-09-07: "CartoDB positron" también es gratuito en teoría, pero
+    # el watermark "API KEY REQUIRED" visto en la demo no puede arriesgarse
+    # de nuevo frente a la comisión; OSM estándar es la opción más segura).
+    fmap = folium.Map(location=center, zoom_start=11, tiles="OpenStreetMap")
     n_cells = len(result.cells)
     for c in result.cells:
         g = c.geometry
-        color = _score_to_color(c.rank, n_cells)
+        # Por display_rank (no por posición): celdas empatadas deben verse
+        # con el MISMO color — un degradado por posición insinuaría una
+        # diferencia de riesgo que el modelo no está afirmando.
+        color = _score_to_color(c.display_rank, n_cells)
         elev_txt = f"{c.elevation:.0f} m" if c.elevation is not None else "sin DEM"
         slope_txt = f"{c.slope:.1f}°" if c.slope is not None else "sin DEM"
-        tooltip = f"<b>{c.cell_id}</b><br>Rank: {c.rank}/{n_cells}<br>Score relativo: {c.score:.4f}"
+        tie_txt = f" (empatada con {c.tie_group_size - 1} celda(s) más)" if c.tie_group_size > 1 else ""
+        tooltip = f"<b>{c.cell_id}</b><br>Rank: {c.display_rank}/{n_cells}<br>Score relativo: {c.score:.4f}"
         popup = (
-            f"{c.cell_id} — rank {c.rank}<br>"
+            f"{c.cell_id} — rank {c.display_rank}{tie_txt}<br>"
             f"Score: {c.score:.4f}<br>"
             f"Elevación: {elev_txt}<br>"
             f"Pendiente: {slope_txt}<br>"
@@ -102,30 +197,65 @@ def _render_map(result: GridScoreResult) -> None:
     st_folium(fmap, height=480, use_container_width=True, key="prototype_map")
 
 
+def _priority_cells(cells: list, min_n: int = _TOP_N_PRIORITY) -> list:
+    """Celdas prioritarias honestas ante empates (2026-09-07): recorre en
+    orden de score y, al llegar a `min_n`, NO corta un grupo empatado a la
+    mitad — incluye el grupo completo. Con datos sin empates se comporta
+    exactamente como `cells[:min_n]`."""
+    selected: list = []
+    seen_display_ranks: set[int] = set()
+    for c in cells:
+        if len(selected) >= min_n and c.display_rank not in seen_display_ranks:
+            break
+        selected.append(c)
+        seen_display_ranks.add(c.display_rank)
+    return selected
+
+
 def _render_ranking_table(result: GridScoreResult) -> None:
     st.markdown("#### Ranking de riesgo relativo (1 = mayor riesgo exploratorio)")
+    priority_ids = {c.cell_id for c in _priority_cells(result.cells)}
     df = pd.DataFrame(
-        [{"Rank": c.rank, "Celda": c.cell_id, "Score": round(c.score, 4)} for c in result.cells]
+        [
+            {
+                "Rank": c.display_rank,
+                "Celda": c.cell_id,
+                "Score": round(c.score, 6),
+                "Empate": f"×{c.tie_group_size}" if c.tie_group_size > 1 else "—",
+            }
+            for c in result.cells
+        ]
     )
 
     def _highlight_top(row: pd.Series) -> list[str]:
-        return ["background-color: rgba(220, 38, 38, 0.15)"] * len(row) if row["Rank"] <= _TOP_N_PRIORITY else [""] * len(row)
+        is_priority = row["Celda"] in priority_ids
+        return ["background-color: rgba(220, 38, 38, 0.15)"] * len(row) if is_priority else [""] * len(row)
 
     st.dataframe(df.style.apply(_highlight_top, axis=1), use_container_width=True, hide_index=True, height=420)
+    st.caption(
+        "El 'Rank' mostrado es honesto ante empates: celdas con score idéntico "
+        "comparten el mismo número (el modelo no las distingue) — la columna "
+        "'Empate' indica cuántas celdas comparten ese score exacto."
+    )
 
 
 def _render_priority_cells(result: GridScoreResult) -> None:
-    st.markdown("#### Celdas prioritarias (exploratorio)")
+    top = _priority_cells(result.cells)
+    n_extra = len(top) - _TOP_N_PRIORITY
+    title = "Celdas prioritarias (exploratorio)"
+    if n_extra > 0:
+        title += f" — Top {_TOP_N_PRIORITY}, se muestran {len(top)} por empate real de score"
+    st.markdown(f"#### {title}")
     st.caption(
         "Apoyo a decisión y priorización exploratoria — NO es una alerta operacional oficial."
     )
-    top = result.cells[:_TOP_N_PRIORITY]
     cols = st.columns(len(top))
     for col, c in zip(cols, top):
         with col:
-            st.metric(f"#{c.rank} · {c.cell_id}", f"{c.score:.4f}")
+            tie_txt = f" · empate ×{c.tie_group_size}" if c.tie_group_size > 1 else ""
+            st.metric(f"#{c.display_rank} · {c.cell_id}", f"{c.score:.4f}")
             elev_txt = f" · Elev: {c.elevation:.0f} m" if c.elevation is not None else ""
-            st.caption(f"Historial: {c.historical_count}{elev_txt}")
+            st.caption(f"Historial: {c.historical_count}{elev_txt}{tie_txt}")
 
 
 def _render_data_status(result: GridScoreResult) -> None:
@@ -136,7 +266,8 @@ def _render_data_status(result: GridScoreResult) -> None:
             "- **Topografía:** DEM (Copernicus GLO-30)\n"
             f"- **Dataset:** temporal h={result.horizon_hours}h\n"
             f"- **Modelo:** {result.model_version} — **{result.model_status}**\n"
-            f"- **Weather timestamp usado:** {result.weather_timestamp}"
+            f"- **Weather timestamp usado:** {result.weather_timestamp}\n"
+            f"- **Antigüedad de la observación:** {result.age_hours:.1f} h — **{result.freshness}**"
         )
         st.caption(
             "El score es un ranking relativo de riesgo exploratorio, NO una "
@@ -162,6 +293,7 @@ def render_prototype_dashboard() -> None:
         return
 
     _render_header(result)
+    _render_stale_data_banner(result)
     _render_meteo_cards(result)
     st.markdown("---")
     map_col, rank_col = st.columns([1.3, 1])

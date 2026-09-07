@@ -46,6 +46,27 @@ MODEL_PATH = REPO_ROOT / "models" / "prototype_model_d.pkl"
 
 _EMPTY_ARRIVALS = pd.Series([], dtype="datetime64[ns, UTC]")
 
+# Frescura de la meteorología usada (2026-09-07, corrección UX/semántica):
+# `forecast_time=None` correctamente no inventa clima futuro y usa la
+# última lectura real disponible — pero si esa lectura tiene varios días
+# de antigüedad respecto al momento en que alguien ABRE el dashboard, la
+# UI no puede insinuar que el ranking es un pronóstico vigente de "las
+# próximas 6 horas de hoy". `age_hours` mide justamente esa distancia
+# entre el reloj real y `weather_timestamp` — no la ventana del target
+# (que sigue siendo T -> T+horizon_hours, sin cambios).
+FRESHNESS_RECENT = "DATOS RECIENTES"
+FRESHNESS_DELAYED = "DATOS CON RETRASO"
+FRESHNESS_HISTORICAL = "DATOS HISTÓRICOS / DESACTUALIZADOS"
+
+
+def classify_freshness(age_hours: float) -> str:
+    """age<=12h -> RECIENTES; 12h<age<=24h -> CON RETRASO; age>24h -> HISTÓRICOS."""
+    if age_hours <= 12:
+        return FRESHNESS_RECENT
+    if age_hours <= 24:
+        return FRESHNESS_DELAYED
+    return FRESHNESS_HISTORICAL
+
 
 class PrototypeUnavailableError(RuntimeError):
     """Falta un artefacto necesario (modelo, meteorología reciente, FIRMS,
@@ -57,7 +78,9 @@ class PrototypeUnavailableError(RuntimeError):
 class CellScore:
     cell_id: str
     score: float
-    rank: int
+    rank: int  # posición 1..N, SIEMPRE única — contrato interno sin cambios
+    display_rank: int  # rank "honesto" para UI: empates comparten el MISMO número (method="min")
+    tie_group_size: int  # cuántas celdas comparten exactamente este score (1 = sin empate)
     geometry: dict  # bbox EPSG:4326: {min_lon, min_lat, max_lon, max_lat}
     elevation: Optional[float]
     slope: float
@@ -71,6 +94,8 @@ class GridScoreResult:
     station_id: str
     station_name: str
     weather_timestamp: pd.Timestamp
+    age_hours: float  # (ahora real - weather_timestamp), en horas
+    freshness: str  # FRESHNESS_RECENT | FRESHNESS_DELAYED | FRESHNESS_HISTORICAL
     model_version: str
     model_status: str
     meteo_actual: dict
@@ -182,6 +207,17 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
     score_by_cell = pd.Series(scores, index=features_df.index, dtype=float)
     ranking = score_by_cell.sort_values(ascending=False)
 
+    # Empates reales del modelo (2026-09-07, corrección de honestidad
+    # científica): con pocos positivos históricos, decenas de celdas caen
+    # en el MISMO score exacto — `rank` (posición 1..N) sigue siendo único
+    # por contrato (lo usan el color del mapa y el corte de Top-5), pero
+    # `display_rank` es el número que debe VERSE: comparte el mismo valor
+    # para todo el grupo empatado (method="min", igual que una tabla de
+    # posiciones deportiva), para no insinuar que una celda es "más
+    # riesgosa" que otra cuando el modelo las trata exactamente igual.
+    display_ranks = ranking.rank(method="min", ascending=False).astype(int)
+    tie_group_sizes = ranking.groupby(ranking).transform("size")
+
     cells = []
     for position, (cell_id, score) in enumerate(ranking.items(), start=1):
         g = grid_by_id[cell_id]
@@ -190,6 +226,8 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
                 cell_id=cell_id,
                 score=float(score),
                 rank=position,
+                display_rank=int(display_ranks.loc[cell_id]),
+                tie_group_size=int(tie_group_sizes.loc[cell_id]),
                 geometry={
                     "min_lon": g["min_lon"],
                     "min_lat": g["min_lat"],
@@ -202,12 +240,18 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
             )
         )
 
+    weather_timestamp = meteo_row["meteo_actual_momento"]
+    age_hours = (pd.Timestamp.now(tz="UTC") - weather_timestamp).total_seconds() / 3600.0
+    freshness = classify_freshness(age_hours)
+
     return GridScoreResult(
         forecast_time=forecast_time,
         horizon_hours=horizon_hours,
         station_id=STATION_ID,
         station_name=STATION_NAME,
-        weather_timestamp=meteo_row["meteo_actual_momento"],
+        weather_timestamp=weather_timestamp,
+        age_hours=age_hours,
+        freshness=freshness,
         model_version=metadata["model_version"],
         model_status=metadata["status"],
         meteo_actual={
