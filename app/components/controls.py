@@ -58,7 +58,13 @@ def render_appearance_toggle(*, location: str = "main") -> str:
 
 def render_data_mode_badge() -> None:
     """Badge visible en sidebar: fuente de datos del dashboard (SAPI-44)."""
-    if SAPI_DATA_MODE == "demo_seed":
+    if SAPI_DATA_MODE == "prototype":
+        st.sidebar.markdown("### 🟣 Prototipo (datos reales)")
+        st.sidebar.caption(
+            "`SAPI_DATA_MODE=prototype` — ranking real vía el pipeline temporal nuevo "
+            "(Modelo D), NO probabilidad calibrada de incendio."
+        )
+    elif SAPI_DATA_MODE == "demo_seed":
         st.sidebar.markdown("### 🟡 Modo Demo")
         st.sidebar.caption(
             "`SAPI_DATA_MODE=demo_seed` — probabilidades y niveles de riesgo provienen "

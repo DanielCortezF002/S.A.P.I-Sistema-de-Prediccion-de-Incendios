@@ -29,7 +29,7 @@ import pandas as pd
 
 from src.geo.grid import all_cells
 from src.procesamiento.causality_validator import validate_temporal_causality
-from src.procesamiento.dem_features import sample_grid_topography
+from src.procesamiento.dem_features import load_grid_topography
 from src.procesamiento.episodes import assign_episodes, build_episode_catalog, first_arrival_by_cell
 from src.procesamiento.pipeline_validators import validate_manifest_matches_dataset
 from src.procesamiento.regional_meteo import load_regional_meteo_series
@@ -51,30 +51,6 @@ CANDIDATE_STEP_HOURS = 6  # muestreo de forecast_time — ver manifest, motivo d
 # de agosto de 2021 y de 2026 fuera de este rango — se recortan acá.
 PERIOD_START = pd.Timestamp("2021-08-30", tz="UTC")
 PERIOD_END = pd.Timestamp("2026-08-29 23:59:59", tz="UTC")
-
-
-def _load_dem_topography(grid_cells: list[dict]) -> pd.DataFrame:
-    """Topografía real por celda si el DEM está procesado; si no, columnas
-    en NaN (nunca la aproximación sintética que sí usa `data_processor.py`
-    como fallback — acá no hay fallback, es un experimento real)."""
-    terrain_dir = REPO_ROOT / "data" / "processed" / "dem_terrain"
-    dem = sorted(terrain_dir.glob("*_utm19s.tif"))
-    slope = sorted(terrain_dir.glob("*_slope.tif"))
-    aspect = sorted(terrain_dir.glob("*_aspect.tif"))
-
-    grid_df = pd.DataFrame(grid_cells)
-    if dem and slope and aspect:
-        topo = sample_grid_topography(grid_df, dem[0], slope[0], aspect[0])
-        grid_df["elevacion"] = topo["altitud"]
-        grid_df["pendiente"] = topo["pendiente"]
-        grid_df["orientacion"] = topo["orientacion"]
-        grid_df["dem_disponible"] = True
-    else:
-        grid_df["elevacion"] = None
-        grid_df["pendiente"] = None
-        grid_df["orientacion"] = None
-        grid_df["dem_disponible"] = False
-    return grid_df[["cell_id", "elevacion", "pendiente", "orientacion", "dem_disponible"]]
 
 
 def build_dataset(horizon: timedelta, cooldown: timedelta) -> tuple[pd.DataFrame, dict]:
@@ -127,7 +103,7 @@ def build_dataset(horizon: timedelta, cooldown: timedelta) -> tuple[pd.DataFrame
     meteo_feats = build_regional_meteo_features(forecast_times, meteo_series, lag_hours=LAG_HOURS)
 
     # 4) Topografía real por celda (estática).
-    topo = _load_dem_topography(grid_cells)
+    topo = load_grid_topography(grid_cells, REPO_ROOT / "data" / "processed" / "dem_terrain")
 
     # 5) target(cell, T, h) + exclusión por cooldown.
     targets = build_targets(arrivals, cell_ids, forecast_times, horizon, cooldown)

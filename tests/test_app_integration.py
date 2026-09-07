@@ -16,15 +16,33 @@ from streamlit.testing.v1 import AppTest
 APP_PATH = Path(__file__).resolve().parent.parent / "app" / "app.py"
 
 
-def _run() -> AppTest:
+def _run(*, mode: str = "Demo (escenario sembrado)") -> AppTest:
+    """Corre `main()` completo. Por defecto selecciona el modo Demo — todo
+    este archivo prueba el escenario sembrado, que desde la iteración del
+    prototipo (2026-09-07) ya no es el modo por defecto de la app."""
     at = AppTest.from_file(str(APP_PATH), default_timeout=60)
     at.run()
     assert not at.exception, f"main() lanzó una excepción: {at.exception}"
+    radios = at.sidebar.radio
+    if radios and mode in radios[0].options and radios[0].value != mode:
+        at = radios[0].set_value(mode).run()
+        assert not at.exception, f"cambiar de modo lanzó una excepción: {at.exception}"
     return at
 
 
 def test_main_runs_without_exceptions() -> None:
     _run()
+
+
+def test_prototype_mode_is_the_default_and_runs_without_exceptions() -> None:
+    """El modo por defecto (sin tocar el radio) debe ser Prototipo, y debe
+    correr sin excepciones incluso si faltan artefactos reales — el manejo
+    de errores vive en `render_prototype_dashboard`, no en `main()`."""
+    at = AppTest.from_file(str(APP_PATH), default_timeout=60)
+    at.run()
+    assert not at.exception
+    radios = at.sidebar.radio
+    assert radios and radios[0].value == "Prototipo (datos reales)"
 
 
 def test_priority_zones_and_trend_sections_are_present() -> None:

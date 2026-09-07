@@ -48,6 +48,7 @@ from app.components.ops_layout import (
     render_ops_header,
     render_variable_strip,
 )
+from app.components.prototype_view import render_prototype_dashboard
 from app.components.risk_map import render_risk_map
 from app.components.risk_sparkline import render_risk_sparkline
 from app.state import (
@@ -243,6 +244,29 @@ class SapiDashboard:
         return "\n".join(lines).encode("utf-8")
 
 
+_MODE_PROTOTIPO = "Prototipo (datos reales)"
+_MODE_DEMO = "Demo (escenario sembrado)"
+
+
+def _resolve_dashboard_mode() -> str:
+    """Selector explícito DEMO / PROTOTIPO en el sidebar — nunca se
+    mezclan en una sola vista (instrucción explícita de la iteración del
+    prototipo, 2026-09-07). Preselección: PROTOTIPO si `SAPI_DATA_MODE` no
+    pide demo explícitamente; el usuario puede cambiar a Demo en cualquier
+    momento sin reiniciar la app."""
+    default_index = 1 if SAPI_DATA_MODE == "demo_seed" else 0
+    return st.sidebar.radio(
+        "Modo de datos",
+        options=[_MODE_PROTOTIPO, _MODE_DEMO],
+        index=default_index,
+        help=(
+            "Prototipo: pipeline temporal nuevo + Modelo D sobre datos reales. "
+            "Demo: escenario sembrado en memoria, solo para presentación — "
+            "nunca se combinan en la misma pantalla."
+        ),
+    )
+
+
 def main() -> None:
     """Punto de entrada de la aplicación Streamlit."""
     st.set_page_config(
@@ -256,6 +280,11 @@ def main() -> None:
     # sidebar colapsado: el modo ya está en session_state desde init_session,
     # así que el CSS no necesita esperar a que el widget se monte.
     _inject_css(appearance())
+
+    mode = _resolve_dashboard_mode()
+    if mode == _MODE_PROTOTIPO:
+        render_prototype_dashboard()
+        return
 
     if not cache_is_warm():
         for _d in _cached_available_dates():

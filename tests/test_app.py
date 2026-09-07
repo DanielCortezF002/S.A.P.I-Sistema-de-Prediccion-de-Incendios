@@ -26,7 +26,14 @@ def test_export_report_pdf():
         crs="EPSG:4326",
     )
 
-    with patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))):
+    # Este reporte es siempre sobre el escenario demo (gdf_precargado demo) —
+    # se fija SAPI_DATA_MODE explícito para la prueba en vez de depender del
+    # default global del dashboard (que desde la iteración del prototipo es
+    # "prototype", no "demo_seed").
+    with (
+        patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))),
+        patch("app.app.SAPI_DATA_MODE", "demo_seed"),
+    ):
         report = dashboard.export_report_pdf(date(2025, 2, 15), gdf_precargado=gdf)
 
     content = report.decode("utf-8")
@@ -55,11 +62,26 @@ def test_export_report_empty():
 def test_render_data_mode_badge_demo_seed(mock_sidebar: MagicMock) -> None:
     from app.components.controls import render_data_mode_badge
 
-    render_data_mode_badge()
+    with patch("app.components.controls.SAPI_DATA_MODE", "demo_seed"):
+        render_data_mode_badge()
     mock_sidebar.markdown.assert_called_once()
     caption = mock_sidebar.caption.call_args[0][0]
     assert "demo_seed" in caption
     assert "no de inferencia XGBoost" in caption
+
+
+@patch("app.components.controls.st.sidebar")
+def test_render_data_mode_badge_prototype(mock_sidebar: MagicMock) -> None:
+    """Desde la iteración del prototipo (2026-09-07), 'prototype' es un
+    modo reconocido — no debe caer en la rama de advertencia genérica."""
+    from app.components.controls import render_data_mode_badge
+
+    with patch("app.components.controls.SAPI_DATA_MODE", "prototype"):
+        render_data_mode_badge()
+    mock_sidebar.markdown.assert_called_once()
+    mock_sidebar.warning.assert_not_called()
+    caption = mock_sidebar.caption.call_args[0][0]
+    assert "prototype" in caption
 
 
 @patch("app.components.banner.st.info")
