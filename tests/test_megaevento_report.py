@@ -20,20 +20,22 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_megaevento_report_reproduces_known_concentration() -> None:
-    """Ancla el hallazgo de la auditoría: si esta fracción baja de forma
-    importante en una corrida futura (p.ej. tras un backfill más amplio),
-    es una señal real de que vale la pena reabrir la conversación sobre
-    qué tan generalizable es el rendimiento reportado — no algo que deba
-    pasar inadvertido."""
+    """Ancla el hallazgo de la auditoría — actualizado tras el backfill DMC
+    de Fase 3 (2026-09-07): antes del backfill el 2024-02-03 explicaba 50%
+    de los positivos de TODO el dataset (23/46); con ~5 años continuos de
+    datos reales, esa misma cifra absoluta (23 filas) ahora es 21.5%
+    (23/107) — la concentración bajó porque hay MUCHA más señal positiva
+    real en otros períodos, no porque el día se haya vuelto menos
+    importante en sí mismo. Si esta fracción vuelve a subir por encima de
+    ~0.3 en una corrida futura, es señal de que el dataset se redujo o de
+    que algo vuelve a depender de un solo día — vale la pena revisar."""
     from scripts.megaevento_report import build_report
 
     report = build_report("2024-02-03")
     assert report["n_positive_rows_dataset_completo"] > 0
-    assert report["n_positive_rows_ese_dia"] > 0
-    # El día domina una fracción sustancial del dataset completo (hallazgo
-    # real de esta auditoría: 50%) — el umbral de 0.3 es deliberadamente
-    # laxo, solo para detectar que la concentración NO desapareció.
-    assert report["fraccion_del_dataset_completo"] > 0.3
+    assert report["n_positive_rows_ese_dia"] == 23  # cifra absoluta, no cambia con el backfill
+    assert report["fraccion_del_dataset_completo"] < 0.3  # ya no domina como antes del backfill
+    assert report["fraccion_del_dataset_completo"] > 0.1  # pero sigue siendo una fracción real, no despreciable
     assert report["n_raw_episodes"] > 1  # son MUCHOS event_id, no uno solo
 
 

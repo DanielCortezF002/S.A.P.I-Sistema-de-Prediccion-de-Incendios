@@ -42,6 +42,16 @@ FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30
 COOLDOWN_HOURS_DEFAULT = 6
 CANDIDATE_STEP_HOURS = 6  # muestreo de forecast_time — ver manifest, motivo documentado
 
+# Período de solapamiento DMC×FIRMS (Fase 3, backfill aprobado 2026-09-07):
+# max(DMC_inicio, FIRMS_inicio) -> min(DMC_fin, FIRMS_fin). Elegido ANTES de
+# mirar dónde hay incendios — es la intersección de disponibilidad entre
+# ambas fuentes, no una selección de días "interesantes". El backfill de
+# `scripts/backfill_dmc_historico.py` descarga meses calendario completos
+# (por simplicidad del request), así que `regional_meteo` trae algunos días
+# de agosto de 2021 y de 2026 fuera de este rango — se recortan acá.
+PERIOD_START = pd.Timestamp("2021-08-30", tz="UTC")
+PERIOD_END = pd.Timestamp("2026-08-29 23:59:59", tz="UTC")
+
 
 def _load_dem_topography(grid_cells: list[dict]) -> pd.DataFrame:
     """Topografía real por celda si el DEM está procesado; si no, columnas
@@ -78,14 +88,20 @@ def build_dataset(horizon: timedelta, cooldown: timedelta) -> tuple[pd.DataFrame
 
     # Candidatos de forecast_time: uno por cada bucket de N horas que
     # contenga AL MENOS UNA lectura real — nunca un `date_range` sobre todo
-    # el calendario entre la primera y la última lectura. `regional_meteo`
-    # solo tiene datos densos dentro de 4 meses reales (2022-01, 2022-12,
-    # 2024-02, 2025-02) más unos días de ingesta reciente; el resto del
-    # rango son años de vacío. Un `date_range` ingenuo generaría miles de
-    # forecast_time sin ninguna lectura real cerca (se detectó exactamente
-    # así en la primera corrida: 93% de las filas quedaban con
-    # `meteo_actual_temp` en NaN). Resamplear sobre la serie real evita
-    # crear un candidato donde no hay dato.
+    # el calendario entre la primera y la última lectura. Tras el backfill
+    # de Fase 3 (2026-09-07), `regional_meteo` trae ~5 años continuos
+    # (99.6% de días con al menos una lectura dentro del período de
+    # solapamiento) — ya no son 4 meses aislados.
+    #
+    # IMPORTANTE: el resample se hace sobre la serie COMPLETA (sin recortar
+    # a PERIOD_START/PERIOD_END todavía) porque el backfill descarga MESES
+    # CALENDARIO completos — hay lecturas reales de fines de agosto de 2021
+    # anteriores a PERIOD_START que SÍ hacen falta para calcular
+    # `meteo_lag_48h` de los primeros forecast_time del período (si se
+    # recortara la serie antes, esos lags quedarían NaN sin necesidad). El
+    # corte al período exacto de solapamiento se aplica DESPUÉS, solo sobre
+    # la lista de `forecast_times` candidatos, no sobre los datos crudos
+    # usados para calcular sus features.
     t_min, t_max = meteo_series["momento"].min(), meteo_series["momento"].max()
     bucketed = (
         meteo_series.set_index("momento")["temperatura"]
@@ -93,7 +109,9 @@ def build_dataset(horizon: timedelta, cooldown: timedelta) -> tuple[pd.DataFrame
         .first()
         .dropna()
     )
-    forecast_times = list(bucketed.index)
+    forecast_times = [t for t in bucketed.index if PERIOD_START <= t <= PERIOD_END]
+    if not forecast_times:
+        raise RuntimeError(f"Sin forecast_time candidatos dentro de [{PERIOD_START}, {PERIOD_END}]")
 
     # 2) Episodios FIRMS reales -> first_arrival por celda.
     fires = pd.read_csv(FIRES_CSV)
@@ -242,15 +260,29 @@ def build_dataset(horizon: timedelta, cooldown: timedelta) -> tuple[pd.DataFrame
         "forecast_frequency_hours": CANDIDATE_STEP_HOURS,
         "cooldown_horas": cooldown.total_seconds() / 3600,
         "episode_parameters": {"radius_km": 2.0, "max_gap_hours": 6.0},
+        "periodo_solapamiento_dmc_firms": {
+            "inicio": str(PERIOD_START),
+            "fin": str(PERIOD_END),
+            "criterio": (
+                "max(DMC_inicio, FIRMS_inicio) -> min(DMC_fin, FIRMS_fin); elegido "
+                "SIN mirar dónde hay incendios (Fase 3, backfill DMC aprobado "
+                "2026-09-07). Los forecast_time candidatos se filtran a este "
+                "rango; las lecturas meteo fuera de él (colas de los meses "
+                "calendario completos que descarga el backfill) solo se usan "
+                "para calcular lags de los forecast_time cercanos al borde, "
+                "nunca generan un forecast_time propio."
+            ),
+        },
         "motivo_muestreo": (
             "Un forecast_time candidato es el primer instante real de cada "
             f"bucket de {CANDIDATE_STEP_HOURS}h que contiene AL MENOS UNA "
             "lectura real de la estación (resample sobre la serie real, no "
-            "un date_range sobre todo el calendario) — evita crear "
-            "candidatos en los años sin datos DMC entre los 4 meses "
-            "históricos reales. (Hallazgo de la primera corrida: un "
-            "date_range ingenuo dejaba 93% de las filas con meteo_actual "
-            "en NaN.)"
+            "un date_range sobre todo el calendario), filtrado además al "
+            "período de solapamiento DMC×FIRMS de arriba. (Hallazgo de la "
+            "primera corrida, cuando solo había 4 meses DMC reales: un "
+            "date_range ingenuo dejaba 93% de las filas con meteo_actual en "
+            "NaN — ya no aplica tras el backfill de Fase 3, pero el resample "
+            "sobre la serie real se mantiene por ser la fuente de verdad.)"
         ),
         "definicion_target": (
             "target(cell,T,h)=1 si existe un evento (clúster espacio-temporal "

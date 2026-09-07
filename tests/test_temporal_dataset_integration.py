@@ -110,7 +110,7 @@ def test_forecast_times_are_reproducible_from_meteo_alone_without_touching_firms
     `forecast_time` ÚNICAMENTE a partir de la serie meteorológica real —
     sin importar `episodes`, `arrivals` ni el CSV de FIRMS en absoluto — y
     comprobando que coincide EXACTO con los `forecast_time` del dataset."""
-    from scripts.build_temporal_dataset import CANDIDATE_STEP_HOURS, STATION_ID
+    from scripts.build_temporal_dataset import CANDIDATE_STEP_HOURS, PERIOD_END, PERIOD_START, STATION_ID
     from src.procesamiento.regional_meteo import load_regional_meteo_series
 
     meteo_series = load_regional_meteo_series(STATION_ID)
@@ -120,7 +120,10 @@ def test_forecast_times_are_reproducible_from_meteo_alone_without_touching_firms
         .first()
         .dropna()
     )
-    recomputed_times = set(bucketed.index)
+    # Mismo recorte de período que build_dataset() -- ver su comentario: el
+    # resample se hace sobre la serie completa (necesaria para los lags),
+    # el corte a [PERIOD_START, PERIOD_END] se aplica solo a los candidatos.
+    recomputed_times = {t for t in bucketed.index if PERIOD_START <= t <= PERIOD_END}
     dataset_times = set(dataset["forecast_time"].unique())
     assert recomputed_times == dataset_times, (
         "forecast_time en el dataset no coincide con el recálculo puramente "

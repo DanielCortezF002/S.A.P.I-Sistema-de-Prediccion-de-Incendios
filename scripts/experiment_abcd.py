@@ -73,12 +73,15 @@ FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30
 # Umbrales de "soporte de evento" — NO son una ley estadística universal, son
 # un criterio metodológico de ESTE proyecto (no derivado de una prueba de
 # poder estadístico), documentado explícitamente porque el propio volumen
-# de datos disponible no permite derivarlos con más rigor: el dataset
-# completo tiene 26 raw episodes que disparan al menos una fila positiva
-# por desempate (n_positive_raw_episodes) — o 31 si se cuenta la unión de
-# todo evento que calificaría sin desempatar (n_positive_raw_episodes_
-# any_qualifying), ver manifest de build_temporal_dataset.py. ADEQUATE es
-# aspiracional: ningún fold de esta corrida lo alcanza hoy.
+# de datos disponible no permite derivarlos con más rigor. Tras el backfill
+# DMC de Fase 3 (2026-09-07, ~5 años continuos en vez de 4 meses), el
+# dataset completo tiene 79 raw episodes que disparan al menos una fila
+# positiva por desempate (n_positive_raw_episodes) — o 84 si se cuenta la
+# unión de todo evento que calificaría sin desempatar
+# (n_positive_raw_episodes_any_qualifying), ver manifest de
+# build_temporal_dataset.py. Antes del backfill eran 26/31. Estos umbrales
+# (4/19/20) no se recalibraron a propósito — cambiarlos junto con los datos
+# habría mezclado dos preguntas distintas.
 EVENT_SUPPORT_THRESHOLDS = {"INSUFFICIENT_MAX": 4, "LIMITED_MAX": 19}  # ADEQUATE: >= 20
 
 
@@ -249,9 +252,19 @@ def run_fold(train: pd.DataFrame, test: pd.DataFrame, arrivals: pd.DataFrame) ->
             "n_nan_train_por_columna": {c: int(x_train[c].isna().sum()) for c in features},
             "n_nan_test_por_columna": {c: int(x_test[c].isna().sum()) for c in features},
         }
-        if y_train.nunique() < 2:
-            fold_result["fila"][f"modelo_{nombre}"] = {"error": "train sin ambas clases, no se puede entrenar"}
-            fold_result["episodio"][f"modelo_{nombre}"] = {"error": "train sin ambas clases"}
+        # `HistGradientBoostingClassifier` con early_stopping="auto" (su
+        # default) hace un train_test_split interno ESTRATIFICADO para su
+        # propio conjunto de validación temprana — eso exige al menos 2
+        # ejemplos de la clase minoritaria, no solo "ambas clases presentes"
+        # (sección Fase 3, expuesto tras el backfill: el bloque 2021 tiene
+        # exactamente 1 positivo). No es un ajuste de hiperparámetros del
+        # experimento — es un guard de robustez para que el fold falle con
+        # un mensaje explicable en vez de un ValueError genérico de sklearn.
+        min_clase = int(y_train.value_counts().min()) if y_train.nunique() >= 2 else 0
+        if min_clase < 2:
+            motivo = f"train con {min_clase} ejemplo(s) de la clase minoritaria, insuficiente para entrenar"
+            fold_result["fila"][f"modelo_{nombre}"] = {"error": motivo}
+            fold_result["episodio"][f"modelo_{nombre}"] = {"error": motivo}
             continue
         clf = HistGradientBoostingClassifier(random_state=RANDOM_STATE, max_depth=4, class_weight="balanced")
         clf.fit(x_train, y_train)
@@ -281,8 +294,16 @@ def main() -> None:
     episodes = assign_episodes(fires)
     arrivals = first_arrival_by_cell(episodes)
 
-    bloques = ["2022-01", "2022-12", "2024-02", "2025-02"]
-    df = df[df["mes"].isin(bloques)].reset_index(drop=True)
+    # Bloques temporales (Fase 3, backfill DMC 2026-09-07): antes eran 4
+    # meses hardcodeados porque eran los únicos con DMC real disponible.
+    # Con el backfill, el dataset cubre ~5 años continuos — el bloque se
+    # deriva del AÑO CALENDARIO presente en los datos, no de un mes elegido
+    # a mano ni de dónde hay incendios. Walk-forward cronológico: cada año
+    # se evalúa contra TODO lo anterior. No es una búsqueda de mejor score
+    # (no se prueban trimestres/semestres/etc. buscando el mejor split) —
+    # es la granularidad más simple y natural dado el rango real obtenido.
+    df["bloque"] = df["forecast_time"].dt.year.astype(str)
+    bloques = sorted(df["bloque"].unique().tolist())
 
     resultados = {
         "AVISO": (
@@ -299,15 +320,16 @@ def main() -> None:
         ),
         "horizon_hours": horizon,
         "bloques_temporales": bloques,
+        "granularidad_bloque": "año calendario (derivado de los datos, no elegido a mano)",
         "event_support_thresholds": EVENT_SUPPORT_THRESHOLDS,
         "folds": [],
     }
 
     for i in range(1, len(bloques)):
-        test_mes = bloques[i]
-        train_meses = bloques[:i]
-        train = df[df["mes"].isin(train_meses)]
-        test = df[df["mes"] == test_mes]
+        test_bloque = bloques[i]
+        train_bloques = bloques[:i]
+        train = df[df["bloque"].isin(train_bloques)]
+        test = df[df["bloque"] == test_bloque]
 
         n_positive_dates = test.loc[test["target"] == 1, "forecast_time"].dt.date.nunique()
         fraction, dominant_event = largest_episode_fraction(test, arrivals)
@@ -318,8 +340,8 @@ def main() -> None:
             "train_end": str(train["forecast_time"].max()) if not train.empty else None,
             "test_start": str(test["forecast_time"].min()) if not test.empty else None,
             "test_end": str(test["forecast_time"].max()) if not test.empty else None,
-            "train_meses": train_meses,
-            "test_mes": test_mes,
+            "train_bloques": train_bloques,
+            "test_bloque": test_bloque,
             "n_train": len(train),
             "n_test": len(test),
             "n_positivos_train_filas": int(train["target"].sum()),
@@ -332,8 +354,8 @@ def main() -> None:
         n_ep = fold["resultados"]["episodio"].get("modelo_D", {}).get("n_raw_episodes_evaluated", "?")
         estado = fold["resultados"]["episodio"].get("modelo_D", {}).get("event_support_status", "?")
         print(
-            f"Fold {i}: train={train_meses} (n={len(train)}, pos_filas={fold['n_positivos_train_filas']}) "
-            f"-> test={test_mes} (n={len(test)}, pos_filas={fold['n_positivos_test_filas']}, "
+            f"Fold {i}: train={train_bloques} (n={len(train)}, pos_filas={fold['n_positivos_train_filas']}) "
+            f"-> test={test_bloque} (n={len(test)}, pos_filas={fold['n_positivos_test_filas']}, "
             f"raw_episodes={n_ep}, event_support={estado})"
         )
 

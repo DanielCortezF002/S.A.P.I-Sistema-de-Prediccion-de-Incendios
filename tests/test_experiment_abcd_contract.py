@@ -18,7 +18,7 @@ import pandas as pd
 import pytest
 from sklearn.ensemble import HistGradientBoostingClassifier
 
-from scripts.experiment_abcd import FEATURES_A, FEATURES_B, FEATURES_C, FEATURES_D, _prep_xy
+from scripts.experiment_abcd import FEATURES_A, FEATURES_B, FEATURES_C, FEATURES_D, _prep_xy, run_fold
 from src.procesamiento.pipeline_validators import validate_feature_set_contract
 
 
@@ -140,6 +140,53 @@ def test_prep_xy_still_works_on_a_clean_eligible_dataframe() -> None:
     )
     x, y = _prep_xy(df, FEATURES_A)
     assert list(y) == [0, 1]
+
+
+def _synthetic_fold_df(n_rows: int, n_positivos: int) -> pd.DataFrame:
+    rng = np.random.default_rng(0)
+    T0 = pd.Timestamp("2021-08-30", tz="UTC")
+    base = {c: rng.uniform(0, 10, n_rows) for c in FEATURES_D}
+    base.update(
+        {
+            "cell_id": [f"VP-{i % 5:03d}" for i in range(n_rows)],
+            "forecast_time": [T0 + pd.Timedelta(hours=6 * i) for i in range(n_rows)],
+            "target_window_start": [T0 + pd.Timedelta(hours=6 * i) for i in range(n_rows)],
+            "target_window_end": [T0 + pd.Timedelta(hours=6 * i + 6) for i in range(n_rows)],
+            "target": [1] * n_positivos + [0] * (n_rows - n_positivos),
+            "excluded": [False] * n_rows,
+        }
+    )
+    return pd.DataFrame(base)
+
+
+def test_run_fold_handles_a_train_set_with_only_one_positive_without_crashing() -> None:
+    """Auditoría Fase 3 (backfill DMC, 2026-09-07): expuesto al usar folds
+    por año en vez de por mes — el bloque 2021 real tiene exactamente 1
+    positivo. `HistGradientBoostingClassifier` con early_stopping="auto"
+    hace un split interno estratificado que revienta con
+    `ValueError: ... too few ... [1.0]` si la clase minoritaria tiene
+    menos de 2 ejemplos. `run_fold` debe reportar un error explicable por
+    modelo, no dejar reventar todo el script."""
+    train = _synthetic_fold_df(n_rows=50, n_positivos=1)
+    test = _synthetic_fold_df(n_rows=20, n_positivos=3)
+    arrivals = pd.DataFrame(columns=["event_id", "cell_id", "first_arrival"])
+
+    result = run_fold(train, test, arrivals)  # no debe lanzar
+
+    for nombre in ("A", "B", "C", "D"):
+        assert "error" in result["fila"][f"modelo_{nombre}"]
+        assert "minoritaria" in result["fila"][f"modelo_{nombre}"]["error"]
+
+
+def test_run_fold_trains_normally_when_train_has_at_least_two_positives() -> None:
+    train = _synthetic_fold_df(n_rows=50, n_positivos=5)
+    test = _synthetic_fold_df(n_rows=20, n_positivos=3)
+    arrivals = pd.DataFrame(columns=["event_id", "cell_id", "first_arrival"])
+
+    result = run_fold(train, test, arrivals)
+
+    for nombre in ("A", "B", "C", "D"):
+        assert "error" not in result["fila"][f"modelo_{nombre}"]
 
 
 def test_histgradientboosting_accepts_nan_end_to_end() -> None:

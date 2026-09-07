@@ -1,9 +1,12 @@
 """Evaluación a nivel de episodio RAW — separada de la evaluación por fila.
 
-Motivación (auditoría 06-09-2026): 23 de 46 filas positivas del dataset
-`temporal_dataset_h6` vienen del mismo `event_id` (2024-02-03). Una métrica
-por fila (PR-AUC, ROC-AUC fila a fila) trata esas 23 filas como si fueran
-23 casos distintos.
+Motivación (auditoría 06-09-2026): 23 filas positivas del dataset
+`temporal_dataset_h6` vienen de un único día calendario, 2024-02-03 (antes
+del backfill DMC de Fase 3 esas 23 filas eran 50% de los 46 positivos
+totales; tras el backfill son 21.5% de 107 — ver
+`reports/megaevento_2024-02-03_report.json`). Una métrica por fila
+(PR-AUC, ROC-AUC fila a fila) trata esas 23 filas como si fueran 23 casos
+distintos.
 
 Precisión de nomenclatura importante (corregida 06-09-2026, ver
 docs/matriz-riesgo.md): "episodio" acá significa exclusivamente `event_id`
@@ -27,9 +30,10 @@ Nota de reconciliación de cifras (auditoría 06-09-2026, sección 7-9):
 calificaría para alguna fila positiva del conjunto evaluado — es la
 semántica "any qualifying" (equivalente a
 `n_positive_raw_episodes_any_qualifying` del manifest de
-`build_temporal_dataset.py`, hoy 31 sobre el dataset completo), NO la
-semántica "un disparador por fila" que usa la columna `target_event_id`
-del dataset (`n_positive_raw_episodes`, hoy 26): en las filas donde dos
+`build_temporal_dataset.py`, 84 tras el backfill DMC de Fase 3 — antes 31
+sobre el dataset de 4 meses), NO la semántica "un disparador por fila" que
+usa la columna `target_event_id` del dataset (`n_positive_raw_episodes`,
+79 tras el backfill — antes 26): en las filas donde dos
 eventos califican a la vez, `target_event_id` registra solo el de arribo
 más temprano, mientras que este módulo evalúa el rank de la celda para
 AMBOS eventos (tiene sentido: para responder "¿el ranking hubiera

@@ -52,8 +52,8 @@
   "n_positive_rows_ese_dia": 23,
   "n_positive_forecast_times_ese_dia": 2,
   "n_positive_rows_mes_completo": 29,
-  "n_positive_rows_dataset_completo": 46,
+  "n_positive_rows_dataset_completo": 107,
   "fraccion_del_mes": 0.7931034482758621,
-  "fraccion_del_dataset_completo": 0.5,
-  "conclusion": "23 de las 29 filas positivas del mes 2024-02 (79.3%) y 23 de las 46 filas positivas de TODO el dataset (50.0%) provienen de un solo día calendario (2024-02-03), repartidas en 26 raw episodes distintos (la brecha entre 'un event_id domina' y 'un día domina' es real: ningún event_id individual supera el umbral de concentración de validate_event_independence, pero el día calendario sí concentra la mayoría de la señal positiva disponible). Cualquier métrica del fold correspondiente debe leerse como 'rendimiento mayormente explicado por un evento regional de incendios de un día', no como evidencia de que el modelo generaliza a fuegos dispersos en el tiempo."
+  "fraccion_del_dataset_completo": 0.21495327102803738,
+  "conclusion": "23 de las 29 filas positivas del mes 2024-02 (79.3%) y 23 de las 107 filas positivas de TODO el dataset (21.5%) provienen de un solo día calendario (2024-02-03), repartidas en 26 raw episodes distintos (la brecha entre 'un event_id domina' y 'un día domina' es real: ningún event_id individual supera el umbral de concentración de validate_event_independence, pero el día calendario sí concentra la mayoría de la señal positiva disponible). Cualquier métrica del fold correspondiente debe leerse como 'rendimiento mayormente explicado por un evento regional de incendios de un día', no como evidencia de que el modelo generaliza a fuegos dispersos en el tiempo."
 }

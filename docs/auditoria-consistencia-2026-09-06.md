@@ -211,9 +211,52 @@ corren).
 - Esto sigue siendo (1) técnicamente limpio y (2) exploratoriamente medido;
   NO constituye (3) evidencia de capacidad predictiva validada.
 
+## Fase 3 — Backfill DMC (2026-09-07)
+
+Aprobado y ejecutado el mismo día. Resumen ejecutivo (detalle completo: `reports/backfill_dmc_330007_manifest.json`, `reports/temporal_dataset_h6_manifest.json`, `reports/experiment_abcd_h6_results.json`).
+
+**Hallazgo que motivó la fase:** la baja cobertura histórica NO era una limitación de la fuente DMC — era que solo se habían descargado 4 meses de muestra. El endpoint mensual (`getDatosRecientesEma/{estación}/{año}/{mes}`, ya documentado en `src/config.py`) tiene datos reales para la estación 330007 desde al menos 2015, continuos hasta hoy.
+
+**Período de backfill:** 2021-08-30 → 2026-08-29 (intersección DMC×FIRMS, elegida sin mirar dónde hay incendios). 61 meses calendario descargados (57 nuevos + 4 re-verificados idénticos a los ya existentes), 0 conflictos, 0 fallos, 0 duplicados. `scripts/backfill_dmc_historico.py` es idempotente (7 tests de regresión con red simulada).
+
+| Métrica | Antes | Después |
+|---|---:|---:|
+| Meses DMC reales | 4 | 61 |
+| Días con ≥1 lectura (período de solapamiento) | ~122 | 1,818 / 1,826 (99.6%) |
+| forecast_times | 473 | 7,260 |
+| Filas totales del dataset | 23,650 | 363,000 |
+| Filas elegibles | 23,595 | 362,883 |
+| Filas positivas | 46 | 107 |
+| Raw episodes (un disparador/fila) | 26 | 79 |
+| Raw episodes (unión, any-qualifying) | 31 | 84 |
+| % filas con `meteo_actual` faltante | 1.5% (350) | 0.45% (1,650 de 363,000) |
+| Folds temporalmente evaluables | 3 (uno de ellos INSUFFICIENT, 0 positivos) | **5** (1 ADEQUATE, 3 LIMITED, 1 no entrenable por clase minoritaria insuficiente) |
+| Concentración del megaevento 2024-02-03 sobre el dataset completo | 50.0% (23/46) | 21.5% (23/107) — la cifra absoluta no cambió, bajó por dilución real |
+
+**Bug real encontrado y corregido durante la Fase 3** (no parte del plan original, expuesto por los datos nuevos):
+1. `load_regional_meteo_series` incluía en su glob los archivos `*_conflicto_*.json` que puede dejar el backfill — corregido para excluirlos explícitamente (3 tests nuevos).
+2. Los forecast_time candidatos no estaban acotados al período de solapamiento exacto — el backfill descarga MESES CALENDARIO completos, así que sin este corte se habrían colado días de agosto de 2021/2026 fuera del rango aprobado. Corregido en `build_temporal_dataset.py` (el resample para lags sigue usando la serie completa; solo los candidatos de `forecast_time` se recortan).
+3. `HistGradientBoostingClassifier` (early_stopping="auto") revienta con un `ValueError` genérico si la clase minoritaria del train tiene menos de 2 ejemplos — expuesto porque el fold `train=2021` tiene exactamente 1 positivo. Corregido: `run_fold` ahora reporta un error explicable por modelo en vez de abortar el script completo (2 tests nuevos).
+
+**Folds temporalmente evaluables (walk-forward por año calendario — granularidad derivada de los datos, no elegida buscando mejor score):**
+
+| Fold | Train | Test | n_test | positivos test | raw episodes | soporte |
+|---|---|---|---:|---:|---:|---|
+| 1 | 2021 | 2022 | 71,871 | 24 | — | no entrenable (train=2021 tiene 1 solo positivo) |
+| 2 | 2021-2022 | 2023 | 72,981 | 19 | 16 | LIMITED |
+| 3 | 2021-2023 | 2024 | 73,149 | 46 | 34 | **ADEQUATE** (primera vez en el proyecto) |
+| 4 | 2021-2024 | 2025 | 72,143 | 7 | 6 | LIMITED |
+| 5 | 2021-2025 | 2026 (parcial) | 48,190 | 10 | 8 | LIMITED |
+
+**Suite de tests:** 445 passed, 0 failed, 0 skipped (incluye 12 tests nuevos de la Fase 3: 7 de `backfill_dmc_historico`, 3 de exclusión de archivos de conflicto, 2 del guard de clase minoritaria).
+
+**No se tocó:** horizonte (6h), radio/gap de clustering (2km/6h), features A/B/C/D, modelo, cooldown, definición de target. La granularidad de fold (mes→año) fue el único ajuste estructural, requerido para que el walk-forward tuviera sentido con 5 años de datos en vez de 4 meses sueltos — no es una búsqueda de mejor score.
+
+**Limitaciones que persisten:** el Fold 1 no es entrenable con los datos que trae 2021 solo; el Fold 3 (2024) es el único con soporte ADEQUATE y coincide con el año del megaevento de 2024-02-03; A/B/C/D siguen siendo resultados EXPLORATORIOS, no evidencia de capacidad predictiva validada — esta fase no cambió esa conclusión, solo la base de evidencia sobre la que se sostiene.
+
 ## Veredicto
 
-**🟡 TÉCNICAMENTE LIMPIO, SOPORTE LIMITADO.**
+**🟡 TÉCNICAMENTE LIMPIO, SOPORTE EMPÍRICO LIMITADO.**
 
 La consistencia código↔parquet↔manifest está verificada de punta a punta con
 pruebas permanentes contra datos reales (no solo fixtures), incluyendo

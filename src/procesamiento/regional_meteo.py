@@ -69,11 +69,18 @@ def load_regional_meteo_series(
     como los archivos de ingesta diaria "recientes" (`dmc_meteo_*.json`, que
     incluyen la estación si tuvo datos ese día). Conserva `station_id` y
     `momento` en todo momento — es la propiedad que `_load_meteo()` violaba.
+
+    Excluye explícitamente los archivos `*_conflicto_*.json` que deja
+    `scripts/backfill_dmc_historico.py` cuando una re-descarga no coincide
+    con lo ya guardado — son evidencia para revisión manual, nunca datos a
+    promediar/deduplicar en silencio junto con el archivo original.
     """
     base = raw_dir or DATA_RAW_DIR
     frames: list[pd.DataFrame] = []
 
     for path in base.glob(f"dmc_historico_{station_id}_*.json"):
+        if "_conflicto_" in path.name:
+            continue
         parsed = parse_dmc_json(path)
         if not parsed.empty:
             frames.append(parsed[parsed["codigo_estacion"] == station_id])
