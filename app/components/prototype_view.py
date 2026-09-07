@@ -173,8 +173,8 @@ def _inject_prototype_css() -> None:
             background: #7f1d1d; border-color: #dc2626; color: #fee2e2;
         }
         .sapi-proto-meta {
-            margin-top: 0.45rem; font-size: 0.82rem; opacity: 0.82;
-            text-align: right; line-height: 1.45;
+            margin-top: 0.45rem; font-size: 0.95rem; font-weight: 500; opacity: 0.92;
+            text-align: right; line-height: 1.5;
         }
         .sapi-proto-kpi-row {
             display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -234,15 +234,26 @@ def _inject_prototype_css() -> None:
         .sapi-proto-disclaimer {
             font-size: 0.75rem; opacity: 0.72; margin: 0.5rem 0 0 0;
         }
-        /* Contraste del selector Prioridades | Todas las celdas (dark mode). */
-        section.main [data-testid="stRadio"] label,
-        section.main [data-testid="stRadio"] p,
-        section.main [data-testid="stRadio"] span,
-        section.main [data-testid="stWidgetLabel"] p,
-        section.main [data-baseweb="radio"] {
-            color: #e8edf2 !important;
+        /* Contraste del selector Prioridades | Todas las celdas (dark mode).
+        Selector amplio a propósito (* dentro del widget, no solo label/p/
+        span): el radio de Streamlit/BaseWeb sigue casi desapareciendo con
+        el set de tags anterior — cubre cualquier tag interno que use el
+        texto de la opción, sin depender de un testid específico de versión. */
+        section.main [data-testid="stRadio"],
+        section.main [data-testid="stRadio"] * {
+            color: #f4f7fa !important;
             opacity: 1 !important;
-            -webkit-text-fill-color: #e8edf2 !important;
+            -webkit-text-fill-color: #f4f7fa !important;
+            font-weight: 600 !important;
+        }
+        /* Reduce el hueco superior antes de "S.A.P.I." para que mapa + KPIs
+        entren mejor en el primer viewport. Varios selectores porque el
+        testid del contenedor principal varía entre versiones de Streamlit. */
+        .block-container,
+        section.main .block-container,
+        [data-testid="stAppViewBlockContainer"],
+        [data-testid="stMainBlockContainer"] {
+            padding-top: 1.4rem !important;
         }
         @media (max-width: 1100px) {
             .sapi-proto-kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
