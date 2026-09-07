@@ -1,4 +1,8 @@
-"""Dashboard principal S.A.P.I. - Streamlit."""
+"""Dashboard principal S.A.P.I. - Streamlit.
+
+Orquesta caché, estado de sesión y componentes de `app/components/`.
+Sin CSS inline ni HTML de presentación: eso vive en theme/ y components/.
+"""
 
 from __future__ import annotations
 
@@ -17,7 +21,7 @@ if _REPO_ROOT_STR in sys.path:
     sys.path.remove(_REPO_ROOT_STR)
 sys.path.insert(0, _REPO_ROOT_STR)
 
-from datetime import date, datetime, timedelta
+from datetime import date
 from typing import Optional
 
 import geopandas as gpd
@@ -25,9 +29,30 @@ import pandas as pd
 import streamlit as st
 from streamlit_folium import st_folium
 
+from app.components.banner import render_demo_scope_banner, render_risk_legend
+from app.components.controls import (
+    pick_demo_date,
+    render_appearance_toggle,
+    render_data_mode_badge,
+    render_technical_details_expander,
+)
+from app.components.day_alerts import render_day_alerts
+from app.components.ops_layout import (
+    previous_day_row,
+    render_comuna_search,
+    render_four_state_legend,
+    render_level_summary_chips,
+    render_mayor_riesgo_block,
+    render_operational_verification_footer,
+    render_ops_detail_panel,
+    render_ops_header,
+    render_variable_strip,
+)
+from app.components.risk_map import render_risk_map
+from app.components.risk_sparkline import render_risk_sparkline
 from app.state import (
+    appearance,
     cache_is_warm,
-    clear_selection,
     ensure_default_selection,
     init_session,
     mark_cache_warm,
@@ -36,25 +61,11 @@ from app.state import (
     selected_cell,
 )
 from app.theme.css import build_stylesheet
-from app.utils.cell_zones import zone_label_for_cell
-from app.utils.date_helpers import resolve_available_dates, resolve_date_range
-from app.utils.grid import CELL_COUNT, cell_step_meters, grid_extent_km
+from app.utils.cell_table import PANEL_HEIGHT_PX, build_display_dataframe, top_risk_cell
+from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
+from app.utils.grid import cell_step_meters
 from app.utils.map_renderer import render_folium_map
 from app.utils.metrics_loader import load_ml_metrics
-from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
-from app.utils.cell_table import (
-    PANEL_HEIGHT_PX,
-    build_display_dataframe,
-    cell_id_from_folium_output,
-    table_widget_key,
-    top_risk_cell,
-)
-from app.utils.risk_colors import (
-    format_cell_summary_html,
-    format_top_risk_banner_html,
-    inject_table_checkbox_colors,
-    style_display_dataframe,
-)
 from src.config import SAPI_DATA_MODE
 from src.query.prediction_query import PredictionQuery
 
@@ -64,6 +75,12 @@ APP_BUILD = "demo-corredor-50cells-v9"
 DEMO_FALLBACK_END = date(2025, 2, 15)
 DEMO_FALLBACK_START = date(2025, 2, 9)
 RECALL_TARGET = 0.75
+
+# Alias estables para tests y callers que aún importan el nombre con guion bajo.
+_render_demo_scope_banner = render_demo_scope_banner
+_render_data_mode_badge = render_data_mode_badge
+_render_risk_legend = render_risk_legend
+_pick_demo_date = pick_demo_date
 
 
 @st.cache_data(ttl=86400)  # 24 horas — sobrevive cualquier inactividad de demo
@@ -115,175 +132,21 @@ def _build_folium_map(fecha: date):
     return render_folium_map(gdf, selected_cell_id=None)
 
 
-def _render_data_mode_badge() -> None:
-    """Badge visible en sidebar: fuente de datos del dashboard (SAPI-44)."""
-    if SAPI_DATA_MODE == "demo_seed":
-        st.sidebar.markdown("### 🟡 Modo Demo")
-        st.sidebar.caption(
-            "`SAPI_DATA_MODE=demo_seed` — probabilidades y niveles de riesgo provienen "
-            "del escenario sembrado (`demo_seed`), no de inferencia XGBoost en runtime."
-        )
-    elif SAPI_DATA_MODE == "postgis_inference":
-        st.sidebar.markdown("### 🟢 Inferencia PostGIS")
-        st.sidebar.caption(
-            "`SAPI_DATA_MODE=postgis_inference` — predicciones desde `predicciones_riesgo`."
-        )
-    else:
-        st.sidebar.warning(f"Modo de datos no reconocido: `{SAPI_DATA_MODE}`")
-
-
-def _render_demo_scope_banner(min_d: date, max_d: date) -> None:
-    """Banner superior: alcance demo y aclaración VP-038 / VP-049 (escenario sembrado).
-
-    La extensión y la resolución se calculan desde `app.utils.grid` en vez de
-    escribirse a mano: el banner afirmaba cubrir el corredor completo mientras
-    la grilla generaba 8,4 x 4,0 km dentro de Viña del Mar.
-
-    Las comunas nombradas reflejan evidencia real, no geometría: contención
-    espacial estricta de las 348 detecciones NASA FIRMS del 2024-02-03 contra
-    las 50 celdas de esta grilla, con la comuna de cada celda resultante
-    verificada contra el shapefile oficial DPA 2023 (SUBDERE), 05-09-2026.
-    Villa Alemana había quedado nombrada antes solo porque su coordenada cae
-    dentro del bounding box de la grilla — sin ninguna detección real ahí
-    verificada en ese momento. Con el dataset completo sí aparece (2 celdas,
-    5 focos, 1.9% del total), junto con Valparaíso (32 focos) y Limache (17),
-    que no estaban mencionadas en ningún texto anterior del proyecto. Ver
-    tests/test_app.py::test_demo_banner_names_localities_with_real_detection_evidence.
-    """
-    step_x, _ = cell_step_meters()
-    ancho_km, alto_km = grid_extent_km()
-    st.info(
-        f"**Demo académica** (`SAPI_DATA_MODE={SAPI_DATA_MODE}`): {CELL_COUNT} celdas de "
-        f"~{step_x / 1000:.1f} km sobre el corredor de interfaz urbano-forestal de la "
-        f"Región de Valparaíso ({ancho_km:.0f} × {alto_km:.0f} km) — evidencia real de "
-        "detecciones NASA FIRMS (2024-02-03) principalmente en Viña del Mar y Quilpué "
-        "(79% de los focos reales), con presencia menor confirmada en Valparaíso, "
-        "Limache y Villa Alemana. "
-        f"Ventana **{min_d.isoformat()}** a "
-        f"**{max_d.isoformat()}** (escenario sembrado calibrado por zona). "
-        "Los valores mostrados **no** son salida del modelo en tiempo real. "
-        "En particular, **VP-038** y **VP-049** el día **2025-02-15** (riesgo alto y regla "
-        "30-30-30 activa) son un **escenario sembrado** para la presentación — no predicción "
-        "del XGBoost en runtime. Arquitectura lista para DMC/CONAF en producción. "
-        "No sustituye alertas oficiales CONAF/SENAPRED."
-    )
-
-
 def _render_technical_details_expander(min_d: date, max_d: date) -> None:
-    """Metadata de trazabilidad técnica y métricas del informe — colapsadas
-    al fondo del sidebar.
-
-    Panel ML (Recall XGBoost, AUC-ROC, Recall RF baseline), Build/versión de
-    query, rango de fechas del seed y el string crudo de SAPI_DATA_MODE no
-    son información que un brigadista bajo presión necesite en los primeros
-    3 segundos; siguen disponibles acá para trazabilidad académica, un clic
-    más adentro. El aviso "Modo Demo" en lenguaje operativo
-    (_render_data_mode_badge) es otra cosa — honestidad sobre demo vs.
-    producción — y se queda visible arriba, sin colapsar.
-
-    Sin una corrida ML real detrás (ver metrics_loader.py, hallazgo
-    2026-09-01), las métricas muestran "—" en vez de un número fabricado.
-    """
-    metrics = _cached_ml_metrics()
-    xgb = metrics.get("xgboost", {})
-    rf = metrics.get("baseline", {})
-    recall = xgb.get("recall")
-    auc = xgb.get("auc_roc")
-    rf_recall = rf.get("recall")
-    with st.sidebar.expander("Detalles técnicos"):
-        st.markdown("**Modelo ML (informe)**")
-        if recall is None:
-            st.metric("Recall XGBoost", "—", delta="sin corrida real todavía")
-        else:
-            st.metric(
-                "Recall XGBoost",
-                f"{recall:.0%}",
-                delta=f"meta ≥{RECALL_TARGET:.0%}",
-                delta_color="normal" if recall >= RECALL_TARGET else "inverse",
-            )
-        st.metric("AUC-ROC", f"{auc:.2f}" if auc is not None else "—")
-        st.metric("Recall RF baseline", f"{rf_recall:.0%}" if rf_recall is not None else "—")
-        st.caption("Validación temporal · SMOTE en train · ver `reports/metrics.json`")
-        st.markdown("---")
-        st.caption(f"Build: `{APP_BUILD}` · Query: `{QUERY_ENGINE_VERSION}`")
-        st.caption(f"Datos disponibles: {min_d} → {max_d}")
-        st.caption(f"`SAPI_DATA_MODE={SAPI_DATA_MODE}`")
-
-
-def _pick_demo_date(available: list[date], min_d: date, max_d: date) -> date:
-    """Selector de fecha: dropdown de días disponibles + calendario acotado."""
-    default = available[-1] if available else max_d
-
-    # Selector principal: dropdown (no scroll) de días con datos
-    selected = st.sidebar.selectbox(
-        "Recorrido demo (días con datos)",
-        options=available,
-        index=len(available) - 1,
-        format_func=lambda d: d.strftime("%Y-%m-%d"),
-    )
-
-    # Calendario secundario para fecha exacta
-    calendar_date = st.sidebar.date_input(
-        "Calendario",
-        value=selected,
-        min_value=min_d,
-        max_value=max_d,
-    )
-    if calendar_date in available:
-        return calendar_date
-    if calendar_date not in available:
-        st.sidebar.caption("Sin predicciones en esa fecha; usa el selector de días.")
-    return selected
-
-
-def _render_risk_legend() -> None:
-    """Orientación geográfica del corredor, oeste a este.
-
-    El semáforo de riesgo ya no se duplica acá: vive anclado al mapa
-    (`build_risk_legend_html`), donde se lee sin desviar la vista. Lo que
-    queda es la única información que el mapa no da solo — qué comuna
-    corresponde a cada banda climática.
-    """
-    st.caption(
-        "Oeste → Este: costa de Viña del Mar · interfaz urbano-forestal "
-        "(Quilpué) · precordillera y cerros orientales"
+    """Adaptador: mantiene la firma usada por tests y main."""
+    render_technical_details_expander(
+        min_d,
+        max_d,
+        metrics=_cached_ml_metrics(),
+        app_build=APP_BUILD,
+        query_version=QUERY_ENGINE_VERSION,
+        recall_target=RECALL_TARGET,
     )
 
 
-def _render_headline_metrics(gdf: gpd.GeoDataFrame, prob_max: float) -> None:
-    """Cifras del día: dos métricas destacadas y la distribución en texto.
-
-    Dos columnas y no cinco: es el máximo que entra legible en un teléfono
-    sin forzar `flex-direction` por CSS contra los internals de Streamlit.
-    """
-    conteos = {
-        nivel: int((gdf["nivel_riesgo"] == nivel).sum()) if not gdf.empty else 0
-        for nivel in ("bajo", "medio", "alto")
-    }
-    regla_activa = int((gdf["regla_30_30_30"] == 1).sum()) if not gdf.empty else 0
-
-    alto_col, prob_col = st.columns(2)
-    with alto_col:
-        st.metric("Celdas en riesgo alto", conteos["alto"])
-    with prob_col:
-        st.metric("Probabilidad máxima", f"{prob_max:.0%}")
-
-    st.caption(
-        f"{len(gdf)} celdas · bajo {conteos['bajo']} · medio {conteos['medio']} · "
-        f"alto {conteos['alto']} · regla 30-30-30 activa en {regla_activa}"
-    )
-
-
-def _inject_css() -> None:
-    """Inyecta la hoja de estilo única, construida desde `app.theme.tokens`.
-
-    Las reglas vivían acá como un bloque literal de ~115 líneas con los
-    colores escritos a mano, duplicados de `.streamlit/config.toml` y de
-    `app/utils/risk_colors.py`. Ahora las construye `app.theme.css` desde los
-    tokens, así que cambiar la paleta es editar un archivo en vez de tres y
-    verificar a mano que no quedó ninguno atrás.
-    """
-    st.markdown(build_stylesheet(), unsafe_allow_html=True)
+def _inject_css(mode: str | None = None) -> None:
+    """Inyecta la hoja de estilo única, construida desde `app.theme.tokens`."""
+    st.markdown(build_stylesheet(mode or appearance()), unsafe_allow_html=True)
 
 
 @st.cache_resource
@@ -388,148 +251,129 @@ def main() -> None:
         layout="wide",
         initial_sidebar_state="collapsed",
     )
-    _inject_css()
+    init_session()
+    # El interruptor ☀️/🌙 vive en el header (ver más abajo), no en el
+    # sidebar colapsado: el modo ya está en session_state desde init_session,
+    # así que el CSS no necesita esperar a que el widget se monte.
+    _inject_css(appearance())
 
-    # ── Precalentamiento de caché (se ejecuta UNA sola vez por sesión) ──────
-    # Carga todos los días del seed en lru_cache y st.cache_data en background
-    # para que los cambios de fecha sean instantáneos sin importar inactividad.
     if not cache_is_warm():
-        # Usa las importaciones del top-level — no re-importar con prefijo 'app.'
-        # ya que en Streamlit Cloud ese path no resuelve y causa UnboundLocalError.
         for _d in _cached_available_dates():
-            get_demo_gdf(_d)                      # lru_cache permanente en RAM
-            _cached_display_df(_d.isoformat())    # st.cache_data 24h
+            get_demo_gdf(_d)
+            _cached_display_df(_d.isoformat())
         mark_cache_warm()
-    # ─────────────────────────────────────────────────────────────────────────
 
     dashboard = _get_dashboard()
-    query = dashboard.query
     min_d, max_d = _cached_date_range()
     available = _cached_available_dates()
 
-    # ── Sidebar: Modo Demo primero (honestidad operativa, sin colapsar) →
-    # selector de fecha → Detalles técnicos al fondo, colapsado (incluye el
-    # panel ML del informe). Jerarquía pensada para un brigadista, no para
-    # quien depura la app (hallazgo "jerarquía de información para
-    # brigadista", 2026-09-04). ──
-    _render_data_mode_badge()
-
-    init_session()
-
-    selected_date = _pick_demo_date(available, min_d, max_d)
+    render_data_mode_badge()
+    selected_date = pick_demo_date(available, min_d, max_d)
     reset_selection_on_date_change(selected_date)
-
     st.sidebar.markdown("---")
     _render_technical_details_expander(min_d, max_d)
 
-    # ── Carga de datos: seed in-memory (lru_cached, sin latencia) ──
     gdf = get_demo_gdf(selected_date)
-
-    # ── Lo primero que se ve, antes del título: la celda de mayor riesgo
-    # ahora mismo, con su nivel y si la regla 30-30-30 está activa. Un
-    # brigadista bajo presión no debería tener que hacer scroll ni clic
-    # para obtener esto. ──
     top_risk = top_risk_cell(gdf)
-    if top_risk is not None:
-        st.markdown(format_top_risk_banner_html(top_risk), unsafe_allow_html=True)
-
-    # ── La ficha de detalle tampoco debería arrancar vacía a la espera de
-    # un clic: sin selección previa, se preselecciona la celda de mayor
-    # riesgo (misma que el banner) para que su ficha completa ya esté
-    # visible al cargar la página. ──
     ensure_default_selection(top_risk)
 
-    st.title("S.A.P.I.")
-    st.subheader("Sistema de Alerta y Predicción de Incendios - Región de Valparaíso")
+    # 1. Header + interruptor de apariencia (misma fila, siempre visible)
+    header_col, toggle_col = st.columns([9, 1], gap="small")
+    with header_col:
+        render_ops_header()
+    with toggle_col:
+        render_appearance_toggle()
 
-    _render_demo_scope_banner(min_d, max_d)
+    # 2. Banner de corredor (texto protegido intacto) + nota SUBDERE
+    render_demo_scope_banner(min_d, max_d)
 
-    prob_max = float(gdf["probabilidad"].max()) if not gdf.empty else 0.0
+    # 3. Mayor riesgo (dominante — primero útil en móvil tras header/banner)
+    render_mayor_riesgo_block(top_risk, gdf)
+
+    # 3b. Top zonas prioritarias (todas las celdas en alto, no solo la #1) +
+    # tendencia regional de riesgo en la ventana del seed.
+    priority_col, trend_col = st.columns([1.25, 1], gap="large")
+    with priority_col:
+        st.markdown(
+            '<div class="sapi-panel__h" style="margin-top:0.5rem">'
+            "TOP ZONAS PRIORITARIAS</div>",
+            unsafe_allow_html=True,
+        )
+        chosen_alert = render_day_alerts(gdf, selected_cell())
+        if chosen_alert and chosen_alert != selected_cell():
+            select_cell(chosen_alert, "alert")
+            st.rerun()
+    with trend_col:
+        st.markdown(
+            '<div class="sapi-panel__h" style="margin-top:0.5rem">'
+            "TENDENCIA DEL RIESGO</div>",
+            unsafe_allow_html=True,
+        )
+        render_risk_sparkline(available)
+
+    focus_id = selected_cell() or (top_risk["cell_id"] if top_risk else None)
+    focus_row = None
+    if focus_id and not gdf.empty:
+        match = gdf.loc[gdf["cell_id"] == focus_id]
+        if not match.empty:
+            focus_row = match.iloc[0]
+    prev_row = previous_day_row(available, selected_date, focus_id, get_demo_gdf)
+
+    # 4. Cuatro tarjetas de variable en fila (T, HR, V de la celda + DMC Rodelillo)
+    render_variable_strip(focus_row, prev_row)
 
     if gdf.empty:
         st.warning(f"No hay predicciones para **{selected_date.isoformat()}**.")
 
-    # ── Dos números al frente, el resto en una línea de contexto ──
-    # Antes eran cinco métricas del mismo tamaño más un st.success que repetía
-    # exactamente las mismas cinco cifras: sin jerarquía y, en pantalla
-    # angosta, cinco columnas que se desarmaban. De las cinco, solo dos
-    # deciden algo para quien mira — cuántas celdas están en rojo y cuán alto
-    # llega el riesgo. La distribución completa queda debajo, en texto.
-    _render_headline_metrics(gdf, prob_max)
+    # 5. Grilla de riesgo (izq) + Panel de detalle (der)
+    gdf_mapa = render_comuna_search(gdf) if not gdf.empty else gdf
 
-    # ── Mapa (izq) + Detalle por celda (der) ──
-    st.markdown(
-        f"### Mapa de riesgo probabilístico "
-        f"(resolución ~{cell_step_meters()[0] / 1000:.1f} km por celda)"
-    )
-    _render_risk_legend()
-
-    if not gdf.empty:
-        display_df = _cached_display_df(selected_date.isoformat())
-        valid_cell_ids = set(display_df["cell_id"].astype(str))
-
-        # ── Pestañas en vez de dos columnas ──
-        # El hallazgo de usabilidad móvil del acta UAT venía de partir la
-        # pantalla 48/52: en un teléfono el mapa quedaba en media pantalla y
-        # la tabla de 8 columnas al lado, ilegible. Las media queries que
-        # forzaban `flex-direction: column` sobre `stHorizontalBlock` eran un
-        # parche sobre ese layout. Las pestañas resuelven el caso angosto de
-        # forma nativa y, en escritorio, dan al mapa el ancho completo.
-        map_tab, detail_tab = st.tabs(["Mapa de riesgo", "Detalle por celda"])
-
-        with map_tab:
-            st.caption("Clic en un círculo para seleccionar la celda")
-            map_output = dashboard.render_folium_map(
-                selected_date,
-                gdf=gdf,
+    if not gdf_mapa.empty:
+        valid_cell_ids = set(gdf_mapa["cell_id"].astype(str))
+        map_col, detail_col = st.columns([1.25, 1], gap="large")
+        with map_col:
+            st.markdown('<div class="sapi-map-frame">', unsafe_allow_html=True)
+            step_x = cell_step_meters()[0] / 1000
+            st.markdown(
+                f'<div class="sapi-map-header">'
+                f'<span class="sapi-map-title">Grilla de riesgo · celdas de {step_x:.0f} km²</span>'
+                f'<span class="sapi-map-crs">EPSG:32719 · {len(gdf_mapa)} celdas</span>'
+                f'</div>',
+                unsafe_allow_html=True,
             )
-            clicked_cell = cell_id_from_folium_output(map_output, valid_cell_ids, gdf)
+            render_level_summary_chips(gdf_mapa)
+            clicked_cell = render_risk_map(
+                dashboard, selected_date, gdf_mapa, valid_cell_ids
+            )
+            st.caption(
+                "mapa base Folium (OSM) · clic en una celda para ver el detalle"
+            )
+            st.markdown("</div>", unsafe_allow_html=True)
             if clicked_cell and clicked_cell != selected_cell():
                 select_cell(clicked_cell, "map")
-
-        with detail_tab:
-            st.caption(f"{len(display_df)} registros · clic en fila o en el mapa")
-            if st.button("Limpiar selección"):
-                clear_selection()
                 st.rerun()
-
-            selected_id = selected_cell()
-
-            # Ficha de celda seleccionada
-            if selected_id and selected_id in valid_cell_ids:
-                gdf_row = gdf.loc[gdf["cell_id"] == selected_id]
-                if not gdf_row.empty:
-                    raw = gdf_row.iloc[0].copy()
-                    raw["zona_climatica"] = zone_label_for_cell(str(raw["cell_id"]))
-                    st.markdown(format_cell_summary_html(raw), unsafe_allow_html=True)
-
-            # Tabla con fila seleccionable
-            styled_df = style_display_dataframe(display_df, selected_id)
-            table_event = st.dataframe(
-                styled_df,
-                use_container_width=True,
-                hide_index=True,
-                height=PANEL_HEIGHT_PX - 88,
-                on_select="rerun",
-                selection_mode="single-row",
-                key=table_widget_key(selected_date),
+        with detail_col:
+            # Panel de detalle sobre el GDF completo (no el filtrado por
+            # comuna): una celda seleccionada antes de buscar no debe
+            # desaparecer del panel solo porque el mapa ahora muestra menos.
+            render_ops_detail_panel(
+                gdf,
+                selected_cell(),
+                fecha=selected_date,
+                app_build=APP_BUILD,
             )
-            inject_table_checkbox_colors(display_df, selected_id)
-
-            if table_event.selection and table_event.selection.rows:
-                row_idx = int(table_event.selection.rows[0])
-                table_cell = str(display_df.iloc[row_idx]["cell_id"])
-                if table_cell != selected_cell():
-                    select_cell(table_cell, "table")
-                    st.rerun()
-    else:
+    elif gdf.empty:
         st.caption("Sin geometrías para mostrar el mapa.")
+    else:
+        st.caption("Ninguna celda de esta comuna en la fecha consultada.")
 
-    st.markdown("### Regla del 30-30-30")
-    st.info(
-        "Condición crítica: Temperatura > 30°C, Humedad < 30%, Viento > 30 km/h simultáneamente."
-    )
+    # 6. Leyenda de 4 estados al pie (Bajo, Medio, Alto, Sin dato)
+    render_four_state_legend()
 
+    # 7. Auditoría técnica y transparencia operativa (página 2 de referencia)
+    render_operational_verification_footer()
+
+    st.markdown("---")
     report = dashboard.export_report_pdf(selected_date, gdf_precargado=gdf)
     st.download_button(
         label="Descargar reporte (TXT)",
@@ -537,14 +381,6 @@ def main() -> None:
         file_name=f"sapi_reporte_{selected_date.isoformat()}.txt",
         mime="text/plain",
     )
-
-    with st.expander("Logs de observabilidad"):
-        # En modo demo no hay PostGIS activo; mostramos tabla vacía instantáneamente
-        logs = pd.DataFrame(
-            columns=["componente", "evento", "detalle", "nivel", "created_at"]
-        )
-        st.caption("Sin conexión a PostGIS activa — logs disponibles en producción.")
-        st.dataframe(logs, use_container_width=True)
 
 
 if __name__ == "__main__":

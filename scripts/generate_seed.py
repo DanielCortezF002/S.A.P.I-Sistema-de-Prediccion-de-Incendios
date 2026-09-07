@@ -3,27 +3,29 @@
 from __future__ import annotations
 
 import json
+import sys
 from datetime import date, timedelta
 from pathlib import Path
 
-# Corredor Viña del Mar – Quilpué (interfaz urbano-forestal)
-# Coordenadas reales alineadas con el informe académico S.A.P.I. 2026
-#
-# Grilla COMPACTA 5 filas × 10 columnas = 50 celdas adyacentes (~1 km² cada una)
-# Las celdas se tocan entre sí formando una red continua de monitoreo.
-#
-# Centro del corredor (zona de interfaz urbano-forestal de los incendios 2024):
-#   Lat centro: -33.040  (Quilpué / Viña del Mar sector cerros)
-#   Lon centro: -71.490  (entre costa y sector urbano)
-#
-# Cobertura total: ~9.3 km E-O  x  ~4.5 km N-S
-BASE_LON = -71.535  # Extremo oeste (inicio grilla, sector costero Viña)
-BASE_LAT = -33.062  # Extremo sur del bloque
-COLS = 10
-ROWS = 5
-STEP_LON = 0.010    # ~930 m por columna  → celdas casi contiguas E-O
-STEP_LAT = 0.009    # ~1000 m por fila    → celdas casi contiguas N-S
-BUFFER_METERS = 490  # Radio ~490 m → celdas se tocan sin solapar
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from src.geo.grid import (  # noqa: E402
+    BASE_LAT,
+    BASE_LON,
+    CELL_RADIUS_METERS,
+    COLS,
+    ROWS,
+    STEP_LAT,
+    STEP_LON,
+)
+
+# Corredor Viña del Mar – Quilpué – precordillera (interfaz urbano-forestal).
+# Geometría importada de src/geo/grid.py — fuente única compartida con el
+# dashboard y el pipeline batch (src/procesamiento/). Antes este script tenía
+# su propia copia de la grilla (~9.3 x 4.5 km, un sector dentro de Viña del
+# Mar) distinta de la que usa el dashboard: mismo VP-001..050, coordenadas
+# físicas distintas. Ver docstring de src.geo.grid para el porqué.
+BUFFER_METERS = CELL_RADIUS_METERS  # Radio derivado del paso real de la grilla
 DEMO_START = date(2025, 2, 9)
 DEMO_END = date(2025, 2, 15)
 DEMO_DAYS = (DEMO_END - DEMO_START).days + 1

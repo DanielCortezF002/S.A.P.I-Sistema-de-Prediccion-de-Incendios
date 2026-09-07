@@ -1,0 +1,40 @@
+{
+  "evento": "2022-12-11",
+  "hallazgo_original": {
+    "celda": "VP-025 (grilla anterior, retirada 06-09-2026)",
+    "afirmaba": "regla 30-30-30 activa con datos 100% reales (temp=30.7, hr=22, viento=30.37)"
+  },
+  "vp025_antigua_centro_fisico": {
+    "lat": -33.044,
+    "lon": -71.495
+  },
+  "celda_nueva_que_contiene_ese_punto": "VP-023",
+  "deteccciones_totales_evento": 31,
+  "deteccciones_dentro_de_alguna_celda_nueva": 13,
+  "join_status": {
+    "matched": 13
+  },
+  "match_rate": 1.0,
+  "resultado_por_celda_nueva": [
+    {
+      "cell_id": "VP-022",
+      "n_detecciones": 1,
+      "temp_max": 27.7,
+      "hr_min": 27.0,
+      "viento_max": 30.37,
+      "regla_activa_en_alguna_deteccion": 0,
+      "nota_agregacion": "temp_max/hr_min/viento_max son el máximo/mínimo de la celda, no necesariamente de la misma detección — pueden venir de observaciones distintas y verse como si cumplieran la regla sin cumplirla ninguna en conjunto. regla_activa_en_alguna_deteccion SÍ es correcto: exige las tres condiciones en una misma fila (misma detección + su meteo emparejada) antes de agregar."
+    },
+    {
+      "cell_id": "VP-023",
+      "n_detecciones": 12,
+      "temp_max": 30.7,
+      "hr_min": 22.0,
+      "viento_max": 30.37,
+      "regla_activa_en_alguna_deteccion": 0,
+      "nota_agregacion": "temp_max/hr_min/viento_max son el máximo/mínimo de la celda, no necesariamente de la misma detección — pueden venir de observaciones distintas y verse como si cumplieran la regla sin cumplirla ninguna en conjunto. regla_activa_en_alguna_deteccion SÍ es correcto: exige las tres condiciones en una misma fila (misma detección + su meteo emparejada) antes de agregar."
+    }
+  ],
+  "regla_30_30_30_activa_en_alguna_celda": false,
+  "conclusion": "NO CONFIRMADO con la grilla nueva: ninguna detección real individual del evento 2022-12-11 cumple las tres condiciones de la regla 30-30-30 a la vez, en ninguna celda de la geometría canónica. Verificado fila por fila: en la celda que hoy contiene el punto de la antigua VP-025 (temperatura máxima 30,7°C y humedad mínima 22% que coinciden con los valores del hallazgo original), esos dos valores vienen de una detección a las 17:35 UTC (viento 10,74 km/h, regla no cumplida), mientras que el viento >30 km/h viene de otras detecciones a las 19:15 UTC (temperatura 27,7°C, regla tampoco cumplida ahí). Ninguna fila individual cumple las tres condiciones juntas. Esto sugiere que el hallazgo original pudo estar afectado por el mismo riesgo metodológico: si se calculó como max(temp)/min(hr)/max(viento) agregados sobre el polígono en vez de exigir las tres condiciones en una misma detección, el resultado sería un artefacto de agregación, no una ignición real con condiciones 30-30-30 simultáneas. No se pudo verificar la metodología exacta del hallazgo original porque no quedó como script reproducible (ver docs/matriz-riesgo.md)."
+}

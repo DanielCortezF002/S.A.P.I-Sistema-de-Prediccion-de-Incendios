@@ -21,9 +21,9 @@ import streamlit as st
 # Celda activa. La leen el mapa, la tabla y la ficha de detalle.
 SESSION_CELL_KEY = "selected_cell_id"
 
-# Contador que forma parte de la clave del widget de tabla. Incrementarlo
-# fuerza a Streamlit a montar un widget nuevo, que es la única forma de
-# limpiar los checkboxes de `st.dataframe` sin que el usuario los destilde.
+# Contador que forma parte de la clave de las tarjetas de detalle.
+# Incrementarlo fuerza a Streamlit a montar botones nuevos tras un clic en el
+# mapa o al limpiar, para que el estado visual no quede desfasado.
 SESSION_TABLE_EPOCH_KEY = "_table_epoch"
 
 # Marca de que la preselección de la celda de mayor riesgo ya corrió en esta
@@ -36,17 +36,44 @@ SESSION_LAST_DATE_KEY = "_last_query_date"
 # Marca del precalentamiento de caché, que debe correr una vez por sesión.
 SESSION_CACHE_WARMED_KEY = "cache_warmed"
 
-# Orígenes de selección que además reinician el widget de tabla. Un clic en la
-# propia tabla no lo hace: remontar el widget en medio de su propio evento
-# descarta la selección que acaba de ocurrir.
+# Apariencia de página: "claro" u "oscuro". Independiente de la selección.
+# Sufijo _v2: fuerza default oscuro aunque una sesión previa hubiera guardado
+# "claro" bajo la clave antigua (el radio sin `key` lo dejaba pegado).
+SESSION_APPEARANCE_KEY = "appearance_v2"
+
+# Orígenes de selección que además reinician las tarjetas de detalle. Un clic
+# en una tarjeta no lo hace: remontar los botones en medio de su propio evento
+# descartaría la selección que acaba de ocurrir.
 _SOURCES_THAT_RESET_TABLE = frozenset({"map", "clear"})
 
 
 def init_session() -> None:
     """Deja las claves de selección en un estado conocido. Idempotente."""
+    from app.theme.tokens import APPEARANCE_OSCURO
+
     st.session_state.setdefault(SESSION_CELL_KEY, None)
     st.session_state.setdefault(SESSION_TABLE_EPOCH_KEY, 0)
     st.session_state.setdefault(SESSION_PRESELECTED_KEY, False)
+    # Dark-first: la demo operativa arranca en oscuro; el toggle sigue
+    # permitiendo claro. Fallback de modos desconocidos sigue siendo claro.
+    st.session_state.setdefault(SESSION_APPEARANCE_KEY, APPEARANCE_OSCURO)
+
+
+def appearance() -> str:
+    """Modo de fondo activo (`claro` / `oscuro`)."""
+    from app.theme.tokens import APPEARANCE_CLARO, APPEARANCE_MODES
+
+    mode = st.session_state.get(SESSION_APPEARANCE_KEY, APPEARANCE_CLARO)
+    return mode if mode in APPEARANCE_MODES else APPEARANCE_CLARO
+
+
+def set_appearance(mode: str) -> None:
+    """Fija el modo de fondo de la página."""
+    from app.theme.tokens import APPEARANCE_CLARO, APPEARANCE_MODES
+
+    st.session_state[SESSION_APPEARANCE_KEY] = (
+        mode if mode in APPEARANCE_MODES else APPEARANCE_CLARO
+    )
 
 
 def selected_cell() -> Optional[str]:
@@ -59,8 +86,8 @@ def select_cell(cell_id: Optional[str], source: str) -> None:
 
     `source` distingue de dónde viene la selección porque el efecto secundario
     depende del origen: un clic en el mapa o el botón de limpiar tienen que
-    destildar el checkbox de la tabla, y la única forma es remontar el widget.
-    Un clic en la tabla no debe hacerlo.
+    remontar las tarjetas para que el estado visual coincida. Un clic en una
+    tarjeta no debe hacerlo.
     """
     st.session_state[SESSION_CELL_KEY] = cell_id
     if source in _SOURCES_THAT_RESET_TABLE:

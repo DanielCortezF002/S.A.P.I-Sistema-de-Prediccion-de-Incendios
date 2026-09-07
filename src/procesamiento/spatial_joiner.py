@@ -8,9 +8,20 @@ import geopandas as gpd
 import pandas as pd
 from shapely.geometry import box
 
+from src.geo.grid import BASE_LAT, BASE_LON, COLS, ROWS, STEP_LAT, STEP_LON
+
 
 def aggregate_dmc_daily(df_dmc: pd.DataFrame) -> dict[str, Any]:
-    """Calcula métricas críticas intradiarias y evalúa la Regla 30-30-30."""
+    """Calcula métricas críticas intradiarias y evalúa la Regla 30-30-30.
+
+    `regla_30_30_30` se evalúa por lectura individual (misma fila: mismo
+    instante, mismas tres variables) antes de agregar, no sobre
+    temp_max_daily/rh_min_daily/wind_speed_max ya agregados (fix 06-09-2026,
+    ver reverificación de VP-025 en docs/matriz-riesgo.md). El agregado por
+    día puede mezclar el pico de temperatura de una hora con el pico de
+    viento de otra como si fueran simultáneos — eso fue exactamente lo que
+    convirtió un hallazgo en artefacto en `scripts/reverificar_hallazgo_2022_12_11.py`.
+    """
     if df_dmc.empty:
         return {
             "temp_max_daily": None,
@@ -23,7 +34,12 @@ def aggregate_dmc_daily(df_dmc: pd.DataFrame) -> dict[str, Any]:
     rh_min = float(df_dmc["humedad_relativa"].min())
     wind_max = float(df_dmc["velocidad_viento_kmh"].max())
 
-    regla_activa = int((t_max > 30.0) and (rh_min < 30.0) and (wind_max > 30.0))
+    regla_por_lectura = (
+        (df_dmc["temperatura"] > 30.0)
+        & (df_dmc["humedad_relativa"] < 30.0)
+        & (df_dmc["velocidad_viento_kmh"] > 30.0)
+    )
+    regla_activa = int(bool(regla_por_lectura.any()))
 
     return {
         "temp_max_daily": round(t_max, 2),
@@ -34,22 +50,16 @@ def aggregate_dmc_daily(df_dmc: pd.DataFrame) -> dict[str, Any]:
 
 
 def build_local_grid_gdf() -> gpd.GeoDataFrame:
-    """Construye la grilla 10×5 local con polígonos (~1 km²), alineada al seed demo."""
-    base_lon = -71.535
-    base_lat = -33.062
-    cols = 10
-    rows = 5
-    step_lon = 0.010
-    step_lat = 0.009
-
+    """Construye la grilla 10×5 local con polígonos, alineada a `src/geo/grid.py`
+    (la misma geometría que usa el dashboard y `scripts/generate_seed.py`)."""
     records: list[dict[str, Any]] = []
     idx = 1
-    for row in range(rows):
-        for col in range(cols):
-            min_lon = round(base_lon + col * step_lon, 5)
-            min_lat = round(base_lat + row * step_lat, 5)
-            max_lon = round(min_lon + step_lon, 5)
-            max_lat = round(min_lat + step_lat, 5)
+    for row in range(ROWS):
+        for col in range(COLS):
+            min_lon = round(BASE_LON + col * STEP_LON, 5)
+            min_lat = round(BASE_LAT + row * STEP_LAT, 5)
+            max_lon = round(min_lon + STEP_LON, 5)
+            max_lat = round(min_lat + STEP_LAT, 5)
             records.append(
                 {
                     "cell_id": f"VP-{idx:03d}",

@@ -122,22 +122,30 @@ def test_stylesheet_is_built_from_tokens_and_leaves_no_stray_colour():
 
     from app.theme.css import build_stylesheet
 
-    css = build_stylesheet()
-    conocidos = {
-        t.SURFACE_PAGE,
-        t.SURFACE_MUTED,
-        t.SURFACE_CARD,
-        t.BORDER_CARD,
-        t.TEXT_PRIMARY,
-        t.ACCENT,
-        t.SURFACE_SIDEBAR,
-        t.TEXT_ON_SIDEBAR,
-        t.TEXT_ON_SIDEBAR_MUTED,
-        t.TEXT_ON_SIDEBAR_LABEL,
-    }
-    encontrados = {m.lower() for m in re.findall(r"#[0-9a-fA-F]{6}", css)}
-    huerfanos = encontrados - {c.lower() for c in conocidos}
-    assert not huerfanos, f"Colores en el CSS que no salen de un token: {huerfanos}"
+    for mode, apariencia in t.APPEARANCES.items():
+        css = build_stylesheet(mode)
+        conocidos = {
+            apariencia.surface_page,
+            apariencia.surface_muted,
+            apariencia.surface_card,
+            apariencia.border_card,
+            apariencia.border_subtle,
+            apariencia.text_primary,
+            apariencia.accent,
+            t.SURFACE_SIDEBAR,
+            t.TEXT_ON_SIDEBAR,
+            t.TEXT_ON_SIDEBAR_MUTED,
+            t.TEXT_ON_SIDEBAR_LABEL,
+            t.RISK_UNKNOWN.surface,
+            *(p.surface for p in t.RISK.values()),
+            *(p.text for p in t.RISK.values()),
+            *(p.stroke for p in t.RISK.values()),
+        }
+        encontrados = {m.lower() for m in re.findall(r"#[0-9a-fA-F]{6}", css)}
+        huerfanos = encontrados - {c.lower() for c in conocidos}
+        assert not huerfanos, (
+            f"Colores en el CSS ({mode}) que no salen de un token: {huerfanos}"
+        )
 
 
 def test_stylesheet_carries_the_accessible_touch_target():
@@ -145,6 +153,26 @@ def test_stylesheet_carries_the_accessible_touch_target():
 
     assert t.TOUCH_TARGET_PX >= 44, "WCAG 2.5.5 pide 44 px de lado mínimo"
     assert f"--sapi-touch-target: {t.TOUCH_TARGET_PX}px" in build_stylesheet()
+
+
+def test_stylesheet_applies_type_scale_to_headings():
+    """La escala tipográfica de tokens alimenta h1–h4 y el cuerpo, no solo :root."""
+    from app.theme.css import build_stylesheet
+
+    css = build_stylesheet()
+    assert "font-size: var(--sapi-font-display-size)" in css
+    assert "font-size: var(--sapi-font-body-size)" in css
+    assert f"--sapi-font-display-size: {t.TYPE_SCALE['display'].size_px}px" in css
+
+
+def test_stylesheet_switches_page_surface_between_light_and_dark():
+    from app.theme.css import build_stylesheet
+
+    claro = build_stylesheet(t.APPEARANCE_CLARO)
+    oscuro = build_stylesheet(t.APPEARANCE_OSCURO)
+    assert t.APPEARANCES[t.APPEARANCE_CLARO].surface_page in claro
+    assert t.APPEARANCES[t.APPEARANCE_OSCURO].surface_page in oscuro
+    assert t.APPEARANCES[t.APPEARANCE_OSCURO].surface_page not in claro
 
 
 # ──────────────────────────────────────────────
@@ -155,7 +183,7 @@ def test_level_name_is_readable_on_the_page_background(nivel, palette):
     """El rol `text` se usa a tamaño normal, así que le aplica 4,5:1."""
     ratio = contrast_ratio(palette.text, t.SURFACE_PAGE)
     assert ratio >= TEXT_AA, (
-        f"El texto del nivel {nivel} da {ratio:.2f}:1 sobre la crema de fondo, "
+        f"El texto del nivel {nivel} da {ratio:.2f}:1 sobre el gris de fondo, "
         f"por debajo de {TEXT_AA}:1"
     )
 
@@ -243,6 +271,8 @@ def test_every_declared_level_has_a_palette_and_a_glyph():
     for nivel in t.RISK_LEVELS:
         assert nivel in t.RISK, f"El nivel {nivel} no tiene paleta"
         assert nivel in t.RISK_GLYPH, f"El nivel {nivel} no tiene glifo"
+        assert nivel in t.RISK_SHAPE_PATH, f"El nivel {nivel} no tiene forma SVG"
+        assert nivel in t.RISK_DESCRIPTION, f"El nivel {nivel} no tiene descripción"
 
 
 def test_unknown_level_resolves_to_the_neutral_palette():

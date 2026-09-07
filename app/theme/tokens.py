@@ -7,13 +7,9 @@ HTML de la leyenda en `app/utils/map_renderer.py`. Cambiar el rojo de riesgo
 alto exigía editar tres archivos y verificar a mano que no quedara ninguno
 atrás.
 
-La identidad visual no cambió: el azul institucional da 5,04:1 sobre la crema
-y el texto principal 14,79:1, así que pasaban WCAG AA con margen y se movieron
-tal cual. El único color que cambió es el del nivel de riesgo medio, y por una
-razón medible: `#f1c40f` daba 1,66:1 sobre blanco, por debajo del mínimo de
-3:1 para elementos gráficos, de modo que el relleno de una celda de riesgo
-medio era indistinguible del mapa base. `tests/test_theme.py` verifica los
-umbrales y documenta los dos déficits que quedan pendientes de decisión.
+El fondo de página admite dos apariencias (`claro` / `oscuro`) elegibles en
+runtime. El semáforo de riesgo y el navy del sidebar son compartidos: el mapa
+no cambia de semántica al cambiar el fondo.
 """
 
 from __future__ import annotations
@@ -21,17 +17,66 @@ from __future__ import annotations
 from typing import NamedTuple
 
 # ──────────────────────────────────────────────
-# Superficies y texto
+# Apariencia de página (claro / oscuro)
 # ──────────────────────────────────────────────
-SURFACE_PAGE = "#faf9f6"
-SURFACE_MUTED = "#f4f1ea"
-SURFACE_CARD = "#ffffff"
-BORDER_CARD = "#e3ddd0"
-BORDER_SUBTLE = "#d7d2c6"
-BORDER_HAIRLINE = "#e6e1d6"
+APPEARANCE_CLARO = "claro"
+APPEARANCE_OSCURO = "oscuro"
+APPEARANCE_MODES: tuple[str, ...] = (APPEARANCE_CLARO, APPEARANCE_OSCURO)
 
-TEXT_PRIMARY = "#20242b"
-ACCENT = "#3b6ea5"
+
+class Appearance(NamedTuple):
+    """Superficies y tipografía de la página (no del semáforo ni del sidebar)."""
+
+    surface_page: str
+    surface_muted: str
+    surface_card: str
+    border_card: str
+    border_subtle: str
+    border_hairline: str
+    text_primary: str
+    accent: str
+
+
+APPEARANCES: dict[str, Appearance] = {
+    APPEARANCE_CLARO: Appearance(
+        surface_page="#eceeef",
+        surface_muted="#e0e3e7",
+        surface_card="#ffffff",
+        border_card="#c9ced4",
+        border_subtle="#c0c5cc",
+        border_hairline="#d5d9de",
+        text_primary="#20242b",
+        accent="#3b6ea5",
+    ),
+    APPEARANCE_OSCURO: Appearance(
+        surface_page="#14171b",
+        surface_muted="#1c2128",
+        surface_card="#242a32",
+        border_card="#3a424d",
+        border_subtle="#4a5260",
+        border_hairline="#323843",
+        text_primary="#e8eaed",
+        accent="#6b9fd4",
+    ),
+}
+
+
+def appearance_tokens(mode: str) -> Appearance:
+    """Paleta de página para el modo indicado; cae a claro si no se reconoce."""
+    return APPEARANCES.get(mode, APPEARANCES[APPEARANCE_CLARO])
+
+
+# Alias del modo claro: lo que lee `.streamlit/config.toml` al arrancar y los
+# tests de contraste WCAG del semáforo (calculados sobre fondo claro).
+_CLARO = APPEARANCES[APPEARANCE_CLARO]
+SURFACE_PAGE = _CLARO.surface_page
+SURFACE_MUTED = _CLARO.surface_muted
+SURFACE_CARD = _CLARO.surface_card
+BORDER_CARD = _CLARO.border_card
+BORDER_SUBTLE = _CLARO.border_subtle
+BORDER_HAIRLINE = _CLARO.border_hairline
+TEXT_PRIMARY = _CLARO.text_primary
+ACCENT = _CLARO.accent
 
 # Sidebar: navy institucional. `secondaryBackgroundColor` del theme se deja
 # neutro porque Streamlit lo aplica también a widgets fuera del sidebar, así
@@ -122,9 +167,29 @@ RISK_LEVELS: tuple[str, ...] = ("bajo", "medio", "alto")
 # Opacidad del tinte de la fila resaltada en la tabla.
 ROW_TINT_ALPHA = 0.32
 
-# Glifos del semáforo. Redundan el color con una forma nombrada, que es la
-# única distinción que le queda a quien no distingue verde de rojo.
+# Glifos del semáforo (legacy / texto plano). La UI profesional usa formas SVG
+# (`RISK_SHAPE_PATH`); estos emojis siguen disponibles para captions y tests.
 RISK_GLYPH: dict[str, str] = {"bajo": "🟢", "medio": "🟠", "alto": "🔴"}
+
+# Path SVG (viewBox 0 0 24 24) por nivel: círculo / cuadrado / triángulo.
+RISK_SHAPE_PATH: dict[str, str] = {
+    "bajo": '<circle cx="12" cy="12" r="8"/>',
+    "medio": '<rect x="5" y="5" width="14" height="14" rx="2"/>',
+    "alto": '<path d="M12 4 L22 20 H2 Z"/>',
+}
+
+# Significado operativo de cada nivel (leyenda, chips).
+RISK_DESCRIPTION: dict[str, str] = {
+    "bajo": "&lt;33% · vigilancia rutinaria",
+    "medio": "33–66% · refuerzo preventivo",
+    "alto": "≥66% o regla 30-30-30 · prioridad",
+}
+
+RISK_LABEL: dict[str, str] = {
+    "bajo": "Bajo",
+    "medio": "Medio",
+    "alto": "Alto",
+}
 
 # Capa de focos reales del mapa. Brasa oscura, deliberadamente fuera del
 # semáforo para que una detección satelital no se lea como un nivel calculado.

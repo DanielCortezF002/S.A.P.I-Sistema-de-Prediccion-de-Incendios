@@ -1,7 +1,7 @@
 # Matriz de trazabilidad — Historia de usuario ↔ Prueba
 
 **Proyecto:** S.A.P.I. — Sistema de Alerta y Predicción de Incendios Forestales  
-**Última actualización:** 31-08-2026  
+**Última actualización:** 05-09-2026  
 **Alcance:** Hito 1 (evaluación 07-09-2026)
 
 Esta matriz conecta cada historia de usuario / ticket Jira con su criterio de aceptación, el módulo de código correspondiente y la prueba o evidencia **verificable en el repositorio** — no supuestos del portafolio.
@@ -29,6 +29,8 @@ Esta matriz conecta cada historia de usuario / ticket Jira con su criterio de ac
 | **SAPI-45** — Imports y tests estables | `app.utils.*` sin UnboundLocalError Cloud; suite verde; cobertura ≥80% | [`app/app.py`](../app/app.py), [`app/utils/`](../app/utils/), [`src/db.py`](../src/db.py), [`src/ingesta/parallel_ingester.py`](../src/ingesta/parallel_ingester.py), [`src/ingesta/nasa_firms_backfill.py`](../src/ingesta/nasa_firms_backfill.py) | `pytest tests/ -v --cov=app --cov=src --cov-fail-under=80` — **188/188 PASS** (Docker, Python 3.11, 31-08-2026); cobertura **80.34%** (1872 stmts, 368 miss) | **Cerrado** | Gate 80% alcanzado. Tests nuevos: `test_nasa_firms_backfill_client.py`, ampliación `test_ingesta.py`, `test_date_helpers.py`, `test_metrics_loader.py`, `test_config.py`, `test_features.py`, `test_query.py`, `test_baseline.py`. |
 | **SAPI-47** — Matriz de riesgo | Riesgo NASA cerrado con evidencia; abiertos documentados | [`docs/matriz-riesgo.md`](matriz-riesgo.md) | Revisión manual; R-NASA-FIRMS-01, R-DMC-01, R-CONAF-01, R-COBERTURA-01, R-INTEGRACION-01 | **Cerrado** | — |
 | **SAPI-48** — Esta matriz | HU conectada a test real verificable | Este documento | Revisión manual | **Cerrado** | SAPI-45 cerrado 31-08-2026 (80.34%, 188 tests); SAPI-44 cerrado 31-08-2026 |
+| **Grilla demo honesta** — corredor vs incendio 2024-02-03 | Extensión de la grilla demo coincide con el corredor documentado; ≥70% de detecciones FIRMS del evento dentro de la grilla | [`app/utils/grid.py`](../app/utils/grid.py), [`app/data/firms_detections.py`](../app/data/firms_detections.py) | `tests/test_grid.py` (`test_grid_covers_the_real_2024_fire`, `test_grid_spans_the_full_corridor`, zonas por comuna) | **Cerrado** (05-09-2026) | Antes: 8,4×4,0 km / 17% cobertura. Ahora: ~34,5×15,6 km / 75%. Deuda: grilla PostGIS (`src/`) sigue angosta — ver [`alcance-prototipo.md`](alcance-prototipo.md) |
+| **UI móvil mapa/detalle** — hallazgo UAT | Mapa y detalle usables en viewport angosto sin columnas 48/52 | [`app/app.py`](../app/app.py), [`app/theme/css.py`](../app/theme/css.py) | `st.tabs` Mapa/Detalle; acta UAT §3 cierre 05-09-2026 | **Cerrado** | Tabla 8 col. reemplazada por tarjetas; MutationObserver de checkboxes eliminado |
 
 ---
 
@@ -76,7 +78,7 @@ Esta matriz conecta cada historia de usuario / ticket Jira con su criterio de ac
 
 | Requisito | Módulo | Test(s) | Estado |
 |-----------|--------|---------|--------|
-| Mapa Folium + colormap | [`app/utils/map_renderer.py`](../app/utils/map_renderer.py) | `tests/test_ui_cache.py` (5 tests), `tests/test_risk_colors.py` (9 tests) | **Cerrado** |
+| Mapa Folium + colormap | [`app/utils/map_renderer.py`](../app/utils/map_renderer.py) | `tests/test_map_renderer.py` (5 tests), `tests/test_risk_colors.py` (9 tests) | **Cerrado** |
 | Tabla celdas + selección mapa | [`app/utils/cell_table.py`](../app/utils/cell_table.py) | `tests/test_cell_table.py` (9 tests) | Verificar en CI |
 | Zonificación VP-XXX | [`app/utils/cell_zones.py`](../app/utils/cell_zones.py) | `tests/test_cell_zones.py` (4 tests) | **Cerrado** |
 | Métricas ML panel | [`app/utils/metrics_loader.py`](../app/utils/metrics_loader.py) | `tests/test_metrics_loader.py` (4 tests) | Verificar en CI |
@@ -102,7 +104,7 @@ Esta matriz conecta cada historia de usuario / ticket Jira con su criterio de ac
 
 ## Inventario de tests (referencia rápida)
 
-**Total archivos en `tests/`:** 22 (+ `test_nasa_firms_backfill.py` con unittest). **Total pytest (31-08-2026):** 134 tests.
+**Total archivos en `tests/`:** ~25 (+ `test_nasa_firms_backfill.py` con unittest). **Total pytest (05-09-2026):** ~325 tests.
 
 | Archivo | # tests |
 |---------|---------|
@@ -121,8 +123,10 @@ Esta matriz conecta cada historia de usuario / ticket Jira con su criterio de ac
 | `test_features.py` | 4 |
 | `test_metrics_loader.py` | 4 |
 | `test_cell_zones.py` | 4 |
-| `test_ui_cache.py` | 5 |
-| `test_procesamiento.py` | 5 |
+| `test_map_renderer.py` | 5 |
+| `test_grid.py` | ≥5 (cobertura FIRMS ≥70%, corredor, radio, tolerancia clic) |
+| `test_theme.py` | tokens WCAG + sync `config.toml` |
+| `test_state.py` | session state selección + apariencia |
 | `test_nasa_firms_backfill.py` | 5 |
 | `test_optimizer.py` | 3 |
 | `test_baseline.py` | 2 |
@@ -130,7 +134,7 @@ Esta matriz conecta cada historia de usuario / ticket Jira con su criterio de ac
 | `test_serialization.py` | 1 |
 | `test_architecture.py` | 1 |
 
-**Comando de verificación:** `docker compose run --rm --no-deps -v "${PWD}:/app" analytics-backend pytest tests/ -v --cov=app --cov=src --cov-fail-under=80` (Python 3.11). Última corrida **31-08-2026:** **188 PASS**, cobertura **80.34%** (gate 80% alcanzado). Corrida anterior mismo día: 134 PASS, 72.22%.
+**Comando de verificación:** `docker compose run --rm --no-deps -v "${PWD}:/app" analytics-backend pytest tests/ -v --cov=app --cov=src --cov-fail-under=80` (Python 3.11). **Corrida Docker 06-09-2026:** **327 PASS**, cobertura **87.18%** (gate 80%; imagen `analytics-backend` reconstruida con `rasterio==1.4.4`). Corrida Docker histórica **31-08-2026:** 188 PASS, 80.34%.
 
 ---
 

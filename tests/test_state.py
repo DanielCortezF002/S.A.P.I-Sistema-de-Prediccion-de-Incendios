@@ -29,6 +29,16 @@ def test_init_session_leaves_every_key_in_a_known_state(sesion):
     assert sesion[state.SESSION_CELL_KEY] is None
     assert sesion[state.SESSION_TABLE_EPOCH_KEY] == 0
     assert sesion[state.SESSION_PRESELECTED_KEY] is False
+    assert sesion[state.SESSION_APPEARANCE_KEY] == "oscuro"
+    assert state.SESSION_APPEARANCE_KEY == "appearance_v2"
+
+
+def test_set_appearance_accepts_only_known_modes(sesion):
+    state.init_session()
+    state.set_appearance("oscuro")
+    assert state.appearance() == "oscuro"
+    state.set_appearance("no-existe")
+    assert state.appearance() == "claro"
 
 
 def test_init_session_does_not_discard_an_existing_selection(sesion):

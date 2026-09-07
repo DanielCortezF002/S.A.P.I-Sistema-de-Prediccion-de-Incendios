@@ -16,7 +16,7 @@ from __future__ import annotations
 import pytest
 
 from app.data.firms_detections import load_event_detections
-from app.utils.cell_zones import zone_for_col
+from app.utils.cell_zones import COMUNA_ZONE, zone_for_col
 from app.utils.grid import (
     BASE_LON,
     CELL_RADIUS_METERS,
@@ -31,12 +31,16 @@ from app.utils.grid import (
     grid_center,
 )
 
-# Coordenadas de referencia de las localidades que el dashboard nombra.
+# Coordenadas de referencia de las localidades que el dashboard nombra. La
+# banda esperada de cada una vive en `app.utils.cell_zones.COMUNA_ZONE` —
+# fuente única compartida con el buscador de comuna del dashboard, para que
+# cambiarla ahí no deje este test verificando una banda distinta sin que
+# nadie lo note.
 _LOCALIDADES = {
-    "Viña del Mar": (-33.0245, -71.5518, "costa"),
-    "Quilpué": (-33.0475, -71.4425, "urbano"),
-    "Villa Alemana": (-33.0422, -71.3733, "urbano"),
-    "Limache": (-33.0153, -71.2661, "precordillera"),
+    "Viña del Mar": (-33.0245, -71.5518),
+    "Quilpué": (-33.0475, -71.4425),
+    "Villa Alemana": (-33.0422, -71.3733),
+    "Limache": (-33.0153, -71.2661),
 }
 
 
@@ -52,8 +56,8 @@ def test_grid_zones_land_on_the_comunas_they_claim(localidad: str) -> None:
     Con la grilla anterior la banda "precordillera" caía a 3 km de la banda
     "costa", ambas dentro de Viña del Mar: las etiquetas eran decorativas.
     """
-    _, lon, zona_esperada = _LOCALIDADES[localidad]
-    assert zone_for_col(_nearest_col(lon)) == zona_esperada
+    _, lon = _LOCALIDADES[localidad]
+    assert zone_for_col(_nearest_col(lon)) == COMUNA_ZONE[localidad]
 
 
 def test_grid_spans_the_full_corridor() -> None:
@@ -92,7 +96,7 @@ def test_villa_alemana_is_inside_the_grid() -> None:
     Villa Alemana. La causa era que la grilla terminaba ~19 km al oeste, no
     que el incendio no hubiera llegado.
     """
-    lat, lon, _ = _LOCALIDADES["Villa Alemana"]
+    lat, lon = _LOCALIDADES["Villa Alemana"]
     assert contains(lat, lon)
 
 

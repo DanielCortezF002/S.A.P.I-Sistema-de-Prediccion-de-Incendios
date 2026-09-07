@@ -1,0 +1,1124 @@
+{
+  "AVISO": "PRELIMINAR — NO presentar como resultado científico. Distingue explícitamente tres tipos de resultado: (1) TÉCNICO (el código corre, causalidad verificada — ver suite de tests, no este archivo); (2) EXPLORATORIO (los números de este archivo: PR-AUC, ROC-AUC, hit@K); (3) EVIDENCIA DE CAPACIDAD PREDICTIVA — esto NO se puede leer directamente de (2); requiere el criterio de éxito acordado (≥2 particiones con mejora consistente, soporte ADEQUATE), que hoy ningún fold cumple. 'event_id' es una construcción del algoritmo de clustering, NO un incendio confirmado en terreno.",
+  "horizon_hours": 6,
+  "bloques_temporales": [
+    "2022-01",
+    "2022-12",
+    "2024-02",
+    "2025-02"
+  ],
+  "event_support_thresholds": {
+    "INSUFFICIENT_MAX": 4,
+    "LIMITED_MAX": 19
+  },
+  "folds": [
+    {
+      "fold": 1,
+      "train_start": "2022-01-01 00:00:00+00:00",
+      "train_end": "2022-01-31 18:00:00+00:00",
+      "test_start": "2022-12-01 00:00:00+00:00",
+      "test_end": "2022-12-31 18:00:00+00:00",
+      "train_meses": [
+        "2022-01"
+      ],
+      "test_mes": "2022-12",
+      "n_train": 6197,
+      "n_test": 5582,
+      "n_positivos_train_filas": 3,
+      "n_positivos_test_filas": 14,
+      "n_positive_dates_test": 8,
+      "largest_episode_fraction_test": 0.21428571428571427,
+      "resultados": {
+        "fila": {
+          "baseline_azar": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.0036507619695505845,
+            "roc_auc": 0.5252591338259441,
+            "brier_score": 0.3271447373019557,
+            "precision@3": 0.0,
+            "recall@3": 0.0,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.03636363636363637,
+            "recall@5": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          },
+          "baseline_prevalencia": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.0025080616266571123,
+            "roc_auc": 0.5,
+            "brier_score": 0.25,
+            "precision@3": 0.0606060606060606,
+            "recall@3": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.03636363636363637,
+            "recall@5": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          },
+          "baseline_historial_crudo_sin_entrenar": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.002428169417386155,
+            "roc_auc": 0.47025733784893264,
+            "brier_score": 0.050175564313865995,
+            "precision@3": 0.0,
+            "recall@3": 0.0,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.018181818181818184,
+            "recall@5": 0.09090909090909091,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          },
+          "modelo_A": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.0026065959889811597,
+            "roc_auc": 0.51875513136289,
+            "brier_score": 0.7468649229666786,
+            "precision@3": 0.0606060606060606,
+            "recall@3": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.03636363636363637,
+            "recall@5": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          },
+          "modelo_B": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.004122056283292287,
+            "roc_auc": 0.5997601087848934,
+            "brier_score": 0.023983207540420083,
+            "precision@3": 0.09090909090909091,
+            "recall@3": 0.2727272727272727,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.05454545454545456,
+            "recall@5": 0.2727272727272727,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          },
+          "modelo_C": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.002842037185964566,
+            "roc_auc": 0.5358297413793104,
+            "brier_score": 0.033005222191090214,
+            "precision@3": 0.0606060606060606,
+            "recall@3": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.05454545454545456,
+            "recall@5": 0.2727272727272727,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          },
+          "modelo_D": {
+            "n_test": 5582,
+            "n_positivos_test_filas": 14,
+            "pr_auc": 0.006142058770081774,
+            "roc_auc": 0.6591299774220033,
+            "brier_score": 0.0054233583160647695,
+            "precision@3": 0.0606060606060606,
+            "recall@3": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@3": 11,
+            "precision@5": 0.03636363636363637,
+            "recall@5": 0.18181818181818182,
+            "n_forecast_times_con_positivo_evaluados@5": 11
+          }
+        },
+        "episodio": {
+          "baseline_azar": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 0.0,
+              "5": 0.2
+            },
+            "n_episodios_hit_at_k": {
+              "3": 0,
+              "5": 2
+            },
+            "mean_rank": 15.0,
+            "median_rank": 9.5,
+            "event_support_status": "LIMITED"
+          },
+          "baseline_prevalencia": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 1.0,
+              "5": 1.0
+            },
+            "n_episodios_hit_at_k": {
+              "3": 10,
+              "5": 10
+            },
+            "mean_rank": 1.0,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          },
+          "baseline_historial_crudo_sin_entrenar": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 0.1,
+              "5": 0.2
+            },
+            "n_episodios_hit_at_k": {
+              "3": 1,
+              "5": 2
+            },
+            "mean_rank": 10.1,
+            "median_rank": 10.5,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_A": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 0.8,
+              "5": 0.8
+            },
+            "n_episodios_hit_at_k": {
+              "3": 8,
+              "5": 8
+            },
+            "mean_rank": 8.8,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_B": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 0.9,
+              "5": 0.9
+            },
+            "n_episodios_hit_at_k": {
+              "3": 9,
+              "5": 9
+            },
+            "mean_rank": 4.9,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_C": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 0.6,
+              "5": 0.7
+            },
+            "n_episodios_hit_at_k": {
+              "3": 6,
+              "5": 7
+            },
+            "mean_rank": 3.4,
+            "median_rank": 2.0,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_D": {
+            "n_raw_episodes_evaluated": 10,
+            "n_filas_positivas": 14,
+            "hit_at_k": {
+              "3": 0.5,
+              "5": 0.6
+            },
+            "n_episodios_hit_at_k": {
+              "3": 5,
+              "5": 6
+            },
+            "mean_rank": 10.3,
+            "median_rank": 3.5,
+            "event_support_status": "LIMITED"
+          }
+        },
+        "concentracion_episodio_dominante": {
+          "fraction": 0.21428571428571427,
+          "dominant_event_id": "1557",
+          "warning": false
+        },
+        "nan_diagnostics": {
+          "A": {
+            "n_nan_before_prep_xy_train": 5926,
+            "n_nan_after_prep_xy_train": 5926,
+            "n_nan_before_prep_xy_test": 4177,
+            "n_nan_after_prep_xy_test": 4177,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 5926
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 4177
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 4177
+          },
+          "B": {
+            "n_nan_before_prep_xy_train": 6526,
+            "n_nan_after_prep_xy_train": 6526,
+            "n_nan_before_prep_xy_test": 4377,
+            "n_nan_after_prep_xy_test": 4377,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 5926,
+              "meteo_actual_temp": 150,
+              "meteo_actual_hr": 150,
+              "meteo_actual_viento": 150,
+              "meteo_actual_regla_30_30_30": 150
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 4177,
+              "meteo_actual_temp": 50,
+              "meteo_actual_hr": 50,
+              "meteo_actual_viento": 50,
+              "meteo_actual_regla_30_30_30": 50
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 4377
+          },
+          "C": {
+            "n_nan_before_prep_xy_train": 11926,
+            "n_nan_after_prep_xy_train": 11926,
+            "n_nan_before_prep_xy_test": 11177,
+            "n_nan_after_prep_xy_test": 11177,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 5926,
+              "meteo_actual_temp": 150,
+              "meteo_actual_hr": 150,
+              "meteo_actual_viento": 150,
+              "meteo_actual_regla_30_30_30": 150,
+              "meteo_lag_6h_temp": 200,
+              "meteo_lag_6h_hr": 200,
+              "meteo_lag_6h_viento": 200,
+              "meteo_lag_6h_regla_30_30_30": 200,
+              "meteo_lag_12h_temp": 250,
+              "meteo_lag_12h_hr": 250,
+              "meteo_lag_12h_viento": 250,
+              "meteo_lag_12h_regla_30_30_30": 250,
+              "meteo_lag_24h_temp": 350,
+              "meteo_lag_24h_hr": 350,
+              "meteo_lag_24h_viento": 350,
+              "meteo_lag_24h_regla_30_30_30": 350,
+              "meteo_lag_48h_temp": 550,
+              "meteo_lag_48h_hr": 550,
+              "meteo_lag_48h_viento": 550,
+              "meteo_lag_48h_regla_30_30_30": 550
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 4177,
+              "meteo_actual_temp": 50,
+              "meteo_actual_hr": 50,
+              "meteo_actual_viento": 50,
+              "meteo_actual_regla_30_30_30": 50,
+              "meteo_lag_6h_temp": 150,
+              "meteo_lag_6h_hr": 150,
+              "meteo_lag_6h_viento": 150,
+              "meteo_lag_6h_regla_30_30_30": 150,
+              "meteo_lag_12h_temp": 250,
+              "meteo_lag_12h_hr": 250,
+              "meteo_lag_12h_viento": 250,
+              "meteo_lag_12h_regla_30_30_30": 250,
+              "meteo_lag_24h_temp": 450,
+              "meteo_lag_24h_hr": 450,
+              "meteo_lag_24h_viento": 450,
+              "meteo_lag_24h_regla_30_30_30": 450,
+              "meteo_lag_48h_temp": 850,
+              "meteo_lag_48h_hr": 850,
+              "meteo_lag_48h_viento": 850,
+              "meteo_lag_48h_regla_30_30_30": 850
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 11177
+          },
+          "D": {
+            "n_nan_before_prep_xy_train": 19363,
+            "n_nan_after_prep_xy_train": 19363,
+            "n_nan_before_prep_xy_test": 17867,
+            "n_nan_after_prep_xy_test": 17867,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 5926,
+              "meteo_actual_temp": 150,
+              "meteo_actual_hr": 150,
+              "meteo_actual_viento": 150,
+              "meteo_actual_regla_30_30_30": 150,
+              "meteo_lag_6h_temp": 200,
+              "meteo_lag_6h_hr": 200,
+              "meteo_lag_6h_viento": 200,
+              "meteo_lag_6h_regla_30_30_30": 200,
+              "meteo_lag_12h_temp": 250,
+              "meteo_lag_12h_hr": 250,
+              "meteo_lag_12h_viento": 250,
+              "meteo_lag_12h_regla_30_30_30": 250,
+              "meteo_lag_24h_temp": 350,
+              "meteo_lag_24h_hr": 350,
+              "meteo_lag_24h_viento": 350,
+              "meteo_lag_24h_regla_30_30_30": 350,
+              "meteo_lag_48h_temp": 550,
+              "meteo_lag_48h_hr": 550,
+              "meteo_lag_48h_viento": 550,
+              "meteo_lag_48h_regla_30_30_30": 550,
+              "elevacion": 2479,
+              "pendiente": 2479,
+              "orientacion": 2479
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 4177,
+              "meteo_actual_temp": 50,
+              "meteo_actual_hr": 50,
+              "meteo_actual_viento": 50,
+              "meteo_actual_regla_30_30_30": 50,
+              "meteo_lag_6h_temp": 150,
+              "meteo_lag_6h_hr": 150,
+              "meteo_lag_6h_viento": 150,
+              "meteo_lag_6h_regla_30_30_30": 150,
+              "meteo_lag_12h_temp": 250,
+              "meteo_lag_12h_hr": 250,
+              "meteo_lag_12h_viento": 250,
+              "meteo_lag_12h_regla_30_30_30": 250,
+              "meteo_lag_24h_temp": 450,
+              "meteo_lag_24h_hr": 450,
+              "meteo_lag_24h_viento": 450,
+              "meteo_lag_24h_regla_30_30_30": 450,
+              "meteo_lag_48h_temp": 850,
+              "meteo_lag_48h_hr": 850,
+              "meteo_lag_48h_viento": 850,
+              "meteo_lag_48h_regla_30_30_30": 850,
+              "elevacion": 2230,
+              "pendiente": 2230,
+              "orientacion": 2230
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 17867
+          }
+        }
+      }
+    },
+    {
+      "fold": 2,
+      "train_start": "2022-01-01 00:00:00+00:00",
+      "train_end": "2022-12-31 18:00:00+00:00",
+      "test_start": "2024-02-01 00:00:00+00:00",
+      "test_end": "2024-02-29 18:00:00+00:00",
+      "train_meses": [
+        "2022-01",
+        "2022-12"
+      ],
+      "test_mes": "2024-02",
+      "n_train": 11779,
+      "n_test": 5766,
+      "n_positivos_train_filas": 17,
+      "n_positivos_test_filas": 29,
+      "n_positive_dates_test": 5,
+      "largest_episode_fraction_test": 0.27586206896551724,
+      "resultados": {
+        "fila": {
+          "baseline_azar": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.005289632234360857,
+            "roc_auc": 0.48702614005878353,
+            "brier_score": 0.3280193742183795,
+            "precision@3": 0.05555555555555555,
+            "recall@3": 0.015151515151515152,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.13333333333333333,
+            "recall@5": 0.09974747474747475,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          },
+          "baseline_prevalencia": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.005029483177245924,
+            "roc_auc": 0.5,
+            "brier_score": 0.25,
+            "precision@3": 0.27777777777777773,
+            "recall@3": 0.22474747474747478,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.16666666666666666,
+            "recall@5": 0.22474747474747478,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          },
+          "baseline_historial_crudo_sin_entrenar": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.004854790412971747,
+            "roc_auc": 0.478743546128278,
+            "brier_score": 0.1957307203144872,
+            "precision@3": 0.0,
+            "recall@3": 0.0,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.06666666666666667,
+            "recall@5": 0.030303030303030304,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          },
+          "modelo_A": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.005200064295938118,
+            "roc_auc": 0.5281205484062919,
+            "brier_score": 0.1271347750755932,
+            "precision@3": 0.1111111111111111,
+            "recall@3": 0.1818181818181818,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.13333333333333333,
+            "recall@5": 0.25252525252525254,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          },
+          "modelo_B": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.07121573169436755,
+            "roc_auc": 0.6432894760568122,
+            "brier_score": 0.13861343393264886,
+            "precision@3": 0.2222222222222222,
+            "recall@3": 0.05808080808080809,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.19999999999999998,
+            "recall@5": 0.2803030303030303,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          },
+          "modelo_C": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.13541793187593526,
+            "roc_auc": 0.8359769914589507,
+            "brier_score": 0.026257014763184157,
+            "precision@3": 0.27777777777777773,
+            "recall@3": 0.22474747474747478,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.16666666666666666,
+            "recall@5": 0.22474747474747478,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          },
+          "modelo_D": {
+            "n_test": 5766,
+            "n_positivos_test_filas": 29,
+            "pr_auc": 0.11071348639606951,
+            "roc_auc": 0.7678529569100756,
+            "brier_score": 0.02752340103692861,
+            "precision@3": 0.2222222222222222,
+            "recall@3": 0.05808080808080809,
+            "n_forecast_times_con_positivo_evaluados@3": 6,
+            "precision@5": 0.13333333333333333,
+            "recall@5": 0.05808080808080809,
+            "n_forecast_times_con_positivo_evaluados@5": 6
+          }
+        },
+        "episodio": {
+          "baseline_azar": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 0.1111111111111111,
+              "5": 0.2777777777777778
+            },
+            "n_episodios_hit_at_k": {
+              "3": 2,
+              "5": 5
+            },
+            "mean_rank": 20.0,
+            "median_rank": 13.5,
+            "event_support_status": "LIMITED"
+          },
+          "baseline_prevalencia": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 1.0,
+              "5": 1.0
+            },
+            "n_episodios_hit_at_k": {
+              "3": 18,
+              "5": 18
+            },
+            "mean_rank": 1.0,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          },
+          "baseline_historial_crudo_sin_entrenar": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 0.0,
+              "5": 0.2222222222222222
+            },
+            "n_episodios_hit_at_k": {
+              "3": 0,
+              "5": 4
+            },
+            "mean_rank": 11.333333333333334,
+            "median_rank": 10.5,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_A": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 0.3333333333333333,
+              "5": 0.3333333333333333
+            },
+            "n_episodios_hit_at_k": {
+              "3": 6,
+              "5": 6
+            },
+            "mean_rank": 20.0,
+            "median_rank": 26.5,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_B": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 0.8888888888888888,
+              "5": 0.9444444444444444
+            },
+            "n_episodios_hit_at_k": {
+              "3": 16,
+              "5": 17
+            },
+            "mean_rank": 2.611111111111111,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_C": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 1.0,
+              "5": 1.0
+            },
+            "n_episodios_hit_at_k": {
+              "3": 18,
+              "5": 18
+            },
+            "mean_rank": 1.0,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          },
+          "modelo_D": {
+            "n_raw_episodes_evaluated": 18,
+            "n_filas_positivas": 29,
+            "hit_at_k": {
+              "3": 0.7777777777777778,
+              "5": 0.8888888888888888
+            },
+            "n_episodios_hit_at_k": {
+              "3": 14,
+              "5": 16
+            },
+            "mean_rank": 4.277777777777778,
+            "median_rank": 1.0,
+            "event_support_status": "LIMITED"
+          }
+        },
+        "concentracion_episodio_dominante": {
+          "fraction": 0.27586206896551724,
+          "dominant_event_id": "3072",
+          "warning": false
+        },
+        "nan_diagnostics": {
+          "A": {
+            "n_nan_before_prep_xy_train": 10103,
+            "n_nan_after_prep_xy_train": 10103,
+            "n_nan_before_prep_xy_test": 1937,
+            "n_nan_after_prep_xy_test": 1937,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 10103
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1937
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 1937
+          },
+          "B": {
+            "n_nan_before_prep_xy_train": 10903,
+            "n_nan_after_prep_xy_train": 10903,
+            "n_nan_before_prep_xy_test": 1937,
+            "n_nan_after_prep_xy_test": 1937,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 10103,
+              "meteo_actual_temp": 200,
+              "meteo_actual_hr": 200,
+              "meteo_actual_viento": 200,
+              "meteo_actual_regla_30_30_30": 200
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1937,
+              "meteo_actual_temp": 0,
+              "meteo_actual_hr": 0,
+              "meteo_actual_viento": 0,
+              "meteo_actual_regla_30_30_30": 0
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 1937
+          },
+          "C": {
+            "n_nan_before_prep_xy_train": 23103,
+            "n_nan_after_prep_xy_train": 23103,
+            "n_nan_before_prep_xy_test": 4937,
+            "n_nan_after_prep_xy_test": 4937,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 10103,
+              "meteo_actual_temp": 200,
+              "meteo_actual_hr": 200,
+              "meteo_actual_viento": 200,
+              "meteo_actual_regla_30_30_30": 200,
+              "meteo_lag_6h_temp": 350,
+              "meteo_lag_6h_hr": 350,
+              "meteo_lag_6h_viento": 350,
+              "meteo_lag_6h_regla_30_30_30": 350,
+              "meteo_lag_12h_temp": 500,
+              "meteo_lag_12h_hr": 500,
+              "meteo_lag_12h_viento": 500,
+              "meteo_lag_12h_regla_30_30_30": 500,
+              "meteo_lag_24h_temp": 800,
+              "meteo_lag_24h_hr": 800,
+              "meteo_lag_24h_viento": 800,
+              "meteo_lag_24h_regla_30_30_30": 800,
+              "meteo_lag_48h_temp": 1400,
+              "meteo_lag_48h_hr": 1400,
+              "meteo_lag_48h_viento": 1400,
+              "meteo_lag_48h_regla_30_30_30": 1400
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1937,
+              "meteo_actual_temp": 0,
+              "meteo_actual_hr": 0,
+              "meteo_actual_viento": 0,
+              "meteo_actual_regla_30_30_30": 0,
+              "meteo_lag_6h_temp": 50,
+              "meteo_lag_6h_hr": 50,
+              "meteo_lag_6h_viento": 50,
+              "meteo_lag_6h_regla_30_30_30": 50,
+              "meteo_lag_12h_temp": 100,
+              "meteo_lag_12h_hr": 100,
+              "meteo_lag_12h_viento": 100,
+              "meteo_lag_12h_regla_30_30_30": 100,
+              "meteo_lag_24h_temp": 200,
+              "meteo_lag_24h_hr": 200,
+              "meteo_lag_24h_viento": 200,
+              "meteo_lag_24h_regla_30_30_30": 200,
+              "meteo_lag_48h_temp": 400,
+              "meteo_lag_48h_hr": 400,
+              "meteo_lag_48h_viento": 400,
+              "meteo_lag_48h_regla_30_30_30": 400
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 4937
+          },
+          "D": {
+            "n_nan_before_prep_xy_train": 37230,
+            "n_nan_after_prep_xy_train": 37230,
+            "n_nan_before_prep_xy_test": 11870,
+            "n_nan_after_prep_xy_test": 11870,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 10103,
+              "meteo_actual_temp": 200,
+              "meteo_actual_hr": 200,
+              "meteo_actual_viento": 200,
+              "meteo_actual_regla_30_30_30": 200,
+              "meteo_lag_6h_temp": 350,
+              "meteo_lag_6h_hr": 350,
+              "meteo_lag_6h_viento": 350,
+              "meteo_lag_6h_regla_30_30_30": 350,
+              "meteo_lag_12h_temp": 500,
+              "meteo_lag_12h_hr": 500,
+              "meteo_lag_12h_viento": 500,
+              "meteo_lag_12h_regla_30_30_30": 500,
+              "meteo_lag_24h_temp": 800,
+              "meteo_lag_24h_hr": 800,
+              "meteo_lag_24h_viento": 800,
+              "meteo_lag_24h_regla_30_30_30": 800,
+              "meteo_lag_48h_temp": 1400,
+              "meteo_lag_48h_hr": 1400,
+              "meteo_lag_48h_viento": 1400,
+              "meteo_lag_48h_regla_30_30_30": 1400,
+              "elevacion": 4709,
+              "pendiente": 4709,
+              "orientacion": 4709
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1937,
+              "meteo_actual_temp": 0,
+              "meteo_actual_hr": 0,
+              "meteo_actual_viento": 0,
+              "meteo_actual_regla_30_30_30": 0,
+              "meteo_lag_6h_temp": 50,
+              "meteo_lag_6h_hr": 50,
+              "meteo_lag_6h_viento": 50,
+              "meteo_lag_6h_regla_30_30_30": 50,
+              "meteo_lag_12h_temp": 100,
+              "meteo_lag_12h_hr": 100,
+              "meteo_lag_12h_viento": 100,
+              "meteo_lag_12h_regla_30_30_30": 100,
+              "meteo_lag_24h_temp": 200,
+              "meteo_lag_24h_hr": 200,
+              "meteo_lag_24h_viento": 200,
+              "meteo_lag_24h_regla_30_30_30": 200,
+              "meteo_lag_48h_temp": 400,
+              "meteo_lag_48h_hr": 400,
+              "meteo_lag_48h_viento": 400,
+              "meteo_lag_48h_regla_30_30_30": 400,
+              "elevacion": 2311,
+              "pendiente": 2311,
+              "orientacion": 2311
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 11870
+          }
+        }
+      }
+    },
+    {
+      "fold": 3,
+      "train_start": "2022-01-01 00:00:00+00:00",
+      "train_end": "2024-02-29 18:00:00+00:00",
+      "test_start": "2025-02-01 00:00:00+00:00",
+      "test_end": "2025-02-28 18:00:00+00:00",
+      "train_meses": [
+        "2022-01",
+        "2022-12",
+        "2024-02"
+      ],
+      "test_mes": "2025-02",
+      "n_train": 17545,
+      "n_test": 5600,
+      "n_positivos_train_filas": 46,
+      "n_positivos_test_filas": 0,
+      "n_positive_dates_test": 0,
+      "largest_episode_fraction_test": 0.0,
+      "resultados": {
+        "fila": {
+          "baseline_azar": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.32736069983621485,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          },
+          "baseline_prevalencia": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.25,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          },
+          "baseline_historial_crudo_sin_entrenar": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.1434375,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          },
+          "modelo_A": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.05176652108934915,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          },
+          "modelo_B": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.03958928355972712,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          },
+          "modelo_C": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.023692655526991218,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          },
+          "modelo_D": {
+            "n_test": 5600,
+            "n_positivos_test_filas": 0,
+            "pr_auc": null,
+            "roc_auc": null,
+            "nota": "Sin variación de clase en el test — PR-AUC/ROC-AUC NOT_EVALUABLE, no 0 ni 100%.",
+            "brier_score": 0.019008908809559043,
+            "precision@3": null,
+            "recall@3": null,
+            "n_forecast_times_con_positivo_evaluados@3": 0,
+            "precision@5": null,
+            "recall@5": null,
+            "n_forecast_times_con_positivo_evaluados@5": 0
+          }
+        },
+        "episodio": {
+          "baseline_azar": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          },
+          "baseline_prevalencia": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          },
+          "baseline_historial_crudo_sin_entrenar": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          },
+          "modelo_A": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          },
+          "modelo_B": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          },
+          "modelo_C": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          },
+          "modelo_D": {
+            "n_raw_episodes_evaluated": 0,
+            "n_filas_positivas": 0,
+            "hit_at_k": null,
+            "mean_rank": null,
+            "median_rank": null,
+            "event_support_status": "INSUFFICIENT",
+            "nota": "NOT_EVALUABLE — sin episodios positivos en este test."
+          }
+        },
+        "concentracion_episodio_dominante": {
+          "fraction": 0.0,
+          "dominant_event_id": null,
+          "warning": false
+        },
+        "nan_diagnostics": {
+          "A": {
+            "n_nan_before_prep_xy_train": 12040,
+            "n_nan_after_prep_xy_train": 12040,
+            "n_nan_before_prep_xy_test": 1344,
+            "n_nan_after_prep_xy_test": 1344,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 12040
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1344
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 1344
+          },
+          "B": {
+            "n_nan_before_prep_xy_train": 12840,
+            "n_nan_after_prep_xy_train": 12840,
+            "n_nan_before_prep_xy_test": 1344,
+            "n_nan_after_prep_xy_test": 1344,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 12040,
+              "meteo_actual_temp": 200,
+              "meteo_actual_hr": 200,
+              "meteo_actual_viento": 200,
+              "meteo_actual_regla_30_30_30": 200
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1344,
+              "meteo_actual_temp": 0,
+              "meteo_actual_hr": 0,
+              "meteo_actual_viento": 0,
+              "meteo_actual_regla_30_30_30": 0
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 1344
+          },
+          "C": {
+            "n_nan_before_prep_xy_train": 28040,
+            "n_nan_after_prep_xy_train": 28040,
+            "n_nan_before_prep_xy_test": 4344,
+            "n_nan_after_prep_xy_test": 4344,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 12040,
+              "meteo_actual_temp": 200,
+              "meteo_actual_hr": 200,
+              "meteo_actual_viento": 200,
+              "meteo_actual_regla_30_30_30": 200,
+              "meteo_lag_6h_temp": 400,
+              "meteo_lag_6h_hr": 400,
+              "meteo_lag_6h_viento": 400,
+              "meteo_lag_6h_regla_30_30_30": 400,
+              "meteo_lag_12h_temp": 600,
+              "meteo_lag_12h_hr": 600,
+              "meteo_lag_12h_viento": 600,
+              "meteo_lag_12h_regla_30_30_30": 600,
+              "meteo_lag_24h_temp": 1000,
+              "meteo_lag_24h_hr": 1000,
+              "meteo_lag_24h_viento": 1000,
+              "meteo_lag_24h_regla_30_30_30": 1000,
+              "meteo_lag_48h_temp": 1800,
+              "meteo_lag_48h_hr": 1800,
+              "meteo_lag_48h_viento": 1800,
+              "meteo_lag_48h_regla_30_30_30": 1800
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1344,
+              "meteo_actual_temp": 0,
+              "meteo_actual_hr": 0,
+              "meteo_actual_viento": 0,
+              "meteo_actual_regla_30_30_30": 0,
+              "meteo_lag_6h_temp": 50,
+              "meteo_lag_6h_hr": 50,
+              "meteo_lag_6h_viento": 50,
+              "meteo_lag_6h_regla_30_30_30": 50,
+              "meteo_lag_12h_temp": 100,
+              "meteo_lag_12h_hr": 100,
+              "meteo_lag_12h_viento": 100,
+              "meteo_lag_12h_regla_30_30_30": 100,
+              "meteo_lag_24h_temp": 200,
+              "meteo_lag_24h_hr": 200,
+              "meteo_lag_24h_viento": 200,
+              "meteo_lag_24h_regla_30_30_30": 200,
+              "meteo_lag_48h_temp": 400,
+              "meteo_lag_48h_hr": 400,
+              "meteo_lag_48h_viento": 400,
+              "meteo_lag_48h_regla_30_30_30": 400
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 4344
+          },
+          "D": {
+            "n_nan_before_prep_xy_train": 49100,
+            "n_nan_after_prep_xy_train": 49100,
+            "n_nan_before_prep_xy_test": 11064,
+            "n_nan_after_prep_xy_test": 11064,
+            "n_nan_train_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 12040,
+              "meteo_actual_temp": 200,
+              "meteo_actual_hr": 200,
+              "meteo_actual_viento": 200,
+              "meteo_actual_regla_30_30_30": 200,
+              "meteo_lag_6h_temp": 400,
+              "meteo_lag_6h_hr": 400,
+              "meteo_lag_6h_viento": 400,
+              "meteo_lag_6h_regla_30_30_30": 400,
+              "meteo_lag_12h_temp": 600,
+              "meteo_lag_12h_hr": 600,
+              "meteo_lag_12h_viento": 600,
+              "meteo_lag_12h_regla_30_30_30": 600,
+              "meteo_lag_24h_temp": 1000,
+              "meteo_lag_24h_hr": 1000,
+              "meteo_lag_24h_viento": 1000,
+              "meteo_lag_24h_regla_30_30_30": 1000,
+              "meteo_lag_48h_temp": 1800,
+              "meteo_lag_48h_hr": 1800,
+              "meteo_lag_48h_viento": 1800,
+              "meteo_lag_48h_regla_30_30_30": 1800,
+              "elevacion": 7020,
+              "pendiente": 7020,
+              "orientacion": 7020
+            },
+            "n_nan_test_por_columna": {
+              "historial_firms_count": 0,
+              "dias_desde_ultimo_evento": 1344,
+              "meteo_actual_temp": 0,
+              "meteo_actual_hr": 0,
+              "meteo_actual_viento": 0,
+              "meteo_actual_regla_30_30_30": 0,
+              "meteo_lag_6h_temp": 50,
+              "meteo_lag_6h_hr": 50,
+              "meteo_lag_6h_viento": 50,
+              "meteo_lag_6h_regla_30_30_30": 50,
+              "meteo_lag_12h_temp": 100,
+              "meteo_lag_12h_hr": 100,
+              "meteo_lag_12h_viento": 100,
+              "meteo_lag_12h_regla_30_30_30": 100,
+              "meteo_lag_24h_temp": 200,
+              "meteo_lag_24h_hr": 200,
+              "meteo_lag_24h_viento": 200,
+              "meteo_lag_24h_regla_30_30_30": 200,
+              "meteo_lag_48h_temp": 400,
+              "meteo_lag_48h_hr": 400,
+              "meteo_lag_48h_viento": 400,
+              "meteo_lag_48h_regla_30_30_30": 400,
+              "elevacion": 2240,
+              "pendiente": 2240,
+              "orientacion": 2240
+            },
+            "n_nan_en_x_test_al_momento_de_predict": 11064
+          }
+        }
+      }
+    }
+  ]
+}

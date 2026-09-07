@@ -46,3 +46,27 @@ ignorada.
 **Recomendación para Sprint 2:** evaluar layout responsivo (CSS adaptativo
 o `st.columns` con proporciones dependientes de viewport) o una vista móvil
 simplificada.
+
+## 3. Cierre del hallazgo móvil (post–Hito 1)
+
+| Campo | Contenido |
+|-------|-----------|
+| **Fecha de cierre** | 05-09-2026 |
+| **Versión verificada** | Tip de `main` posterior a `v1.1.0-corredor-verified` (rediseño mobile-first en `app/`) |
+| **Evidencia automatizada** | Suite local: tests de componentes (`tests/test_app.py`), theme/touch targets (`tests/test_theme.py`, `tests/test_risk_colors.py`) y arquitectura (`tests/test_architecture.py`) en verde |
+| **Evidencia manual** | Vista local Streamlit (`http://localhost:8501`): pestañas Mapa/Detalle a ancho completo; lista de tarjetas en Detalle (sin tabla de 8 columnas); botones con `min-height` ≥ 44 px |
+
+### Cambios que cierran la causa
+
+- Layout 48/52 reemplazado por `st.tabs` (Mapa / Detalle).
+- Tabla de 8 columnas reemplazada por tarjetas (`st.container(border=True)` + botón por celda).
+- Eliminado `inject_table_checkbox_colors()` (MutationObserver sobre el DOM de Streamlit).
+- Métricas de cabecera reducidas a dos columnas + caption de distribución.
+- Tipografía y touch targets centralizados en `app/theme/tokens.py`.
+
+### Criterio de aceptación (actualizado)
+
+**Cumplido para el alcance del prototipo demo.** El hallazgo de la §2 queda
+**cerrado** respecto a la causa de layout (columnas + tabla ancha). Queda
+como mejora continua cualquier ajuste fino de densidad de las 50 tarjetas en
+teléfonos muy angostos — no reabre el desbordamiento estructural original.

@@ -1,9 +1,12 @@
 """Corrige geometrías incorrectas en predicciones_riesgo para fechas > 2025-02-15."""
-BASE_LON = -71.535
-BASE_LAT = -33.062
-STEP_LON = 0.010
-STEP_LAT = 0.009
-BUFFER = 490
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from src.geo.grid import BASE_LAT, BASE_LON, CELL_RADIUS_METERS, STEP_LAT, STEP_LON
+
+BUFFER = CELL_RADIUS_METERS
 
 lines = []
 idx = 1

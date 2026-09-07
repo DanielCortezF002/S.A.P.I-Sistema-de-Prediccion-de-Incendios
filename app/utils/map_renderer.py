@@ -1,17 +1,14 @@
 """Renderizado cartográfico Folium del mapa de riesgo.
 
-Dos capas superpuestas y separables:
-
-- **Riesgo por celda**: la superficie de probabilidad del escenario. Relleno
-  graduado por probabilidad, no plano, para que el riesgo alto se lea de un
-  vistazo sin tener que comparar tonos.
-- **Focos reales 2024-02-03**: detecciones VIIRS medidas por satélite,
-  dimensionadas por potencia radiativa (FRP). Es referencia histórica de otra
-  fecha que el escenario del dashboard, así que va rotulada y se puede apagar.
+La capa principal es el **riesgo por celda**: relleno graduado por
+probabilidad, para que el riesgo alto se lea de un vistazo. Los focos FIRMS
+como mini-marcadores quedaron fuera del render por defecto — mezclaban una
+fecha histórica (2024-02-03) con el escenario del dashboard y distraían del
+semáforo. La función `add_detection_layer` sigue disponible si hace falta
+una vista de referencia aparte.
 
 El basemap es un lienzo gris neutro y no OpenStreetMap: los caminos y usos
-de suelo coloreados de OSM competían con el semáforo de riesgo y el
-resultado se leía como un prototipo, no como una vista de monitoreo.
+de suelo coloreados de OSM competían con el semáforo de riesgo.
 """
 
 from __future__ import annotations
@@ -120,16 +117,16 @@ def detection_radius(frp: float, frp_max: float) -> float:
 
 
 def build_risk_legend_html() -> str:
-    """Contenido de la leyenda.
+    """Contenido de la leyenda con forma + color + umbral por nivel."""
+    from app.components.risk_level import risk_shape_svg
 
-    Reemplaza la barra continua de `branca` más el markdown suelto que vivía
-    en `app.py`: una escala continua sugería una precisión que el modelo no
-    tiene, y la leyenda separada del mapa obligaba a mirar en dos lados.
-    """
     filas = "".join(
         f'<div style="display:flex;align-items:center;gap:6px;margin:2px 0;">'
-        f'<span style="width:12px;height:12px;border-radius:50%;'
-        f'background:{risk_palette(nivel).surface};flex:none;"></span>'
+        f'<span style="width:18px;height:18px;border-radius:3px;'
+        f"background:{risk_palette(nivel).surface};display:inline-grid;"
+        f'place-items:center;flex:none;">'
+        f"{risk_shape_svg(nivel, fill=risk_palette(nivel).on_solid, size=12)}"
+        f"</span>"
         f'<span style="font-weight:600;">{etiqueta}</span>'
         f'<span style="opacity:0.7;">{detalle}</span>'
         f"</div>"
@@ -144,12 +141,6 @@ def build_risk_legend_html() -> str:
         f'color:{theme.TEXT_PRIMARY};box-shadow:0 1px 4px rgba(0,0,0,0.16);">'
         '<div style="font-weight:700;margin-bottom:4px;">Probabilidad de ignición</div>'
         f"{filas}"
-        '<div style="display:flex;align-items:center;gap:6px;margin-top:6px;'
-        f'padding-top:5px;border-top:1px solid {theme.BORDER_HAIRLINE};">'
-        f'<span style="width:8px;height:8px;border-radius:50%;background:{DETECTION_FILL};'
-        f'border:1px solid {DETECTION_STROKE};flex:none;"></span>'
-        f'<span style="opacity:0.8;">Foco real {EVENT_DATE} · tamaño por FRP</span>'
-        "</div>"
         "</div>"
     )
 
@@ -217,7 +208,7 @@ def render_folium_map(
     center: Optional[tuple[float, float]] = None,
     zoom: int = 11,
     selected_cell_id: Optional[str] = None,
-    show_detections: bool = True,
+    show_detections: bool = False,
 ) -> folium.Map:
     """Renderiza el mapa de riesgo del corredor.
 
@@ -226,7 +217,8 @@ def render_folium_map(
         center: Centro explícito (lat, lon). Si es None, encuadra la grilla.
         zoom: Zoom inicial, usado solo cuando se pasa un centro explícito.
         selected_cell_id: Celda a resaltar.
-        show_detections: Incluir la capa de focos reales.
+        show_detections: Si True, agrega focos FIRMS históricos (apagado por
+            defecto: no pertenecen al escenario del día consultado).
 
     Returns:
         Mapa Folium configurado.
