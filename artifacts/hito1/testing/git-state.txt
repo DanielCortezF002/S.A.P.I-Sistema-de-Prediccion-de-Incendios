@@ -1,0 +1,22 @@
+=== git diff BEFORE (src app tests data) ===
+--- (vacío arriba = sin diffs antes de esta fase) ---
+
+=== git rev-parse HEAD ===
+9f076172adca3dbce0285f5d942d2803ac6f68a4
+=== git branch --show-current ===
+main
+=== git status --short ===
+?? .claude/
+?? artifacts/
+?? docs/arquitectura-hito1.md
+?? tools/
+
+=== git diff DESPUES de esta fase (src app tests data) ===
+--- (vacío arriba = sin cambios, verificado 2 veces: antes y despues) ---
+
+=== git status --short DESPUES ===
+?? .claude/
+?? artifacts/
+?? docs/arquitectura-hito1.md
+?? docs/testing-evidencia-hito1.md
+?? tools/

@@ -1,0 +1,10 @@
+design/direccion-b-institucional|2026-09-05 10:50:13 -0400
+experiment/real-cells-map-preview|2026-09-05 23:01:57 -0400
+feature/dmc-live-card|2026-09-05 16:44:05 -0400
+main|2026-09-07 12:30:23 -0300
+worktree-gleaming-meandering-pudding|2026-09-02 22:27:05 -0400
+wt-design-b-work|2026-09-04 18:03:15 -0400
+origin|2026-09-05 23:01:57 -0400
+origin/develop|2026-06-20 11:17:18 -0400
+origin/feature/dmc-live-card|2026-09-05 16:44:05 -0400
+origin/main|2026-09-05 23:01:57 -0400

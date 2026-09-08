@@ -1,0 +1,99 @@
+........................................................................ [ 15%]
+........................................................................ [ 30%]
+........................................................................ [ 45%]
+........................................................................ [ 61%]
+........................................................................ [ 76%]
+........................................................................ [ 91%]
+......................................                                   [100%]
+============================== warnings summary ===============================
+tests/test_app_integration.py: 99 warnings
+tests/test_prototype_service.py: 990 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\joblib\numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    array.shape = self.shape
+
+tests/test_app_integration.py: 750 warnings
+tests/test_dem_features.py: 90 warnings
+tests/test_procesamiento.py: 750 warnings
+tests/test_prototype_service.py: 6000 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\features.py:420: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return _bounds(geom, north_up=north_up, transform=transform)
+
+tests/test_app_integration.py: 90 warnings
+tests/test_dem_features.py: 12 warnings
+tests/test_procesamiento.py: 150 warnings
+tests/test_prototype_service.py: 720 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\windows.py:360: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    x, y = transform * (window.col_off or 0.0, window.row_off or 0.0)
+
+tests/test_app_integration.py: 90 warnings
+tests/test_dem_features.py: 12 warnings
+tests/test_procesamiento.py: 150 warnings
+tests/test_prototype_service.py: 720 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\windows.py:361: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(
+
+tests/test_dem_features.py: 9 warnings
+tests/test_dem_ingester.py: 3 warnings
+tests/test_dem_terrain.py: 3 warnings
+tests/test_procesamiento.py: 3 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\transform.py:178: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(west, north) * Affine.scale(xsize, -ysize)
+
+tests/test_dem_features.py::test_sample_grid_topography_returns_nan_for_cell_outside_raster_coverage
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\__init__.py:378: NotGeoreferencedWarning: The given matrix is equal to Affine.identity or its flipped counterpart. GDAL may ignore this matrix and save no geotransform without raising an error. This behavior is somewhat driver-specific.
+    dataset = writer(
+
+tests/test_dem_ingester.py::test_fetch_downloads_reads_and_writes_manifest
+tests/test_dem_ingester.py::test_fetch_reuses_cache_without_calling_api
+tests/test_dem_ingester.py::test_fetch_reuses_cache_without_calling_api
+tests/test_dem_ingester.py::test_fetch_force_true_bypasses_cache
+tests/test_dem_ingester.py::test_fetch_force_true_bypasses_cache
+  C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\src\ingesta\dem_ingester.py:183: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    band = dataset.read(1)
+
+tests/test_dem_terrain.py::test_reproject_produces_near_isotropic_metric_pixels
+tests/test_dem_terrain.py::test_processor_end_to_end_on_synthetic_hill
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\transform.py:189: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(west, north) * Affine.scale(
+
+tests/test_dem_terrain.py::test_reproject_rejects_dem_without_crs
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\__init__.py:378: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
+    dataset = writer(
+
+tests/test_dem_terrain.py::test_reproject_rejects_dem_without_crs
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\__init__.py:368: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
+    dataset = DatasetReader(path, driver=driver, sharing=sharing, **kwargs)
+
+tests/test_ingesta.py::test_ingest_dmc_keeps_stations_without_data_in_payload
+tests/test_ingesta.py::test_ingest_dmc_missing_credentials_degrades
+tests/test_ingesta.py::test_ingest_dmc_empty_station_catalog_degrades
+tests/test_ingesta_degradation.py::test_ingester_degrades_to_postgis_on_dmc_failure
+  C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\src\ingesta\parallel_ingester.py:198: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    out_path = self.raw_dir / f"dmc_meteo_{datetime.utcnow().date().isoformat()}.json"
+
+tests/test_ingesta.py::test_ingest_nasa_missing_api_key_degrades
+tests/test_ingesta.py::test_ingest_nasa_success_writes_daily_csv
+tests/test_ingesta_degradation.py::test_ingester_fails_when_fallback_empty
+  C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\src\ingesta\parallel_ingester.py:157: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    end_date = datetime.utcnow().date()
+
+tests/test_ingesta.py::test_ingest_conaf_success_when_api_reachable_without_seed
+tests/test_ingesta.py::test_ingest_conaf_falls_back_to_institutional_seed_when_degrade_fails
+tests/test_ingesta_degradation.py::test_conaf_loads_institutional_seed_on_failure
+  C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\src\ingesta\parallel_ingester.py:228: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    out_path = self.raw_dir / f"conaf_incendios_{datetime.utcnow().date().isoformat()}.json"
+
+tests/test_procesamiento.py::test_process_all_with_sample_raw
+  C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\src\procesamiento\data_processor.py:152: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "fecha": row.get("acq_date", datetime.utcnow().date()),
+
+tests/test_procesamiento.py::test_process_all_with_sample_raw
+tests/test_procesamiento.py::test_process_all_with_sample_raw
+  C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\src\procesamiento\data_processor.py:304: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "fecha": row.get("fecha", datetime.utcnow()),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+470 passed, 10664 warnings in 297.97s (0:04:57)
+EXIT_CODE=0

@@ -1,0 +1,111 @@
+INVENTARIO REAL DE PRUEBAS — S.A.P.I. Hito 1
+Generado 2026-09-07. Fuente: lectura directa de tests/*.py (docstrings +
+`def test_...`) y de los 4 scripts test_*.py en la raíz del repo — no
+clasificado solo por nombre de archivo.
+
+Total collected por pytest (ejecución fresca, ver pytest-full.txt): 470
+Total archivos en tests/: 58 (+ conftest.py, sin tests propios)
+Total scripts test_*.py en la raíz (fuera de pytest.ini testpaths=tests,
+NO se ejecutan en la suite estándar, requieren PostGIS/API reales): 4
+
+Columnas: archivo | #tests | categoría principal | componente real |
+propósito | tipo de evidencia
+
+=== CAUSALIDAD / ANTI-LEAKAGE ===
+(pipeline temporal nuevo — garantía feature_timestamp <= T / target futuro honesto)
+
+tests/test_causality_validator.py | 10 | CAUSALIDAD/ANTI-LEAKAGE | src/procesamiento/causality_validator.py::validate_temporal_causality | "test de no futuro": feature_timestamp<=T válido, >T es violación; target_timestamp>T válido | unitaria, determinista
+tests/test_temporal_features.py | 5 | CAUSALIDAD/ANTI-LEAKAGE | src/procesamiento/temporal_features.py | lag_24h usa la lectura real 24h antes (no la más cercana a T); lag nunca excede T; historial FIRMS ignora eventos en/después de T | unitaria, determinista
+tests/test_target_builder.py | 12 | CAUSALIDAD/ANTI-LEAKAGE | src/procesamiento/target_builder.py::build_targets | ventana (T,T+h] exacta; arribo en T no cuenta; cooldown excluye (nunca 0); target_event_id=None si no positivo o excluido | unitaria, determinista
+tests/test_temporal_dataset_integration.py | 9 | CAUSALIDAD/ANTI-LEAKAGE + INTEGRACIÓN | scripts/build_temporal_dataset.py (dataset real) | unicidad (cell_id,forecast_time); excluded nunca target 0/1; NaN meteo real no imputado a 0; folds walk-forward sin overlap temporal NI episodios compartidos train/test | integración sobre artefacto real (parquet), condicional a que exista
+tests/test_experiment_abcd_contract.py | 13 | CAUSALIDAD/ANTI-LEAKAGE + CONTRATO | scripts/experiment_abcd.py::FEATURES_A/B/C/D, run_fold | containment A⊂B⊂C⊂D; D-C=solo topografía; cell_id NUNCA en ningún feature set; _prep_xy nunca imputa NaN; guard de clase minoritaria en run_fold; HistGradientBoosting acepta NaN end-to-end | unitaria + contrato de regresión
+
+=== INTEGRIDAD DE DATOS ===
+
+tests/test_nan_journey_real_data.py | 1 | INTEGRIDAD DE DATOS | scripts/experiment_abcd.py sobre dataset real | traza el NaN real (no sintético) reportado por run_fold contra el dataset real | integración sobre artefacto real
+tests/test_pipeline_validators.py | 20 | INTEGRIDAD DE DATOS | src/procesamiento/pipeline_validators.py | validadores de manifest/dataset/contrato de feature sets | unitaria, determinista
+tests/test_dataset_cleaner.py | 5 | INTEGRIDAD DE DATOS | src/procesamiento/dataset_cleaner.py | winsorización, imputación mediana solo en filas "matched", dedup FIRMS (pipeline LEGACY, feb-2025) | unitaria
+tests/test_meteo_fire_joiner.py | 11 | INTEGRIDAD DE DATOS | src/procesamiento/meteo_fire_joiner.py | join ignición↔meteo por tolerancia ±15min, Haversine (pipeline LEGACY) | integración
+
+=== INTEGRACIÓN (ingesta / DMC / DEM / backfill) ===
+
+tests/test_backfill_dmc_historico.py | 7 | INTEGRACIÓN | scripts/backfill_dmc_historico.py | idempotencia (ignora fechaCreacion), detección de conflicto sin sobrescribir, meses sin datos, fallos parciales sin abortar | integración (filesystem + API mockeada)
+tests/test_regional_meteo_loading.py | 3 | INTEGRACIÓN | src/procesamiento/regional_meteo.py::load_regional_meteo_series | EXCLUYE explícitamente archivos *_conflicto_*; combina y ordena múltiples meses | integración (filesystem real, tmp_path)
+tests/test_regional_meteo.py | 7 | INTEGRACIÓN | src/procesamiento/regional_meteo.py | serie única station_id+momento, matching por tolerancia | integración
+tests/test_dem_ingester.py | 10 | INTEGRACIÓN | src/ingesta/dem_ingester.py | descarga/caché DEM, límite de llamadas OpenTopography | integración (API mockeada)
+tests/test_dem_terrain.py | 7 | UNITARIA | src/procesamiento/dem_terrain.py | reproyección + pendiente/orientación (Horn 1981) sobre raster sintético | unitaria
+tests/test_dem_features.py | 4 | CAUSALIDAD/INTEGRIDAD | src/procesamiento/dem_features.py::load_grid_topography | media zonal altitud/pendiente; NaN explícito si celda fuera de cobertura o sin directorio DEM (NUNCA 0) | integración (raster real vía tmp_path)
+tests/test_nasa_firms_backfill.py | ~5 (unittest) | INTEGRACIÓN | src/ingesta/nasa_firms_backfill.py | backfill histórico NASA FIRMS | integración
+tests/test_nasa_firms_backfill_client.py | 22 | INTEGRACIÓN | src/ingesta/nasa_firms_backfill.py (cliente, ventanas, CLI) | cobertura SAPI-45 | integración (API mockeada)
+tests/test_ingesta.py | 22 | INTEGRACIÓN | src/ingesta/parallel_ingester.py | ingesta asíncrona NASA/DMC/CONAF, degradación por credenciales/estación vacía | integración (mocks)
+tests/test_ingesta_degradation.py | 4 | INTEGRACIÓN | src/ingesta/parallel_ingester.py | degradación R-03 a PostGIS/seed institucional cuando falla DMC/CONAF | integración
+tests/test_raw_parser.py | 7 | UNITARIA | src/procesamiento/raw_parser.py | normalización payloads crudos NASA/DMC | unitaria
+tests/test_station_catalog.py | 5 | UNITARIA | src/procesamiento/station_catalog.py | catálogo DMC, selección espacial Haversine | unitaria
+tests/test_spatial_joiner.py | 4 | INTEGRACIÓN (LEGACY) | src/procesamiento/spatial_joiner.py::aggregate_dmc_daily | agregación diaria DMC a grilla (pipeline LEGACY/PostGIS) | integración
+tests/test_procesamiento.py | 8 | INTEGRACIÓN (LEGACY) | src/procesamiento/data_processor.py | pipeline geoespacial legacy end-to-end sobre muestra cruda | integración
+tests/test_db.py | 6 | INTEGRACIÓN | src/db.py | conexión y observabilidad (engine, logging de eventos) | integración
+tests/test_query.py | 18 | INTEGRACIÓN (LEGACY) | src/query/prediction_query.py | PredictionQuery, clasificación de riesgo (no usado en runtime del prototipo) | integración
+tests/test_inference_engine.py | 5 | INTEGRACIÓN (LEGACY) | src/modelo/inference_engine.py | inferencia XGBoost sin tocar Postgres real | integración
+tests/test_pipeline.py | 1 | INTEGRACIÓN (LEGACY) | src/pipeline/run_daily.py | orquestador diario legacy (mock de sub-pasos) | integración
+
+=== CONTRATOS / REGRESIÓN ===
+
+tests/test_architecture.py | 1 | CONTRATO | app/ (AST estático) | app/ NO importa src.ingesta/procesamiento/modelo/pipeline directamente ("Data Contract") | análisis estático (AST), regresión de arquitectura
+tests/test_grid_consistency.py | 3 | CONTRATO | src/geo/grid.py como fuente única | data_processor y spatial_joiner usan los MISMOS límites que la grilla canónica; generate_seed importa la grilla canónica | unitaria/contrato
+tests/test_megaevento_report.py | 2 | REGRESIÓN | scripts/megaevento_report.py | reporte de un evento histórico específico (auditoría, sección 10) | integración puntual
+tests/test_grid_assign_cell.py | 4 | UNITARIA | src/geo/grid.py::all_cells/assign_cell | centroides resuelven a su propia celda; fuera de grilla → None; celdas contiguas sin huecos | unitaria, determinista
+
+=== PROTOTIPO / INFERENCIA (pipeline temporal nuevo) ===
+
+tests/test_prototype_service.py | 14 | PROTOTIPO/INFERENCIA | src/inference/prototype_service.py::score_current_grid | 50 celdas únicas, rank 1..N único, display_rank comparte empates (method=min), alineación cell_id<->score robusta a reordenamiento, features mayoritariamente distintas aunque empate el score, scores finitos, sin timestamps futuros, falla explícito si T>última lectura real, aislamiento legacy/demo_seed | unitaria + integración sobre artefacto real (modelo .pkl)
+tests/test_prototype_freshness.py | 8 | PROTOTIPO/INFERENCIA | src/inference/prototype_service.py::classify_freshness + app/components/prototype_view.py | RECIENTE<=12h, CON RETRASO<=24h, HISTÓRICO>24h; banner de stale solo si histórico; encabezado nunca dice "próximas horas" si el dato es viejo | unitaria (freshness) + UI mockeada (banner)
+
+=== UI / STREAMLIT ===
+
+tests/test_app.py | 22 | UI/STREAMLIT | app/app.py + componentes | contratos de componentes de la app demo (SAPI-44/45) | unitaria/contrato UI
+tests/test_app_integration.py | 5 | UI/STREAMLIT (SMOKE) | app/app.py::main() | AppTest de punta a punta: main() sin excepciones, modo Prototipo es el default y corre, zonas prioritarias/tendencia presentes, selección de celda actualiza estado | integración real (AppTest, sin mocks del pipeline) — ES el smoke test de Streamlit
+tests/test_cell_table.py | 16 | UI/STREAMLIT | app/utils/cell_table.py | tabla y selección de celdas | unitaria UI
+tests/test_day_alerts.py | 5 | UI/STREAMLIT | app/components/day_alerts.py | "Top zonas prioritarias" | unitaria UI
+tests/test_map_renderer.py | 16 | UI/STREAMLIT | app/utils/map_renderer.py | renderizado cartográfico (Folium) | unitaria UI
+tests/test_risk_colors.py | 5 | UI/STREAMLIT | app/utils/risk_colors.py | paleta y estilo de selección en el mapa | unitaria UI
+tests/test_risk_sparkline.py | 4 | UI/STREAMLIT | app/components/risk_sparkline.py | tendencia de riesgo | unitaria UI
+tests/test_theme.py | 24 | UI/STREAMLIT | app/theme/* | tokens de diseño, contraste WCAG, sincronía con config.toml de Streamlit | unitaria UI
+tests/test_state.py | 11 | UI/STREAMLIT | app/state.py | estado de sesión del dashboard | unitaria UI
+tests/test_date_helpers.py | 13 | UI/STREAMLIT | app/utils/date_helpers.py | helpers de fechas del modo demo | unitaria UI
+tests/test_cell_zones.py | 4 | UI/STREAMLIT | app/utils/cell_zones.py | zonas climáticas por celda (modo demo) | unitaria UI
+tests/test_metrics_loader.py | 6 | UI/STREAMLIT | app/utils/metrics_loader.py | carga de métricas ML para el panel | unitaria UI
+tests/test_ui_profesional.py | 10 | UI/STREAMLIT | niveles/alertas/tendencia/ops_layout | contratos de la UI "profesional" (rediseño Cursor auditado) | unitaria/contrato UI
+
+=== MODELO ML (legacy XGBoost — fuera del pipeline temporal del prototipo) ===
+
+tests/test_baseline.py | 3 | UNITARIA (LEGACY) | src/modelo/baseline.py | modelo baseline Random Forest | unitaria
+tests/test_optimizer.py | 3 | UNITARIA (LEGACY) | src/modelo/optimizer.py | optimizador XGBoost | unitaria
+tests/test_serialization.py | 1 | UNITARIA (LEGACY) | src/modelo/serializer.py | serialización de modelos .pkl | unitaria
+
+=== CONFIGURACIÓN / MISCELÁNEA ===
+
+tests/test_config.py | 2 | UNITARIA | src/config.py | configuración central (incluye SAPI_DATA_MODE) | unitaria
+tests/test_features.py | 11 | UNITARIA | src/procesamiento/features.py | regla 30-30-30, feature engineering (LEGACY) | unitaria
+tests/test_row_explainer.py | 5 | UNITARIA | src/procesamiento/row_explainer.py | explicación de fila (auditoría, sección 21) | unitaria
+tests/test_episode_evaluation.py | 7 | INTEGRIDAD DE DATOS | src/procesamiento/episode_evaluation.py | n_positive_rows cuenta filas (no pares evento-fila); hit@K por mejor rank del episodio; detección de dominación por episodio grande | unitaria, determinista — GUARDA REGRESIÓN de un defecto real (ver defect-evidence.md)
+tests/test_grid.py | 8 | CONTRATO | app/utils/grid.py (grilla demo) | grilla demo cubre el corredor real / evento 2024-02-03 (>=70% detecciones FIRMS dentro) | integración sobre datos reales (FIRMS 2024-02-03)
+
+conftest.py | 0 (fixtures) | — | fixtures compartidas (mocks streamlit, tmp datasets) | soporte de test
+
+=== NO EJECUTADOS POR LA SUITE ESTÁNDAR (fuera de pytest.ini testpaths=tests) ===
+No son pruebas automatizadas pytest (sin `def test_*`, sin asserts — son
+scripts de verificación manual, imprimen resultados a stdout). Requieren
+una base PostGIS real y/o el pipeline legacy XGBoost. NO se contabilizan
+en collected=470 ni se ejecutaron en esta fase.
+
+test_persistence_postgis.py (raíz) | script manual | INTEGRACIÓN MANUAL (LEGACY) | src/procesamiento/persister.py + PostGIS real | requiere DB real, no en CI
+test_prediction_query_real.py (raíz) | script manual | INTEGRACIÓN MANUAL (LEGACY) | src/modelo/inference_engine.py + src/query/prediction_query.py | requiere DB real, no en CI
+test_raw_parser.py (raíz, DISTINTO de tests/test_raw_parser.py) | script manual | INTEGRACIÓN MANUAL | src/procesamiento/raw_parser.py sobre data/raw/ real | imprime a stdout, sin asserts
+test_spatial_join.py (raíz) | script manual | INTEGRACIÓN MANUAL (LEGACY) | src/procesamiento/spatial_joiner.py + PostGIS real | requiere DB real, no en CI
+
+=== CARGA / RENDIMIENTO (fuera de alcance de esta fase — AE1, no AE3) ===
+locustfile.py (raíz) | script real | CARGA (Locust) | dashboard Streamlit (endpoints "/" y "/_stcore/health") | EXISTE como script real ("Prueba de carga CP-01"), pero no se encontró
+evidencia de una ejecución real capturada (sin reporte/CSV de Locust en
+reports/). No se ejecuta en esta fase (alcance AE1/IL1.1-1.4, no AE3) ni
+se fabrica una prueba de carga nueva — ver docs/testing-evidencia-hito1.md
+sección 2 (Alcance académico).

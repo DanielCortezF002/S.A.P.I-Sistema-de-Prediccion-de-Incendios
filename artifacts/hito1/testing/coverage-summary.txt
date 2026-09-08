@@ -1,0 +1,83 @@
+# Cobertura de código (fresca, 2026-09-07, python -m pytest -q con pytest.ini default: --cov=app --cov=src)
+# Nota metodológica: este porcentaje mide LINEAS DE CODIGO cubiertas por la suite,
+# NO cobertura de HU/CA (ver docs/testing-evidencia-hito1.md seccion 17/23).
+
+=============================== tests coverage ================================
+_______________ coverage: platform win32, python 3.14.6-final-0 _______________
+
+Name                                       Stmts   Miss  Cover   Missing
+------------------------------------------------------------------------
+app\__init__.py                                0      0   100%
+app\app.py                                   183      9    95%   94, 114-115, 355, 382-383, 394-397
+app\components\__init__.py                     0      0   100%
+app\components\banner.py                      13      0   100%
+app\components\controls.py                    63     10    84%   28, 30, 52-53, 55-56, 73-79
+app\components\day_alerts.py                  34      2    94%   32-33
+app\components\ops_layout.py                 189     36    81%   84, 128-129, 134-135, 155-161, 237, 295, 329-345, 384-390, 396, 421-422, 425-426, 464-469, 485, 496, 608, 611, 614, 619
+app\components\prototype_view.py             203     36    82%   90-92, 111, 133, 142, 277-280, 351-352, 416-419, 459-463, 470-471, 499-500, 507, 566, 570-571, 603-612, 637-638
+app\components\risk_level.py                   9      0   100%
+app\components\risk_map.py                     9      0   100%
+app\components\risk_sparkline.py              21      1    95%   22
+app\data\__init__.py                           0      0   100%
+app\data\cell_firms.py                        27      2    93%   28, 40
+app\data\cell_terrain.py                      24      2    92%   31, 39
+app\data\dmc_live.py                          83     14    83%   44, 46, 48, 55, 61, 66, 76, 94-95, 113, 134-135, 142, 146
+app\data\firms_detections.py                  18      2    89%   32, 45
+app\state.py                                  55      0   100%
+app\theme\__init__.py                          0      0   100%
+app\theme\contrast.py                         27      0   100%
+app\theme\css.py                              12      0   100%
+app\theme\tokens.py                           68      0   100%
+app\utils\__init__.py                          0      0   100%
+app\utils\cell_table.py                       84      0   100%
+app\utils\cell_zones.py                       27      5    81%   49, 71-74
+app\utils\date_helpers.py                     59      2    97%   87-88
+app\utils\demo_seed.py                        89      2    98%   57, 160
+app\utils\grid.py                              3      0   100%
+app\utils\map_renderer.py                    101      0   100%
+app\utils\metrics_loader.py                   25      0   100%
+app\utils\risk_colors.py                      11      0   100%
+src\__init__.py                                0      0   100%
+src\config.py                                 32      0   100%
+src\db.py                                     26      0   100%
+src\geo\__init__.py                            0      0   100%
+src\geo\grid.py                               53      0   100%
+src\inference\__init__.py                      0      0   100%
+src\inference\prototype_service.py           133      6    95%   132, 151, 157, 179, 221, 234
+src\ingesta\__init__.py                        0      0   100%
+src\ingesta\dem_ingester.py                   96      0   100%
+src\ingesta\nasa_firms_backfill.py           183      0   100%
+src\ingesta\parallel_ingester.py             147      1    99%   242
+src\modelo\__init__.py                         0      0   100%
+src\modelo\baseline.py                        50      1    98%   68
+src\modelo\inference_engine.py                71     37    48%   28-36, 62-138
+src\modelo\optimizer.py                       80      8    90%   53, 130, 149-160
+src\modelo\serializer.py                      38      1    97%   74
+src\pipeline\__init__.py                       0      0   100%
+src\pipeline\run_daily.py                     32      2    94%   70-71
+src\procesamiento\__init__.py                  0      0   100%
+src\procesamiento\causality_validator.py      28      0   100%
+src\procesamiento\data_processor.py          129      5    96%   100, 190, 200, 209, 225
+src\procesamiento\dataset_cleaner.py         131      8    94%   59, 68, 70, 109, 127, 131, 172, 175
+src\procesamiento\dem_features.py             70      2    97%   80-81
+src\procesamiento\dem_terrain.py              68      0   100%
+src\procesamiento\episode_evaluation.py       59      0   100%
+src\procesamiento\episodes.py                 54      8    85%   110, 128-153
+src\procesamiento\features.py                 63      0   100%
+src\procesamiento\meteo_fire_joiner.py        77      0   100%
+src\procesamiento\persister.py                40     40     0%   3-96
+src\procesamiento\pipeline_validators.py     109     12    89%   63, 149, 189-190, 196, 206, 223, 234-238
+src\procesamiento\raw_parser.py               52      1    98%   38
+src\procesamiento\regional_meteo.py           68      3    96%   94, 131, 136
+src\procesamiento\row_explainer.py            31     18    42%   86-94, 98-109
+src\procesamiento\spatial_joiner.py           46     18    61%   81-112
+src\procesamiento\station_catalog.py          38      0   100%
+src\procesamiento\target_builder.py           34      0   100%
+src\procesamiento\temporal_features.py        38      0   100%
+src\query\__init__.py                          0      0   100%
+src\query\prediction_query.py                 94      5    95%   199-206, 209-210
+src\query\risk_map_query.py                    3      0   100%
+------------------------------------------------------------------------
+TOTAL                                       3610    299    92%
+Required test coverage of 80% reached. Total coverage: 91.72%
+470 passed, 10664 warnings in 232.34s (0:03:52)

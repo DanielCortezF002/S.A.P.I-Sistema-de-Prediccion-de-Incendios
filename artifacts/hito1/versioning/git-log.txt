@@ -1,0 +1,73 @@
+9f076172adca3dbce0285f5d942d2803ac6f68a4|9f07617|2026-09-07 12:30:23 -0300|danie|danie@example.com|ui: polish contrast, spacing and radio labels (feedback pass)
+2147e7053fb06d12dfb0e9556694b163d7fd1bb1|2147e70|2026-09-07 12:13:45 -0300|danie|danie@example.com|ui: finalize professional prototype dashboard
+b75d357053b6e8f560f9d46513f96e3ee4c25bf2|b75d357|2026-09-07 10:43:39 -0300|danie|danie@example.com|checkpoint: freeze functional local prototype
+de0aaa85a5ee45d399405da7cbd180d6240383a6|de0aaa8|2026-09-07 10:20:28 -0300|danie|danie@example.com|fix: 4 correcciones UX/semánticas del prototipo antes de congelarlo
+46ceaecf2e7d312c37bcc6b7dfbac42586cbea09|46ceaec|2026-09-07 09:48:04 -0300|danie|danie@example.com|feat: prototipo local funcional — dashboard conectado al pipeline temporal
+99efd7a61110a652f2d1366c5199dba0799c7c3d|99efd7a|2026-09-07 09:13:53 -0300|danie|danie@example.com|checkpoint: backfill DMC 330007 (Fase 3) — 5 años continuos de meteorologia real
+60f9fa796e42ae382fbd461974a8ac521204467a|60f9fa7|2026-09-07 08:31:27 -0300|danie|danie@example.com|checkpoint: temporal pipeline audit and reproducibility guards
+7b09f550d0932543fddadf5677534c6ebd5b8b23|7b09f55|2026-09-05 23:01:57 -0400|danie|danie@example.com|chore(seed): alinear los comentarios del seed PostGIS con la grilla que genera
+2ef14cd33e38b0e26e08e843baed4885728d548d|2ef14cd|2026-09-05 23:01:36 -0400|danie|danie@example.com|docs: reconciliar la documentación con la grilla de la demo y registrar la deuda de las dos grillas
+ff5fdabc7e3fa32ee748cf79b79ac19540ee200b|ff5fdab|2026-09-05 23:01:05 -0400|danie|danie@example.com|feat(app): pestañas en vez de dos columnas, banner por evidencia real y CSS desde tokens
+45d2448c9baf33b8c67096b4291d48c94e4ab6cc|45d2448|2026-09-05 23:00:40 -0400|danie|danie@example.com|refactor(app): estado de sesión en app/state.py, con sus transiciones cubiertas
+86b5663de25b8860a74fac4035ac4b72c2783f85|86b5663|2026-09-05 23:00:21 -0400|danie|danie@example.com|feat(app): mapa con simbología graduada, detecciones reales y leyenda anclada
+caf69fc8e04a1f5d1ea05c1ffe65f3454d4c2e7c|caf69fc|2026-09-05 23:00:00 -0400|danie|danie@example.com|feat(app): sistema de diseño centralizado en app/theme
+64772688eae7d2fdb8923edab3d3cc6c2ac9ca37|6477268|2026-09-05 22:59:36 -0400|danie|danie@example.com|feat(app): grilla única en app/utils/grid.py, verificada contra NASA FIRMS
+bccbdb04a45b6ed776f74a9ec0c9044f6eaa615f|bccbdb0|2026-09-05 16:44:05 -0400|danie|danie@example.com|feat(app): tarjeta 'Clima actual en Rodelillo' — DMC en vivo, TTL 5 min
+f3988e3cb7012668c861818a4c70aec7451f32b8|f3988e3|2026-09-05 16:37:18 -0400|danie|danie@example.com|fix(app): forzar raiz del repo al indice 0 de sys.path en cada run
+dbf450ea800a38e5c370cc3561229b765334edb7|dbf450e|2026-09-05 11:03:29 -0400|danie|danie@example.com|Merge design/direccion-b-institucional: Dirección B institucional + panel ML unificado
+1c9d01cb97e05a106008521078adc18c325595fe|1c9d01c|2026-09-04 18:03:15 -0400|danie|danie@example.com|feat(app): panel ML dentro de Detalles técnicos + preselección de celda de mayor riesgo
+53f6b928d87327d442409abfab177988662beac5|53f6b92|2026-09-04 18:03:15 -0400|danie|danie@example.com|feat(app): panel ML dentro de Detalles técnicos + preselección de celda de mayor riesgo
+143947c79d0db896d89f256069327d3e47d26343|143947c|2026-09-04 17:42:10 -0400|danie|danie@example.com|feat(app): jerarquía de información pensada para brigadista, no para dev
+ad5a58a6cf720582911bdee8c834af2916b55093|ad5a58a|2026-09-04 17:16:18 -0400|danie|danie@example.com|fix(app): corrige contraste sidebar en Dirección B (código inline y métricas)
+24dcb97f6e0a4bb3da3f1a5ac8b6a9593df89fc5|24dcb97|2026-09-04 17:11:31 -0400|danie|danie@example.com|feat(app): exploración visual — Dirección B "Claridad Institucional"
+bca417da8518a720d31dcdfbb98cc98fc523a628|bca417d|2026-09-03 23:56:28 -0400|danie|danie@example.com|fix(app): 3 arreglos CSS mobile — mapa, controles de fecha, columnas anidadas
+c918230df40aacf8ea8f46743184f8082fa7fb23|c918230|2026-09-03 23:05:33 -0400|danie|danie@example.com|docs: agregar versión Word del Informe 1 para entrega
+fd1b9872831b4219b7afa17c23ddae16c31ba34c|fd1b987|2026-09-02 22:27:05 -0400|danie|danie@example.com|docs: Informe 1 — Seminario de Licenciatura (INSW421, IL 1.1-1.4)
+48106dbb659c89f930e6dc9f28e64342980c4a99|48106db|2026-09-02 22:26:52 -0400|danie|danie@example.com|feat(sapi-32): script reproducible del artefacto de prueba real ignición->celda
+f43db376f2a9b555bb0a21302884da36493798cd|f43db37|2026-09-02 22:26:37 -0400|danie|danie@example.com|docs: corregir métricas fabricadas restantes y documentar avance SAPI-32 + hallazgo R-ETIQUETA-01
+38e3231be4c030db9e447e404b59168b12beba34|38e3231|2026-09-02 20:25:36 -0400|danie|danie@example.com|fix(pipeline): parametrizar reports_dir en run_daily_pipeline para que la suite de tests no sobreescriba metrics.json real
+a1bfa169510f8f725252dc834e40743c21b16931|a1bfa16|2026-09-02 20:25:04 -0400|danie|danie@example.com|docs: actualizar menciones desactualizadas de métricas/cobertura a valores vigentes (221 tests, 84.07%)
+180de5dcc32784f17781619dc871ad6d22e5bfb3|180de5d|2026-09-01 23:31:07 -0400|danie|danie@example.com|docs(riesgo): documentar R-ETIQUETA-01 — la regla sintética de ignición nunca coincide con incendios reales confirmados
+c22c9a14bac2e6bb2523fc9a071bcbd37372d29c|c22c9a1|2026-09-01 23:01:08 -0400|danie|danie@example.com|feat(sapi-30): pipeline DEM real + corrección de métricas fabricadas
+cb2ece1d4aac67240c8cfca8dae54cec078fd490|cb2ece1|2026-09-01 17:05:10 -0400|danie|danie@example.com|fix(docs): reconstruir acta UAT con hallazgo real, eliminar duplicados fabricados por sesion anterior
+36ba7c830f79e9e6d183b3ca14718daecf9f0256|36ba7c8|2026-09-01 00:18:29 -0400|danie|danie@example.com|docs: consolidar matriz de trazabilidad, matriz de riesgos v1 y evidencia SQA 80.34% (Semana 5)
+ba5b9a31aa8cffc8a438b821944866bc8fad56df|ba5b9a3|2026-09-01 00:17:29 -0400|danie|danie@example.com|chore: actualizar reportes de cobertura y metricas analiticas finales (Semana 5)
+aa6198dc4268ffe22ca5bd8b91afa10a48b8c06d|aa6198d|2026-09-01 00:16:51 -0400|danie|danie@example.com|docs: formalizar matriz de trazabilidad, matriz de riesgos v1 y reporte SQA (Semana 5)
+0f472af2df607b7dda65c5512cbaa25da7fec788|0f472af|2026-08-31 23:58:38 -0400|danie|danie@example.com|docs: acta de aceptacion con usuario - hallazgo confirmado de usabilidad movil (Semana 5)
+5388c55f21b0af805023659ec18f2e65555f1a75|5388c55|2026-08-31 23:02:47 -0400|danie|danie@example.com|docs: matrices de trazabilidad y riesgo; alinear guias con evidencia verificada
+b8bbeb527ab7eec52a3e80dd66cd776edc76cbad|b8bbeb5|2026-08-31 23:02:39 -0400|danie|danie@example.com|test(coverage): ampliar suite a gate 80% (SAPI-45)
+a506d599c1a1841e532626235f720f67c59170b6|a506d59|2026-08-31 23:02:31 -0400|danie|danie@example.com|test(db): observabilidad y conexiones backend
+ae387432d68808df5aa622b811feae87cd57629f|ae38743|2026-08-31 23:02:21 -0400|danie|danie@example.com|feat(app): modo demo_seed, badge y banner de alcance (SAPI-44)
+57271b9adb13c90fdbd5db1c0254741b9a3f5688|57271b9|2026-08-31 23:02:10 -0400|danie|danie@example.com|feat(modelo): scaffolding inferencia y persistencia PostGIS
+53007b861994715b9e4f07c0cb4045e350acb3fd|53007b8|2026-08-31 23:02:01 -0400|danie|danie@example.com|feat(ingesta): backfill NASA FIRMS ventanas SP/NRT
+5ca2c46efe4677d048c4fc95910eb5b04a6d817e|5ca2c46|2026-08-31 23:01:52 -0400|danie|danie@example.com|feat(procesamiento): limpieza dataset join feb-2025 (SAPI-32)
+5b3e5c0b51cd5333440c51d7c8a859891690f6f7|5b3e5c0|2026-08-31 23:01:42 -0400|danie|danie@example.com|feat(procesamiento): parser, catalogo DMC y join ignicion-meteo (SAPI-28)
+10b1e90887e51ec924f54f5e537761743460cf5b|10b1e90|2026-08-31 23:01:32 -0400|danie|danie@example.com|feat(config): SAPI_DATA_MODE y URL backend directa
+5f311653a1741e8ccedb40f9e291e9f3d4e34381|5f31165|2026-08-29 22:00:27 -0400|danie|danie@example.com|On main: local WIP antes de pull 8d53ae8
+07be34ceb8a707cfff1371eb9ee3d2c7bb6a7349|07be34c|2026-08-29 22:00:27 -0400|danie|danie@example.com|index on main: df942da fix(ingesta): corregir endpoint DMC y agregar credenciales/estaciones reales
+8d53ae881153cbeedb6b43bfe66eecc7be66a74a|8d53ae8|2026-08-30 01:52:38 +0000|Daniel Cortez|daniel.cortez@duocuc.cl|fix(ingesta): corregir formato real de la API NASA FIRMS + confirmar estaciones DMC
+df942daffa0b7ec2559d59c23651be70b08e82d5|df942da|2026-08-28 22:09:27 +0000|Daniel Cortez|daniel.cortez@duocuc.cl|fix(ingesta): corregir endpoint DMC y agregar credenciales/estaciones reales
+4472bb7ebe3251841c98595277be913a99e5f89f|4472bb7|2026-08-28 04:14:31 +0000|Daniel Cortez|daniel.cortez@duocuc.cl|fix(metrics): remover precision/f1/auc-baseline sin corrida real
+942609a116ac5a50f547be1063c716e327de3e64|942609a|2026-07-06 18:24:43 -0400|Daniel Gonzalo Cortez Fierro|128172594+DanielCortezF002@users.noreply.github.com|Update README.md
+5254aead58563dfa8885de887fe46a514bd3a242|5254aea|2026-06-25 23:28:18 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(cloud): eliminar re-imports con prefijo app. que causan UnboundLocalError en Streamlit Cloud
+d5789de9917600dd3d71ac8df8704dda680191ec|d5789de|2026-06-25 23:19:25 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(dashboard): cierre de prototipo, cache ram y suite de pruebas
+38134c8db15baad65aab02d9a7f527ef3b090c0b|38134c8|2026-06-20 21:56:35 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(demo): panel ML, slider temporal, zonas climaticas y build v8-professional
+b9cd0aadbc592b8428685d0258011757f15857c3|b9cd0aa|2026-06-20 18:40:04 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(cloud): getattr en date_helpers y fallback demo sin AttributeError
+c8befebda004c89caffbcaa900d4318a2158dded|c8befeb|2026-06-20 18:27:33 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix: simplificar fechas demo, contingencia seed y evitar doble consulta mapa
+3a81fd2adadd01d52447ffeb7d13be9095dc3b36|3a81fd2|2026-06-20 18:17:49 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(app): importar solo PredictionQuery y resolver fechas con fallback
+5f7ef1ebb6125fd2084fc98e1c9b9e8b2da61742|5f7ef1e|2026-06-20 18:15:08 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(app): evitar cache stale de PredictionQuery en Streamlit Cloud
+9091aa8847c341a0c33d0eb71cea3fa7c2b8993e|9091aa8|2026-06-20 18:11:46 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(cloud): serving layer autocontenida en prediction_query sin import circular
+9c58038a85003cf91520a16910c9b3290bcbf18e|9c58038|2026-06-20 17:54:49 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(app): importar solo PredictionQuery para evitar ImportError en cloud
+a4b9becfd14af753a0a29834b1750aa0c7605120|a4b9bec|2026-06-20 17:49:47 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(demo): seed multi-fecha y consulta exacta por dia
+d4d9c3cdfd39c5262f8bcf470624db78a642f98b|d4d9c3c|2026-06-20 15:38:55 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(app): numerar tabla detalle 1-50 sin indice pandas 0-based
+6ebdb718385069aba999c70e4e3f9ccaac5475af|6ebdb71|2026-06-20 15:27:33 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(demo): calibrar seed zonal oeste-este y tres niveles de riesgo
+0c769b2ac071acbb2d8833ba91952d9b5e94da53|0c769b2|2026-06-20 15:16:42 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(demo): seed zonal corredor Vina-Quilpue-Villa Alemana y mapa circular
+61e75ced480b7889c9a576ca7bc227c63b7e9baf|61e75ce|2026-06-20 14:50:15 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(query): módulo risk_map_query v2 sin fallback silencioso a 8 celdas
+7123fa34a59013b8411f99129ee2b517304d8b2f|7123fa3|2026-06-20 14:41:36 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(app): restaurar columnas KPI tras build stamp
+e93ea761652d1d9e5a43b7db6c0caa9ffcdf179c|e93ea76|2026-06-20 14:39:55 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(demo): forzar redeploy y bust cache para consulta 50 celdas
+ad533cc949c422ec88ddaa349a4a8d1fc8301996|ad533cc|2026-06-20 14:32:30 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(demo): mostrar 50 celdas por consulta y regla 30-30-30 activa en seed
+f82e8df83e98ecfb31eab8a792b6508f88575e2c|f82e8df|2026-06-20 14:16:33 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(app): corregir sys.path para imports en Streamlit Cloud
+bd530f53ac0c80536958b812cab5c4e2fc24cf0a|bd530f5|2026-06-20 14:12:31 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|fix(deploy): fijar dependencias Streamlit Cloud para Python 3.11
+30c8a26e71e3d365b6cdccf212ca043ba827e4e0|30c8a26|2026-06-20 11:17:18 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(dashboard): optimizar motor predictivo XGBoost e implementar UI geográfica con caché bi-nivel #HU-06 #HU-07 #HU-08
+2d5afc890ad650a156d025d10f1a6bc7f071152a|2d5afc8|2026-06-20 11:15:31 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(model): implementar Feature Engineering, balanceo por SMOTE y clasificador baseline RF #HU-05 #TS-02
+6fcffa0b9b2e09a7c556e99586e1abb68e243bdb|6fcffa0|2026-06-20 11:14:50 -0400|Daniel Gonzalo Cortez Fierro|d.cortezfierro@uandresbello.edu|feat(data): implementar pipeline ETL asíncrono y normalización geoespacial #HU-01 #HU-02 #HU-03 #HU-04
