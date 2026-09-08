@@ -10,13 +10,22 @@ from imblearn.over_sampling import SMOTE
 
 from src.db import log_event
 
+# Única definición de la regla 30-30-30 del proyecto (constantes de módulo,
+# no solo de clase, para que otros módulos —p. ej.
+# `src.procesamiento.regional_meteo`— la importen sin reimplementarla ni
+# arrastrar una segunda definición con umbrales distintos, como pasó con el
+# 32/28/25 de `src.modelo.baseline`/`optimizer` — ver docs/matriz-riesgo.md).
+RULE_30_30_30_TEMP_THRESHOLD = 30.0
+RULE_30_30_30_HUMIDITY_THRESHOLD = 30.0
+RULE_30_30_30_WIND_THRESHOLD = 30.0
+
 
 class FeatureEngineer:
     """Cálculo de features dinámicas, lags y regla 30-30-30."""
 
-    TEMP_THRESHOLD = 30.0
-    HUMIDITY_THRESHOLD = 30.0
-    WIND_THRESHOLD = 30.0
+    TEMP_THRESHOLD = RULE_30_30_30_TEMP_THRESHOLD
+    HUMIDITY_THRESHOLD = RULE_30_30_30_HUMIDITY_THRESHOLD
+    WIND_THRESHOLD = RULE_30_30_30_WIND_THRESHOLD
 
     def compute_environmental_features(self, df: pd.DataFrame) -> pd.DataFrame:
         """Genera vectores de características para modelamiento.

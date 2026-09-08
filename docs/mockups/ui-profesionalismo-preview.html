@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>S.A.P.I. — Mockup profesionalismo (aprobación)</title>
+  <!--
+    Mockup aislado. No forma parte de la app Streamlit.
+    Tokens tomados de app/theme/tokens.py (modo claro).
+    Abrir en el navegador; no requiere servidor.
+  -->
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap");
+
+    :root {
+      --page: #eceeef;
+      --muted: #e0e3e7;
+      --card: #ffffff;
+      --border: #c9ced4;
+      --hair: #d5d9de;
+      --text: #20242b;
+      --accent: #3b6ea5;
+      --bajo: #2ecc71;
+      --bajo-stroke: #1a7a42;
+      --bajo-on: #0d3d20;
+      --medio: #c8720d;
+      --medio-stroke: #8f4f06;
+      --medio-on: #3a2400;
+      --alto: #e74c3c;
+      --alto-stroke: #a93226;
+      --alto-on: #fdecea;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-xxl: 32px;
+      --radius: 6px;
+      --font: "Public Sans", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      background: var(--page);
+      color: var(--text);
+      padding: var(--space-xl);
+      line-height: 1.4;
+    }
+    .wrap { max-width: 920px; margin: 0 auto; }
+    .note {
+      font-size: 13px;
+      color: #4b5563;
+      margin-bottom: var(--space-xl);
+      padding: var(--space-md) var(--space-lg);
+      background: var(--muted);
+      border-radius: var(--radius);
+      border-left: 3px solid var(--accent);
+    }
+    .section-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: var(--space-xxl) 0 var(--space-md);
+    }
+    h1 { font-size: 22px; margin: 0 0 4px; }
+    .sub { font-size: 13px; color: #6b7280; margin: 0 0 var(--space-lg); }
+
+    /* ── 1. Banner de mayor riesgo (más presencia) ── */
+    .risk-hero {
+      background: var(--alto);
+      color: var(--alto-on);
+      border-radius: 8px;
+      padding: var(--space-lg) var(--space-xl);
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: var(--space-lg);
+      align-items: center;
+      box-shadow: 0 0 0 1px rgba(0,0,0,0.06);
+    }
+    .risk-hero__icon {
+      width: 48px; height: 48px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.18);
+      display: grid; place-items: center;
+      flex: none;
+    }
+    .risk-hero__icon svg { width: 28px; height: 28px; }
+    .risk-hero__kicker {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; opacity: 0.85; margin-bottom: 2px;
+    }
+    .risk-hero__title {
+      font-size: 22px; font-weight: 800; letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+    .risk-hero__meta { font-size: 14px; font-weight: 500; margin-top: 4px; opacity: 0.92; }
+    .risk-hero__badge {
+      background: rgba(0,0,0,0.22);
+      color: var(--alto-on);
+      font-size: 12px; font-weight: 700;
+      padding: 8px 12px; border-radius: 4px;
+      text-align: center; line-height: 1.25;
+      min-width: 120px;
+    }
+    .risk-hero__badge small { display: block; font-weight: 500; opacity: 0.85; font-size: 10px; }
+
+    /* ── 2. Nivel de riesgo (color + forma + etiqueta + descripción) ── */
+    .risk-levels {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+    }
+    .risk-chip {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-md) var(--space-lg);
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-md);
+      align-items: start;
+    }
+    .risk-chip.is-active {
+      border-color: var(--chip-stroke);
+      box-shadow: inset 3px 0 0 var(--chip-stroke);
+    }
+    .risk-chip__mark {
+      width: 36px; height: 36px;
+      border-radius: 6px;
+      background: var(--chip-surface);
+      display: grid; place-items: center;
+    }
+    .risk-chip__mark svg { width: 20px; height: 20px; }
+    .risk-chip__label {
+      font-size: 14px; font-weight: 700;
+      color: var(--chip-stroke);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .risk-chip__desc { font-size: 12px; color: #5b6470; margin-top: 2px; }
+
+    /* Formas geométricas (no emoji): accesibilidad + look ops */
+    .shape-bajo { fill: var(--bajo-on); }
+    .shape-medio { fill: var(--medio-on); }
+    .shape-alto { fill: var(--alto-on); }
+
+    /* ── 3. Tarjetas de variable ── */
+    .vars {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: var(--space-md);
+    }
+    .var-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: var(--space-lg);
+      min-height: 112px;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-sm);
+    }
+    .var-card__top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .var-card__name {
+      font-size: 12px; font-weight: 600;
+      color: #5b6470; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .var-card__icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--muted);
+      display: grid; place-items: center;
+      color: var(--accent);
+    }
+    .var-card__icon svg { width: 16px; height: 16px; }
+    .var-card__value {
+      font-size: 28px; font-weight: 800;
+      letter-spacing: -0.03em; line-height: 1;
+    }
+    .var-card__unit {
+      font-size: 14px; font-weight: 600; color: #6b7280; margin-left: 2px;
+    }
+    .var-card__state {
+      font-size: 11px; font-weight: 700;
+      letter-spacing: 0.04em; text-transform: uppercase;
+      padding: 3px 8px; border-radius: 999px;
+      width: fit-content;
+    }
+    .state-alto { background: #fdecea; color: #a93226; }
+    .state-normal { background: #e8f5ee; color: #1a7a42; }
+    .state-bajo { background: #eef2f7; color: #3b6ea5; }
+
+    /* ── 4. Panel de detalle de zona ── */
+    .detail {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .detail__head {
+      padding: var(--space-lg) var(--space-xl);
+      border-bottom: 1px solid var(--hair);
+      display: flex; gap: var(--space-md); align-items: center;
+    }
+    .detail__head .risk-chip__mark { width: 40px; height: 40px; }
+    .detail__id { font-size: 18px; font-weight: 800; letter-spacing: -0.02em; }
+    .detail__zone { font-size: 13px; color: #5b6470; }
+    .detail__prob {
+      margin-left: auto; text-align: right;
+      font-size: 22px; font-weight: 800; color: var(--alto-stroke);
+    }
+    .detail__prob small { display: block; font-size: 11px; font-weight: 600; color: #6b7280; }
+    .detail__block {
+      padding: var(--space-lg) var(--space-xl);
+      border-bottom: 1px solid var(--hair);
+    }
+    .detail__block:last-child { border-bottom: none; }
+    .detail__block-title {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #6b7280;
+      margin-bottom: var(--space-md);
+    }
+    .rule-row {
+      display: flex; align-items: center; gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      background: #fdecea;
+      border: 1px solid #f5c6c0;
+      border-radius: var(--radius);
+    }
+    .rule-row.is-off { background: var(--muted); border-color: var(--border); }
+    .rule-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--alto); flex: none;
+    }
+    .rule-row.is-off .rule-dot { background: #95a5a6; }
+    .rule-title { font-size: 14px; font-weight: 700; }
+    .rule-sub { font-size: 12px; color: #5b6470; }
+    .meta-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm) var(--space-xl);
+      font-size: 12px;
+    }
+    .meta-grid dt { color: #6b7280; font-weight: 500; }
+    .meta-grid dd { margin: 0; font-weight: 600; }
+
+    .compare {
+      display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);
+      margin-top: var(--space-md);
+    }
+    .compare > div {
+      padding: var(--space-md);
+      background: var(--muted);
+      border-radius: var(--radius);
+      font-size: 12px;
+    }
+    .compare strong { display: block; margin-bottom: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .old { opacity: 0.75; font-family: ui-monospace, monospace; font-size: 11px; }
+
+    @media (max-width: 720px) {
+      .risk-levels, .vars, .compare { grid-template-columns: 1fr; }
+      .risk-hero { grid-template-columns: auto 1fr; }
+      .risk-hero__badge { grid-column: 1 / -1; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Mockup — profesionalismo visual</h1>
+    <p class="sub">Solo HTML aislado · tokens de <code>app/theme</code> · sin tocar <code>app.py</code></p>
+
+    <div class="note">
+      <strong>Para aprobar:</strong> (A) banner de riesgo con más presencia,
+      (B) niveles con forma geométrica + etiqueta + descripción corta (sin depender solo del color),
+      (C) tarjetas de variable reutilizables,
+      (D) panel de detalle por bloques.
+      Los íconos son SVG estáticos (sin JS). Los emojis 🟢🟠🔴 del código actual se reemplazarían por estas formas.
+    </div>
+
+    <!-- 1. HERO RIESGO -->
+    <div class="section-label">1 · Jerarquía — riesgo actual (lo primero, sin scroll)</div>
+    <div class="risk-hero" role="status" aria-label="Celda de mayor riesgo: VP-038, alto, 97%">
+      <div class="risk-hero__icon" aria-hidden="true">
+        <!-- Triángulo = alto -->
+        <svg viewBox="0 0 24 24"><path class="shape-alto" d="M12 4 L22 20 H2 Z"/></svg>
+      </div>
+      <div>
+        <div class="risk-hero__kicker">Alerta operativa · ahora</div>
+        <div class="risk-hero__title">VP-038 · Riesgo alto · 97%</div>
+        <div class="risk-hero__meta">Precordillera · Probabilidad de ignición máxima del día</div>
+      </div>
+      <div class="risk-hero__badge">
+        Regla 30-30-30
+        <small>ACTIVA</small>
+      </div>
+    </div>
+
+    <div class="compare">
+      <div>
+        <strong>Hoy (código)</strong>
+        <span class="old">🔴 Celda de mayor riesgo ahora: VP-038 · Precordillera · ALTO · 97% · Regla…</span>
+        Una sola línea, emoji, ~1.05rem.
+      </div>
+      <div>
+        <strong>Propuesta</strong>
+        Bloque hero a todo el ancho: kicker + título 22px + meta + badge de regla.
+        Forma geométrica, no emoji.
+      </div>
+    </div>
+
+    <!-- 2. NIVELES -->
+    <div class="section-label">2 · Niveles — color + forma + etiqueta + significado</div>
+    <div class="risk-levels">
+      <div class="risk-chip" style="--chip-surface:var(--bajo);--chip-stroke:var(--bajo-stroke)">
+        <div class="risk-chip__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><circle class="shape-bajo" cx="12" cy="12" r="8"/></svg>
+        </div>
+        <div>
+          <div class="risk-chip__label">Bajo</div>
+          <div class="risk-chip__desc">&lt;33% · vigilancia rutinaria</div>
+        </div>
+      </div>
+      <div class="risk-chip" style="--chip-surface:var(--medio);--chip-stroke:var(--medio-stroke)">
+        <div class="risk-chip__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><rect class="shape-medio" x="5" y="5" width="14" height="14" rx="2"/></svg>
+        </div>
+        <div>
+          <div class="risk-chip__label">Medio</div>
+          <div class="risk-chip__desc">33–66% · refuerzo preventivo</div>
+        </div>
+      </div>
+      <div class="risk-chip is-active" style="--chip-surface:var(--alto);--chip-stroke:var(--alto-stroke)">
+        <div class="risk-chip__mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path class="shape-alto" d="M12 4 L22 20 H2 Z"/></svg>
+        </div>
+        <div>
+          <div class="risk-chip__label">Alto</div>
+          <div class="risk-chip__desc">≥66% o regla 30-30-30 · prioridad</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. VARIABLES -->
+    <div class="section-label">3 · Tarjetas de variable (mismo componente ×3)</div>
+    <div class="vars">
+      <article class="var-card">
+        <div class="var-card__top">
+          <span class="var-card__name">Temperatura</span>
+          <span class="var-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 14.76V5a2 2 0 1 0-4 0v9.76a4 4 0 1 0 4 0Z"/>
+            </svg>
+          </span>
+        </div>
+        <div>
+          <span class="var-card__value">32.5</span><span class="var-card__unit">°C</span>
+        </div>
+        <span class="var-card__state state-alto">Sobre umbral (&gt;30)</span>
+      </article>
+      <article class="var-card">
+        <div class="var-card__top">
+          <span class="var-card__name">Humedad</span>
+          <span class="var-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 3c-3 4.5-6 7.5-6 11a6 6 0 0 0 12 0c0-3.5-3-6.5-6-11Z"/>
+            </svg>
+          </span>
+        </div>
+        <div>
+          <span class="var-card__value">24</span><span class="var-card__unit">%</span>
+        </div>
+        <span class="var-card__state state-alto">Crítica (&lt;30)</span>
+      </article>
+      <article class="var-card">
+        <div class="var-card__top">
+          <span class="var-card__name">Viento</span>
+          <span class="var-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 8h11a3 3 0 1 0-3-3"/><path d="M3 12h14a3 3 0 1 1-3 3"/><path d="M3 16h7"/>
+            </svg>
+          </span>
+        </div>
+        <div>
+          <span class="var-card__value">34</span><span class="var-card__unit">km/h</span>
+        </div>
+        <span class="var-card__state state-alto">Sobre umbral (&gt;30)</span>
+      </article>
+    </div>
+
+    <!-- 4. DETALLE -->
+    <div class="section-label">4 · Panel de detalle de zona (celda seleccionada)</div>
+    <div class="detail">
+      <div class="detail__head">
+        <div class="risk-chip__mark" style="background:var(--alto)" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path class="shape-alto" d="M12 4 L22 20 H2 Z"/></svg>
+        </div>
+        <div>
+          <div class="detail__id">VP-038</div>
+          <div class="detail__zone">Precordillera (continental) · Riesgo alto</div>
+        </div>
+        <div class="detail__prob">97%<small>Probabilidad</small></div>
+      </div>
+
+      <div class="detail__block">
+        <div class="detail__block-title">Condiciones meteorológicas</div>
+        <div class="vars">
+          <article class="var-card" style="min-height:auto;padding:12px">
+            <div class="var-card__name">Temperatura</div>
+            <div><span class="var-card__value" style="font-size:22px">32.5</span><span class="var-card__unit">°C</span></div>
+            <span class="var-card__state state-alto">Alto</span>
+          </article>
+          <article class="var-card" style="min-height:auto;padding:12px">
+            <div class="var-card__name">Humedad</div>
+            <div><span class="var-card__value" style="font-size:22px">24</span><span class="var-card__unit">%</span></div>
+            <span class="var-card__state state-alto">Baja</span>
+          </article>
+          <article class="var-card" style="min-height:auto;padding:12px">
+            <div class="var-card__name">Viento</div>
+            <div><span class="var-card__value" style="font-size:22px">34</span><span class="var-card__unit">km/h</span></div>
+            <span class="var-card__state state-alto">Alto</span>
+          </article>
+        </div>
+      </div>
+
+      <div class="detail__block">
+        <div class="detail__block-title">Regla 30-30-30</div>
+        <div class="rule-row">
+          <span class="rule-dot" aria-hidden="true"></span>
+          <div>
+            <div class="rule-title">Condición crítica activa</div>
+            <div class="rule-sub">T &gt; 30 °C · H &lt; 30 % · V &gt; 30 km/h — las tres a la vez</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="detail__block">
+        <div class="detail__block-title">Metadata</div>
+        <dl class="meta-grid">
+          <dt>Fuente de datos</dt><dd>demo_seed (escenario sembrado)</dd>
+          <dt>Fecha consultada</dt><dd>2025-02-15</dd>
+          <dt>Build</dt><dd>demo-corredor-50cells-v9</dd>
+          <dt>Nota</dt><dd>No es inferencia XGBoost en runtime</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="compare" style="margin-bottom:48px">
+      <div>
+        <strong>Hoy (ficha)</strong>
+        <span class="old">VP-038 · Precordillera · alto · 97%</span>
+        Una franja de color; meteo solo en la tabla de abajo.
+      </div>
+      <div>
+        <strong>Propuesta</strong>
+        Cabecera + bloque meteo (mismas tarjetas) + bloque regla + metadata.
+        Espaciado xl/lg del design system; un solo lenguaje visual.
+      </div>
+    </div>
+  </div>
+</body>
+</html>

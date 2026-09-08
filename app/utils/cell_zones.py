@@ -22,6 +22,32 @@ ZONE_LABELS = {
 _COSTA_LAST_COL = 1
 _URBANO_LAST_COL = 6
 
+# Comunas de referencia con evidencia real (coordenada verificada + banda que
+# le corresponde). Fuente única para el buscador de comuna y para
+# `tests/test_grid.py::test_grid_zones_land_on_the_comunas_they_claim`, que
+# antes duplicaba esta misma tabla — un cambio acá bastaba para que el test
+# seleccionado quedara verificando otra cosa sin que nadie lo notara.
+# Restringida a las comunas atadas a una banda climática verificada por
+# geometría real; no incluye Valparaíso ni Concón (nombradas en el banner por
+# evidencia FIRMS, pero sin columna de grilla verificada) para no inventar una
+# precisión que la grilla no tiene.
+COMUNA_ZONE: dict[str, str] = {
+    "Viña del Mar": "costa",
+    "Quilpué": "urbano",
+    "Villa Alemana": "urbano",
+    "Limache": "precordillera",
+}
+
+
+def comuna_options() -> list[str]:
+    """Comunas buscables, orden alfabético."""
+    return sorted(COMUNA_ZONE)
+
+
+def zone_for_comuna(comuna: str) -> str | None:
+    """Banda climática de una comuna buscable; None si no se reconoce."""
+    return COMUNA_ZONE.get(comuna)
+
 
 def zone_for_col(col: int) -> str:
     """Clasifica columna oeste→este en costa / urbano / precordillera.

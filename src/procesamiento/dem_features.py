@@ -115,3 +115,32 @@ def sample_grid_topography(
         _zonal_circular_mean_deg(aspect_path, geometries), dtype="float32"
     )
     return result
+
+
+def load_grid_topography(grid_cells: list[dict], dem_terrain_dir: Path) -> pd.DataFrame:
+    """Topografía real por celda (elevacion/pendiente/orientacion/cell_id)
+    si el DEM está procesado en `dem_terrain_dir`; si no, columnas en NaN —
+    nunca la aproximación sintética que sí usa `data_processor.py` como
+    fallback. Usada tanto por `scripts/build_temporal_dataset.py` (dataset
+    de entrenamiento) como por `src/inference/prototype_service.py`
+    (inferencia en vivo) — una sola fuente de verdad para "cómo se obtiene
+    la topografía de una celda", en vez de dos implementaciones separadas
+    que podrían divergir.
+    """
+    dem = sorted(dem_terrain_dir.glob("*_utm19s.tif"))
+    slope = sorted(dem_terrain_dir.glob("*_slope.tif"))
+    aspect = sorted(dem_terrain_dir.glob("*_aspect.tif"))
+
+    grid_df = pd.DataFrame(grid_cells)
+    if dem and slope and aspect:
+        topo = sample_grid_topography(grid_df, dem[0], slope[0], aspect[0])
+        grid_df["elevacion"] = topo["altitud"]
+        grid_df["pendiente"] = topo["pendiente"]
+        grid_df["orientacion"] = topo["orientacion"]
+        grid_df["dem_disponible"] = True
+    else:
+        grid_df["elevacion"] = None
+        grid_df["pendiente"] = None
+        grid_df["orientacion"] = None
+        grid_df["dem_disponible"] = False
+    return grid_df[["cell_id", "elevacion", "pendiente", "orientacion", "dem_disponible"]]

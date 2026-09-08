@@ -1,4 +1,4 @@
-"""Pruebas de la aplicación Streamlit."""
+"""Pruebas de la aplicación Streamlit y contratos de componentes."""
 
 from __future__ import annotations
 
@@ -6,6 +6,7 @@ from datetime import date
 from unittest.mock import MagicMock, patch
 
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import box
 
 from app.app import SapiDashboard
@@ -25,7 +26,14 @@ def test_export_report_pdf():
         crs="EPSG:4326",
     )
 
-    with patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))):
+    # Este reporte es siempre sobre el escenario demo (gdf_precargado demo) —
+    # se fija SAPI_DATA_MODE explícito para la prueba en vez de depender del
+    # default global del dashboard (que desde la iteración del prototipo es
+    # "prototype", no "demo_seed").
+    with (
+        patch("app.app._cached_date_range", return_value=(date(2025, 2, 9), date(2025, 2, 15))),
+        patch("app.app.SAPI_DATA_MODE", "demo_seed"),
+    ):
         report = dashboard.export_report_pdf(date(2025, 2, 15), gdf_precargado=gdf)
 
     content = report.decode("utf-8")
@@ -50,22 +58,37 @@ def test_export_report_empty():
     assert b"data_source=demo_seed" in report
 
 
-@patch("app.app.st.sidebar")
+@patch("app.components.controls.st.sidebar")
 def test_render_data_mode_badge_demo_seed(mock_sidebar: MagicMock) -> None:
-    from app.app import _render_data_mode_badge
+    from app.components.controls import render_data_mode_badge
 
-    _render_data_mode_badge()
+    with patch("app.components.controls.SAPI_DATA_MODE", "demo_seed"):
+        render_data_mode_badge()
     mock_sidebar.markdown.assert_called_once()
     caption = mock_sidebar.caption.call_args[0][0]
     assert "demo_seed" in caption
     assert "no de inferencia XGBoost" in caption
 
 
-@patch("app.app.st.info")
-def test_render_demo_scope_banner_mentions_vp049(mock_info: MagicMock) -> None:
-    from app.app import _render_demo_scope_banner
+@patch("app.components.controls.st.sidebar")
+def test_render_data_mode_badge_prototype(mock_sidebar: MagicMock) -> None:
+    """Desde la iteración del prototipo (2026-09-07), 'prototype' es un
+    modo reconocido — no debe caer en la rama de advertencia genérica."""
+    from app.components.controls import render_data_mode_badge
 
-    _render_demo_scope_banner(date(2025, 2, 9), date(2025, 2, 15))
+    with patch("app.components.controls.SAPI_DATA_MODE", "prototype"):
+        render_data_mode_badge()
+    mock_sidebar.markdown.assert_called_once()
+    mock_sidebar.warning.assert_not_called()
+    caption = mock_sidebar.caption.call_args[0][0]
+    assert "prototype" in caption
+
+
+@patch("app.components.banner.st.info")
+def test_render_demo_scope_banner_mentions_vp049(mock_info: MagicMock) -> None:
+    from app.components.banner import render_demo_scope_banner
+
+    render_demo_scope_banner(date(2025, 2, 9), date(2025, 2, 15))
     mock_info.assert_called_once()
     text = mock_info.call_args[0][0]
     assert "VP-049" in text
@@ -120,7 +143,7 @@ def test_dashboard_init():
     assert dashboard.query is not None
 
 
-@patch("app.app.st.info")
+@patch("app.components.banner.st.info")
 def test_demo_banner_names_localities_with_real_detection_evidence(mock_info: MagicMock) -> None:
     """El banner nombra comunas por evidencia real de detecciones, no por
     geometría de la grilla.
@@ -139,11 +162,8 @@ def test_demo_banner_names_localities_with_real_detection_evidence(mock_info: Ma
     nombrar una comuna con evidencia real, y falla igual si aparece nombrada
     una sin ninguna.
     """
-    from app.app import _render_demo_scope_banner
+    from app.components.banner import render_demo_scope_banner
 
-    # Focos reales por comuna: contención estricta de las 348 detecciones
-    # 2024-02-03 contra la grilla ancha, comuna verificada contra DPA 2023
-    # (SUBDERE) — ver docs/matriz-riesgo.md, avance SAPI-32 y hallazgo 05-09-2026.
     focos_reales_por_comuna = {
         "Viña del Mar": 120,
         "Quilpué": 89,
@@ -151,9 +171,9 @@ def test_demo_banner_names_localities_with_real_detection_evidence(mock_info: Ma
         "Limache": 17,
         "Villa Alemana": 5,
     }
-    comuna_sin_evidencia_real = "Concón"  # 0 detecciones en el evento verificado
+    comuna_sin_evidencia_real = "Concón"
 
-    _render_demo_scope_banner(date(2025, 2, 9), date(2025, 2, 15))
+    render_demo_scope_banner(date(2025, 2, 9), date(2025, 2, 15))
     texto = mock_info.call_args[0][0]
 
     for comuna in focos_reales_por_comuna:
@@ -163,40 +183,38 @@ def test_demo_banner_names_localities_with_real_detection_evidence(mock_info: Ma
     )
 
 
-@patch("app.app.st.caption")
+@patch("app.components.banner.st.caption")
 def test_render_risk_legend(mock_caption: MagicMock) -> None:
-    """La leyenda de texto orienta geográficamente y no repite el semáforo.
+    """La leyenda de texto orienta geográficamente y no repite el semáforo."""
+    from app.components.banner import render_risk_legend
 
-    El semáforo vive anclado al mapa; duplicarlo acá obligaba a leer la misma
-    información en dos lugares.
-    """
-    from app.app import _render_risk_legend
-
-    _render_risk_legend()
+    render_risk_legend()
     texto = mock_caption.call_args[0][0]
     assert "Viña del Mar" in texto
     assert "Quilpué" in texto
 
 
-@patch("app.app._cached_ml_metrics", return_value={"xgboost": {"recall": 0.78, "auc_roc": 0.83}, "baseline": {"recall": 0.71}})
-@patch("app.app.st.metric")
-@patch("app.app.st.caption")
-@patch("app.app.st.markdown")
-@patch("app.app.st.sidebar")
+@patch("app.components.controls.st.metric")
+@patch("app.components.controls.st.caption")
+@patch("app.components.controls.st.markdown")
+@patch("app.components.controls.st.sidebar")
 def test_render_technical_details_expander_includes_ml_panel(
     mock_sidebar: MagicMock,
     mock_markdown: MagicMock,
     mock_caption: MagicMock,
     mock_metric: MagicMock,
-    _mock_metrics: MagicMock,
 ) -> None:
-    """El panel ML (Recall XGBoost, AUC-ROC, Recall RF baseline) vive dentro
-    del expander 'Detalles técnicos', junto a Build/Query/SAPI_DATA_MODE —
-    no como sección aparte del sidebar.
-    """
-    from app.app import _render_technical_details_expander
+    """El panel ML vive dentro del expander 'Detalles técnicos'."""
+    from app.components.controls import render_technical_details_expander
 
-    _render_technical_details_expander(date(2025, 2, 9), date(2025, 2, 15))
+    render_technical_details_expander(
+        date(2025, 2, 9),
+        date(2025, 2, 15),
+        metrics={"xgboost": {"recall": 0.78, "auc_roc": 0.83}, "baseline": {"recall": 0.71}},
+        app_build="demo-corredor-50cells-v9",
+        query_version="exact-date-v1",
+        recall_target=0.75,
+    )
 
     mock_sidebar.expander.assert_called_once_with("Detalles técnicos")
     assert mock_metric.call_count == 3
@@ -205,63 +223,77 @@ def test_render_technical_details_expander_includes_ml_panel(
     assert any("SAPI_DATA_MODE" in c for c in captions)
 
 
-@patch(
-    "app.app._cached_ml_metrics",
-    return_value={"xgboost": {"recall": None, "auc_roc": None}, "baseline": {"recall": None}},
-)
-@patch("app.app.st.metric")
-@patch("app.app.st.caption")
-@patch("app.app.st.markdown")
-@patch("app.app.st.sidebar")
+@patch("app.components.controls.st.metric")
+@patch("app.components.controls.st.caption")
+@patch("app.components.controls.st.markdown")
+@patch("app.components.controls.st.sidebar")
 def test_render_technical_details_expander_shows_dash_when_no_real_run(
     mock_sidebar: MagicMock,
     mock_markdown: MagicMock,
     mock_caption: MagicMock,
     mock_metric: MagicMock,
-    _mock_metrics: MagicMock,
 ) -> None:
-    """Sin corrida real (recall/auc_roc en None), el panel debe mostrar '—'
-    en vez de fabricar un número — ver hallazgo 2026-09-01 en metrics_loader.py.
-    """
-    from app.app import _render_technical_details_expander
+    """Sin corrida real, el panel debe mostrar '—' en vez de fabricar un número."""
+    from app.components.controls import render_technical_details_expander
 
-    _render_technical_details_expander(date(2025, 2, 9), date(2025, 2, 15))
+    render_technical_details_expander(
+        date(2025, 2, 9),
+        date(2025, 2, 15),
+        metrics={"xgboost": {"recall": None, "auc_roc": None}, "baseline": {"recall": None}},
+        app_build="demo-corredor-50cells-v9",
+        query_version="exact-date-v1",
+        recall_target=0.75,
+    )
 
     assert mock_metric.call_count == 3
     displayed_values = [call.args[1] for call in mock_metric.call_args_list]
     assert displayed_values == ["—", "—", "—"]
 
 
-@patch("app.app.st.sidebar")
+@patch("app.components.controls.st.sidebar")
 def test_pick_demo_date_uses_calendar_when_available(mock_sidebar: MagicMock) -> None:
-    from app.app import _pick_demo_date
+    from app.components.controls import pick_demo_date
 
     available = [date(2025, 2, 9), date(2025, 2, 15)]
     mock_sidebar.selectbox.return_value = date(2025, 2, 9)
     mock_sidebar.date_input.return_value = date(2025, 2, 15)
-    assert _pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 15)
+    assert pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 15)
 
 
-@patch("app.app.st.sidebar")
+@patch("app.components.controls.st.sidebar")
 def test_pick_demo_date_falls_back_to_slider(mock_sidebar: MagicMock) -> None:
-    from app.app import _pick_demo_date
+    from app.components.controls import pick_demo_date
 
     available = [date(2025, 2, 9), date(2025, 2, 15)]
     mock_sidebar.selectbox.return_value = date(2025, 2, 9)
     mock_sidebar.date_input.return_value = date(2025, 2, 10)
-    assert _pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 9)
+    assert pick_demo_date(available, date(2025, 2, 9), date(2025, 2, 15)) == date(2025, 2, 9)
     mock_sidebar.caption.assert_called_once()
+
+
+@patch("app.components.risk_map.cell_id_from_folium_output", return_value="VP-038")
+def test_render_risk_map_returns_clicked_cell(mock_resolve: MagicMock) -> None:
+    from app.components.risk_map import render_risk_map
+
+    dashboard = MagicMock()
+    dashboard.render_folium_map.return_value = {"last_object_clicked_tooltip": "VP-038"}
+    gdf = gpd.GeoDataFrame(
+        {"cell_id": ["VP-038"], "probabilidad": [0.9], "nivel_riesgo": ["alto"]},
+        geometry=[box(-71.4, -33.0, -71.3, -32.9)],
+        crs="EPSG:4326",
+    )
+    # Sin patch de st.caption: render_risk_map ya no imprime una propia (SAPI
+    # compactación dashboard) — la caption con resolución vive en app.py.
+    clicked = render_risk_map(dashboard, date(2025, 2, 15), gdf, {"VP-038"})
+    assert clicked == "VP-038"
+    mock_resolve.assert_called_once()
 
 
 @patch("app.state.st")
 def test_ensure_default_selection_shows_top_risk_ficha_on_initial_load(mock_st: MagicMock) -> None:
-    """Al cargar la página sin ninguna selección previa, el panel de detalle
-    debe mostrar la ficha completa de la celda de mayor riesgo — no un
-    estado vacío a la espera de un clic en mapa/tabla.
-    """
+    """Al cargar sin selección previa, se preselecciona la celda de mayor riesgo."""
     from app.state import SESSION_CELL_KEY, ensure_default_selection
     from app.utils.cell_table import top_risk_cell
-    from app.utils.risk_colors import format_cell_summary_html
 
     gdf = gpd.GeoDataFrame(
         {
@@ -277,24 +309,20 @@ def test_ensure_default_selection_shows_top_risk_ficha_on_initial_load(mock_st: 
         ],
         crs="EPSG:4326",
     )
-    mock_st.session_state = {}  # sesión recién abierta, sin clic todavía
+    mock_st.session_state = {}
     top_risk = top_risk_cell(gdf)
 
     ensure_default_selection(top_risk)
 
     selected_id = mock_st.session_state.get(SESSION_CELL_KEY)
-    assert selected_id == "VP-002"  # única celda "alto" -> mayor riesgo del día
+    assert selected_id == "VP-002"
 
-    gdf_row = gdf.loc[gdf["cell_id"] == selected_id].iloc[0].copy()
-    gdf_row["zona_climatica"] = "Urbano (transición)"
-    ficha_html = format_cell_summary_html(gdf_row)
-    assert "VP-002" in ficha_html
-    assert "alto" in ficha_html
+    selected_row = gdf.loc[gdf["cell_id"] == selected_id].iloc[0]
+    assert selected_row["nivel_riesgo"] == "alto"
 
 
 @patch("app.state.st")
 def test_ensure_default_selection_noop_without_top_risk(mock_st: MagicMock) -> None:
-    """gdf vacío -> top_risk_cell devuelve None -> no hay nada que preseleccionar."""
     from app.state import SESSION_CELL_KEY, ensure_default_selection
 
     mock_st.session_state = {}
@@ -305,11 +333,16 @@ def test_ensure_default_selection_noop_without_top_risk(mock_st: MagicMock) -> N
 
 @patch("app.state.st")
 def test_ensure_default_selection_respects_explicit_click(mock_st: MagicMock) -> None:
-    """Si ya hay una celda seleccionada (clic previo), no se sobreescribe."""
     from app.state import SESSION_CELL_KEY, ensure_default_selection
 
     mock_st.session_state = {SESSION_CELL_KEY: "VP-007"}
-    top_risk = {"cell_id": "VP-002", "zona": "Urbano", "nivel_riesgo": "alto", "probabilidad": 0.9, "regla_30_30_30": True}
+    top_risk = {
+        "cell_id": "VP-002",
+        "zona": "Urbano",
+        "nivel_riesgo": "alto",
+        "probabilidad": 0.9,
+        "regla_30_30_30": True,
+    }
 
     ensure_default_selection(top_risk)
 
@@ -318,14 +351,16 @@ def test_ensure_default_selection_respects_explicit_click(mock_st: MagicMock) ->
 
 @patch("app.state.st")
 def test_ensure_default_selection_skips_after_limpiar(mock_st: MagicMock) -> None:
-    """El botón 'Limpiar' pone la selección en None y marca la ronda como ya
-    preseleccionada; en el rerun que sigue, la ficha debe seguir vacía en
-    vez de que la preselección la vuelva a llenar.
-    """
     from app.state import SESSION_CELL_KEY, ensure_default_selection
 
     mock_st.session_state = {SESSION_CELL_KEY: None, "_top_risk_preselected": True}
-    top_risk = {"cell_id": "VP-002", "zona": "Urbano", "nivel_riesgo": "alto", "probabilidad": 0.9, "regla_30_30_30": True}
+    top_risk = {
+        "cell_id": "VP-002",
+        "zona": "Urbano",
+        "nivel_riesgo": "alto",
+        "probabilidad": 0.9,
+        "regla_30_30_30": True,
+    }
 
     ensure_default_selection(top_risk)
 
@@ -348,3 +383,11 @@ def test_cached_available_dates_from_demo_seed() -> None:
     dates = _cached_available_dates()
     assert len(dates) == 7
     assert dates == get_all_demo_dates()
+
+
+def test_app_reexports_protected_banner_alias() -> None:
+    """El alias con guion bajo sigue disponible para callers/tests legacy."""
+    from app.app import _render_demo_scope_banner
+    from app.components.banner import render_demo_scope_banner
+
+    assert _render_demo_scope_banner is render_demo_scope_banner

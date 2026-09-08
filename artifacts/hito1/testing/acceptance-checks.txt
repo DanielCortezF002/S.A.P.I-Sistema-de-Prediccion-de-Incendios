@@ -1,0 +1,88 @@
+CRITERIOS TÉCNICOS DE VERIFICACIÓN DEL CIERRE — 07/09/2026
+(candidatos AC-T01..AC-T10 de la instrucción de esta fase — NO son CA
+históricos de una HU de Jira; son criterios técnicos formulados AHORA
+para verificar el incremento actual del pipeline temporal, verificados
+contra test/código/ejecución real, nunca asumidos)
+
+AC-T01 — Prototipo usa pipeline temporal nuevo y no demo_seed.
+  Resultado: PASS
+  Evidencia: tests/test_prototype_service.py::test_no_legacy_imports_in_prototype_modules
+  (PASS en la ejecución fresca, ver pytest-full.txt). Confirmado además
+  por lectura directa del docstring/imports de src/inference/prototype_service.py
+  y app/components/prototype_view.py (ambos declaran explícitamente que
+  no importan demo_seed ni el pipeline legacy).
+
+AC-T02 — DMC 330007 se trata como meteorología regional, nunca por celda.
+  Resultado: PASS
+  Evidencia: src/procesamiento/regional_meteo.py produce una serie única
+  (station_id, momento, variables) sin columna cell_id, por diseño.
+  reports/auditoria_integridad_datos.json documenta el defecto histórico
+  que esto reemplazó (38/50 celdas con asignación geográficamente
+  incorrecta bajo el `_load_meteo()` legacy). Tests: test_regional_meteo.py,
+  test_regional_meteo_loading.py (PASS).
+
+AC-T03 — Los features temporales utilizan solamente información <= T.
+  Resultado: PASS
+  Evidencia: tests/test_causality_validator.py (10 tests, incluye
+  "feature_timestamp after forecast_time is a violation"),
+  tests/test_temporal_features.py::test_lag_momento_never_exceeds_forecast_time,
+  test_historial_firms_features_ignore_events_at_or_after_forecast_time.
+  Todos PASS.
+
+AC-T04 — El target positivo corresponde a una detección FIRMS válida
+  durante T < t <= T+6h (nunca en T mismo, nunca ignorando cooldown).
+  Resultado: PASS
+  Evidencia: tests/test_target_builder.py (12 tests) — incluye
+  test_arrival_exactly_at_forecast_time_does_not_count_as_future,
+  test_arrival_exactly_at_window_end_counts_as_future,
+  test_forecast_time_within_cooldown_of_a_past_arrival_is_excluded.
+  Todos PASS.
+
+AC-T05 — score_current_grid() produce las 50 celdas de la grilla.
+  Resultado: PASS
+  Evidencia: tests/test_prototype_service.py::test_inference_returns_fifty_cells,
+  test_feature_matrix_has_fifty_unique_cell_ids_and_no_missing_or_duplicate.
+  PASS.
+
+AC-T06 — El ranking conserva empates reales (no inventa granularidad).
+  Resultado: PASS
+  Evidencia: tests/test_prototype_service.py::test_ties_share_display_rank_but_internal_rank_stays_unique,
+  test_feature_rows_are_mostly_distinct_even_though_scores_tie. PASS.
+
+AC-T07 — cell_id permanece alineado con su score aunque cambie el orden
+  de las filas internamente.
+  Resultado: PASS
+  Evidencia: tests/test_prototype_service.py::test_reordering_features_df_does_not_desync_cell_id_and_score.
+  PASS.
+
+AC-T08 — DEM sin cobertura permanece NaN/N-D, nunca 0 artificial.
+  Resultado: PASS (capa de datos) — PARCIAL (capa de UI, ver nota)
+  Evidencia capa de datos: tests/test_dem_features.py::test_sample_grid_topography_returns_nan_for_cell_outside_raster_coverage,
+  test_load_grid_topography_falls_back_to_nan_without_a_dem_directory. PASS.
+  Nota UI: app/components/prototype_view.py::_fmt_nd() formatea
+  NaN/None -> "N/D" explícitamente (verificado por lectura de código,
+  línea 84-90) pero NO se encontró un test unitario dedicado a `_fmt_nd`
+  ni a la cadena "N/D" en tests/*.py — la garantía de UI está implementada
+  pero no cubierta por un test automatizado propio. Se registra como
+  brecha menor, no como falla.
+
+AC-T09 — La app Streamlit carga (ensambla) sin excepción fatal, con el
+  modo Prototipo como default.
+  Resultado: PASS
+  Evidencia: tests/test_app_integration.py (AppTest real, sin mocks del
+  pipeline) — test_main_runs_without_exceptions,
+  test_prototype_mode_is_the_default_and_runs_without_exceptions.
+  Ejecución fresca dedicada: 5 passed en 14.18s (ver streamlit-smoke.txt).
+
+AC-T10 — El legacy/demo no participa en la inferencia del Prototipo.
+  Resultado: PASS
+  Evidencia: tests/test_prototype_service.py::test_no_legacy_imports_in_prototype_modules
+  (verifica que prototype_service.py y prototype_view.py no importan
+  matriz_features, xgboost_optimized.pkl, ignicion 32/28/25, NDVI
+  sintético, ni demo_seed); tests/test_architecture.py::test_frontend_data_contract_compliance
+  (app/ no importa src.ingesta/procesamiento/modelo/pipeline directamente).
+  Ambos PASS.
+
+Resumen: 9/10 PASS completos, 1/10 (AC-T08) PASS en la capa que importa
+científicamente (datos nunca fabrican un 0) con una brecha menor y
+verificable en cobertura de test de la capa de presentación.

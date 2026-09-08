@@ -9,7 +9,7 @@ Documento técnico y operativo del prototipo **Sistema de Alerta y Predicción d
 S.A.P.I. es una plataforma de **apoyo a la decisión preventiva** que:
 
 1. Integra variables ambientales (en el informe: meteo, topografía, histórico de igniciones).
-2. Estima **probabilidad de ignición** por celda territorial (~1 km²).
+2. Estima **probabilidad de ignición** por celda territorial (resolución objetivo del informe: ~1 km²; esta demo usa 50 celdas de ~11,5 km² para que el corredor completo entre en pantalla — ver [`alcance-prototipo.md`](alcance-prototipo.md)).
 3. Visualiza el riesgo en un **mapa interactivo** antes de que ocurra un foco visible.
 
 En **esta demo académica** (`SAPI_DATA_MODE=demo_seed` por defecto en [`src/config.py`](../src/config.py)):
@@ -165,21 +165,24 @@ python scripts/validate_seed.py
 
 ### 5.2 Grilla espacial del seed PostGIS (50 celdas)
 
-> Esta tabla describe la grilla del **seed de PostGIS** (`scripts/generate_seed.py`),
-> que **no** es la que usa el dashboard en modo `demo_seed`. El dashboard toma su
-> geometría de `app/utils/grid.py` (celdas de ~11,5 km² sobre 34,5 × 15,6 km).
-> Ver *Deuda técnica: dos grillas conviviendo* en
-> [`alcance-prototipo.md`](alcance-prototipo.md).
+> Desde la unificación de grillas (2026-09-06), el seed de PostGIS
+> (`scripts/generate_seed.py`) usa **la misma geometría que el dashboard**:
+> `src/geo/grid.py`, re-exportada por `app/utils/grid.py`. Antes tenía su
+> propia copia, ~15x más pequeña por celda; ver *Deuda técnica: dos grillas
+> conviviendo* en [`alcance-prototipo.md`](alcance-prototipo.md) para el
+> historial.
 
 | Parámetro | Valor | Significado |
 |-----------|-------|-------------|
 | Diseño | 5 filas × 10 columnas | VP-001 … VP-050 |
-| Ancla | lon -71.535, lat -33.062 | Corredor Viña–Quilpué |
-| Paso | 0.010° / 0.009° (~930 m / ~1.000 m) | Centros de celda |
-| Geometría | `ST_Buffer(490 m)` | Círculo ≈ 0,75 km² de área |
+| Ancla | lon -71.58, lat -33.14 | Corredor Viña–Quilpué–precordillera |
+| Paso | 0.0411° / 0.035° (~3,8 km) | Centros de celda |
+| Geometría | `ST_Buffer(1.917 m)` | Círculo ≈ 11,5 km² de área |
 | Zonas (columnas) | 0–1 costa, 2–6 urbano, 7–9 precordillera | Microclimas sintéticos |
 
-Los círculos **se superponen** en el eje este-oeste porque el diámetro (980 m) es mayor que la separación entre centros (~930 m). En producción se usaría un teselado regional sin solape; aquí cada círculo es un **radio de influencia** demo.
+El radio (`CELL_RADIUS_METERS` en `src/geo/grid.py`) se deriva de la
+separación real entre centros de celda, no es un literal calibrado a mano:
+los círculos se tocan en los bordes sin superponerse.
 
 ### 5.3 Ventana temporal (7 días)
 
@@ -242,24 +245,30 @@ visible; la metadata de trazabilidad académica va un clic más adentro.
 
 ### Área principal
 
-| Bloque | Contenido |
-|--------|-----------|
-| Banner de mayor riesgo | **Antes del título**: la celda más crítica del día, con fondo del color de su nivel y el estado de la regla 30-30-30 |
-| Título y subtítulo | S.A.P.I. — Región de Valparaíso |
-| Banner azul de alcance | Alcance demo, `SAPI_DATA_MODE`, extensión y resolución de la grilla, comunas con evidencia real de detecciones, VP-038/VP-049 como escenario sembrado, disclaimer institucional |
-| 2 métricas + caption | Celdas en riesgo alto y probabilidad máxima; la distribución completa (bajo/medio/alto y regla activa) va en el caption inmediatamente debajo |
-| Orientación del corredor | Caption oeste→este: costa de Viña del Mar · interfaz urbano-forestal (Quilpué) · precordillera |
-| Pestaña **“Mapa de riesgo”** | 50 círculos sobre mapa base Esri World Light Gray, leyenda del semáforo anclada al mapa como control Leaflet, y capa opcional con las detecciones NASA FIRMS del 2024-02-03 |
-| Pestaña **“Detalle por celda”** | Ficha de la celda seleccionada, botón “Limpiar selección” y tabla auditable VP-001…050 |
-| Regla 30-30-30 | Texto explicativo |
-| Descarga TXT | Reporte ejecutivo con footer `data_source=demo_seed` |
-| Logs | Auditoría `observability_logs` (vacía en demo: no hay PostGIS activo) |
+> Reescrito 06-09-2026: la tabla anterior describía un layout de pestañas
+> ("Mapa de riesgo" / "Detalle por celda") que ya no existe en `app/app.py`.
+> Esto es el orden real de `main()`, componente por componente
+> (`app/components/ops_layout.py`, `banner.py`, `day_alerts.py`,
+> `risk_sparkline.py`, `risk_map.py`).
 
-El mapa y el detalle están en **pestañas**, no en dos columnas lado a lado. El
-layout anterior partía la pantalla 48/52, y en un teléfono dejaba el mapa a
-media pantalla con una tabla de 8 columnas al lado, ilegible — es el hallazgo
-de usabilidad móvil del acta de UAT. Las pestañas lo resuelven de forma nativa
-y, en escritorio, le dan al mapa el ancho completo.
+| # | Bloque | Contenido |
+|---|--------|-----------|
+| 1 | Header + interruptor de apariencia | Marca S.A.P.I., chip DMC en vivo/sin dato, chip de escenario (`SAPI_DATA_MODE`), hora local; claro/oscuro a la derecha |
+| 2 | Banner de corredor | Alcance demo, extensión y resolución de la grilla, comunas con evidencia real de detecciones, VP-038/VP-049 como escenario sembrado, disclaimer institucional, nota de verificación SUBDERE |
+| 3 | **Mayor riesgo ahora** | Bloque dominante: celda de mayor riesgo, nivel, ubicación, desglose de la regla 30-30-30 (condición por condición, con valor y umbral) |
+| 3b | **Top zonas prioritarias** / **Tendencia del riesgo** | Dos columnas: lista de todas las celdas en riesgo alto (no solo la #1) ordenadas por probabilidad, con botón para seleccionar cualquiera; y evolución del máximo diario de probabilidad en la ventana de 7 días del seed (`app/components/day_alerts.py`, `risk_sparkline.py`) |
+| 4 | Tarjetas de variable | Temperatura, humedad relativa y viento de la celda foco + tarjeta DMC Rodelillo en vivo, con tendencia respecto al día anterior |
+| 5 | Buscador de comuna + Mapa + Panel de detalle | Buscador filtra por banda climática; mapa Folium (izq., ~55% del ancho) con círculos de riesgo y clic para seleccionar; panel de detalle (der.) con meteo, regla 30-30-30, topografía DEM, historial FIRMS y procedencia de la celda seleccionada |
+| 6 | Leyenda de 4 estados | Bajo, Medio, Alto, Sin dato — con descripción de cada uno |
+| 7 | Auditoría y transparencia | Qué está verificado con datos reales, qué es simulado en esta vista, riesgo abierto R-ETIQUETA-01 |
+| 8 | Descarga TXT | Reporte ejecutivo con footer `data_source=demo_seed` |
+
+Mapa y panel de detalle están en **columnas lado a lado** (~55/45), no en
+pestañas: en escritorio se ven ambos a la vez; en móvil, Streamlit apila las
+columnas verticalmente. "Top zonas prioritarias" reutiliza la selección de
+celda (clic en una alerta o en el mapa apuntan al mismo estado —
+`app.state.select_cell`), así que ambos caminos llevan al mismo panel de
+detalle.
 
 ---
 
@@ -268,7 +277,7 @@ y, en escritorio, le dan al mapa el ancho completo.
 1. **2025-02-09** — Selector al primer día: mayoría verde/ámbar, **0 rojos**, KPI alto = 0.
 2. **2025-02-15** — Último día: **2 rojos** (este), regla activa, prob. máx ~97 %.
 3. Clic **VP-038** — Popup precordillera, regla activa.
-4. Tabla — Filas **#38** y **#49**, columna `regla_30_30_30 = 1`.
+4. Detalle — tarjeta de **VP-038** / **VP-049**, regla 30-30-30 activa.
 5. Sidebar — muestra "sin corrida real todavía" (no 0.78/0.83); si preguntan, mencionar el hallazgo de métricas fabricadas (`c22c9a1`) y el exploratorio R-ETIQUETA-01.
 6. Descargar reporte TXT y abrirlo.
 7. Cierre — *“Seed sintético calibrado; arquitectura PostGIS + contrato de datos listos para DMC en producción.”*

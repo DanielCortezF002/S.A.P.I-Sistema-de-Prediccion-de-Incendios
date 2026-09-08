@@ -10,7 +10,7 @@ import pytest
 import rasterio
 from rasterio.transform import from_origin
 
-from src.procesamiento.dem_features import ASPECT_FLAT_SENTINEL, sample_grid_topography
+from src.procesamiento.dem_features import ASPECT_FLAT_SENTINEL, load_grid_topography, sample_grid_topography
 
 # Grilla mínima de 2 celdas, misma forma que DataProcessor._build_grid().
 _GRID = pd.DataFrame(
@@ -132,3 +132,14 @@ def test_sample_grid_topography_returns_nan_for_cell_outside_raster_coverage(tmp
     result = sample_grid_topography(_GRID, dem_path, slope_path, aspect_path)
 
     assert result["altitud"].isna().all()
+
+
+def test_load_grid_topography_falls_back_to_nan_without_a_dem_directory(tmp_path: Path) -> None:
+    """Compartida por build_temporal_dataset.py y prototype_service.py:
+    sin GeoTIFFs procesados, columnas en NaN — nunca una aproximación
+    sintética silenciosa."""
+    grid_cells = [{"cell_id": "VP-001"}, {"cell_id": "VP-002"}]
+    result = load_grid_topography(grid_cells, tmp_path)  # tmp_path vacío, sin *.tif
+    assert list(result["cell_id"]) == ["VP-001", "VP-002"]
+    assert result["dem_disponible"].eq(False).all()
+    assert result["elevacion"].isna().all()

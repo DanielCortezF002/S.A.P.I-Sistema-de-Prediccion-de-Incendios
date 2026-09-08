@@ -56,45 +56,56 @@ La grilla demo 5×10 (VP-001 a VP-050) está centrada en el corredor de interfaz
 
 No representa cobertura regional completa ni sustituye el Botón Rojo ni los sistemas oficiales CONAF/SENAPRED.
 
-## Deuda técnica: dos grillas conviviendo (Sprint 2)
+## Deuda técnica: dos grillas conviviendo — **cerrada (2026-09-06)**
 
-El repositorio contiene **dos definiciones de grilla que no coinciden**, y esta
-entrega usa una sola de ellas.
+El repositorio contenía **dos definiciones de grilla que no coincidían**.
+Quedaron unificadas sobre una fuente única: [`src/geo/grid.py`](../src/geo/grid.py).
 
-| | Grilla de la demo (`app/`) | Grilla del pipeline PostGIS (`src/`) |
+| | Grilla canónica (única, desde 2026-09-06) | Grilla anterior del pipeline PostGIS (retirada) |
 |---|---|---|
-| Definida en | `app/utils/grid.py` | `src/procesamiento/data_processor.py`, `scripts/generate_seed.py` |
+| Definida en | `src/geo/grid.py` (re-exportada por `app/utils/grid.py`) | Copias locales en `data_processor.py`, `spatial_joiner.py`, `generate_seed.py`, `docker/fix_geom.py` |
 | Ancla (lon, lat) | −71.58, −33.14 | −71.535, −33.062 |
 | Paso | 0.0411° / 0.035° (~3,8 km) | 0.010° / 0.009° (~0,93 / ~1,0 km) |
 | Extensión | 34,5 × 15,6 km | 8,4 × 4,0 km |
 | Área por celda | ~11,5 km² (radio 1.917 m) | ~0,75 km² (radio 490 m) |
 | Comunas con detecciones reales | Viña del Mar, Quilpué, Valparaíso, Limache, Villa Alemana | Viña del Mar, Quilpué |
-| Cobertura del incendio 2024-02-03 | 75% de 348 detecciones | 17% |
+| Cobertura del incendio 2024-02-03 | 74,7% de 348 detecciones | 17% |
 
-**Qué usa cada cosa.** Con `SAPI_DATA_MODE=demo_seed` —el modo de esta
-entrega— el dashboard lee `app/utils/demo_seed.py`, que importa su geometría
-de `app/utils/grid.py`. La grilla de `src/` alimenta únicamente el camino
-`postgis_inference` y el seed de `docker/initdb/`, que en esta entrega no se
-ejecutan.
+**Qué usa cada cosa ahora.** Los tres caminos (`demo_seed`, `real_data`,
+`postgis_inference`) comparten la misma geometría: el dashboard vía
+`app/utils/grid.py`, y el pipeline batch / seed de PostGIS vía
+`src/procesamiento/data_processor.py`, `spatial_joiner.py` y
+`scripts/generate_seed.py`, todos importando de `src/geo/grid.py`. `VP-038`
+designa la misma porción de territorio en cualquier camino. Test de
+regresión: [`tests/test_grid_consistency.py`](../tests/test_grid_consistency.py).
 
-**Por qué divergieron.** La grilla de la demo se ensanchó al detectar que la
-original afirmaba cubrir el corredor completo mientras generaba celdas sobre
-8,4 × 4,0 km dentro de Viña del Mar, conteniendo apenas el 17% de las
-detecciones reales del incendio del 2024-02-03. La extensión nueva está
-verificada contra NASA FIRMS y contra el shapefile comunal DPA 2023 (SUBDERE);
-ver [`tests/test_grid.py`](../tests/test_grid.py). El pipeline de `src/` no se
-migró: hacerlo obliga a regenerar el seed de PostGIS y a revalidar la matriz de
-features, y se decidió no abrir eso antes de la entrega.
+**Por qué divergieron originalmente.** La grilla del dashboard se ensanchó al
+detectar que la original afirmaba cubrir el corredor completo mientras
+generaba celdas sobre 8,4 × 4,0 km dentro de Viña del Mar, conteniendo apenas
+el 17% de las detecciones reales del incendio del 2024-02-03. El pipeline de
+`src/` no se migró en esa misma iteración: hacerlo obligaba a regenerar el
+seed de PostGIS y a revalidar la matriz de features, y se decidió no abrir eso
+antes de aquella entrega.
 
-**Consecuencia mientras la deuda esté abierta.** Cualquier comparación entre
-una corrida `demo_seed` y una `postgis_inference` es inválida: `VP-038` no
-designa la misma porción de territorio en las dos. Las cifras de área y
-resolución de este documento y del manual de presentación describen la grilla
-de la demo.
+**Trabajo de cierre ejecutado:** `docker/initdb/04_seed_valparaiso.sql`
+regenerado sobre la grilla canónica (mismas 350 filas); `docker/fix_geom.sql`
+regenerado; `data/processed/matriz_features_real_sapi32_preview.parquet`
+re-corrido sobre la grilla nueva (14 celdas con detecciones reales del evento
+2024-02-03, antes 24 sobre celdas ~15x más pequeñas). Al re-correr apareció un
+hallazgo: la celda `VP-043`, excluida en la corrida anterior por sospecha de
+falso positivo persistente (detecciones en 12/12 meses de 6 años en esa
+*geometría anterior*), es una zona física distinta en la grilla canónica —
+reverificada, muestra solo 4 detecciones en 6 años concentradas en 2 meses (2
+años), patrón estacional normal. Ya no se excluye; ver docstring de
+`scripts/build_matriz_features_real_sapi32_preview.py`. Suite completa
+(348 tests) y `tests/test_architecture.py` (Data Contract) verificados en
+verde tras la migración.
 
-**Cierre previsto.** Sprint 2: unificar ambas capas sobre `app/utils/grid.py`
-como fuente única, regenerar el seed de PostGIS y revalidar la matriz de
-features contra la grilla nueva.
+**Pendiente, no bloqueante para esta deuda:** el shapefile comunal DPA 2023
+(SUBDERE) usado para la verificación de comunas y el resto de la matriz de
+features de producción (`matriz_features` en Postgres, distinta del preview
+Parquet de arriba) siguen sin regenerarse contra la grilla nueva — ver
+R-INTEGRACION-01 en [`matriz-riesgo.md`](matriz-riesgo.md).
 
 ## Trazabilidad informe → código
 

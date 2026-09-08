@@ -12,6 +12,7 @@ fastReruns = true
 
 [client]
 showSidebarNavigation = false
+toolbarMode = "minimal"
 
 # Estos cuatro colores están duplicados a propósito: Streamlit lee este bloque
 # al arrancar, antes de que corra Python, así que no puede importarlos de
@@ -25,7 +26,7 @@ showSidebarNavigation = false
 [theme]
 base = "light"
 primaryColor = "#3b6ea5"
-backgroundColor = "#faf9f6"
-secondaryBackgroundColor = "#f4f1ea"
+backgroundColor = "#eceeef"
+secondaryBackgroundColor = "#e0e3e7"
 textColor = "#20242b"
 font = "sans serif"

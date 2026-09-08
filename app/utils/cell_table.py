@@ -116,13 +116,17 @@ def top_risk_cell(gdf: gpd.GeoDataFrame) -> Optional[dict[str, Any]]:
         regla_activa = False
     cell_id = str(top["cell_id"])
     zona_full = zone_label_for_cell(cell_id)
-    return {
+    result = {
         "cell_id": cell_id,
         "zona": _ZONA_CORTA.get(zona_full, zona_full),
         "nivel_riesgo": str(top["nivel_riesgo"]),
         "probabilidad": float(top["probabilidad"]),
         "regla_30_30_30": regla_activa,
     }
+    for key in ("temperatura", "humedad_relativa", "velocidad_viento"):
+        if key in top.index:
+            result[key] = float(top[key])
+    return result
 
 
 def row_index_for_cell(display_df: pd.DataFrame, cell_id: Optional[str]) -> Optional[int]:

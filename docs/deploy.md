@@ -39,7 +39,7 @@ psql ... -f docker/initdb/04_seed_valparaiso.sql
 psql ... -f docker/initdb/04_seed_valparaiso.sql
 ```
 
-El seed v2 (`scripts/generate_seed.py`) usa microclimas costa/urbano/precordillera y celdas circulares ~1 km² (no series MeteoChile en vivo).
+El seed v2 (`scripts/generate_seed.py`) usa microclimas costa/urbano/precordillera y celdas circulares ~11,5 km² sobre la grilla canónica de `src/geo/grid.py` (no series MeteoChile en vivo).
 
 ## 2. Streamlit Community Cloud — Python 3.11 (obligatorio)
 

@@ -20,6 +20,7 @@ from src.config import (
     VALPARAISO_BBOX,
 )
 from src.db import get_backend_connection, log_event
+from src.geo.grid import BASE_LAT, BASE_LON, COLS, ROWS, STEP_LAT, STEP_LON
 from src.procesamiento.dem_features import sample_grid_topography
 from src.procesamiento.raw_parser import parse_dmc_json
 
@@ -208,18 +209,9 @@ class DataProcessor:
             df = df.assign(cell_id=[f"VP-{i:03d}" for i in range(1, len(df) + 1)])
         return df.groupby("cell_id", as_index=False).mean(numeric_only=True)
 
-    # Parámetros de grilla alineados con scripts/generate_seed.py
-    # Grilla compacta 10 cols × 5 filas = 50 celdas (~1 km² cada una)
-    # Corredor Viña del Mar – Quilpué
-    _GRID_BASE_LON = -71.535
-    _GRID_BASE_LAT = -33.062
-    _GRID_COLS = 10
-    _GRID_ROWS = 5
-    _GRID_STEP_LON = 0.010   # ~930 m por columna
-    _GRID_STEP_LAT = 0.009   # ~1000 m por fila
-
     def _build_grid(self) -> pd.DataFrame:
-        """Construye grilla 10×5 idéntica a scripts/generate_seed.py.
+        """Construye la grilla canónica (`src/geo/grid.py`), idéntica a la
+        que usa el dashboard y a `scripts/generate_seed.py`.
 
         Itera filas × columnas (mismo orden que el seed) para garantizar que
         VP-001..VP-010 correspondan a la fila sur y los cell_id coincidan
@@ -227,19 +219,19 @@ class DataProcessor:
         """
         cells: list[dict] = []
         idx = 1
-        for row in range(self._GRID_ROWS):
-            for col in range(self._GRID_COLS):
+        for row in range(ROWS):
+            for col in range(COLS):
                 if idx > GRID_MAX_CELLS:
                     break
-                lon = round(self._GRID_BASE_LON + col * self._GRID_STEP_LON, 5)
-                lat = round(self._GRID_BASE_LAT + row * self._GRID_STEP_LAT, 5)
+                lon = round(BASE_LON + col * STEP_LON, 5)
+                lat = round(BASE_LAT + row * STEP_LAT, 5)
                 cells.append(
                     {
                         "cell_id": f"VP-{idx:03d}",
                         "min_lon": lon,
                         "min_lat": lat,
-                        "max_lon": round(lon + self._GRID_STEP_LON, 5),
-                        "max_lat": round(lat + self._GRID_STEP_LAT, 5),
+                        "max_lon": round(lon + STEP_LON, 5),
+                        "max_lat": round(lat + STEP_LAT, 5),
                     }
                 )
                 idx += 1

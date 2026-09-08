@@ -1,0 +1,39 @@
+# Smoke/integración real de Streamlit — mecanismo YA EXISTENTE en el repo
+# tests/test_app_integration.py usa streamlit.testing.v1.AppTest para ensamblar
+# app/app.py::main() de punta a punta (sin mock del pipeline).
+# Ejecución fresca, 2026-09-07:
+
+============================= test session starts =============================
+platform win32 -- Python 3.14.6, pytest-9.1.1, pluggy-1.6.0 -- C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\danie\OneDrive\Escritorio\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main\S.A.P.I-Sistema-de-Prediccion-de-Incendios-main
+configfile: pytest.ini
+plugins: anyio-4.14.2, cov-7.1.0
+collecting ... collected 5 items
+
+tests/test_app_integration.py::test_main_runs_without_exceptions PASSED  [ 20%]
+tests/test_app_integration.py::test_prototype_mode_is_the_default_and_runs_without_exceptions PASSED [ 40%]
+tests/test_app_integration.py::test_priority_zones_and_trend_sections_are_present PASSED [ 60%]
+tests/test_app_integration.py::test_default_demo_day_has_two_priority_alerts PASSED [ 80%]
+tests/test_app_integration.py::test_selecting_a_priority_alert_updates_the_selected_cell PASSED [100%]
+
+============================== warnings summary ===============================
+tests/test_app_integration.py: 99 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\joblib\numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    array.shape = self.shape
+
+tests/test_app_integration.py: 750 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\features.py:420: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return _bounds(geom, north_up=north_up, transform=transform)
+
+tests/test_app_integration.py: 90 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\windows.py:360: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    x, y = transform * (window.col_off or 0.0, window.row_off or 0.0)
+
+tests/test_app_integration.py: 90 warnings
+  C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages\rasterio\windows.py:361: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+====================== 5 passed, 1029 warnings in 14.18s ======================

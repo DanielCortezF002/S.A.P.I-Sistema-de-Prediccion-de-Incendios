@@ -1,0 +1,18 @@
+=== Commits en main (68 total) con referencia explicita Jira SAPI-xx o legacy #HU-xx/#TS-xx ===
+--- SAPI-xx (7 commits) ---
+48106db 2026-09-02 feat(sapi-32): script reproducible del artefacto de prueba real ignición->celda
+f43db37 2026-09-02 docs: corregir métricas fabricadas restantes y documentar avance SAPI-32 + hallazgo R-ETIQUETA-01
+c22c9a1 2026-09-01 feat(sapi-30): pipeline DEM real + corrección de métricas fabricadas
+b8bbeb5 2026-08-31 test(coverage): ampliar suite a gate 80% (SAPI-45)
+ae38743 2026-08-31 feat(app): modo demo_seed, badge y banner de alcance (SAPI-44)
+5ca2c46 2026-08-31 feat(procesamiento): limpieza dataset join feb-2025 (SAPI-32)
+5b3e5c0 2026-08-31 feat(procesamiento): parser, catalogo DMC y join ignicion-meteo (SAPI-28)
+--- legacy #HU-xx / #TS-xx (3 commits) ---
+30c8a26 2026-06-20 feat(dashboard): optimizar motor predictivo XGBoost e implementar UI geográfica con caché bi-nivel #HU-06 #HU-07 #HU-08
+2d5afc8 2026-06-20 feat(model): implementar Feature Engineering, balanceo por SMOTE y clasificador baseline RF #HU-05 #TS-02
+6fcffa0 2026-06-20 feat(data): implementar pipeline ETL asíncrono y normalización geoespacial #HU-01 #HU-02 #HU-03 #HU-04
+
+=== Calculo de tasa ===
+total_commits_main=68
+commits_con_SAPI=7
+tasa_SAPI = 7/68 = 10.29%

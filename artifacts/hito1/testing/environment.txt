@@ -1,0 +1,30 @@
+=== python --version ===
+Python 3.14.6
+=== pytest --version ===
+pytest 9.1.1
+=== pip show pytest-cov ===
+Name: pytest-cov
+Version: 7.1.0
+Summary: Pytest plugin for measuring coverage.
+Home-page: 
+Author: 
+Author-email: Marc Schlaich <marc.schlaich@gmail.com>
+License-Expression: MIT
+Location: C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages
+Requires: coverage, pluggy, pytest
+Required-by: 
+=== pip show coverage ===
+Name: coverage
+Version: 7.16.0
+Summary: Code coverage measurement for Python
+Home-page: https://github.com/coveragepy/coveragepy
+Author: Ned Batchelder and 269 others
+Author-email: ned@nedbatchelder.com
+License: Apache-2.0
+Location: C:\Users\danie\AppData\Local\Python\pythoncore-3.14-64\Lib\site-packages
+Requires: 
+Required-by: pytest-cov
+=== OS ===
+MINGW64_NT-10.0-26200 Daniel 3.6.9-b4195d69.x86_64 2026-06-06 17:49 UTC x86_64 Msys
+=== fecha real de ejecución ===
+Mon Sep  7 19:44:57 UTC 2026

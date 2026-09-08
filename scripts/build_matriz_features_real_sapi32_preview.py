@@ -2,15 +2,23 @@
 
 Genera data/processed/matriz_features_real_sapi32_preview.parquet a partir
 del evento real del 2024-02-03 (megaincendio Valparaíso/Viña del Mar),
-sobre las 24 de las 50 celdas de la grilla demo donde detecciones NASA
-FIRMS reales caen dentro del polígono de la celda (contención estricta,
-sin aproximación por distancia — a diferencia del candidato VP-044/
-feb-2025 descartado en el diseño previo, acá sí hay contención real).
+sobre las celdas de `src/geo/grid.py` donde detecciones NASA FIRMS reales
+caen dentro del polígono de la celda (contención estricta, sin
+aproximación por distancia — a diferencia del candidato VP-044/feb-2025
+descartado en el diseño previo, acá sí hay contención real).
 
-VP-043 excluida explícitamente: detecciones en los 12 meses de los 6 años
-de historial (2021-2026), patrón no estacional incompatible con incendio
-forestal — sospecha de falso positivo persistente (fuente de calor no
-ígnea) no investigada todavía.
+Nota sobre VP-043 (unificación de grilla, 2026-09-06): la corrida original
+de este script excluía la celda VP-043 por sospecha de falso positivo
+persistente (detecciones en los 12 meses de los 6 años de historial,
+patrón no estacional incompatible con incendio forestal). Esa sospecha se
+verificó sobre la geometría de grilla anterior (~1 km²/celda). Tras migrar
+a la grilla canónica (~11,5 km²/celda, ver `src/geo/grid.py`), "VP-043" es
+una zona física distinta, y se reverificó: la nueva área tiene solo 4
+detecciones en 6 años, concentradas en 2 meses (feb/dic) y 2 años — patrón
+estacional consistente con incendio real, no con el hallazgo original. Por
+eso ya NO se excluye. La exclusión no se puede migrar entre grillas por el
+solo nombre de la celda; si se sospecha de nuevo un falso positivo, hay que
+reverificarlo contra la geometría vigente.
 
 Deliberadamente NO escribe en matriz_features de producción (Postgres) —
 ver R-INTEGRACION-01 en docs/matriz-riesgo.md. Es un artefacto Parquet
@@ -21,6 +29,20 @@ procesamiento DEM de su integración a data_processor.py.
 a ~10 km justifica marcar ignicion=1 en una celda es una decisión de
 etiquetado (ver R-ETIQUETA-01), no una agregación mecánica — no se infiere
 acá.
+
+Nota sobre `regla_30_30_30` (fix 06-09-2026, ver reverificación de VP-025 en
+docs/matriz-riesgo.md): se evalúa POR DETECCIÓN (misma fila, misma meteo
+emparejada) antes de agregar por celda, no sobre
+temperatura=max/humedad=min/viento=max ya agregados. Agregar primero mezcla
+valores de detecciones distintas en momentos distintos como si describieran
+una sola observación real — así fue como el hallazgo de VP-025/2022-12-11
+resultó ser un artefacto de agregación. Con el fix, "regla activa en la
+celda" significa "alguna detección real cumplió las tres condiciones a la
+vez", no "el peor valor de cada variable en la celda, sin importar cuándo
+ocurrió, cumple la regla". En esta corrida (evento 2024-02-03) el resultado
+no cambió (0 celdas con regla activa en ambos casos) porque el viento
+agregado nunca superó 21,11 km/h — pero el método anterior sí podía producir
+falsos positivos en otros eventos, como ocurrió con VP-025.
 """
 
 from __future__ import annotations
@@ -34,6 +56,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import numpy as np
 import pandas as pd
 
+from src.geo.grid import BASE_LAT, BASE_LON, COLS, ROWS, STEP_LAT, STEP_LON
 from src.procesamiento.meteo_fire_joiner import join_fires_to_meteo, summarize_join
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -42,26 +65,22 @@ OUT_PARQUET = REPO_ROOT / "data" / "processed" / "matriz_features_real_sapi32_pr
 OUT_MANIFEST = REPO_ROOT / "data" / "processed" / "matriz_features_real_sapi32_preview_manifest.json"
 
 EVENT_DATE = "2024-02-03"
-EXCLUDED_CELLS = ["VP-043"]
-
-# Grilla idéntica a spatial_joiner.build_local_grid_gdf() / DataProcessor._build_grid()
-_GRID_BASE_LON = -71.535
-_GRID_BASE_LAT = -33.062
-_GRID_COLS = 10
-_GRID_ROWS = 5
-_GRID_STEP_LON = 0.010
-_GRID_STEP_LAT = 0.009
+# Vacía a propósito: ver nota sobre VP-043 en el docstring del módulo — la
+# exclusión anterior era específica de la geometría de grilla previa y no
+# se sostuvo al reverificarla contra la grilla canónica.
+EXCLUDED_CELLS: list[str] = []
 
 
 def build_grid() -> pd.DataFrame:
+    """Grilla idéntica a `src/geo/grid.py` (fuente única, ver su docstring)."""
     cells = []
     idx = 1
-    for row in range(_GRID_ROWS):
-        for col in range(_GRID_COLS):
-            min_lon = round(_GRID_BASE_LON + col * _GRID_STEP_LON, 5)
-            min_lat = round(_GRID_BASE_LAT + row * _GRID_STEP_LAT, 5)
-            max_lon = round(min_lon + _GRID_STEP_LON, 5)
-            max_lat = round(min_lat + _GRID_STEP_LAT, 5)
+    for row in range(ROWS):
+        for col in range(COLS):
+            min_lon = round(BASE_LON + col * STEP_LON, 5)
+            min_lat = round(BASE_LAT + row * STEP_LAT, 5)
+            max_lon = round(min_lon + STEP_LON, 5)
+            max_lat = round(min_lat + STEP_LAT, 5)
             cells.append(
                 {
                     "cell_id": f"VP-{idx:03d}",
@@ -118,6 +137,21 @@ def build_preview() -> tuple[pd.DataFrame, dict]:
             f"resultado real: {join_summary['by_status']}. Revisar antes de persistir."
         )
 
+    # regla_30_30_30 se evalúa POR DETECCIÓN, antes de agregar (hallazgo
+    # 06-09-2026, ver reverificación de VP-025 en docs/matriz-riesgo.md):
+    # calcularla sobre temperatura=max/humedad=min/viento=max ya agregados
+    # por celda mezcla valores de detecciones distintas en momentos
+    # distintos como si describieran una sola observación real. Acá cada
+    # fila de `joined` ya es una detección con su propia meteo emparejada
+    # (misma fuente, mismo instante), así que "regla activa en la celda" se
+    # define correctamente como "alguna detección real cumplió las tres
+    # condiciones a la vez", con `.max()` haciendo ese OR al agregar.
+    joined["regla_30_30_30"] = (
+        (joined.temperatura > 30)
+        & (joined.humedad_relativa < 30)
+        & (joined.velocidad_viento_kmh > 30)
+    ).astype(int)
+
     grouped = joined.groupby(["cell_id", "acq_date"])
     agg = grouped.agg(
         temperatura=("temperatura", "max"),
@@ -125,10 +159,8 @@ def build_preview() -> tuple[pd.DataFrame, dict]:
         velocidad_viento=("velocidad_viento_kmh", "max"),
         conteo_focos_activos=("latitude", "count"),
         max_frp=("frp", "max"),
+        regla_30_30_30=("regla_30_30_30", "max"),
     ).reset_index()
-    agg["regla_30_30_30"] = (
-        (agg.temperatura > 30) & (agg.humedad_relativa < 30) & (agg.velocidad_viento > 30)
-    ).astype(int)
     agg = agg.rename(columns={"acq_date": "fecha"})
 
     # distancia_km_al_dato_real: acá NO es la aproximación de ~10 km del
@@ -176,12 +208,19 @@ def build_preview() -> tuple[pd.DataFrame, dict]:
             "6 focos por celda. Usar como prueba de escala del mecanismo, no como "
             "ejemplo de valores normales."
         ),
+        "nota_regla_30_30_30": (
+            "Evaluada por detección individual antes de agregar (fix 06-09-2026, ver "
+            "docstring del script) — no sobre temperatura/humedad/viento ya agregados "
+            "por celda, que puede mezclar detecciones distintas en momentos distintos."
+        ),
         "evento": EVENT_DATE,
         "celdas_excluidas": EXCLUDED_CELLS,
-        "motivo_exclusion_VP-043": (
-            "Detecciones en los 12 meses de los 6 años de historial (2021-2026) — "
-            "patrón no estacional, incompatible con incendio forestal; sospecha de "
-            "falso positivo persistente no investigada."
+        "nota_VP-043": (
+            "Excluida en la corrida sobre la grilla anterior por sospecha de falso "
+            "positivo persistente (detecciones en 12/12 meses de 6 años). Tras migrar "
+            "a la grilla canónica (src/geo/grid.py), VP-043 es una zona física "
+            "distinta; reverificada aquí: solo 4 detecciones en 6 años, 2 meses "
+            "(feb/dic), 2 años — patrón estacional normal, ya no se excluye."
         ),
         "n_celdas": int(agg.cell_id.nunique()),
         "n_detecciones_totales_agregadas": int(agg.n_detecciones_agregadas.sum()),

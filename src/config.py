@@ -125,9 +125,13 @@ DMC_ESTACIONES_VALPARAISO: list[str] = [
 RISK_THRESHOLDS = {"bajo": 0.33, "medio": 0.66, "alto": 1.0}
 
 # Modo de datos del dashboard (SAPI-44). Valores soportados:
-#   demo_seed         — escenario sembrado en memoria (Hito 1 / demo académica)
-#   postgis_inference — predicciones desde PostGIS + inference_engine (Sprint 2)
-SAPI_DATA_MODE: str = os.getenv("SAPI_DATA_MODE", "demo_seed").strip() or "demo_seed"
+#   prototype         — pipeline temporal nuevo + Modelo D, datos reales (default)
+#   demo_seed         — escenario sembrado en memoria (demo académica, separado a propósito)
+#   postgis_inference — predicciones desde PostGIS + inference_engine (legacy, Sprint 2)
+# Default "prototype": si el artefacto del prototipo no existe todavía,
+# app.py lo detecta y muestra un mensaje claro (nunca cae a demo en
+# silencio, ver app/components/prototype_view.py).
+SAPI_DATA_MODE: str = os.getenv("SAPI_DATA_MODE", "prototype").strip() or "prototype"
 
 
 def get_backend_database_url() -> str:

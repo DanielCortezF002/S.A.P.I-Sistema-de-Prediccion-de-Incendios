@@ -75,7 +75,7 @@ def test_detection_radius_handles_degenerate_frp():
     assert detection_radius(5.0, 0.0) == 2.5
 
 
-def test_build_risk_legend_html_covers_the_three_levels_and_detections():
+def test_build_risk_legend_html_covers_the_three_levels():
     from app.theme.tokens import RISK_LEVELS, risk_palette
 
     html = build_risk_legend_html()
@@ -84,7 +84,8 @@ def test_build_risk_legend_html_covers_the_three_levels_and_detections():
         assert risk_palette(nivel).surface in html, (
             f"La leyenda no muestra el color con el que el mapa pinta el nivel {nivel}"
         )
-    assert "FRP" in html
+    assert "FRP" not in html
+    assert "Foco real" not in html
 
 
 def test_legend_is_a_leaflet_control_not_a_floating_div():
@@ -126,20 +127,16 @@ def test_render_folium_map_with_data():
     assert m_selected is not None
 
 
-def test_render_folium_map_includes_both_named_layers():
-    """Riesgo y focos reales van en capas separadas y apagables.
-
-    Son fechas distintas: el escenario es 2025-02, los focos son 2024-02-03.
-    Mezclarlos sin poder separarlos sería engañoso.
-    """
+def test_render_folium_map_omits_detections_by_default():
+    """Los mini focos FIRMS no van en el mapa del escenario: otra fecha, otra idea."""
     html = render_folium_map(_gdf_una_celda()).get_root().render()
     assert RISK_LAYER_NAME in html
-    assert DETECTION_LAYER_NAME in html
-
-
-def test_render_folium_map_can_omit_detections():
-    html = render_folium_map(_gdf_una_celda(), show_detections=False).get_root().render()
     assert DETECTION_LAYER_NAME not in html
+
+
+def test_render_folium_map_can_include_detections_when_requested():
+    html = render_folium_map(_gdf_una_celda(), show_detections=True).get_root().render()
+    assert DETECTION_LAYER_NAME in html
 
 
 def test_render_folium_map_empty():

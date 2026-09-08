@@ -96,7 +96,7 @@ Abrir `http://localhost:8501`.
 - **Ámbar:** riesgo medio (zona urbana de transición).
 - **Rojo:** riesgo alto (precordillera con condiciones extremas).
 - **Clic en una celda:** popup con celda (`VP-XXX`), zona climática, probabilidad, temperatura, humedad, viento y estado de la regla 30-30-30.
-- Controles: zoom (+/−) y capa opcional con las detecciones NASA FIRMS del 2024-02-03. Mapa base Esri World Light Gray.
+- Controles: zoom (+/−). Mapa base Esri World Light Gray. Sin capa de mini focos FIRMS (solo riesgo por celda).
 - El mapa y la tabla están en **pestañas** (“Mapa de riesgo” / “Detalle por celda”), no lado a lado — así el mapa usa el ancho completo y la vista funciona en teléfono.
 
 **Distribución esperada en demo (2025-02-15):**

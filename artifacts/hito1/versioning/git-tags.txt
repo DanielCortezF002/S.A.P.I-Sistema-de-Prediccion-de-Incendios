@@ -1,0 +1,6 @@
+v1.0.0-data|2026-06-20 11:14:51 -0400|Release v1.0.0: Línea de base del pipeline de datos e ingesta estructurada
+v2.0.0-baseline|2026-06-20 11:15:31 -0400|Release v2.0.0: Línea de base del motor analítico y modelo preliminar Random Forest
+v3.0.0-final-release|2026-06-20 11:17:19 -0400|Release v3.0.0: Versión final del prototipo funcional integrado para defensa de título
+v3.2.0-demo-professional|2026-06-20 17:49:47 -0400|Demo profesional: 7 dias, consulta exacta, UI v7-multiday
+v1.0.0-sprint1-verified|2026-08-31 23:09:39 -0400|SAPI Sprint 1 — cierre con trazabilidad verificada (Hito 1)
+v1.1.0-corredor-verified|2026-09-05 23:15:10 -0400|v1.1.0-corredor-verified — grilla del corredor verificada + sistema de diseño
