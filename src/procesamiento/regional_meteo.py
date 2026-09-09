@@ -27,12 +27,12 @@ from typing import Optional
 import pandas as pd
 
 from src.config import DATA_RAW_DIR
-from src.procesamiento.features import (
+from src.procesamiento.raw_parser import parse_dmc_json
+from src.procesamiento.shared_thresholds import (
     RULE_30_30_30_HUMIDITY_THRESHOLD,
     RULE_30_30_30_TEMP_THRESHOLD,
     RULE_30_30_30_WIND_THRESHOLD,
 )
-from src.procesamiento.raw_parser import parse_dmc_json
 
 DEFAULT_SYMMETRIC_TOLERANCE = timedelta(minutes=15)
 DEFAULT_LOOKBACK_TOLERANCE = timedelta(minutes=30)
