@@ -314,14 +314,21 @@ documentaba `docs/arquitectura-hito1.md` sección 9.
 
 | ID | Escenario | Actor | Precondición | Flujo | Módulos involucrados | Resultado | REQ/HU | Tests/evidencia |
 |---|---|---|---|---|---|---|---|---|
-| **S1** | Ejecutar inferencia y priorizar 50 celdas | Analista | App corriendo, `data/raw`/`data/processed` (o snapshot) disponibles | Ver Vista de Procesos A | `app.app`, `prototype_view`, `prototype_service`, `regional_meteo`, `episodes`, `temporal_features`, `dem_features` | 50 celdas rankeadas, empates visibles, banner de frescura | REQ-14 (sin HU Jira) | `tests/test_prototype_service.py::test_inference_returns_fifty_cells`, `test_ranks_are_one_to_n` |
+| **S1** | Ejecutar inferencia y priorizar 50 celdas | Analista | App corriendo, `data/raw`/`data/processed` (o snapshot) disponibles | Ver Vista de Procesos A | `app.app`, `prototype_view`, `prototype_service`, `regional_meteo`, `episodes`, `temporal_features`, `dem_features` | 50 celdas rankeadas, empates visibles, banner de frescura | REQ-14 (SAPI-51¹) | `tests/test_prototype_service.py::test_inference_returns_fifty_cells`, `test_ranks_are_one_to_n` |
 | **S2** | Consultar detalle/trazabilidad de una celda | Analista | S1 ya ejecutado | Click en celda → `_render_selected_panel()` muestra features usados, hash de dataset | `prototype_view.py::_render_selected_panel`, `_render_tech_expander` | Panel con features/valores/hash visibles | Sin REQ específico — **Sin HU Jira real, pendiente de vincular** | `tests/test_ui_profesional.py`, `tests/test_app_integration.py` |
-| **S3** | Detectar meteorología desactualizada | Analista | Última lectura DMC > 24h antes de `forecast_time` | `classify_freshness()` clasifica RECIENTE/CON RETRASO/HISTÓRICO y lo muestra explícito | `prototype_service.py::classify_freshness`, `prototype_view.py::_render_stale_data_banner` | Banner honesto, nunca presenta dato viejo como reciente | REQ-16 (sin HU Jira) | `tests/test_prototype_freshness.py` |
+| **S3** | Detectar meteorología desactualizada | Analista | Última lectura DMC > 24h antes de `forecast_time` | `classify_freshness()` clasifica RECIENTE/CON RETRASO/HISTÓRICO y lo muestra explícito | `prototype_service.py::classify_freshness`, `prototype_view.py::_render_stale_data_banner` | Banner honesto, nunca presenta dato viejo como reciente | REQ-16 (SAPI-52¹) | `tests/test_prototype_freshness.py` |
 | **S4** | Reproducir inferencia Hito 1 offline | Auditor/Evaluador | Clon limpio, sin red, `SAPI_REPRODUCIBILITY_MODE=1` | Ver Vista de Procesos B | `prototype_service.py`, `artifacts/hito1/reproducibility/` | Resultado oficial exacto reproducido, sin red | R3 (informe de reproducibilidad separado) | `tests/test_prototype_service.py::test_reproducibility_mode_works_fully_offline` |
-| **S5** | Construir dataset temporal | Desarrollador/Científico de datos | Fuentes crudas (`data/raw/`) disponibles | Ver Vista de Procesos C (hasta `temporal_dataset_h6.parquet`) | `build_temporal_dataset.py`, `causality_validator.py`, `target_builder.py`, `pipeline_validators.py` | `temporal_dataset_h6.parquet` + manifest verificable | REQ-10, REQ-11, REQ-12 (sin HU Jira) | `tests/test_temporal_dataset_integration.py`, `test_causality_validator.py`, `test_target_builder.py` |
-| **S6** | Entrenar/verificar Modelo D | Desarrollador/Científico de datos | Dataset temporal disponible | Ver Vista de Procesos C (desde `experiment_abcd.py`) | `experiment_abcd.py`, `build_prototype_model.py` | `prototype_model_d.pkl` + metadata con hash verificable | REQ-14 (sin HU Jira) | `tests/test_experiment_abcd_contract.py`; hash bit-a-bit verificado (informe de reproducibilidad) |
-| **S7** | Detectar violación de causalidad | Desarrollador (build-time) | Se intenta construir un feature con `timestamp > T` | `validate_temporal_causality()` falla explícitamente (FAIL, no WARN) | `causality_validator.py` | Excepción/`FAIL` explícito, fila descartada — nunca se usa el dato futuro | REQ-11 (sin HU Jira) | `tests/test_causality_validator.py` |
-| **S8** | Manejar DEM faltante como N/D | Sistema (runtime) | Una celda cae fuera de la cobertura del raster DEM | `_zonal_mean()`/`_zonal_circular_mean_deg()` conservan `NaN`; `HistGradientBoostingClassifier` lo maneja nativamente; UI muestra "N/D" | `dem_features.py`, `prototype_view.py::_fmt_nd` | Celda con topografía N/D, nunca `0` disfrazado de dato real | REQ-15 (sin HU Jira) | `tests/test_dem_features.py` (datos); **UI (`_fmt_nd`) sin test dedicado — brecha ya documentada en `docs/trazabilidad-hito1.md`** |
+| **S5** | Construir dataset temporal | Desarrollador/Científico de datos | Fuentes crudas (`data/raw/`) disponibles | Ver Vista de Procesos C (hasta `temporal_dataset_h6.parquet`) | `build_temporal_dataset.py`, `causality_validator.py`, `target_builder.py`, `pipeline_validators.py` | `temporal_dataset_h6.parquet` + manifest verificable | REQ-10, REQ-11, REQ-12 (SAPI-50¹) | `tests/test_temporal_dataset_integration.py`, `test_causality_validator.py`, `test_target_builder.py` |
+| **S6** | Entrenar/verificar Modelo D | Desarrollador/Científico de datos | Dataset temporal disponible | Ver Vista de Procesos C (desde `experiment_abcd.py`) | `experiment_abcd.py`, `build_prototype_model.py` | `prototype_model_d.pkl` + metadata con hash verificable | REQ-14 (SAPI-51¹) | `tests/test_experiment_abcd_contract.py`; hash bit-a-bit verificado (informe de reproducibilidad) |
+| **S7** | Detectar violación de causalidad | Desarrollador (build-time) | Se intenta construir un feature con `timestamp > T` | `validate_temporal_causality()` falla explícitamente (FAIL, no WARN) | `causality_validator.py` | Excepción/`FAIL` explícito, fila descartada — nunca se usa el dato futuro | REQ-11 (SAPI-50¹) | `tests/test_causality_validator.py` |
+| **S8** | Manejar DEM faltante como N/D | Sistema (runtime) | Una celda cae fuera de la cobertura del raster DEM | `_zonal_mean()`/`_zonal_circular_mean_deg()` conservan `NaN`; `HistGradientBoostingClassifier` lo maneja nativamente; UI muestra "N/D" | `dem_features.py`, `prototype_view.py::_fmt_nd` | Celda con topografía N/D, nunca `0` disfrazado de dato real | REQ-15 (SAPI-52¹) | `tests/test_dem_features.py` (datos); **UI (`_fmt_nd`) sin test dedicado — brecha ya documentada en `docs/trazabilidad-hito1.md`** |
+
+¹ **SAPI-50/51/52 fueron creadas en Jira el 09-09-2026, posteriormente al
+cierre histórico de Sprint 1 (03-08 a 31-08-2026).** Formalizan trazabilidad
+de funcionalidad ya implementada y verificada; no representan trabajo
+planificado ni aceptado durante Sprint 1. Ver
+`artifacts/hito1/posthito-jira/jira-ticket-specs.md` y
+`docs/trazabilidad-current.md` para el detalle completo del vínculo.
 
 ### Diagrama de secuencia de escenario — S8 (DEM faltante como N/D)
 
@@ -353,26 +360,39 @@ Reutiliza **exactamente** los REQ-01 a REQ-16 ya definidos en
 `docs/trazabilidad-hito1.md` (congelado, no se redefinen aquí ni se
 inventan nuevos). Los REQ-10 a REQ-16 cubren el pipeline temporal y **ya
 estaban marcados ahí como "PENDIENTE DE VINCULAR EN FASE DE TRAZABILIDAD"**
-— este documento no cambia ese estado, solo lo hace visible desde la
-perspectiva de escenarios 4+1.
+— ese documento histórico no se modifica. Lo que sí cambia, a partir del
+09-09-2026, es que 7 de estos 9 vínculos vista→escenario→REQ **ya tienen
+una HU Jira real** (SAPI-50/51/52), creada explícitamente **después** del
+cierre de Sprint 1 para formalizar trazabilidad de funcionalidad ya
+implementada y verificada — no como si hubiera guiado ese desarrollo. Ver
+`docs/trazabilidad-current.md` para la matriz completa HU→CA→REQ→test.
 
 | Vista | Escenario | REQ | HU/Ticket Jira | Estado del vínculo | Evidencia |
 |---|---|---|---|---|---|
-| Procesos A | S1 | REQ-14 | — | **Sin HU Jira real — pendiente de vincular** | `test_inference_returns_fifty_cells` |
-| +1 | S2 | (ninguno definido en `docs/trazabilidad-hito1.md`) | — | **Sin HU Jira real — pendiente de vincular** | `test_ui_profesional.py` |
-| +1 | S3 | REQ-16 | — | **Sin HU Jira real — pendiente de vincular** | `test_prototype_freshness.py` |
-| Procesos B | S4 | (no cubierto por REQ-01..16; es un requisito de la auditoría de reproducibilidad, no de Sprint 1) | — | **Sin HU Jira real — pendiente de vincular** | `test_reproducibility_mode_works_fully_offline` |
-| Procesos C | S5 | REQ-10, REQ-11, REQ-12 | — | **Sin HU Jira real — pendiente de vincular** | `test_temporal_dataset_integration.py`, `test_causality_validator.py`, `test_target_builder.py` |
-| Procesos C | S6 | REQ-14 | — | **Sin HU Jira real — pendiente de vincular** | `test_experiment_abcd_contract.py` |
-| +1 | S7 | REQ-11 | — | **Sin HU Jira real — pendiente de vincular** | `test_causality_validator.py` |
-| +1 (diagrama) | S8 | REQ-15 | — | **Sin HU Jira real — pendiente de vincular** | `test_dem_features.py` (parcial — UI sin test) |
-| Lógica/Desarrollo | (aislamiento legacy, transversal) | REQ-13 | — | **Sin HU Jira real — pendiente de vincular** | `test_no_legacy_imports_in_prototype_modules`, `test_frontend_data_contract_compliance`, `test_temporal_pipeline_has_no_transitive_legacy_dependency` (nuevo, sección 8) |
+| Procesos A | S1 | REQ-14 | **SAPI-51** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_inference_returns_fifty_cells` |
+| +1 | S2 | (ninguno definido en `docs/trazabilidad-hito1.md`) | — | **Sin HU Jira real — pendiente de vincular** (sin REQ asignado; fuera del alcance de SAPI-50/51/52) | `test_ui_profesional.py` |
+| +1 | S3 | REQ-16 | **SAPI-52** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_prototype_freshness.py` |
+| Procesos B | S4 | (no cubierto por REQ-01..16; es un requisito de la auditoría de reproducibilidad, no de Sprint 1) | — | **Sin HU Jira real — pendiente de vincular** (requisito de auditoría de reproducibilidad, no de backlog de producto) | `test_reproducibility_mode_works_fully_offline` |
+| Procesos C | S5 | REQ-10, REQ-11, REQ-12 | **SAPI-50** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_temporal_dataset_integration.py`, `test_causality_validator.py`, `test_target_builder.py` |
+| Procesos C | S6 | REQ-14 | **SAPI-51** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_experiment_abcd_contract.py` |
+| +1 | S7 | REQ-11 | **SAPI-50** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_causality_validator.py` |
+| +1 (diagrama) | S8 | REQ-15 | **SAPI-52** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_dem_features.py` (parcial — UI sin test) |
+| Lógica/Desarrollo | (aislamiento legacy, transversal) | REQ-13 | **SAPI-51** | Vinculado (post-Hito 1, 09-09-2026)¹ | `test_no_legacy_imports_in_prototype_modules`, `test_frontend_data_contract_compliance`, `test_temporal_pipeline_has_no_transitive_legacy_dependency` (nuevo, sección 8) |
 
-**Resumen:** 9 de 9 vínculos vista→escenario→REQ de esta matriz están
-**sin HU Jira real** — consistente con lo que `docs/trazabilidad-hito1.md`
-ya documentaba (REQ-10 a REQ-16, "PENDIENTE DE VINCULAR EN FASE DE
-TRAZABILIDAD"). No se inventó ningún ticket para completar esta matriz. Los
-únicos REQ del proyecto con HU Jira real y verificable son REQ-01 a REQ-08
+¹ SAPI-50/51/52 fueron creadas en Jira el 09-09-2026, posteriormente al
+cierre histórico de Sprint 1 (03-08 a 31-08-2026), en estado `TO DO`,
+Sprint vacío, Story Points vacíos, dentro del Product Backlog actual —
+**no** dentro de Sprint 1 ni de Sprint 2 todavía. No implican Sprint Goal,
+DoD ni Sprint Review retroactivos para Sprint 1 (ver
+`docs/cierre-sprint1-hito1.md`).
+
+**Resumen:** 7 de 9 vínculos vista→escenario→REQ de esta matriz **ya tienen
+HU Jira real** (SAPI-50, SAPI-51, SAPI-52, creadas 09-09-2026). Los 2
+restantes (S2, S4) siguen **sin HU Jira real** — por diseño, no por omisión:
+S2 nunca tuvo un REQ asignado en `docs/trazabilidad-hito1.md` y S4 es un
+requisito de la auditoría de reproducibilidad, no del backlog de producto.
+No se inventó ningún ticket para completar esta matriz. Los únicos otros REQ
+del proyecto con HU Jira real y verificable son REQ-01 a REQ-08
 (SAPI-26/28/30/32/44/45/47/48), que pertenecen mayormente al pipeline de
 ingesta/legacy, no al pipeline temporal cubierto por los escenarios S1-S8.
 

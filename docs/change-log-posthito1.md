@@ -97,3 +97,61 @@ genuinamente incompleta tras el cierre del bloque de arquitectura 4+1
 **No modificados (fuera de alcance de esta acción, es de
 gestión/trazabilidad, no de código):**
 - `src/`, `app/`, `tests/` — sin cambios en esta acción.
+
+---
+
+## CR-002 — Keys Jira reales asignadas (SAPI-50/51/52)
+
+**Fecha:** 09-09-2026 (misma jornada que CR-001, acción posterior).
+
+**Origen:** el paquete de importación de CR-001
+(`artifacts/hito1/posthito-jira/`) fue creado manualmente en Jira por el
+responsable del proyecto, siguiendo las "Instrucciones de creación manual"
+de `jira-ticket-specs.md`.
+
+**Resultado:** las 3 HU **existen realmente** en Jira, en el proyecto
+**SAPI**:
+
+| HU | Key real | Título |
+|---|---|---|
+| HU-A | **SAPI-50** | Integridad causal del dataset temporal |
+| HU-B | **SAPI-51** | Ranking de riesgo confiable y aislado de datos sintéticos/legacy |
+| HU-C | **SAPI-52** | Presentación robusta y honesta de información por celda |
+
+**Estado actual verificado de las 3 keys:** Product Backlog, `TO DO`,
+Sprint vacío, Story Points vacíos — **no** asignadas a Sprint 2 todavía
+(pendiente de refinamiento y Sprint Planning 2, tal como especificaba
+`jira-ticket-specs.md`).
+
+**Decisión:** actualizar `docs/architecture-4plus1-hito1.md` (sección 6)
+para reemplazar "Sin HU Jira real — pendiente de vincular" por las keys
+reales en las 7 de 9 filas que corresponden a REQ-10..16, y crear
+`docs/trazabilidad-current.md` con la matriz completa HU→CA→REQ→módulo→
+test→evidencia→escenario. Ambos cambios están fechados 09-09-2026 y marcan
+explícitamente las HU como posteriores al cierre histórico de Sprint 1.
+
+**Lo que esta decisión NO hace — explícito:**
+- No modifica `docs/trazabilidad-hito1.md` ni ningún otro documento
+  congelado de Hito 1.
+- No atribuye SAPI-50/51/52 al Sprint Backlog, Sprint Goal ni DoD
+  histórico de Sprint 1.
+- No mueve las 3 HU a Sprint 2 ni les asigna Story Points.
+- No cierra el gap conocido de `CA-C3` (`_fmt_nd` sin test dedicado,
+  REQ-15) — queda explícito en `docs/trazabilidad-current.md` para
+  refinamiento futuro.
+
+**Documentos afectados por CR-002:**
+
+**Creados:**
+- `docs/trazabilidad-current.md`
+
+**Modificados:**
+- `docs/architecture-4plus1-hito1.md` (sección 6 y tabla de escenarios de
+  la sección 5 — solo las celdas REQ/HU, sin tocar el resto del documento)
+- Este archivo (`docs/change-log-posthito1.md`)
+
+**No modificados (documentos congelados de Hito 1, decisión deliberada):**
+- `docs/trazabilidad-hito1.md`
+- `docs/informe-hito1-final.md`, `docs/atributos-calidad-hito1.md`,
+  `docs/cierre-sprint1-hito1.md`
+- Ningún export Jira histórico (`artifacts/hito1/versioning/*`) fue tocado.
