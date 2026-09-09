@@ -1,12 +1,13 @@
 # Dependencias ML, batch y desarrollo (Docker analytics + CI local)
+# Version que reproduce el Modelo D publicado (models/prototype_model_d.pkl) de
+# forma bit-identica, verificado 09-09-2026 -- ver docs/deploy.md.
+# scikit-learn/joblib/rasterio/imbalanced-learn se heredan de requirements.txt
+# desde el 09-09-2026 (son runtime, no solo training -- ver requirements.txt).
 -r requirements.txt
-scikit-learn==1.4.2
-xgboost==2.0.3
-imbalanced-learn==0.11.0
-joblib==1.3.2
-rasterio==1.4.4
-pytest==7.4.4
-pytest-cov==4.1.0
-flake8==7.0.0
-black==24.3.0
-locust==2.24.0
+scipy==1.18.1
+xgboost==3.4.1
+pytest==9.1.1
+pytest-cov==7.1.0
+flake8==7.3.0
+black==26.5.1
+locust==2.46.5

@@ -1,0 +1,54 @@
+# Evita que `docker build` dependa accidentalmente de archivos locales que
+# Git no versiona (ver docs/deploy.md, seccion "Reproducibilidad de datos y
+# modelo"). docker-compose.yml monta data/ y models/ como VOLUMENES en
+# runtime (no via build) -- no hacen falta en el build context.
+#
+# Auditoria 09-09-2026: sin este archivo, `docker build` copiaba silenciosamente
+# data/raw, data/processed y models/*.pkl si existian en el disco local,
+# haciendo que un build "funcionara" solo por casualidad del working tree,
+# no de forma reproducible desde un clon limpio. Verificado con
+# `git archive HEAD` + docker build: el build es identico (mas rapido, sin
+# estos archivos) y el contenedor arranca igual.
+
+.git/
+.venv/
+.venv_model_probe/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+data/raw/*
+data/processed/*
+data/predictions/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/predictions/.gitkeep
+
+models/*.pkl
+# Modelo D oficial: SI entra a la imagen (score_current_grid() lo necesita
+# para runtime; ya esta versionado en git, ver .gitignore). El dataset de
+# entrenamiento (data/processed/temporal_dataset_h6.parquet, excluido arriba)
+# NO entra -- solo hace falta para build_prototype_model.py, que no corre
+# dentro del contenedor web en el flujo normal.
+!models/prototype_model_d.pkl
+
+artifacts/
+# Snapshots minimos del Hito 1 (DMC ~4.3MB, FIRMS ~1.3MB, DEM derivado
+# ~1.6KB): SI entran a la imagen -- permiten que
+# SAPI_REPRODUCIBILITY_MODE=1 funcione dentro del contenedor sin necesitar
+# los volumenes data/raw ni data/processed reales. No incluye
+# manifest.json/README.md (documentacion, no runtime).
+!artifacts/hito1/
+artifacts/hito1/*
+!artifacts/hito1/reproducibility/
+artifacts/hito1/reproducibility/*
+!artifacts/hito1/reproducibility/dmc/
+!artifacts/hito1/reproducibility/firms/
+!artifacts/hito1/reproducibility/dem/
+reports/*.html
+*.log
+.DS_Store
+.claude/

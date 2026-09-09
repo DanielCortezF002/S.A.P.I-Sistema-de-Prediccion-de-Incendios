@@ -23,6 +23,7 @@ valor.
 
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Optional, Union
@@ -43,6 +44,38 @@ CANDIDATE_STEP_HOURS = 6  # mismo valor congelado que scripts/build_temporal_dat
 FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
 DEM_TERRAIN_DIR = REPO_ROOT / "data" / "processed" / "dem_terrain"
 MODEL_PATH = REPO_ROOT / "models" / "prototype_model_d.pkl"
+
+# Modo de reproducibilidad del Hito 1 (formalizado 09-09-2026, ver
+# docs/deploy.md "MODO HITO 1 REPRODUCIBLE"). Explicito, opt-in via
+# variable de entorno -- el comportamiento normal (data/raw/ operacional,
+# meteorologia mas reciente que exista localmente) NO cambia salvo que se
+# active. Cuando esta activo, `load_regional_meteo_series` lee del
+# snapshot congelado en artifacts/hito1/reproducibility/dmc/ en vez de
+# data/raw/ -- NUNCA se disfraza como meteorologia en tiempo real: el
+# `forecast_time` resultante y `classify_freshness()` siguen reflejando
+# la fecha real de los datos (historicos), no la fecha de hoy.
+#
+# Deliberadamente NO se lee os.getenv() a nivel de modulo (import-time):
+# eso congelaria el valor en el primer import y un test que active la
+# variable despues no tendria efecto. `_reproducibility_mode()` la lee en
+# cada llamada.
+REPRODUCIBILITY_DMC_DIR = REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "dmc"
+# FIRMS: el CSV congelado es EL MISMO archivo derivado (1,3MB, ya deduplicado
+# SP/NRT) que data/processed/nasa_firms_2021-08-30_2026-08-30.csv -- no una
+# version recortada. historial_firms_features() necesita el historial COMPLETO
+# hasta forecast_time (cuenta arribos totales, no una ventana corta como DMC),
+# asi que no existe un subconjunto mas chico sin alterar el resultado.
+REPRODUCIBILITY_FIRMS_CSV = REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "firms" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# DEM: tabla derivada (50 filas: cell_id/elevacion/pendiente/orientacion/
+# dem_disponible) -- exactamente lo que load_grid_topography() produce a
+# partir del raster real, generada una vez y congelada (1,6KB vs ~6,5MB de
+# rasters). Evita versionar los .tif; la funcion que los consume no se toca,
+# solo se evita llamarla en modo reproducibilidad.
+REPRODUCIBILITY_TOPO_CSV = REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "dem" / "grid_topography.csv"
+
+
+def _reproducibility_mode() -> bool:
+    return os.getenv("SAPI_REPRODUCIBILITY_MODE") == "1"
 
 _EMPTY_ARRIVALS = pd.Series([], dtype="datetime64[ns, UTC]")
 
@@ -175,16 +208,25 @@ def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> p
     un mismo T (una sola estación regional, nunca reetiquetada por
     celda); historial FIRMS y topografía sí varían por celda.
     """
-    if not FIRES_CSV.exists():
-        raise PrototypeUnavailableError(f"No existe el histórico FIRMS en {FIRES_CSV.relative_to(REPO_ROOT)}.")
-    fires = pd.read_csv(FIRES_CSV)
+    reproducibility = _reproducibility_mode()
+    fires_csv = REPRODUCIBILITY_FIRMS_CSV if reproducibility else FIRES_CSV
+    if not fires_csv.exists():
+        raise PrototypeUnavailableError(f"No existe el histórico FIRMS en {fires_csv.relative_to(REPO_ROOT)}.")
+    fires = pd.read_csv(fires_csv)
     episodes = assign_episodes(fires)
     arrivals = first_arrival_by_cell(episodes)
     arrivals_by_cell = {cell: group["first_arrival"] for cell, group in arrivals.groupby("cell_id")}
 
     grid_cells = all_cells()
     cell_ids = [c["cell_id"] for c in grid_cells]
-    topo = load_grid_topography(grid_cells, DEM_TERRAIN_DIR).set_index("cell_id")
+    if reproducibility:
+        if not REPRODUCIBILITY_TOPO_CSV.exists():
+            raise PrototypeUnavailableError(
+                f"No existe la tabla topográfica congelada en {REPRODUCIBILITY_TOPO_CSV.relative_to(REPO_ROOT)}."
+            )
+        topo = pd.read_csv(REPRODUCIBILITY_TOPO_CSV).set_index("cell_id")
+    else:
+        topo = load_grid_topography(grid_cells, DEM_TERRAIN_DIR).set_index("cell_id")
 
     rows = []
     for cell_id in cell_ids:
@@ -211,12 +253,20 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
     `forecast_time=None` -> usa el último T real con features disponibles
     (nunca una fecha futura inventada). Lanza `PrototypeUnavailableError`
     con un mensaje explicable si falta cualquier artefacto necesario.
+
+    Si `SAPI_REPRODUCIBILITY_MODE=1` está activo, la meteorología se lee
+    del snapshot congelado del Hito 1 (`REPRODUCIBILITY_DMC_DIR`) en vez de
+    `data/raw/` operacional -- ver docs/deploy.md, "MODO HITO 1
+    REPRODUCIBLE". El resultado sigue siendo honesto sobre su frescura:
+    `forecast_time`/`weather_timestamp`/`classify_freshness()` reflejan la
+    fecha real de esos datos (históricos), nunca la fecha de hoy.
     """
     model, metadata = _load_model()
     feature_columns: list[str] = metadata["feature_columns"]
     horizon_hours: int = metadata["horizon_hours"]
 
-    meteo_series = load_regional_meteo_series(STATION_ID)
+    meteo_raw_dir = REPRODUCIBILITY_DMC_DIR if _reproducibility_mode() else None
+    meteo_series = load_regional_meteo_series(STATION_ID, raw_dir=meteo_raw_dir)
     if meteo_series.empty:
         raise PrototypeUnavailableError(
             f"No hay datos meteorológicos reales para la estación {STATION_ID} en data/raw/."

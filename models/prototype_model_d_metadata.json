@@ -2,7 +2,7 @@
   "model_version": "prototype_model_d_v1",
   "status": "PROTOTYPE / EXPLORATORY",
   "aviso": "PROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, NO una probabilidad calibrada de incendio. No usar para decisiones operacionales. Ver docs/auditoria-consistencia-2026-09-06.md para el estado metodológico completo.",
-  "trained_at": "2026-09-07T12:24:42.298807+00:00",
+  "trained_at": "2026-09-09T16:25:16.572345+00:00",
   "dataset_hash": "14b36ad8db680cf57f6e0c655cb0a1940ed4b4c63e810d59e470055babc530fe",
   "dataset_path": "data\\processed\\temporal_dataset_h6.parquet",
   "feature_columns": [
@@ -38,5 +38,13 @@
   "n_training_rows": 362883,
   "n_positive_rows": 107,
   "model_type": "HistGradientBoostingClassifier",
-  "random_state": 42
+  "random_state": 42,
+  "training_environment": {
+    "python_version": "3.14.6",
+    "numpy_version": "2.5.2",
+    "scipy_version": "1.18.1",
+    "scikit_learn_version": "1.9.0",
+    "joblib_version": "1.5.3",
+    "nota": "Registrado a partir de 09-09-2026 (migracion de reproducibilidad). Un entorno con versiones distintas de numpy/scikit-learn puede fallar al deserializar este artefacto (ver docs/deploy.md, seccion CURRENT) o, si logra reentrenar, producir un modelo funcionalmente distinto -- usar exactamente estas versiones para regenerar el artefacto."
+  }
 }
