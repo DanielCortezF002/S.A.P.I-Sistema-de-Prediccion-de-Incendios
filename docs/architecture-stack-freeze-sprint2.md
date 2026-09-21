@@ -367,3 +367,79 @@ TEMPORAL_MODEL_SELECTION: OPEN
 CLOUD_PROVIDER: OPEN
 JIRA_READY: YES
 ```
+
+---
+
+## 9. Baseline reproducible de tests — Sprint 2
+
+**Entorno canónico: Docker.** La verificación reproducible del baseline de
+tests de Sprint 2 se hace ejecutando `pytest` dentro de un contenedor
+construido desde `Dockerfile.analytics` (`docker build --no-cache`, sin
+volúmenes montados, usando exclusivamente lo que `COPY . .` trae del build
+context filtrado por `.dockerignore`). Cualquier pipeline de CI futuro debe
+reproducir exactamente este flujo — o invocarlo directamente — para que sus
+resultados puedan compararse contra este baseline.
+
+La ejecución en el `.venv` del host (entorno de desarrollo local) es
+auxiliar, no canónica: puede mostrar un número distinto de tests
+ejecutados/saltados porque el disco local de un desarrollador puede tener
+artefactos generados en sesiones previas (`data/raw/*`, `data/processed/*`)
+que están en `.gitignore` y por lo tanto nunca están presentes en un clon
+limpio, en Docker, ni en CI. Un resultado "más verde" en el host (p. ej.
+487 passed / 0 skipped) no es más confiable que el de Docker — es menos
+reproducible, porque depende de archivos que no viven en git.
+
+**Commit verificado:** `e573adc54a0d234507457af99e2deca27a874905`
+
+**Resultados canónicos (Docker, commit de arriba):**
+
+```
+TESTS_COLLECTED: 487
+TESTS_PASSED: 464
+TESTS_FAILED: 0
+TESTS_SKIPPED: 23
+EXPECTED_SKIPS: 23
+UNEXPECTED_SKIPS: 0
+COVERAGE: 88.19%
+COVERAGE_GATE: PASS (80% requerido)
+
+DOCKER_REBUILD: PASS
+MANIFEST_VISIBLE: YES
+MANIFEST_HASH_VALIDATION: PASS
+MODEL_D_LOAD: OK
+MODEL: HistGradientBoostingClassifier
+ARTIFACT: prototype_model_d_v1
+```
+
+**Alcance temporal — no confundir con Hito 1 / Sprint 1.** Estas cifras
+corresponden exclusivamente al baseline de Sprint 2 (commit de arriba). El
+baseline histórico de Hito 1 (470 collected / 470 passed / 0 failed,
+commit `9f076172`, 2026-09-07 — ver
+`artifacts/hito1/testing/pytest-full.txt`) es un snapshot distinto, de una
+fase anterior, con menos tests recolectados y sin las condiciones de
+verificación Docker descritas aquí. No se debe citar uno como si fuera el
+otro.
+
+### Aclaración de alcance — `test_locally_present_artifacts_match_manifest_hash`
+
+`tests/test_reproducibility_manifest.py::test_locally_present_artifacts_match_manifest_hash`
+valida el hash SHA-256 de los artefactos de `CHECKED_ARTIFACTS`
+(`scripts/verify_reproducibility.py`) que estén **presentes localmente**
+contra lo declarado en `artifacts/hito1/reproducibility/manifest.json`. La
+ausencia local de un artefacto no produce fallo — es un comportamiento por
+diseño (ver el docstring del propio test). Esto **no** debe interpretarse
+como una verificación de existencia completa de todos los artefactos
+declarados en el manifest: es una prueba de "si existe, su hash coincide
+con lo publicado", no de "todo lo declarado existe". (La prueba que sí
+exige existencia incondicional de los artefactos mínimos versionados es
+`test_the_four_minimum_r3_artifacts_are_always_present`, en el mismo
+archivo.)
+
+### Deuda técnica registrada (no bloqueante para Sprint 2)
+
+El pin de versiones del sistema operativo/GDAL/GEOS/PROJ en
+`Dockerfile.analytics` y `Dockerfile.web` (`FROM python:3.14-slim` sin
+digest fijo, `apt-get install` sin versiones exactas) queda registrado
+como mejora futura de reproducibilidad de la capa de sistema operativo.
+No es un requisito retroactivo del baseline de Sprint 2 ni bloquea el
+veredicto de la sección 8 — se anota aquí únicamente para trazabilidad.
