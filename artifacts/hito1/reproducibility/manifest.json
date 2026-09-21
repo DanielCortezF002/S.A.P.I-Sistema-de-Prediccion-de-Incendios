@@ -1,0 +1,230 @@
+{
+  "_meta": {
+    "proposito": "Manifest de reproducibilidad del Modelo D y su cadena de datos. Generado 09-09-2026 para cerrar la brecha encontrada al auditar reproducibilidad: data/ y models/*.pkl no estan versionados en git (.gitignore), asi que un clon limpio no podia inferir ni reentrenar sin regenerar la cadena completa contra APIs externas.",
+    "actualizado_09-09-2026_fase2": "El Modelo D oficial (models/prototype_model_d.pkl, 68 KB) fue promovido a FROZEN_IN_GIT tras verificar: (a) coincide exactamente con el hash citado en su propio metadata.json y con el dataset_hash 14b36ad8...; (b) no contiene datos crudos de terceros, solo parametros de un HistGradientBoostingClassifier entrenado. El dataset temporal (10,8 MB) NO fue versionado: LICENSE_NOT_CONFIRMED -- el repo no documenta los terminos de redistribucion de datos derivados de NASA FIRMS / DMC / Copernicus DEM, y no se asumio una condicion legal sin evidencia. Sigue NOT_FROZEN_IN_GIT hasta que se confirme.",
+    "no_reemplaza": "El dataset (no versionado). Para el modelo, este archivo ahora documenta un artefacto que SI esta versionado -- ver seccion 5_training_modelo_d.",
+    "generado": "2026-09-09",
+    "principio_de_honestidad_temporal": "Esta formalizacion de reproducibilidad es evidencia ACTUAL del 09-09-2026, posterior al cierre historico de Sprint 1 (31-08-2026). No se presenta como si el snapshot/manifest hubiera estado versionado durante Sprint 1 -- es una formalizacion de reproducibilidad posterior al cierre, basada en los artefactos cientificos originales ya verificados (mismo dataset_hash, mismos resultados de score_current_grid, sin alterar metodologia ni metricas).",
+    "principio_de_no_fabricacion": "Ningun hash/cifra de este archivo fue inventado -- todos se recalcularon con sha256sum sobre los archivos reales presentes en esta maquina el 09-09-2026. Donde no hay snapshot congelado, se dice explicitamente NOT_FROZEN."
+  },
+
+  "cadena_de_proveniencia": {
+    "1_nasa_firms": {
+      "fuente_externa": {
+        "endpoint": "https://firms.modaps.eosdis.nasa.gov/api",
+        "autenticacion": "MAP_KEY (query param), variable NASA_FIRMS_API_KEY",
+        "periodo_solicitado": "2021-08-30 a 2026-08-30 (backfill) + ventanas diarias SP/NRT",
+        "parametros": "area (bbox Valparaiso), source (VIIRS_SNPP_SP / VIIRS_SNPP_NRT), day_range (max 5 dias/llamada, ventaneado)",
+        "script": "src/ingesta/nasa_firms_backfill.py, scripts/backfill_nasa_firms.py"
+      },
+      "raw_output": {
+        "archivo": "data/processed/nasa_firms_2021-08-30_2026-08-30.csv",
+        "manifest_propio": "data/processed/nasa_firms_2021-08-30_2026-08-30_manifest.json",
+        "sha256_verificado_09-09-2026": "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271",
+        "n_registros_manifest": 12477,
+        "tamano_bytes": 1323306,
+        "congelado": "NOT_FROZEN_IN_GIT en data/processed/ -- pero ver snapshot_reproducibilidad_R3 abajo: el MISMO archivo (identico, mismo hash) SI esta versionado en artifacts/hito1/reproducibility/firms/"
+      },
+      "snapshot_reproducibilidad_R3": {
+        "purpose": "inference_reproducibility -- FROZEN_IN_GIT desde 09-09-2026",
+        "file": "artifacts/hito1/reproducibility/firms/nasa_firms_2021-08-30_2026-08-30.csv",
+        "sha256": "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271",
+        "size_bytes": 1323306,
+        "record_count": 12477,
+        "period": "2021-08-30 a 2026-08-30",
+        "format": "CSV, formato original sin transformar, identico byte a byte al de data/processed/",
+        "razon_de_no_recortar": "historial_firms_features() (src/procesamiento/temporal_features.py) cuenta TODOS los arribos previos a forecast_time por celda (historial_firms_count, dias_desde_ultimo_evento) -- no usa una ventana corta como los lags DMC. El archivo ya es un artefacto derivado y consolidado (backfill deduplicado SP/NRT), no RAW crudo dia por dia; a 1,3MB, es en si mismo el snapshot minimo -- no existe un subconjunto mas chico sin alterar historial_firms_count para forecast_times anteriores.",
+        "criterio_de_uso_en_features": "Input de assign_episodes() + first_arrival_by_cell() -> arrivals_by_cell -> historial_firms_features(cell_id, forecast_time, arrivals) para cada una de las 50 celdas, en src/inference/prototype_service.py::build_feature_matrix().",
+        "security": "PASS -- 0 coincidencias de API keys/tokens/paths locales/emails",
+        "license_status": "NOT_CONFIRMED -- datos observacionales publicos de NASA FIRMS (Fire Information for Resource Management System); el repo no documenta licencia de redistribucion explicita ni prohibicion. No se afirma ningun derecho no demostrado.",
+        "generado_por": "src/ingesta/nasa_firms_backfill.py, scripts/backfill_nasa_firms.py",
+        "fecha_de_formalizacion": "2026-09-09, posterior al cierre historico de Sprint 1 (31-08-2026)",
+        "relacion_con_modelo_d": "Mismo archivo (mismo hash) usado por scripts/build_temporal_dataset.py para construir el dataset de entrenamiento del Modelo D publicado -- consistencia verificada por igualdad de SHA256, no solo por nombre de archivo."
+      }
+    },
+
+    "2_dmc_330007": {
+      "fuente_externa": {
+        "endpoint": "https://climatologia.meteochile.gob.cl/application/servicios/getDatosRecientesEma/{estacion}/{anio}/{mes}",
+        "estacion": "330007 (Rodelillo)",
+        "autenticacion": "sin credenciales por header (endpoint publico historico mensual)",
+        "periodo_solicitado": "2021-08 a 2026-08 (61 meses calendario)",
+        "script": "scripts/backfill_dmc_historico.py"
+      },
+      "raw_output": {
+        "archivos": "data/raw/dmc_historico_330007_YYYY-MM.json (61 archivos)",
+        "manifest_propio": "reports/backfill_dmc_330007_manifest.json",
+        "tamano_total_aprox_bytes": 210000000,
+        "congelado": "NOT_FROZEN_IN_GIT (los 61 meses completos) -- data/raw/* esta en .gitignore. Ver snapshot_reproducibilidad_R3 abajo para el subconjunto minimo SI versionado."
+      },
+      "snapshot_reproducibilidad_R3": {
+        "proposito": "FROZEN_IN_GIT desde 09-09-2026, exclusivamente para cerrar R3 (inference_reproducibility) -- NO es el backfill completo de 61 meses, NO se reconstruyo/regenero el historico completo.",
+        "periodo_necesario": {
+          "desde": "2026-08-01T00:00:00Z",
+          "hasta": "2026-09-01T01:30:00Z",
+          "razon": "score_current_grid() usa LAG_HOURS=(0,6,12,24,48) con LAG_TOLERANCE=30min (src/procesamiento/temporal_features.py). Para el ultimo forecast_time real disponible (2026-09-01T00:00Z), el lag maximo de 48h requiere datos continuos desde forecast_time-48h30min (~2026-08-30T00:30Z). La granularidad de archivo del backfill historico es mensual, asi que la unidad minima practicable sin huecos es el mes calendario completo (agosto 2026) mas el archivo de ingesta reciente que ancla el punto mas nuevo (dmc_meteo_2026-09-01.json).",
+          "lag_maximo_horas": 48,
+          "margen_tolerancia_minutos": 30
+        },
+        "archivos": [
+          {
+            "ruta": "artifacts/hito1/reproducibility/dmc/dmc_historico_330007_2026-08.json",
+            "sha256": "6f7305aaf127be517ba58ad6ee3794f47d46caaa9794941fa312ae27e2606e40",
+            "tamano_bytes": 3650294,
+            "estacion": "330007 (Rodelillo, Ad.)",
+            "formato": "JSON, formato original sin transformar",
+            "endpoint_origen": "getDatosRecientesEma/{estacion}/{anio}/{mes} (historico mensual)"
+          },
+          {
+            "ruta": "artifacts/hito1/reproducibility/dmc/dmc_meteo_2026-09-01.json",
+            "sha256": "69439eb14bdf6f8982ad1acdeeacb43a25e97eaba630c0b5dbe52613b5a207fd",
+            "tamano_bytes": 635707,
+            "registros_declarados": 690,
+            "estacion": "330007 (Rodelillo, Ad.)",
+            "formato": "JSON, formato original sin transformar",
+            "endpoint_origen": "getDatosRecientesEma/{estacion} (ultimas 12h, sin anio/mes)",
+            "nota": "El JSON tambien menciona estaciones 330005/330004 pero ambas solo contienen {'error':'Informacion no disponible'} -- 0 datos reales de otra estacion; el parser real (parse_dmc_json) ademas filtra explicitamente por codigo_estacion=='330007'."
+          }
+        ],
+        "security": "PASS -- busqueda de API keys/tokens/passwords/paths locales/emails en ambos archivos: 0 coincidencias",
+        "license_status": "NOT_CONFIRMED -- datos observacionales publicos de la Direccion Meteorologica de Chile (DMC), organismo publico chileno; el repo no documenta una licencia de redistribucion explicita. No se afirma ningun derecho de redistribucion no demostrado -- se conserva como evidencia academica de reproducibilidad del Hito 1, igual que el resto de artefactos de esta carpeta.",
+        "verificado_09-09-2026": "score_current_grid() con SAPI_REPRODUCIBILITY_MODE=1 (leyendo SOLO estos 2 archivos) produce forecast_time=2026-09-01T00:00:00Z, 50 celdas, tie_group_sizes=[41,7,2], rank1=VP-001 score=0.13129336874795144 -- identico al resultado oficial verificado con el data/raw/ completo (61 meses).",
+        "limitacion_conocida": "Este snapshot resuelve la dependencia de DMC para R3, pero score_current_grid() TAMBIEN necesita data/processed/nasa_firms_2021-08-30_2026-08-30.csv (FIRMS) y data/processed/dem_terrain/*.tif (DEM) -- NINGUNO de los dos esta versionado ni fue autorizado en esta accion. R3 sigue sin poder marcarse VERIFIED completo desde un clon limpio real hasta que se decida sobre esos dos artefactos tambien."
+      }
+    },
+
+    "3_copernicus_dem": {
+      "fuente_externa": {
+        "endpoint": "https://portal.opentopography.org/API/globaldem",
+        "producto": "COP30 (Copernicus GLO-30)",
+        "bbox": "-33.11,-71.59,-32.96,-71.34",
+        "script": "src/ingesta/dem_ingester.py"
+      },
+      "raw_output": {
+        "archivo": "data/raw/dem/COP30_-33.1100_-71.5900_-32.9600_-71.3400.tif",
+        "manifest_propio": "data/raw/dem/COP30_..._manifest.json",
+        "congelado": "NOT_FROZEN_IN_GIT -- los rasters (.tif) originales NO se versionan (6,5MB combinados). Ver snapshot_reproducibilidad_R3: tabla DERIVADA minima si versionada."
+      },
+      "processed_rasters_dem_terrain": {
+        "archivos": [
+          {"nombre": "COP30_..._utm19s.tif", "sha256": "859f1d54141ce8eba1a224f55c9afe4d9ba00a01e9e15d6b60945dd53832a84a", "bytes": 2102784},
+          {"nombre": "COP30_..._slope.tif", "sha256": "c54017c6ed7f23faefca4657851af88b186828db724b9479b8ec5e85610fd36a", "bytes": 2231896},
+          {"nombre": "COP30_..._aspect.tif", "sha256": "f00e7c9c078760b484a157f8a325b4772a7bc4a4075be2dcd3960bdd9a1e5738", "bytes": 2248579}
+        ],
+        "nota": "Hashes registrados aqui solo para trazabilidad -- los rasters NO se versionan. La tabla derivada abajo se genero llamando load_grid_topography() sobre EXACTAMENTE estos 3 archivos."
+      },
+      "snapshot_reproducibilidad_R3": {
+        "purpose": "inference_reproducibility -- FROZEN_IN_GIT desde 09-09-2026",
+        "tipo": "TABLA DERIVADA (no raster) -- cell_id, elevacion, pendiente, orientacion, dem_disponible, una fila por celda (50 filas)",
+        "file": "artifacts/hito1/reproducibility/dem/grid_topography.csv",
+        "sha256": "dc8c7cdd6bd688d5b562dfaa705f513a8d27320007398d3dcb842c6d648ce034",
+        "size_bytes": 1641,
+        "celdas": 50,
+        "dem_disponible": "True en las 50 celdas (cobertura completa del raster sobre la grilla) -- 0 NaN en esta corrida; el codigo real (load_grid_topography) SI produce NaN honesto por celda si el raster no cubriera esa celda, y el modo reproducibilidad respeta ese mismo comportamiento si se regenerara con cobertura parcial.",
+        "generado_por": "load_grid_topography() (src/procesamiento/dem_features.py) -- la MISMA funcion que usa scripts/build_temporal_dataset.py para el dataset de entrenamiento, ejecutada una vez el 09-09-2026 sobre los 3 rasters listados en processed_rasters_dem_terrain. No es una tabla fabricada a mano.",
+        "consumido_por": "src/inference/prototype_service.py::build_feature_matrix(), solo cuando SAPI_REPRODUCIBILITY_MODE=1 -- en modo normal sigue llamando load_grid_topography() sobre los rasters reales.",
+        "security": "PASS -- tabla numerica, sin metadata sensible",
+        "license_status": "NOT_CONFIRMED -- Copernicus DEM GLO-30 vía OpenTopography; el repo no documenta licencia de redistribucion explicita ni prohibicion para este derivado (elevacion/pendiente/orientacion agregada por celda, no el raster). No se afirma ningun derecho no demostrado.",
+        "fecha_de_formalizacion": "2026-09-09, posterior al cierre historico de Sprint 1 (31-08-2026)"
+      }
+    },
+
+    "4_procesamiento_y_dataset_temporal": {
+      "script": "scripts/build_temporal_dataset.py",
+      "inputs": [
+        "data/raw/dmc_historico_330007_*.json",
+        "data/processed/nasa_firms_2021-08-30_2026-08-30.csv",
+        "data/raw/dem/COP30_...tif"
+      ],
+      "parametros_congelados": {
+        "periodo": "2021-08-30 a 2026-08-29",
+        "horizonte_horas": 6,
+        "cooldown_horas": 6,
+        "radio_episodios_km": 2,
+        "gap_max_episodios_horas": 6
+      },
+      "output": {
+        "archivo": "data/processed/temporal_dataset_h6.parquet",
+        "manifest_propio": "reports/temporal_dataset_h6_manifest.json",
+        "sha256_verificado_09-09-2026": "14b36ad8db680cf57f6e0c655cb0a1940ed4b4c63e810d59e470055babc530fe",
+        "tamano_bytes": 10838028,
+        "n_rows": 363000,
+        "n_rows_eligible": 362883,
+        "n_positive_rows": 107,
+        "n_timestamps": 7260,
+        "n_celdas": 50,
+        "congelado": "NOT_FROZEN_IN_GIT -- pero SI tiene hash propio autoverificado por validate_manifest_matches_dataset() en cada regeneracion (ver src/procesamiento/pipeline_validators.py)"
+      }
+    },
+
+    "5_training_modelo_d": {
+      "script": "scripts/build_prototype_model.py",
+      "input": "data/processed/temporal_dataset_h6.parquet (dataset_hash 14b36ad8...)",
+      "hiperparametros_congelados": {
+        "model_type": "HistGradientBoostingClassifier",
+        "max_depth": 4,
+        "class_weight": "balanced",
+        "random_state": 42
+      },
+      "output": {
+        "archivo": "models/prototype_model_d.pkl",
+        "sha256_verificado_09-09-2026": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f",
+        "tamano_bytes": 67663,
+        "metadata_json_TRACKED_EN_GIT": "models/prototype_model_d_metadata.json",
+        "dataset_hash_vinculado": "14b36ad8db680cf57f6e0c655cb0a1940ed4b4c63e810d59e470055babc530fe",
+        "training_environment_declarado": {
+          "python_version": "3.14.6",
+          "numpy_version": "2.5.2",
+          "scipy_version": "1.18.1",
+          "scikit_learn_version": "1.9.0",
+          "joblib_version": "1.5.3"
+        },
+        "fecha_de_entrenamiento_original": "2026-09-07T12:24:42.298807+00:00 (metadata.trained_at, sin alterar)",
+        "fecha_de_verificacion_de_reproducibilidad": "2026-09-09 (formalizacion posterior al cierre historico, ver _meta.principio_de_honestidad_temporal)",
+        "congelado": "FROZEN_IN_GIT desde 09-09-2026 (.gitignore: excepcion quirurgica !models/prototype_model_d.pkl; el resto de models/*.pkl -- xgboost legacy -- sigue ignorado). metadata.json TRACKED_IN_GIT desde el commit original del Hito 1."
+      }
+    },
+
+    "6_inferencia": {
+      "script": "src/inference/prototype_service.py::score_current_grid()",
+      "resultado_oficial_verificado_09-09-2026": {
+        "forecast_time": "2026-09-01T00:00:00+00:00",
+        "n_cells": 50,
+        "unique_scores": 3,
+        "tie_group_sizes_desc": [41, 7, 2],
+        "rank1_cell": "VP-001",
+        "rank1_score": "0.13129336874795144",
+        "verificado_bit_a_bit_en": "3 corridas independientes (modelo publicado + 2 reentrenamientos), max|delta_predict_proba| = 0.0"
+      }
+    }
+  },
+
+  "reproducibilidad_por_dimension": {
+    "R1_environment_reproducibility": "VERIFIED -- requirements.txt/requirements-dev.txt fijan las versiones exactas verificadas (Python 3.14.6, numpy==2.5.2, scikit-learn==1.9.0, joblib==1.5.3, rasterio==1.4.4, imbalanced-learn==0.14.2, etc.). Auditoria 09-09-2026 (tercera ronda) encontro y corrigio 4 dependencias de runtime ausentes de requirements.txt (scikit-learn, joblib, rasterio, imbalanced-learn), descubiertas empiricamente ejecutando el contenedor Docker con --network none y auditando sys.modules -- ver docs/deploy.md.",
+    "R2_build_test_reproducibility": "VERIFIED -- clon limpio (371 archivos: git ls-files + git ls-files --others --exclude-standard) + venv desde requirements-dev.txt: 454 passed, 23 skipped, 0 failed, cobertura 87.77% (gate 80% cumplido). Repo real (con datos locales ignorados presentes): 477 passed, 0 skipped, 0 failed, cobertura 91.72%. 477 = 454 + 23 (consistente: los 23 skip son exactamente las pruebas que dependen de datos locales no versionados, via marcador _needs_recent_meteo).",
+    "R3_inference_reproducibility": "VERIFIED (actualizado 09-09-2026, tercera ronda). Los 3 artefactos minimos necesarios estan versionados y confirmados FROZEN_IN_GIT: Modelo D (models/prototype_model_d.pkl), snapshot DMC (artifacts/hito1/reproducibility/dmc/, 2 archivos), snapshot FIRMS (artifacts/hito1/reproducibility/firms/nasa_firms_2021-08-30_2026-08-30.csv, copia exacta del operacional) y snapshot DEM derivado (artifacts/hito1/reproducibility/dem/grid_topography.csv, generado con load_grid_topography() real sobre los rasters DEM originales). Con SAPI_REPRODUCIBILITY_MODE=1, score_current_grid() lee EXCLUSIVAMENTE estos 4 artefactos versionados (no data/raw ni data/processed) y reproduce el resultado oficial exacto: 50 celdas, 50 cell_id unicos, forecast_time=2026-09-01 00:00:00+00:00, rank1_cell=VP-001, rank1_score=0.13129336874795144, tie_group_size maximo=41, freshness='DATOS HISTORICOS / DESACTUALIZADOS' (honesto, no se disfraza como reciente). Verificado en 2 entornos independientes con red bloqueada: (a) venv de solo-produccion (requirements.txt, sin requirements-dev.txt) con socket.socket.connect parcheado para lanzar excepcion; (b) contenedor Docker construido con `docker build -f Dockerfile.web` desde un build context que respeta .dockerignore (sin ver data/raw ni data/processed locales), ejecutado con `docker run --network none`. Streamlit (app/app.py) tambien arranca en ese mismo contenedor offline con SAPI_REPRODUCIBILITY_MODE=1: servidor Uvicorn arriba, /_stcore/health=200 'ok', HTTP 200 en '/', sin traceback en el log combinado stdout+stderr.",
+    "R4_scientific_retraining_reproducibility": "NOT_VERIFIED_FROM_CLEAN_CLONE (sin cambios respecto a la ronda anterior, fuera de alcance de esta accion) -- el dataset temporal completo (data/processed/temporal_dataset_h6.parquet, ~10.8MB) y los datos RAW historicos completos (61 meses DMC, FIRMS/DEM completos) NO se congelaron en git (LICENSE_NOT_CONFIRMED para el dataset completo, ver licencia_dataset abajo, y fuera del alcance autorizado: 'NO versionar todos los datos RAW historicos'). Reentrenar el Modelo D desde cero en un clon limpio sigue requiriendo ejecutar la ingesta contra NASA FIRMS/DMC/Copernicus, sin garantia de bit-identidad futura. R3 (inferencia con el modelo ya entrenado) esta desacoplado de R4 (reentrenamiento cientifico completo) y no depende de el."
+  },
+
+  "licencia_dataset": {
+    "decision": "LICENSE_NOT_CONFIRMED",
+    "alcance": "Aplica solo a data/processed/temporal_dataset_h6.parquet (dataset derivado de NASA FIRMS + DMC + Copernicus DEM). NO aplica al modelo (parametros entrenados, no datos crudos de terceros).",
+    "evidencia_buscada": "Se busco en todo el repo (docs/, README.md, scripts/, src/) cualquier mencion de licencia/terminos de uso/redistribucion especificos de NASA FIRMS, DMC o Copernicus DEM. Unico resultado: README.md 'Licencia' declara MIT para el CODIGO del proyecto -- no dice nada sobre los datos.",
+    "conclusion": "El repo no confirma ni niega que redistribuir este dataset derivado sea seguro. No se asumio ninguna condicion legal sin evidencia (instruccion explicita). El dataset NO fue agregado a git en esta accion -- requiere autorizacion adicional una vez confirmada la licencia real de las 3 fuentes."
+  },
+
+  "apis_externas_garantizan_reconstruccion_bit_a_bit": "NO",
+  "razon": "Ninguna de las 3 fuentes (NASA FIRMS, DMC, Copernicus DEM) documenta una garantia de inmutabilidad de datos historicos ya servidos; los proveedores pueden corregir/revisar registros historicos sin aviso. No hay evidencia en el repo de que esto haya ocurrido, pero tampoco evidencia de que estatutariamente no pueda ocurrir.",
+
+  "como_reconstruir": {
+    "opcion_A_usar_lo_ya_generado": "Si los archivos de data/ ya existen localmente (no borrados), correr scripts/build_prototype_model.py reproduce el modelo bit a bit (verificado).",
+    "opcion_B_reconstruir_desde_cero": [
+      "python scripts/backfill_nasa_firms.py",
+      "python scripts/backfill_dmc_historico.py",
+      "python src/ingesta/dem_ingester.py  # o el flujo equivalente documentado",
+      "python scripts/build_temporal_dataset.py",
+      "python scripts/build_prototype_model.py"
+    ],
+    "advertencia": "La opcion B depende de que las APIs devuelvan datos identicos a los originales -- ver 'apis_externas_garantizan_reconstruccion_bit_a_bit'. No se ha probado ni se afirma que produzca un dataset_hash identico a 14b36ad8..."
+  }
+}

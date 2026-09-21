@@ -1,0 +1,10 @@
+{
+  "enabledPlugins": {
+    "claude-code-setup@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "codex@openai-codex": true,
+    "impeccable@impeccable": true,
+    "figma@claude-plugins-official": true
+  }
+}

@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import platform
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,7 +31,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import joblib
+import numpy
 import pandas as pd
+import scipy
+import sklearn
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 from scripts.experiment_abcd import FEATURES_D, RANDOM_STATE, _prep_xy
@@ -66,6 +70,20 @@ def build_metadata(eligible: pd.DataFrame, dataset_hash: str) -> dict:
         "n_positive_rows": int(eligible["target"].sum()),
         "model_type": "HistGradientBoostingClassifier",
         "random_state": RANDOM_STATE,
+        "training_environment": {
+            "python_version": platform.python_version(),
+            "numpy_version": numpy.__version__,
+            "scipy_version": scipy.__version__,
+            "scikit_learn_version": sklearn.__version__,
+            "joblib_version": joblib.__version__,
+            "nota": (
+                "Registrado a partir de 09-09-2026 (migracion de reproducibilidad). "
+                "Un entorno con versiones distintas de numpy/scikit-learn puede fallar "
+                "al deserializar este artefacto (ver docs/deploy.md, seccion CURRENT) o, "
+                "si logra reentrenar, producir un modelo funcionalmente distinto -- "
+                "usar exactamente estas versiones para regenerar el artefacto."
+            ),
+        },
     }
 
 

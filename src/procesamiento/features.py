@@ -9,15 +9,20 @@ import pandas as pd
 from imblearn.over_sampling import SMOTE
 
 from src.db import log_event
+from src.procesamiento.shared_thresholds import (
+    RULE_30_30_30_HUMIDITY_THRESHOLD,
+    RULE_30_30_30_TEMP_THRESHOLD,
+    RULE_30_30_30_WIND_THRESHOLD,
+)
 
-# Única definición de la regla 30-30-30 del proyecto (constantes de módulo,
-# no solo de clase, para que otros módulos —p. ej.
-# `src.procesamiento.regional_meteo`— la importen sin reimplementarla ni
-# arrastrar una segunda definición con umbrales distintos, como pasó con el
-# 32/28/25 de `src.modelo.baseline`/`optimizer` — ver docs/matriz-riesgo.md).
-RULE_30_30_30_TEMP_THRESHOLD = 30.0
-RULE_30_30_30_HUMIDITY_THRESHOLD = 30.0
-RULE_30_30_30_WIND_THRESHOLD = 30.0
+# Reexportadas desde shared_thresholds.py (extraído 09-09-2026, ver
+# docs/architecture-4plus1-hito1.md) para no romper a quien ya importa
+# `RULE_30_30_30_*` desde este módulo. Único uso real de estos nombres
+# dentro de este archivo: los valores de clase de abajo. El pipeline
+# temporal (`src.procesamiento.regional_meteo`) ya NO importa desde aquí —
+# importa directo de `shared_thresholds`, para no arrastrar la dependencia
+# de `imblearn`/SMOTE de este módulo (que es exclusiva del pipeline legacy,
+# ver `apply_smote_balance` más abajo).
 
 
 class FeatureEngineer:

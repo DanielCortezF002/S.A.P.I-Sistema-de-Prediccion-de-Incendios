@@ -6,6 +6,7 @@ __pycache__/
 .coverage
 htmlcov/
 .venv/
+.venv*/
 venv/
 data/raw/*
 data/processed/*
@@ -15,6 +16,11 @@ data/predictions/*
 !data/predictions/.gitkeep
 models/*.pkl
 !models/.gitkeep
+# Modelo D oficial: artefacto congelado del Hito 1, formalizado 09-09-2026
+# (ver docs/deploy.md "Reproducibilidad de datos y modelo" y
+# artifacts/hito1/reproducibility/manifest.json). Excepcion quirurgica --
+# el resto de models/*.pkl (legacy xgboost_optimized*.pkl) sigue ignorado.
+!models/prototype_model_d.pkl
 reports/*.html
 .DS_Store
 *.log

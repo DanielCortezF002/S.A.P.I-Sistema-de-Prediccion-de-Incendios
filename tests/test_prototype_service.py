@@ -12,11 +12,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import joblib
+import numpy
 import pandas as pd
 import pytest
+import sklearn
 
 from src.inference.prototype_service import (
     MODEL_PATH,
+    REPRODUCIBILITY_FIRMS_CSV,
+    REPRODUCIBILITY_TOPO_CSV,
     STATION_ID,
     PrototypeUnavailableError,
     _resolve_forecast_time,
@@ -29,10 +33,29 @@ from src.procesamiento.pipeline_validators import FORBIDDEN_LEGACY_REFERENCES, v
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATASET_PATH = REPO_ROOT / "data" / "processed" / "temporal_dataset_h6.parquet"
+_DMC_RAW_GLOB = f"dmc_historico_{STATION_ID}_*.json"
+_HAS_RECENT_METEO = any((REPO_ROOT / "data" / "raw").glob(_DMC_RAW_GLOB))
 
+# Auditoria 09-09-2026: models/prototype_model_d.pkl esta versionado en git
+# desde esta fecha, pero score_current_grid() ADEMAS necesita meteorologia
+# reciente real en data/raw/ (no versionada -- ver docs/deploy.md,
+# "Reproducibilidad de datos y modelo"). Sin este segundo skip, un clon
+# limpio con el modelo pero sin data/raw/ pasa de "10 tests saltados
+# limpiamente" a "9 tests fallando con PrototypeUnavailableError" -- mismo
+# artefacto faltante, peor experiencia de CI. Los 2 tests que solo cargan
+# el modelo directamente (sin llamar score_current_grid) SI corren siempre
+# que el .pkl exista.
 pytestmark = pytest.mark.skipif(
     not MODEL_PATH.exists(),
     reason="models/prototype_model_d.pkl no existe — correr scripts/build_prototype_model.py primero",
+)
+_needs_recent_meteo = pytest.mark.skipif(
+    not _HAS_RECENT_METEO,
+    reason=(
+        f"No hay {_DMC_RAW_GLOB} en data/raw/ — score_current_grid() necesita "
+        "meteorologia reciente ademas del modelo (ver docs/deploy.md, "
+        "seccion 'Reproducibilidad de datos y modelo')"
+    ),
 )
 
 
@@ -41,6 +64,53 @@ def test_prototype_model_loads() -> None:
     assert "model" in payload and "metadata" in payload
     assert payload["metadata"]["status"] == "PROTOTYPE / EXPLORATORY"
     assert hasattr(payload["model"], "predict_proba")
+
+
+def test_environment_matches_training_environment_declared_in_metadata() -> None:
+    """Guarda de reproducibilidad (migracion 09-09-2026, ver docs/deploy.md,
+    seccion CURRENT). `models/prototype_model_d.pkl` es un
+    HistGradientBoostingClassifier serializado con joblib: su estado interno
+    incluye objetos de numpy/scikit-learn cuyo formato de pickle NO es
+    compatible entre versiones mayores -- deserializarlo con un numpy/
+    scikit-learn distinto al que lo entreno falla con un `ValueError` de
+    numpy poco explicable (`PCG64 is not a known BitGenerator module`), no
+    con un mensaje que apunte a la causa real. Esta prueba detecta la causa
+    real ANTES de intentar cargar el modelo, con un mensaje explicable.
+
+    Si este test falla: el entorno actual no coincide con el que entreno el
+    artefacto commiteado. La correccion NO es "arreglar el test" -- es (a)
+    instalar exactamente las versiones de
+    `metadata["training_environment"]`, o (b) si se migra deliberadamente de
+    version, regenerar el artefacto con
+    `python scripts/build_prototype_model.py` en el nuevo entorno y
+    actualizar `requirements.txt`/`requirements-dev.txt` de forma consistente
+    (ver docs/deploy.md).
+    """
+    metadata = joblib.load(MODEL_PATH)["metadata"]
+    declared = metadata.get("training_environment")
+    if declared is None:
+        pytest.skip(
+            "El modelo commiteado no tiene 'training_environment' en su metadata "
+            "(artefacto anterior a la migracion 09-09-2026) -- no hay contra que comparar."
+        )
+
+    actual = {
+        "numpy_version": numpy.__version__,
+        "scikit_learn_version": sklearn.__version__,
+        "joblib_version": joblib.__version__,
+    }
+    mismatches = {
+        key: (declared[key], actual[key]) for key in actual if declared[key] != actual[key]
+    }
+    assert not mismatches, (
+        "El entorno actual no coincide con el que entreno "
+        f"{MODEL_PATH.name} (declarado en su metadata):\n"
+        + "\n".join(
+            f"  {k}: declarado={v[0]!r} actual={v[1]!r}" for k, v in mismatches.items()
+        )
+        + "\nEsto puede hacer que las predicciones difieran del artefacto publicado, o "
+        "que joblib.load() falle directamente. Ver docs/deploy.md, seccion CURRENT."
+    )
 
 
 def test_feature_contract_matches_model() -> None:
@@ -55,12 +125,14 @@ def test_feature_contract_matches_model() -> None:
         assert set(model.feature_names_in_) == declared
 
 
+@_needs_recent_meteo
 def test_inference_returns_fifty_cells() -> None:
     result = score_current_grid()
     assert len(result.cells) == 50
     assert len({c.cell_id for c in result.cells}) == 50
 
 
+@_needs_recent_meteo
 def test_ranks_are_one_to_n() -> None:
     result = score_current_grid()
     ranks = sorted(c.rank for c in result.cells)
@@ -69,6 +141,7 @@ def test_ranks_are_one_to_n() -> None:
     assert [c.rank for c in result.cells] == ranks
 
 
+@_needs_recent_meteo
 def test_ties_share_display_rank_but_internal_rank_stays_unique() -> None:
     """Corrección de honestidad científica (2026-09-07): con pocos
     positivos históricos, decenas de celdas caen en el mismo score exacto.
@@ -114,6 +187,7 @@ def _real_feature_matrix() -> pd.DataFrame:
     return build_feature_matrix(forecast_time, meteo_row)
 
 
+@_needs_recent_meteo
 def test_feature_matrix_has_fifty_unique_cell_ids_and_no_missing_or_duplicate() -> None:
     """Sección 3 de la auditoría 2026-09-08: cobertura exacta del ranking
     — exactamente 50 cell_id únicos, ninguno perdido, ninguno duplicado."""
@@ -127,6 +201,7 @@ def test_feature_matrix_has_fifty_unique_cell_ids_and_no_missing_or_duplicate() 
     assert set(features_df.index) == expected_ids
 
 
+@_needs_recent_meteo
 def test_reordering_features_df_does_not_desync_cell_id_and_score() -> None:
     """Sección 2 de la auditoría 2026-09-08: si `build_feature_matrix` o
     `score_current_grid` alguna vez pasaran a usar arrays/posiciones en
@@ -153,6 +228,7 @@ def test_reordering_features_df_does_not_desync_cell_id_and_score() -> None:
     assert (aligned == scores_original).all(), "El score de al menos una celda cambió solo por reordenar filas"
 
 
+@_needs_recent_meteo
 def test_feature_rows_are_mostly_distinct_even_though_scores_tie() -> None:
     """Sección 1 de la auditoría 2026-09-08 ('¿por qué 41 celdas tienen el
     mismo score?'): ancla la evidencia de que el empate es del MODELO, no
@@ -190,6 +266,7 @@ def test_feature_rows_are_mostly_distinct_even_though_scores_tie() -> None:
         assert non_null.nunique() > 1, f"{col} no varía entre celdas con dato real — posible bug de pipeline"
 
 
+@_needs_recent_meteo
 def test_scores_are_finite() -> None:
     result = score_current_grid()
     for c in result.cells:
@@ -197,6 +274,7 @@ def test_scores_are_finite() -> None:
         assert 0.0 <= c.score <= 1.0
 
 
+@_needs_recent_meteo
 def test_no_future_timestamps() -> None:
     """El forecast_time y el weather_timestamp devueltos nunca pueden ser
     posteriores al momento actual real — el servicio no inventa clima
@@ -211,6 +289,7 @@ def test_no_future_timestamps() -> None:
     )
 
 
+@_needs_recent_meteo
 def test_requesting_a_forecast_time_beyond_real_data_fails_explicitly() -> None:
     """No debe inventar meteorología futura: pedir un T muy posterior a la
     última lectura real debe fallar con un mensaje explicable, no con datos
@@ -225,6 +304,65 @@ def test_dashboard_service_handles_missing_model_artifact(tmp_path, monkeypatch)
     monkeypatch.setattr(svc, "MODEL_PATH", tmp_path / "no_existe.pkl")
     with pytest.raises(PrototypeUnavailableError, match="build_prototype_model"):
         svc.score_current_grid()
+
+
+# El test activa SAPI_REPRODUCIBILITY_MODE=1, que usa los SNAPSHOTS
+# CONGELADOS (artifacts/hito1/reproducibility/{firms,dem}/), no
+# data/processed/ operacional -- la condicion de skip debe verificar
+# exactamente lo que el test realmente usa, o quedaria saltandose incluso
+# en un clon limpio que YA tiene los snapshots versionados (bug real
+# encontrado 09-09-2026 al probar esto en un clon limpio real).
+_REPRODUCIBILITY_SNAPSHOTS_AVAILABLE = (
+    REPRODUCIBILITY_FIRMS_CSV.exists() and REPRODUCIBILITY_TOPO_CSV.exists()
+)
+
+
+@pytest.mark.skipif(
+    not _REPRODUCIBILITY_SNAPSHOTS_AVAILABLE,
+    reason=(
+        "Requiere artifacts/hito1/reproducibility/firms/*.csv y "
+        "artifacts/hito1/reproducibility/dem/grid_topography.csv "
+        "versionados (ver docs/deploy.md 'MODO HITO 1 REPRODUCIBLE')."
+    ),
+)
+def test_reproducibility_mode_works_fully_offline(monkeypatch) -> None:
+    """Auditoria 09-09-2026 (cierre de R3): con SAPI_REPRODUCIBILITY_MODE=1,
+    el Modelo D versionado + el snapshot DMC versionado
+    (artifacts/hito1/reproducibility/dmc/) deben reproducir el ranking
+    oficial del Hito 1 SIN ninguna llamada de red -- ni para DMC (usa el
+    snapshot, no data/raw/ ni la API en vivo) ni para ningun otro
+    proposito. Si `score_current_grid()` alguna vez intentara abrir un
+    socket, este test debe fallar de forma ruidosa, no silenciarlo."""
+    import socket
+
+    def _blocked_connect(*_args, **_kwargs):
+        raise AssertionError(
+            "score_current_grid() intento una conexion de red durante el modo "
+            "de reproducibilidad offline -- esto no deberia depender de Internet."
+        )
+
+    monkeypatch.setattr(socket.socket, "connect", _blocked_connect)
+    monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
+
+    result = score_current_grid()
+
+    # Invariantes oficiales del artefacto congelado -- ninguno hardcodeado
+    # arbitrariamente: son exactamente los valores ya verificados y
+    # documentados en artifacts/hito1/reproducibility/manifest.json contra
+    # el modelo/dataset oficiales (41/50 empatadas, top VP-001).
+    assert len(result.cells) == 50
+    assert len({c.cell_id for c in result.cells}) == 50
+    assert str(result.forecast_time) == "2026-09-01 00:00:00+00:00"
+    assert result.cells[0].cell_id == "VP-001"
+    assert result.cells[0].score == pytest.approx(0.13129336874795144, rel=1e-9)
+    tie_sizes = sorted((c.tie_group_size for c in result.cells), reverse=True)
+    # tie_group_size se repite por celda dentro del mismo grupo; el conjunto
+    # de tamaños de grupo unicos debe contener 41 (el grupo dominante real).
+    assert 41 in set(tie_sizes)
+    # La frescura debe seguir siendo honesta: el snapshot es de 2026-09,
+    # muy anterior a "hoy" en cualquier corrida futura de este test -- debe
+    # clasificarse como historico, nunca como "reciente".
+    assert "HIST" in result.freshness.upper()
 
 
 def test_no_legacy_imports_in_prototype_modules() -> None:

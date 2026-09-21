@@ -54,6 +54,17 @@ services:
     ports:
       - "8501:8501"
     volumes:
+      # ./data agregado 09-09-2026 (auditoria arquitectura 4+1, ver
+      # docs/architecture-4plus1-hito1.md, Vista Fisica): sin este montaje,
+      # web-presentation (el unico servicio que sirve app/app.py, modo
+      # Prototipo por defecto) no tenia acceso a data/raw ni data/processed
+      # -- score_current_grid() en MODO NORMAL habria fallado con
+      # PrototypeUnavailableError dentro de este contenedor. analytics-backend
+      # ya montaba ./data; web-presentation no, pese a ser el servicio que
+      # realmente ejecuta la ruta de inferencia. En SAPI_REPRODUCIBILITY_MODE=1
+      # no hace falta (usa artifacts/hito1/reproducibility/, ya incluido en
+      # la imagen via .dockerignore) -- este mount cubre el modo normal.
+      - ./data:/app/data
       - ./models:/app/models
     depends_on:
       db-postgis:

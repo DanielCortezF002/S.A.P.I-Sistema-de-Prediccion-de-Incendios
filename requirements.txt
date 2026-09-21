@@ -1,17 +1,49 @@
-# S.A.P.I. - Runtime UI + serving layer (Streamlit Cloud / web-presentation)
-# Python 3.11 obligatorio en Streamlit Cloud (Advanced settings). Ver docs/deploy.md
-pandas==2.1.4
-numpy==1.26.4
-geopandas==0.14.3
-shapely==2.0.3
-pyproj==3.6.1
-requests==2.31.0
-tenacity==8.2.3
-psycopg2-binary==2.9.10
-sqlalchemy==2.0.29
-geoalchemy2==0.14.4
-streamlit==1.35.0
-folium==0.16.0
-streamlit-folium==0.18.0
-python-dotenv==1.0.1
-pyarrow==15.0.2
+# S.A.P.I. - Runtime UI + serving layer (Docker local / desarrollo)
+# Python 3.14.6 - entorno reproducible verificado 09-09-2026 (ver docs/deploy.md,
+# seccion "Entorno reproducible actual"). Streamlit Cloud (Python 3.11) queda
+# documentado por separado como ruta opcional/legacy, no como el entorno de
+# ejecucion del incremento evaluado en Hito 1.
+pandas==3.0.5
+numpy==2.5.2
+geopandas==1.1.4
+shapely==2.1.2
+pyproj==3.7.2
+requests==2.34.2
+tenacity==9.1.4
+psycopg2-binary==2.9.12
+sqlalchemy==2.0.52
+geoalchemy2==0.20.0
+streamlit==1.63.0
+folium==0.20.0
+streamlit-folium==0.27.4
+python-dotenv==1.2.3
+pyarrow==25.0.1
+# Runtime, no solo desarrollo/training (auditoria 09-09-2026): src/inference/
+# prototype_service.py::_load_model() hace joblib.load(MODEL_PATH) sobre
+# models/prototype_model_d.pkl, un HistGradientBoostingClassifier -- des-
+# erializar ese objeto requiere que scikit-learn sea importable en tiempo de
+# ejecucion (aunque prototype_service.py no escriba "import sklearn"), y
+# joblib.load() en si mismo requiere joblib. Sin estos dos, el modo
+# Prototipo (SAPI_DATA_MODE default) falla con ModuleNotFoundError al
+# arrancar el contenedor de Dockerfile.web -- confirmado empiricamente.
+# Mismas versiones ya verificadas reproduciendo el Modelo D oficial bit a
+# bit (ver requirements-dev.txt, artifacts/hito1/reproducibility/manifest.json).
+scikit-learn==1.9.0
+joblib==1.5.3
+# rasterio (auditoria 09-09-2026, hallazgo #2): src/inference/prototype_service.py
+# importa a nivel de MODULO src.procesamiento.dem_features, que importa
+# rasterio incondicionalmente en su cabecera -- aunque el codigo que lo
+# LLAMA (load_grid_topography) no se ejecute en modo reproducibilidad, el
+# import de todo el arbol si ocurre siempre. Confirmado empiricamente:
+# `docker run --network none` fallaba con ModuleNotFoundError: rasterio
+# antes de esta linea. Misma version ya usada en requirements-dev.txt.
+rasterio==1.4.4
+# imbalanced-learn (auditoria 09-09-2026, hallazgo #3): src/inference/
+# prototype_service.py -> src.procesamiento.regional_meteo -> importa
+# src.procesamiento.features (pipeline legacy, NDVI/SMOTE) -> imblearn.
+# Es un acoplamiento real del pipeline temporal nuevo al legacy vía el
+# arbol de imports (no es que regional_meteo "necesite" SMOTE
+# funcionalmente, pero Python igual ejecuta el import). Confirmado
+# empiricamente con `docker run --network none`. Misma version que
+# requirements-dev.txt tenia antes de heredar de este archivo.
+imbalanced-learn==0.14.2
