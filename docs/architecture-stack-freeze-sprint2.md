@@ -78,7 +78,9 @@ Marco de referencia que se mantiene en todo el documento:
   (el 50%) provienen de un único día calendario, 2024-02-03 (un
   megaevento de 26 episodios crudos distintos que afectó 14 celdas
   simultáneamente — ver `reports/megaevento_2024-02-03_report.json`).
-  Esas 23 filas representan además el 21,5% de TODO el dataset. Ningún
+  Esas 23 filas representan además 23/107 = 21,5% de los positivos de
+  TODO el dataset — no 21,5% de las filas del dataset completo (363.000),
+  que sería 0,006%. Ningún
   fold de validación temporal que incluya ese día debe leerse como
   "rendimiento típico": concentra una fracción desproporcionada de toda
   la señal positiva disponible.
@@ -222,7 +224,8 @@ Criterios de aceptación del slice:
   único.
 - **2024 requiere contextualización adicional en cualquier evaluación**
   por el megaevento del 2024-02-03 (23 de 46 positivos del año, y 21,5%
-  de todo el dataset, en un solo día). Un fold walk-forward que
+  de los positivos de todo el dataset — no de las filas totales —, en un
+  solo día). Un fold walk-forward que
   atraviese esa fecha debe reportarse por separado de folds "típicos",
   y ningún resultado de ese fold debe generalizarse como desempeño
   esperado en un año sin megaeventos.
@@ -398,6 +401,12 @@ TESTS_COLLECTED: 487
 TESTS_PASSED: 464
 TESTS_FAILED: 0
 TESTS_SKIPPED: 23
+  DMC_RELATED (data/raw/dmc_historico_330007_*.json ausente,
+    marcador _needs_recent_meteo en tests/test_prototype_service.py): 9
+  PARQUET_RELATED (data/processed/temporal_dataset_h6.parquet ausente,
+    tests/test_megaevento_report.py [2] + test_nan_journey_real_data.py [1]
+    + test_temporal_dataset_integration.py [9] + test_pipeline_validators.py [1]
+    + test_row_explainer.py [1]): 14
 EXPECTED_SKIPS: 23
 UNEXPECTED_SKIPS: 0
 COVERAGE: 88.19%
@@ -419,6 +428,43 @@ commit `9f076172`, 2026-09-07 — ver
 fase anterior, con menos tests recolectados y sin las condiciones de
 verificación Docker descritas aquí. No se debe citar uno como si fuera el
 otro.
+
+### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
+
+`artifacts/hito1/reproducibility/manifest.json` es un snapshot histórico
+fechado (ver sus propios campos `_meta.principio_de_honestidad_temporal`
+y `_meta.principio_de_no_fabricacion`) y **no se reescribe
+retroactivamente**. Esta nota solo reconcilia lo ya publicado ahí con el
+baseline de Sprint 2 de arriba, sin alterar una sola palabra del manifest:
+
+- `reproducibilidad_por_dimension.R2_build_test_reproducibility` (manifest,
+  campo fechado 09-09-2026) registra 454 passed / 23 skipped / 0 failed
+  (clon limpio) y 477 passed / 0 skipped (repo con datos locales). Ambas
+  cifras eran correctas para esa fecha. Entre el commit que generó el
+  manifest (`5e721f2`, 2026-09-09) y el baseline de Sprint 2 de arriba
+  (`e573adc`) se agregaron 10 tests nuevos que nunca dependen de datos
+  locales (no se saltan): 2 en `tests/test_architecture.py` (commit
+  `07c8306`, 2026-09-09) y 8 en `tests/test_prototype_view.py` (commit
+  `b66aaf3`, 2026-09-09). 454+10=464 y 477+10=487 — coincide exactamente
+  con las cifras de Sprint 2. No hay regresión ni discrepancia real:
+  son dos snapshots de fechas distintas, ambos correctos en su momento.
+- Ese mismo campo del manifest atribuye los 23 skips únicamente al
+  marcador `_needs_recent_meteo` — esto es impreciso incluso en su propia
+  fecha: `_needs_recent_meteo` (ausencia de DMC) explica 9 de los 23; los
+  otros 14 dependen de la ausencia de `temporal_dataset_h6.parquet`, vía
+  guards de skip independientes (ver desglose completo arriba en esta
+  sección). No se corrige el texto del manifest — se deja constancia aquí
+  para no repetir la imprecisión en evidencia futura.
+- `cadena_de_proveniencia.2_dmc_330007.snapshot_reproducibilidad_R3.limitacion_conocida`
+  en el manifest es una nota de una ronda de verificación anterior a que
+  se agregaran los snapshots FIRMS/DEM; el propio manifest la supera más
+  abajo en `reproducibilidad_por_dimension.R3_inference_reproducibility`
+  ("actualizado 09-09-2026, tercera ronda"), que sí confirma los 4
+  artefactos mínimos versionados. Ambas afirmaciones son del mismo
+  documento y no se contradicen en sustancia — la nota de la ronda
+  anterior simplemente quedó sin una marca explícita de supersesión
+  dentro del propio manifest. Corregir eso directamente en
+  `manifest.json` queda fuera del alcance de este PR.
 
 ### Aclaración de alcance — `test_locally_present_artifacts_match_manifest_hash`
 
