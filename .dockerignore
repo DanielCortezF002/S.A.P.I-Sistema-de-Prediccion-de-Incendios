@@ -39,8 +39,15 @@ artifacts/
 # Snapshots minimos del Hito 1 (DMC ~4.3MB, FIRMS ~1.3MB, DEM derivado
 # ~1.6KB): SI entran a la imagen -- permiten que
 # SAPI_REPRODUCIBILITY_MODE=1 funcione dentro del contenedor sin necesitar
-# los volumenes data/raw ni data/processed reales. No incluye
-# manifest.json/README.md (documentacion, no runtime).
+# los volumenes data/raw ni data/processed reales.
+#
+# Correccion 21-09-2026: manifest.json tambien SI entra -- es un archivo de
+# 21KB, versionado en git (no un dataset), y tests/test_reproducibility_manifest.py
+# (mismo commit que este .dockerignore, 5e721f2) lo requiere sin condicion
+# (assert MANIFEST_PATH.exists(), sin guard de skip) para poder correr dentro
+# de cualquier build reproducible, incluido este. La exclusion original de
+# manifest.json era mas amplia de lo necesario y rompia ese test en Docker.
+# README.md se mantiene excluido (documentacion, ningun test lo requiere).
 !artifacts/hito1/
 artifacts/hito1/*
 !artifacts/hito1/reproducibility/
@@ -48,6 +55,7 @@ artifacts/hito1/reproducibility/*
 !artifacts/hito1/reproducibility/dmc/
 !artifacts/hito1/reproducibility/firms/
 !artifacts/hito1/reproducibility/dem/
+!artifacts/hito1/reproducibility/manifest.json
 reports/*.html
 *.log
 .DS_Store
