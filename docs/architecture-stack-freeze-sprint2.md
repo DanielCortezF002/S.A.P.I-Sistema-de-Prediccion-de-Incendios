@@ -582,6 +582,55 @@ MODEL_D: fingerprint 33c2eacc…31ff sin cambios (modo normal y reproducible);
 BASELINE FIRMS: sha256 a9a85db4…bb271 sin cambios
 ```
 
+### Refresco DMC versionado por mes (SAPI-71 Fase B) — nota fechada 23-09-2026
+
+**Contrato verificado con UNA llamada real** (23-09-2026 15:25 UTC,
+`getDatosRecientesEma/330007/2026/9`, credenciales solo en runtime; se
+registró únicamente metadata): HTTP 200, `application/json`, raíz objeto
+sin envoltorio de estación (`datosEstaciones`, `fechaCreacion`, `organismo`,
+`pais`, `producto`, `registros`, `status`, `timezone`), `timezone: "UTC"`,
+2.169 lecturas = `registros`, de 2026-09-01 00:00 a 2026-09-23 15:00
+(desfase 0,42 h: el mes EN CURSO viene parcial y casi al día), orden
+ascendente, sin `momento` repetidos, paso de 15 min (un hueco de 75 min),
+26 campos uniformes (7 siempre nulos). Envuelta como `{estacion: respuesta}`
+la lee `parse_dmc_json` sin descartar filas. El campo `producto` sigue
+diciendo "últimas 12 horas" aunque la respuesta sea mensual.
+
+- **Refresco manual** (`python -m src.refresh.dmc_refresh refresh | status |
+  rollback --to <manifest_sha12>`): consulta desde el mes de la última
+  lectura publicada (el mes anterior en la primera corrida) hasta el mes en
+  curso y fusiona por mes con lo ya publicado, clave (estación, `momento`
+  UTC); un `momento` ya publicado con otro contenido conserva el valor
+  publicado (append-only) y se informa como conflicto. JSON canónico
+  (claves ordenadas, lecturas ascendentes, sin `fechaCreacion`): la misma
+  entrada produce los mismos bytes y una corrida sin datos nuevos no publica.
+  Cada documento se relee con `parse_dmc_json` antes de publicarse.
+- **Almacenamiento** en `data/processed/dmc/330007/` (versiones mensuales
+  inmutables, `pointers/`, `CURRENT.json`, `pointer_history.jsonl`), fuera
+  de `data/raw/`: `load_regional_meteo_series` no lo lee, así que el scoring
+  NO usa todavía datos refrescados (eso llega con `ScoringInputs`). Los
+  archivos legacy `dmc_historico_*`/`dmc_meteo_*` nunca se escriben.
+- **Fallos**: sin credenciales, 78 antes de cualquier escritura o request;
+  red caída o 5xx, 3 intentos acotados y luego 69; HTTP 4xx, 69 sin
+  reintento; JSON inválido, `timezone` distinto de UTC, `registros` que no
+  calza, lecturas de otro mes o sin `momento`, o respuesta vacía, 65 (el
+  mes en curso vacío solo se tolera en sus primeras 6 h). En todos los casos
+  `CURRENT.json` queda intacto. Lock de escritor único compartido con el
+  patrón FIRMS: un segundo escritor sale con 75 sin llamar a la API.
+- No usa `ParallelIngester`, `staging_meteo` ni `run_daily`; el loop legacy
+  sigue apagado (no existe contenedor `sapi-analytics`).
+
+**Resultados reales** (rama `feat/SAPI-71-dmc-refresh`, sobre `5d28a94`; sin
+refresco real ejecutado: `data/processed/dmc/` no existe):
+
+```
+HOST: 649 passed, 3 skipped, 0 failed; cobertura 91.87% (dmc_refresh 93%)
+LINUX (contenedor sin red): 70 passed (refresco DMC, FIRMS y primitivas)
+MUTACIONES: perder lo publicado, no ordenar, pisar lo publicado y quitar el
+  lock hacen fallar al menos un test cada una
+MODEL_D: fingerprint 33c2eacc…31ff sin cambios
+```
+
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
 
 `artifacts/hito1/reproducibility/manifest.json` es un snapshot histórico
