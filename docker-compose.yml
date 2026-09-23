@@ -78,14 +78,18 @@ services:
     # score_current_grid() -- NO es el servicio FastAPI de la arquitectura
     # objetivo (ver tools/n8n_bridge/app.py, ADR-002). Publicado SOLO en
     # 127.0.0.1 -- nunca cambiar a 0.0.0.0 sin decision explicita, ver
-    # docs de la propuesta de integracion n8n.
+    # docs de la propuesta de integracion n8n. n8n (en su propio contenedor)
+    # lo alcanza via http://host.docker.internal:8600.
+    # Sin env_file (SAPI-70/SAPI-71): no necesita credenciales. Sin
+    # /var/run/docker.sock ni DOCKER_HOST: el puente nunca controla Docker.
+    # data/ y models/ en solo lectura: solo puntua, no ingiere ni reentrena.
     build:
       context: .
       dockerfile: Dockerfile.n8n-bridge
     container_name: sapi-n8n-bridge
     restart: unless-stopped
     ports:
-      - "127.0.0.1:8600:8000"
+      - "127.0.0.1:8600:8600"
     volumes:
       - ./data:/app/data:ro
       - ./models:/app/models:ro

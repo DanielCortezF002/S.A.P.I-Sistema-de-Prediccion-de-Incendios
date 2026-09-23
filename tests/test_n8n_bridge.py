@@ -8,15 +8,22 @@ categoria aparte, con marca explicita).
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 
 import pandas as pd
+import pytest
 from fastapi.testclient import TestClient
 
+import src.inference.prototype_service as prototype_service
 import tools.n8n_bridge.app as bridge_app
 from src.inference.prototype_service import CellScore, GridScoreResult, PrototypeUnavailableError
 from src.procesamiento.pipeline_validators import FORBIDDEN_LEGACY_REFERENCES, validate_pipeline_isolation
+from test_docker_build_hygiene import _service_block
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+BRIDGE_PORT = "8600"
 
 client = TestClient(bridge_app.app)
 
@@ -156,9 +163,70 @@ def test_score_503_on_prototype_unavailable(monkeypatch):
     assert "prototype_model_d.pkl" in body["message"]
 
 
-def test_score_500_hides_internal_details(monkeypatch):
+@pytest.mark.parametrize(
+    "exc",
+    [
+        json.JSONDecodeError("Expecting value", "{ truncado", 2),
+        FileNotFoundError(2, "No such file or directory", "/app/data/raw/dmc_meteo_x.json"),
+        FileNotFoundError(2, "No such file or directory", "/app/data/processed/nasa_firms.csv"),
+        pd.errors.EmptyDataError("No columns to parse from file"),
+        pd.errors.ParserError("Error tokenizing data"),
+    ],
+    ids=["dmc_json_decode", "dmc_missing", "firms_missing", "firms_empty", "firms_malformed"],
+)
+def test_score_503_on_data_input_errors(monkeypatch, exc):
     def _raise():
-        raise ValueError("boom - detalle interno que no debe fugarse")
+        raise exc
+
+    monkeypatch.setattr(bridge_app, "score_current_grid", _raise)
+
+    resp = client.get("/score")
+
+    assert resp.status_code == 503
+    body = resp.json()
+    assert body["status"] == "error"
+    assert body["error_type"] == "data_unavailable"
+    assert type(exc).__name__ in body["message"]
+    assert "/app/data" not in body["message"]  # rutas internas solo al log
+
+
+def test_score_503_on_real_corrupt_dmc_json(monkeypatch, tmp_path):
+    """Sin mockear el parser: un JSON DMC truncado llega como
+    JSONDecodeError desde `parse_dmc_json` real (no lo envuelve en
+    DmcFormatError) y el puente lo responde como 503, no 500."""
+    (tmp_path / "dmc_meteo_2026-09-20.json").write_text('{"330007": {"datos"', encoding="utf-8")
+    monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
+    monkeypatch.setattr(prototype_service, "REPRODUCIBILITY_DMC_DIR", tmp_path)
+    monkeypatch.setattr(
+        prototype_service,
+        "_load_model",
+        lambda: (object(), {"feature_columns": [], "horizon_hours": 6}),
+    )
+
+    resp = client.get("/score")
+
+    assert resp.status_code == 503
+    assert resp.json()["error_type"] == "data_unavailable"
+    assert "JSONDecodeError" in resp.json()["message"]
+
+
+@pytest.mark.parametrize(
+    "exc",
+    [
+        ValueError("boom - detalle interno que no debe fugarse"),
+        KeyError("boom"),
+        TypeError("boom"),
+        PermissionError(13, "boom"),
+    ],
+    ids=["value_error", "key_error", "type_error", "permission_error"],
+)
+def test_score_500_hides_internal_details(monkeypatch, exc):
+    """Un error de programación no se disfraza de indisponibilidad de
+    datos: sigue siendo 500 (con traza en el log), sin detalles en la
+    respuesta."""
+
+    def _raise():
+        raise exc
 
     monkeypatch.setattr(bridge_app, "score_current_grid", _raise)
 
@@ -169,6 +237,26 @@ def test_score_500_hides_internal_details(monkeypatch):
     assert body["status"] == "error"
     assert body["error_type"] == "internal_error"
     assert "boom" not in body["message"]
+
+
+def test_score_passes_model_d_ranking_through_unchanged(monkeypatch):
+    """El puente no reordena, redondea ni recalcula: devuelve el orden y
+    los scores exactos de `score_current_grid()` (Model D / ranking)."""
+    base = _fixture_result()
+    scores = [0.13129336874795144, 0.12, 0.12, 0.05]
+    cells = [
+        dataclasses.replace(base.cells[0], cell_id=f"VP-00{i}", score=s, rank=i, display_rank=i)
+        for i, s in enumerate(scores, start=1)
+    ]
+    result = dataclasses.replace(base, cells=cells)
+    monkeypatch.setattr(bridge_app, "score_current_grid", lambda: result)
+    monkeypatch.setattr(bridge_app, "_read_metadata_json", lambda: None)
+
+    body = client.get("/score").json()
+
+    assert [(c["cell_id"], c["score"], c["rank"]) for c in body["cells"]] == [
+        (c.cell_id, c.score, c.rank) for c in cells
+    ]
 
 
 def test_score_ignores_unexpected_query_params(monkeypatch):
@@ -195,3 +283,74 @@ def test_bridge_module_does_not_import_legacy_pipeline():
         [Path(bridge_app.__file__)], forbidden=FORBIDDEN_LEGACY_REFERENCES
     )
     assert result.status == "PASS", result.detail
+
+
+# --- Seguridad Docker/Compose del puente (SAPI-71) ---------------------------
+# Estáticos: leen docker-compose.yml y Dockerfile.n8n-bridge tal como están
+# versionados. La verificación empírica (imagen sin secretos, montajes no
+# escribibles, bind real) se hace construyendo y levantando el servicio.
+
+
+def _bridge_block() -> list[str]:
+    block = _service_block((REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8"), "n8n-bridge")
+    assert block, "servicio n8n-bridge no encontrado en docker-compose.yml"
+    return block
+
+
+def _list_entries(block: list[str], key: str) -> list[str]:
+    """Entradas `- ...` bajo `key:` dentro del bloque del servicio."""
+    entries, inside = [], False
+    for line in block:
+        stripped = line.strip()
+        if stripped == f"{key}:":
+            inside = True
+            continue
+        if inside:
+            if stripped.startswith("- "):
+                entries.append(stripped[2:].strip().strip('"'))
+            elif stripped and not stripped.startswith("#"):
+                break
+    return entries
+
+
+def _bridge_config_lines() -> list[str]:
+    """Líneas efectivas (sin comentarios) del servicio y su Dockerfile."""
+    dockerfile = (REPO_ROOT / "Dockerfile.n8n-bridge").read_text(encoding="utf-8").splitlines()
+    return [
+        line.split("#", 1)[0]
+        for line in _bridge_block() + dockerfile
+        if line.split("#", 1)[0].strip()
+    ]
+
+
+def test_bridge_does_not_receive_env_file():
+    assert not any(line.strip().startswith("env_file") for line in _bridge_config_lines())
+
+
+def test_bridge_mounts_only_data_and_models_read_only():
+    assert _list_entries(_bridge_block(), "volumes") == [
+        "./data:/app/data:ro",
+        "./models:/app/models:ro",
+    ]
+
+
+def test_bridge_published_only_on_loopback_8600():
+    assert _list_entries(_bridge_block(), "ports") == [f"127.0.0.1:{BRIDGE_PORT}:{BRIDGE_PORT}"]
+
+
+def test_bridge_uvicorn_listens_on_published_container_port():
+    dockerfile = (REPO_ROOT / "Dockerfile.n8n-bridge").read_text(encoding="utf-8")
+    assert f"EXPOSE {BRIDGE_PORT}" in dockerfile
+    assert f'"--port", "{BRIDGE_PORT}"' in dockerfile
+
+
+@pytest.mark.parametrize("forbidden", ["docker.sock", "DOCKER_HOST"])
+def test_bridge_has_no_docker_control(forbidden):
+    assert not any(forbidden in line for line in _bridge_config_lines())
+
+
+def test_bridge_dockerfile_never_copies_env_explicitly():
+    """El único `COPY . .` queda filtrado por .dockerignore (SAPI-70,
+    ver tests/test_docker_build_hygiene.py); ningún COPY nombra .env."""
+    copies = [line for line in _bridge_config_lines() if line.strip().upper().startswith("COPY")]
+    assert copies == ["COPY requirements.txt requirements-dev.txt ./", "COPY . ."]

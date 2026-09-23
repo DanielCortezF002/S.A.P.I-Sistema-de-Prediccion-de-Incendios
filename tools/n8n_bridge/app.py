@@ -22,6 +22,7 @@ import logging
 from datetime import datetime, timezone
 from typing import Optional
 
+import pandas as pd
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
@@ -35,6 +36,20 @@ from src.inference.prototype_service import (
 logger = logging.getLogger("sapi.n8n_bridge")
 
 METADATA_PATH = MODEL_PATH.with_name("prototype_model_d_metadata.json")
+
+# Fallas de los insumos de datos que `score_current_grid()` deja pasar sin
+# envolver en `PrototypeUnavailableError`: un JSON DMC truncado/corrupto
+# (`json.load` en `parse_dmc_json`), un archivo FIRMS/DMC que desaparece
+# entre el `exists()`/`glob()` y su lectura, o un CSV FIRMS vacío o
+# malformado. Son indisponibilidad de datos (503), no un bug. Se listan
+# por tipo exacto -- nunca `ValueError`/`OSError` genéricos -- para que un
+# error de programación siga saliendo como 500 con traza en el log.
+DATA_INPUT_ERRORS = (
+    json.JSONDecodeError,
+    FileNotFoundError,
+    pd.errors.EmptyDataError,
+    pd.errors.ParserError,
+)
 
 _FALLBACK_DISCLAIMER = (
     "PROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, "
@@ -100,7 +115,7 @@ def _serialize_grid_result(result: GridScoreResult, disclaimer: str) -> dict:
 @app.get("/health")
 def health() -> dict:
     """Chequeo barato: solo existencia de archivos + lectura de JSON.
-    Nunca ejecuta `score_current_grid()` -- seguro de poll ear seguido."""
+    Nunca ejecuta `score_current_grid()` -- seguro de consultar seguido."""
     model_exists = MODEL_PATH.exists()
     metadata = _read_metadata_json() if model_exists else None
     status = "ok" if (model_exists and metadata is not None) else "degraded"
@@ -128,6 +143,19 @@ def get_score() -> JSONResponse:
                 "status": "error",
                 "error_type": "prototype_unavailable",
                 "message": str(exc),
+            },
+        )
+    except DATA_INPUT_ERRORS as exc:
+        logger.warning("Model D scoring input data unavailable", exc_info=True)
+        return JSONResponse(
+            status_code=503,
+            content={
+                "status": "error",
+                "error_type": "data_unavailable",
+                "message": (
+                    f"Insumo de datos no disponible o ilegible ({type(exc).__name__}). "
+                    "Revisar logs del servicio n8n-bridge."
+                ),
             },
         )
     except Exception:  # noqa: BLE001 -- nunca exponer detalles internos a n8n

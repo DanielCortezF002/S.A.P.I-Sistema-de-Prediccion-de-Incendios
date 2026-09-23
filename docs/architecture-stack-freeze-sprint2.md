@@ -476,6 +476,62 @@ ramas solo se ejecutaban con credenciales cargadas. Los 5 tests adicionales
 imagen se ejecutan completos. Este es el baseline de referencia desde
 SAPI-70; las cifras anteriores quedan como registro histórico.
 
+### Fingerprint del ranking Model D y n8n-bridge (SAPI-71 Fase A) — nota fechada 23-09-2026
+
+El hash `e84b2323…1170` citado arriba no es reproducible: no quedó
+registrado cómo se calculó y ninguna de ~3.800 serializaciones candidatas
+(campos, separadores, formatos de float, sha256/md5/sha1/blake2b, modo
+normal y reproducible) lo reproduce sobre el mismo ranking. Queda como
+registro histórico. Desde SAPI-71 el fingerprint de referencia es este:
+
+- Entrada: `score_current_grid()` sin argumentos (último `forecast_time` real).
+- Campos por celda: `cell_id`, `score`, `rank`, en ese orden.
+- Orden de filas: el de `GridScoreResult.cells` (rank 1..50), sin reordenar.
+- Serialización: una línea por celda `f"{cell_id},{score!r},{rank}"`
+  (`repr` del float: precisión completa, sin redondeo), líneas unidas con
+  `"\n"`, sin salto final, codificadas en UTF-8.
+- Algoritmo: SHA-256, hexdigest.
+
+```bash
+PYTHONPATH=. python -c "
+import hashlib
+from src.inference.prototype_service import score_current_grid
+cells = score_current_grid().cells
+payload = '\n'.join(f'{c.cell_id},{c.score!r},{c.rank}' for c in cells)
+print(len(cells), cells[0].cell_id, round(cells[0].score, 12))
+print(hashlib.sha256(payload.encode('utf-8')).hexdigest())"
+```
+
+Valor esperado (`prototype_model_d_v1`, pkl sha256 `ac017bef…2173f`,
+`forecast_time` 2026-09-01T00:00:00Z, 50 celdas, VP-001 primera con
+0.131293368748), idéntico en modo normal y con
+`SAPI_REPRODUCIBILITY_MODE=1`:
+
+```
+33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff
+```
+
+El valor depende de los datos: si llega meteorología DMC más reciente,
+cambia el `forecast_time` y con él el fingerprint, sin que Model D haya
+cambiado. Compararlo siempre contra el mismo `forecast_time`.
+
+**Resultados reales SAPI-71 Fase A** (n8n-bridge, `main` `1bd32f2` + bridge
+adaptado; `src/`, `app/`, `models/` y `scripts/` sin cambios):
+
+```
+HOST: 551 passed, 2 skipped, 0 failed; cobertura 91.97%
+DOCKER (Dockerfile.analytics --no-cache, sin volúmenes):
+  528 passed, 25 skipped, 0 failed; cobertura 88.30%
+  (502 del baseline SAPI-70 + 26 de tests/test_n8n_bridge.py)
+N8N_BRIDGE_IMAGE: sin .env/.env.*/.mcp.json/.venv*, 0 .pyc;
+  valores del .env NOT_FOUND en filesystem, history y config
+N8N_BRIDGE_RUNTIME: 127.0.0.1:8600->8600, data/ y models/ RW=false,
+  sin env_file, sin docker.sock, sin DOCKER_HOST
+/health y /score: HTTP 200 desde host y desde contenedor
+  (host.docker.internal:8600); /score = 50 celdas, mismo ranking que
+  score_current_grid() en host (fingerprint 33c2eacc…31ff)
+```
+
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
 
 `artifacts/hito1/reproducibility/manifest.json` es un snapshot histórico
