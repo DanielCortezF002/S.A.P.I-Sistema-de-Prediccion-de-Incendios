@@ -1,0 +1,36 @@
+# S.A.P.I. - n8n-bridge (puente HTTP local de desarrollo, NO el servicio
+# FastAPI de la arquitectura objetivo -- ver tools/n8n_bridge/app.py).
+# Misma base y dependencias de sistema que Dockerfile.web/Dockerfile.analytics
+# (gdal/geos/proj/gcc son necesarias porque score_current_grid() importa,
+# via src.procesamiento.dem_features, rasterio a nivel de modulo).
+#
+# Higiene SAPI-70: `COPY . .` respeta .dockerignore, que excluye .env,
+# .env.*, .mcp.json, .venv* y caches de Python. Este servicio no recibe
+# credenciales (sin env_file en docker-compose.yml): Model D solo lee
+# archivos locales montados en solo lectura.
+FROM python:3.14-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin libgdal-dev libgeos-dev libproj-dev gcc g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV GDAL_CONFIG=/usr/bin/gdal-config
+
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+COPY . .
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+EXPOSE 8600
+
+# --host 0.0.0.0 es el bind INTERNO del proceso dentro de su propio
+# namespace de red del contenedor -- necesario para que Docker pueda
+# reenviar trafico desde el puerto publicado en el host. El bind
+# expuesto al host (127.0.0.1:8600) se controla en docker-compose.yml,
+# no aqui.
+CMD ["uvicorn", "tools.n8n_bridge.app:app", "--host", "0.0.0.0", "--port", "8600"]

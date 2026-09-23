@@ -11,3 +11,10 @@ pytest-cov==7.1.0
 flake8==7.3.0
 black==26.5.1
 locust==2.46.5
+# n8n-bridge (tools/n8n_bridge/app.py, Dockerfile.n8n-bridge) -- puente
+# HTTP local de desarrollo, NO el servicio FastAPI de la arquitectura
+# objetivo (ver ADR-002 en docs/architecture-stack-freeze-sprint2.md).
+fastapi==0.141.1
+uvicorn==0.53.0
+# httpx: dependencia de fastapi.testclient.TestClient (tests/test_n8n_bridge.py).
+httpx==0.28.1
