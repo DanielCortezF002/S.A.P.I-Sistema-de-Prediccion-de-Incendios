@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 from typing import Optional, Union
 
@@ -112,6 +113,19 @@ def classify_freshness(age_hours: float) -> str:
     return FRESHNESS_HISTORICAL
 
 
+# Desfase FIRMS (SAPI-71 Fase B): `historial_firms_features` cuenta arribos
+# y días desde el último evento ANTES de T. Si la cobertura FIRMS termina
+# antes de T, los incendios de ese hueco faltan en silencio y las features
+# ya no describen lo realmente disponible en T (el modelo se entrenó con
+# historial completo). lag = fecha(T) - coverage_end, en días:
+#   <= 3 -> FIRMS_STATUS_CURRENT; 4..7 -> FIRMS_STATUS_STALE (se puntúa,
+#   con aviso); > 7 -> PrototypeUnavailableError (no se puntúa).
+FIRMS_LAG_WARN_DAYS = 3
+FIRMS_LAG_MAX_DAYS = 7
+FIRMS_STATUS_CURRENT = "FIRMS AL DÍA"
+FIRMS_STATUS_STALE = "FIRMS DESACTUALIZADO"
+
+
 class PrototypeUnavailableError(RuntimeError):
     """Falta un artefacto necesario (modelo, meteorología reciente, FIRMS,
     grilla) para generar el ranking. El dashboard debe capturar esta
@@ -144,6 +158,25 @@ class GridScoreResult:
     model_status: str
     meteo_actual: dict
     cells: list = field(default_factory=list)  # list[CellScore], orden = rank 1..N
+    # Procedencia y desfase FIRMS de este ranking (ver FIRMS_LAG_*).
+    firms_origin: Optional[str] = None  # "baseline" | "current" | "reproducibility"
+    firms_coverage_end: Optional[date] = None
+    firms_lag_days: Optional[int] = None
+    firms_status: Optional[str] = None
+
+
+def classify_firms_lag(forecast_time: pd.Timestamp, coverage_end: date) -> tuple[int, str]:
+    """(lag en días, estado). Lanza `PrototypeUnavailableError` si FIRMS
+    está más de `FIRMS_LAG_MAX_DAYS` días detrás de `forecast_time`."""
+    lag = (forecast_time.date() - coverage_end).days
+    if lag > FIRMS_LAG_MAX_DAYS:
+        raise PrototypeUnavailableError(
+            f"El histórico FIRMS termina el {coverage_end}, {lag} días antes de "
+            f"forecast_time={forecast_time} (máximo {FIRMS_LAG_MAX_DAYS}): faltarían "
+            "detecciones recientes en las features. Refrescar FIRMS "
+            "(python -m src.refresh.firms_refresh refresh)."
+        )
+    return lag, FIRMS_STATUS_CURRENT if lag <= FIRMS_LAG_WARN_DAYS else FIRMS_STATUS_STALE
 
 
 def _load_model() -> tuple[object, dict]:
@@ -224,6 +257,7 @@ def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> p
         firms_source = resolve_firms_source(reproducibility=reproducibility)
     except FirmsSourceError as exc:
         raise PrototypeUnavailableError(f"Fuente FIRMS inválida: {exc}") from exc
+    firms_lag_days, firms_status = classify_firms_lag(forecast_time, firms_source.coverage_end)
     fires_csv = firms_source.path
     if not fires_csv.exists():
         raise PrototypeUnavailableError(
@@ -261,7 +295,14 @@ def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> p
     # posterior de `features_df` (p. ej. un `.sort_values` sobre una
     # columna de feature) seguiría llevando el cell_id correcto consigo
     # mismo vía el índice — nunca se vuelve a alinear por posición entera.
-    return pd.DataFrame(rows).set_index("cell_id")
+    features_df = pd.DataFrame(rows).set_index("cell_id")
+    features_df.attrs["firms"] = {
+        "origin": firms_source.origin,
+        "coverage_end": firms_source.coverage_end,
+        "lag_days": firms_lag_days,
+        "status": firms_status,
+    }
+    return features_df
 
 
 def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None) -> GridScoreResult:
@@ -297,6 +338,7 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
     forecast_time = _resolve_forecast_time(forecast_time, meteo_series)
     meteo_row = _resolve_meteo_row(forecast_time, meteo_series)
     features_df = build_feature_matrix(forecast_time, meteo_row)
+    firms = features_df.attrs["firms"]
 
     grid_cells = all_cells()
     grid_by_id = {c["cell_id"]: c for c in grid_cells}
@@ -370,4 +412,8 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
             "momento_observacion": meteo_row["meteo_actual_momento"],
         },
         cells=cells,
+        firms_origin=firms["origin"],
+        firms_coverage_end=firms["coverage_end"],
+        firms_lag_days=firms["lag_days"],
+        firms_status=firms["status"],
     )
