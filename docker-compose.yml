@@ -46,8 +46,9 @@ services:
       dockerfile: Dockerfile.web
     container_name: sapi-web
     restart: unless-stopped
-    env_file:
-      - .env
+    # Sin env_file (SAPI-70): el dashboard no usa credenciales de APIs
+    # externas (NASA FIRMS, DMC, OpenTopography) -- Model D solo lee
+    # archivos locales. Solo recibe la URL de la base de datos.
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
       DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
