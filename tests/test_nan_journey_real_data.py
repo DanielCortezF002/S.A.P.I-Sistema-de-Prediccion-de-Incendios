@@ -15,7 +15,8 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DATASET_PATH = REPO_ROOT / "data" / "processed" / "temporal_dataset_h6.parquet"
-FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# Linea base FIRMS CONGELADA (la del dataset de entrenamiento del Modelo D).
+from src.procesamiento.firms_source import FIRMS_BASELINE_CSV as FIRES_CSV  # noqa: E402
 
 pytestmark = pytest.mark.skipif(
     not DATASET_PATH.exists(),

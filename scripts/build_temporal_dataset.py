@@ -38,7 +38,8 @@ from src.procesamiento.temporal_features import LAG_HOURS, build_regional_meteo_
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 STATION_ID = "330007"
-FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# Linea base FIRMS CONGELADA (la del dataset de entrenamiento del Modelo D).
+from src.procesamiento.firms_source import FIRMS_BASELINE_CSV as FIRES_CSV  # noqa: E402
 COOLDOWN_HOURS_DEFAULT = 6
 CANDIDATE_STEP_HOURS = 6  # muestreo de forecast_time — ver manifest, motivo documentado
 

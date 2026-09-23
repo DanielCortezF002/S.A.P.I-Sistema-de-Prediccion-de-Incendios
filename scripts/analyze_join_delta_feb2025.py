@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pandas as pd
 
+from src.procesamiento.firms_source import FIRMS_BASELINE_CSV
 from src.procesamiento.meteo_fire_joiner import ignition_timestamp
 from src.procesamiento.raw_parser import parse_dmc_json
 
@@ -76,7 +77,7 @@ def main() -> None:
     gaps_1h = cadence[cadence > 60].dropna()
     print(f"\nHuecos > 60 min (cortes serios): {len(gaps_1h)}")
 
-    fires = pd.read_csv("data/processed/nasa_firms_2021-08-30_2026-08-30.csv")
+    fires = pd.read_csv(FIRMS_BASELINE_CSV)
     fires_feb = fires[fires["acq_date"].astype(str).str.startswith("2025-02")].copy()
     fires_feb["ignition_ts"] = fires_feb.apply(
         lambda r: ignition_timestamp(str(r["acq_date"]), r["acq_time"]),

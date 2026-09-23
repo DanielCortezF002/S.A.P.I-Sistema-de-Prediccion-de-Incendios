@@ -22,6 +22,19 @@ def _clean_float(val) -> float | None:
     return float(match.group()) if match else None
 
 
+_DMC_STATION_KEYS = frozenset({"error", "datosEstaciones", "registros"})
+
+
+class DmcFormatError(ValueError):
+    """El archivo no tiene la forma de un JSON DMC `{codigo_estacion: respuesta}`.
+
+    Existe para no aceptar en silencio otros formatos escritos con el mismo
+    patrón de nombre -- p. ej. la degradación legacy de
+    `ParallelIngester._degrade_source`, que vuelca filas de `staging_meteo`
+    como una LISTA de registros en `dmc_meteo_*.json`.
+    """
+
+
 def _extract_dmc_records(contenido: dict) -> list[dict]:
     """Extrae filas horarias desde la estructura real de getDatosRecientesEma."""
     if "error" in contenido:
@@ -39,14 +52,31 @@ def _extract_dmc_records(contenido: dict) -> list[dict]:
 
 
 def parse_dmc_json(json_path: str | Path) -> pd.DataFrame:
-    """Extrae y limpia telemetría horaria desde el JSON de DMC (ej. Rodelillo 330007)."""
+    """Extrae y limpia telemetría horaria desde el JSON de DMC (ej. Rodelillo 330007).
+
+    Lanza `DmcFormatError` si la raíz no es un objeto o si una estación trae
+    un objeto sin ninguna clave DMC reconocida. Las estaciones cuyo valor no
+    es un objeto (p. ej. el texto "Sin Información" de la API) se siguen
+    omitiendo, igual que antes.
+    """
     with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
+
+    if not isinstance(data, dict):
+        raise DmcFormatError(
+            f"{Path(json_path).name}: se esperaba un objeto {{codigo_estacion: respuesta}}, "
+            f"se encontró {type(data).__name__}."
+        )
 
     filas: list[dict] = []
     for cod_estacion, contenido in data.items():
         if not isinstance(contenido, dict):
             continue
+        if not _DMC_STATION_KEYS.intersection(contenido):
+            raise DmcFormatError(
+                f"{Path(json_path).name}: la entrada {cod_estacion!r} no tiene ninguna clave DMC "
+                f"reconocida ({', '.join(sorted(_DMC_STATION_KEYS))})."
+            )
 
         for reg in _extract_dmc_records(contenido):
             viento_kt = _clean_float(reg.get("fuerzaDelViento"))

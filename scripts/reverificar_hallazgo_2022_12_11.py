@@ -29,7 +29,8 @@ from src.geo.grid import BASE_LAT, BASE_LON, COLS, ROWS, STEP_LAT, STEP_LON
 from src.procesamiento.meteo_fire_joiner import join_fires_to_meteo, summarize_join
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# Linea base FIRMS CONGELADA (la del dataset de entrenamiento del Modelo D).
+from src.procesamiento.firms_source import FIRMS_BASELINE_CSV as FIRES_CSV  # noqa: E402
 OUT_JSON = REPO_ROOT / "reports" / "reverificacion_vp025_2022-12-11.json"
 
 EVENT_DATE = "2022-12-11"

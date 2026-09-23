@@ -34,6 +34,8 @@ import pandas as pd
 from src.geo.grid import all_cells
 from src.procesamiento.dem_features import load_grid_topography
 from src.procesamiento.episodes import assign_episodes, first_arrival_by_cell
+from src.procesamiento.firms_source import FirmsSourceError, resolve_firms_source
+from src.procesamiento.raw_parser import DmcFormatError
 from src.procesamiento.regional_meteo import load_regional_meteo_series
 from src.procesamiento.temporal_features import LAG_HOURS, build_regional_meteo_features, historial_firms_features
 
@@ -41,7 +43,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 STATION_ID = "330007"
 STATION_NAME = "Rodelillo"
 CANDIDATE_STEP_HOURS = 6  # mismo valor congelado que scripts/build_temporal_dataset.py
-FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# FIRMS: la ruta ya no vive aquí -- ver src/procesamiento/firms_source.py
+# (resolve_firms_source), única fuente de verdad sobre qué CSV se lee.
 DEM_TERRAIN_DIR = REPO_ROOT / "data" / "processed" / "dem_terrain"
 MODEL_PATH = REPO_ROOT / "models" / "prototype_model_d.pkl"
 
@@ -60,12 +63,12 @@ MODEL_PATH = REPO_ROOT / "models" / "prototype_model_d.pkl"
 # variable despues no tendria efecto. `_reproducibility_mode()` la lee en
 # cada llamada.
 REPRODUCIBILITY_DMC_DIR = REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "dmc"
-# FIRMS: el CSV congelado es EL MISMO archivo derivado (1,3MB, ya deduplicado
-# SP/NRT) que data/processed/nasa_firms_2021-08-30_2026-08-30.csv -- no una
-# version recortada. historial_firms_features() necesita el historial COMPLETO
-# hasta forecast_time (cuenta arribos totales, no una ventana corta como DMC),
-# asi que no existe un subconjunto mas chico sin alterar el resultado.
-REPRODUCIBILITY_FIRMS_CSV = REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "firms" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# FIRMS: el snapshot congelado (FIRMS_REPRODUCIBILITY_CSV en firms_source.py)
+# es EL MISMO archivo derivado (1,3MB, ya deduplicado SP/NRT) que la linea
+# base de data/processed/ -- no una version recortada.
+# historial_firms_features() necesita el historial COMPLETO hasta
+# forecast_time (cuenta arribos totales, no una ventana corta como DMC), asi
+# que no existe un subconjunto mas chico sin alterar el resultado.
 # DEM: tabla derivada (50 filas: cell_id/elevacion/pendiente/orientacion/
 # dem_disponible) -- exactamente lo que load_grid_topography() produce a
 # partir del raster real, generada una vez y congelada (1,6KB vs ~6,5MB de
@@ -76,6 +79,14 @@ REPRODUCIBILITY_TOPO_CSV = REPO_ROOT / "artifacts" / "hito1" / "reproducibility"
 
 def _reproducibility_mode() -> bool:
     return os.getenv("SAPI_REPRODUCIBILITY_MODE") == "1"
+
+
+def _display_path(path: Path) -> str:
+    """Ruta relativa al repo para mensajes; absoluta si no cuelga de él."""
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
 
 _EMPTY_ARRIVALS = pd.Series([], dtype="datetime64[ns, UTC]")
 
@@ -209,9 +220,15 @@ def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> p
     celda); historial FIRMS y topografía sí varían por celda.
     """
     reproducibility = _reproducibility_mode()
-    fires_csv = REPRODUCIBILITY_FIRMS_CSV if reproducibility else FIRES_CSV
+    try:
+        firms_source = resolve_firms_source(reproducibility=reproducibility)
+    except FirmsSourceError as exc:
+        raise PrototypeUnavailableError(f"Fuente FIRMS inválida: {exc}") from exc
+    fires_csv = firms_source.path
     if not fires_csv.exists():
-        raise PrototypeUnavailableError(f"No existe el histórico FIRMS en {fires_csv.relative_to(REPO_ROOT)}.")
+        raise PrototypeUnavailableError(
+            f"No existe el histórico FIRMS en {_display_path(fires_csv)}."
+        )
     fires = pd.read_csv(fires_csv)
     episodes = assign_episodes(fires)
     arrivals = first_arrival_by_cell(episodes)
@@ -266,7 +283,12 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
     horizon_hours: int = metadata["horizon_hours"]
 
     meteo_raw_dir = REPRODUCIBILITY_DMC_DIR if _reproducibility_mode() else None
-    meteo_series = load_regional_meteo_series(STATION_ID, raw_dir=meteo_raw_dir)
+    try:
+        meteo_series = load_regional_meteo_series(STATION_ID, raw_dir=meteo_raw_dir)
+    except DmcFormatError as exc:
+        raise PrototypeUnavailableError(
+            f"Archivo meteorológico DMC con formato incompatible: {exc}"
+        ) from exc
     if meteo_series.empty:
         raise PrototypeUnavailableError(
             f"No hay datos meteorológicos reales para la estación {STATION_ID} en data/raw/."

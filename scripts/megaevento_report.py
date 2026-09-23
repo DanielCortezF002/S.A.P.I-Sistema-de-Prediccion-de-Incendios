@@ -27,7 +27,8 @@ import pandas as pd
 from src.procesamiento.episodes import assign_episodes
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# Linea base FIRMS CONGELADA (la del dataset de entrenamiento del Modelo D).
+from src.procesamiento.firms_source import FIRMS_BASELINE_CSV as FIRES_CSV  # noqa: E402
 DATASET_PATH = REPO_ROOT / "data" / "processed" / "temporal_dataset_h6.parquet"
 OUT_PATH = REPO_ROOT / "reports" / "megaevento_2024-02-03_report.json"
 FECHA = "2024-02-03"
