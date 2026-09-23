@@ -71,6 +71,59 @@ class FirmsSourceError(RuntimeError):
     """El puntero FIRMS vigente existe pero es inválido o inconsistente."""
 
 
+# Archivos FIRMS congelados que ningún writer puede tocar (SAPI-71): la línea
+# base científica, su manifest de proveniencia (mismo `stem`, que es
+# exactamente lo que `NasaFirmsBackfill.run()` escribiría para el período
+# 2021-08-30..2026-08-30) y el snapshot del Hito 1 (mismo sha256).
+FROZEN_FIRMS_PATHS: tuple[Path, ...] = (
+    FIRMS_BASELINE_CSV,
+    FIRMS_BASELINE_CSV.with_name(f"{FIRMS_BASELINE_CSV.stem}_manifest.json"),
+    FIRMS_REPRODUCIBILITY_CSV,
+)
+
+
+class FrozenFirmsWriteError(RuntimeError):
+    """Se intentó escribir sobre un archivo FIRMS congelado. Nunca se
+    captura para seguir con otra ruta: la operación debe abortar."""
+
+
+def _canonical(path: Path) -> str:
+    return os.path.normcase(os.path.realpath(os.path.abspath(path)))
+
+
+def is_frozen_firms_path(path: str | os.PathLike) -> bool:
+    """True si `path` (relativa al cwd o absoluta, con `..`, symlinks o
+    distinta capitalización en Windows) es uno de `FROZEN_FIRMS_PATHS`, o
+    si ya existe y es el mismo archivo físico (hardlink)."""
+    candidate = Path(path)
+    canonical = _canonical(candidate)
+    for frozen in FROZEN_FIRMS_PATHS:
+        if canonical == _canonical(frozen):
+            return True
+        try:
+            if (
+                candidate.exists()
+                and frozen.exists()
+                and os.path.samefile(candidate, frozen)
+            ):
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def ensure_writable_firms_path(path: str | os.PathLike) -> None:
+    """Llamar ANTES de cualquier escritura (y de la red) sobre una salida
+    FIRMS. Lanza `FrozenFirmsWriteError` si `path` es un archivo congelado;
+    no escribe, no cambia la ruta y no ofrece alternativa."""
+    if is_frozen_firms_path(path):
+        raise FrozenFirmsWriteError(
+            f"Escritura rechazada: {path} es un archivo FIRMS congelado "
+            "(línea base científica de Model D, su manifest o el snapshot del "
+            "Hito 1). No se escribió nada. Use otro destino."
+        )
+
+
 @dataclass(frozen=True)
 class FirmsSource:
     path: Path

@@ -26,6 +26,7 @@ from src.config import (
     VALPARAISO_BBOX,
 )
 from src.db import get_backend_connection, log_event
+from src.procesamiento.firms_source import ensure_writable_firms_path
 from src.query.prediction_query import PredictionQuery
 
 _STAGING_TABLES = frozenset({"staging_incendios", "staging_meteo"})
@@ -156,6 +157,7 @@ class ParallelIngester:
         """
         end_date = datetime.utcnow().date()
         out_path = self.raw_dir / f"nasa_firms_{end_date.isoformat()}.csv"
+        ensure_writable_firms_path(out_path)
 
         if not NASA_FIRMS_API_KEY:
             exc = RuntimeError("NASA_FIRMS_API_KEY no configurada (ver src/config.py)")
@@ -294,6 +296,7 @@ class ParallelIngester:
         Returns:
             Resultado con flag degraded y datos de PostGIS si existen.
         """
+        ensure_writable_firms_path(out_path)
         df_fallback = self._recuperar_payload_fallback(staging_table)
         if df_fallback.empty:
             log_event(
