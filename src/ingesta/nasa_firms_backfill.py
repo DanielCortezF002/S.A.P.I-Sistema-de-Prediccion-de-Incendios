@@ -21,6 +21,7 @@ import pandas as pd
 import requests
 
 from src.config import DATA_PROCESSED_DIR, DATA_RAW_DIR, NASA_FIRMS_API_KEY, VALPARAISO_BBOX
+from src.procesamiento.firms_source import ensure_writable_firms_path
 
 FIRMS_API_BASE = "https://firms.modaps.eosdis.nasa.gov/api"
 SP_SOURCE = "VIIRS_SNPP_SP"
@@ -294,17 +295,19 @@ class NasaFirmsBackfill:
     def download_window(self, window: DateWindow) -> tuple[Path, pd.DataFrame]:
         """Descarga y conserva sin modificar el CSV de una ventana."""
 
+        source_dir = self.raw_dir / window.source
+        raw_path = source_dir / (
+            f"{window.start_date.isoformat()}_{window.end_date.isoformat()}.csv"
+        )
+        ensure_writable_firms_path(raw_path)
+
         response = self._get_with_retry(self.window_url(window))
         frame = pd.read_csv(io.StringIO(response.text))
         missing = _REQUIRED_COLUMNS.difference(frame.columns)
         if missing:
             raise ValueError(f"Respuesta FIRMS inválida: faltan {sorted(missing)}")
 
-        source_dir = self.raw_dir / window.source
         source_dir.mkdir(parents=True, exist_ok=True)
-        raw_path = source_dir / (
-            f"{window.start_date.isoformat()}_{window.end_date.isoformat()}.csv"
-        )
         raw_path.write_text(response.text, encoding="utf-8")
 
         frame["firms_source"] = window.source
@@ -317,6 +320,17 @@ class NasaFirmsBackfill:
         selected = list(windows)
         if not selected:
             raise ValueError("No hay ventanas FIRMS para ejecutar")
+
+        # El nombre de salida sale solo del período pedido: con
+        # 2021-08-30..2026-08-30 coincide con la línea base congelada. Se
+        # valida antes de la red y de cualquier escritura (SAPI-71).
+        first_date = min(window.start_date for window in selected)
+        last_date = max(window.end_date for window in selected)
+        stem = f"nasa_firms_{first_date.isoformat()}_{last_date.isoformat()}"
+        consolidated_path = self.processed_dir / f"{stem}.csv"
+        manifest_path = self.processed_dir / f"{stem}_manifest.json"
+        ensure_writable_firms_path(consolidated_path)
+        ensure_writable_firms_path(manifest_path)
 
         frames: list[pd.DataFrame] = []
         raw_files: list[str] = []
@@ -335,11 +349,6 @@ class NasaFirmsBackfill:
         ).reset_index(drop=True)
 
         self.processed_dir.mkdir(parents=True, exist_ok=True)
-        first_date = min(window.start_date for window in selected)
-        last_date = max(window.end_date for window in selected)
-        stem = f"nasa_firms_{first_date.isoformat()}_{last_date.isoformat()}"
-        consolidated_path = self.processed_dir / f"{stem}.csv"
-        manifest_path = self.processed_dir / f"{stem}_manifest.json"
         deduplicated.to_csv(consolidated_path, index=False)
 
         checksum = hashlib.sha256(consolidated_path.read_bytes()).hexdigest()
