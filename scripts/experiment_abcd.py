@@ -68,7 +68,8 @@ warnings.filterwarnings("ignore", category=UserWarning)
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 RANDOM_STATE = 42
-FIRES_CSV = REPO_ROOT / "data" / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# Linea base FIRMS CONGELADA (la del dataset de entrenamiento del Modelo D).
+from src.procesamiento.firms_source import FIRMS_BASELINE_CSV as FIRES_CSV  # noqa: E402
 
 # Umbrales de "soporte de evento" — NO son una ley estadística universal, son
 # un criterio metodológico de ESTE proyecto (no derivado de una prueba de

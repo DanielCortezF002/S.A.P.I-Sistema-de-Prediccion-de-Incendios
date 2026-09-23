@@ -19,7 +19,6 @@ import sklearn
 
 from src.inference.prototype_service import (
     MODEL_PATH,
-    REPRODUCIBILITY_FIRMS_CSV,
     REPRODUCIBILITY_TOPO_CSV,
     STATION_ID,
     PrototypeUnavailableError,
@@ -28,6 +27,9 @@ from src.inference.prototype_service import (
     build_feature_matrix,
     load_regional_meteo_series,
     score_current_grid,
+)
+from src.procesamiento.firms_source import (  # noqa: E402
+    FIRMS_REPRODUCIBILITY_CSV as REPRODUCIBILITY_FIRMS_CSV,
 )
 from src.procesamiento.pipeline_validators import FORBIDDEN_LEGACY_REFERENCES, validate_pipeline_isolation
 
