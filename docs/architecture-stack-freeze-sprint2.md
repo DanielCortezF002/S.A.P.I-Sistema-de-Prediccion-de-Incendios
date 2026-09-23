@@ -429,6 +429,53 @@ fase anterior, con menos tests recolectados y sin las condiciones de
 verificación Docker descritas aquí. No se debe citar uno como si fuera el
 otro.
 
+### Corrección del build context (SAPI-70) — nota fechada 22-09-2026
+
+**La línea base de arriba no se ejecutó sobre un clon limpio en sentido
+estricto.** El `.dockerignore` de ese commit no excluía `.env`, `.env.*`,
+`.mcp.json` ni `.venv-demo/`, y sus reglas `__pycache__/` y `*.py[cod]` solo
+aplicaban a la raíz del contexto. `COPY . .` copiaba el `.env` local del
+desarrollador (credenciales NASA FIRMS, DMC y OpenTopography) dentro de la
+imagen, y `src/config.py` (`load_dotenv()`) lo cargaba en cada contenedor.
+Verificado en todas las imágenes locales construidas desde entonces. No hay
+evidencia de que alguna imagen se haya publicado en un registry.
+
+SAPI-70 corrige `.dockerignore` (reglas al final del archivo, después de toda
+excepción `!`), quita `env_file` de `web-presentation` en
+`docker-compose.yml` y agrega `tests/test_docker_build_hygiene.py`. No cambia
+Dockerfiles, `src/`, `app/`, `models/` ni Model D.
+
+**Resultados reales (Docker, `build --no-cache` de `Dockerfile.analytics`,
+sin volúmenes, `main` `a4838bb` + cambios de SAPI-70):**
+
+```
+BUILD_CONTEXT: 240 archivos / 13.7 MB (antes: 17.695 / 779 MB)
+IMAGE_ENV_FILES: 0 (.env, .env.*, .mcp.json ausentes)
+IMAGE_VENV_DIRS: 0
+IMAGE_PYCACHE_DIRS: 0
+IMAGE_PYC_FILES: 0
+SECRET_VALUES_IN_IMAGE_FS: NOT_FOUND (4/4 claves, 52.236 archivos)
+SECRET_VALUES_IN_HISTORY_AND_CONFIG: NOT_FOUND
+RUNTIME_CREDENTIALS_WITHOUT_INJECTION: vacías (4/4)
+TESTS_COLLECTED: 527
+TESTS_PASSED: 502
+TESTS_FAILED: 0
+TESTS_SKIPPED: 25 (los 23 de arriba + 2 de tests/test_data_loader_golden.py
+  que requieren data/ local, agregados en SAPI-69)
+COVERAGE: 88.30%
+COVERAGE_GATE: PASS (80% requerido)
+MODEL_D: prototype_model_d_v1, pkl sha256 ac017bef…2173f, ranking
+  idéntico (hash de las 50 celdas e84b2323…1170)
+```
+
+La cobertura baja de 88.49% a 88.30% por sacar `.env` de la imagen, no por
+cambios de código: medido sobre el mismo árbol (`a4838bb`), con y sin
+`/app/.env`, ambas corridas dan 497 passed / 25 skipped / 0 failed; algunas
+ramas solo se ejecutaban con credenciales cargadas. Los 5 tests adicionales
+(502 − 497) son los de `test_docker_build_hygiene.py`, que dentro de la
+imagen se ejecutan completos. Este es el baseline de referencia desde
+SAPI-70; las cifras anteriores quedan como registro histórico.
+
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
 
 `artifacts/hito1/reproducibility/manifest.json` es un snapshot histórico

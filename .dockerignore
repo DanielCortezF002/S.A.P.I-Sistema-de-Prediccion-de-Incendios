@@ -11,13 +11,7 @@
 # estos archivos) y el contenedor arranca igual.
 
 .git/
-.venv/
-.venv_model_probe/
 venv/
-__pycache__/
-*.py[cod]
-.pytest_cache/
-.coverage
 htmlcov/
 
 data/raw/*
@@ -60,3 +54,28 @@ reports/*.html
 *.log
 .DS_Store
 .claude/
+
+# --- SAPI-70: secretos y artefactos locales ---------------------------------
+# Van AL FINAL a proposito: en .dockerignore gana la ULTIMA regla que coincide,
+# y ninguna excepcion `!` de arriba puede volver a incluir lo que sigue.
+# Verificado 22-09-2026: sin estas reglas, .env (credenciales NASA FIRMS, DMC y
+# OpenTopography) quedaba copiado por `COPY . .` en todas las imagenes y
+# src/config.py (load_dotenv) lo cargaba en cada contenedor; .venv-demo sumaba
+# 761 MB y 747 carpetas __pycache__. Las credenciales se inyectan en runtime
+# (env_file / environment de compose), nunca dentro de la imagen.
+.env
+.env.*
+.mcp.json
+.venv*
+# Docker solo aplica un patron sin `**/` a la raiz del contexto.
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+.coverage*
+# Scripts y salidas locales sueltos en la raiz, no versionados en git.
+check_estaciones.py
+inspect_dmc_json.py
+inspect_nasa_error.py
+run_ingest_real.py
+test_*.py
+coverage_run.txt
