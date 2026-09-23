@@ -94,7 +94,9 @@ def _serialize_cell(cell) -> dict:
 
 def _serialize_grid_result(result: GridScoreResult, disclaimer: str) -> dict:
     meteo_actual = dict(result.meteo_actual)
-    meteo_actual["momento_observacion"] = meteo_actual["momento_observacion"].isoformat()
+    meteo_actual["momento_observacion"] = meteo_actual[
+        "momento_observacion"
+    ].isoformat()
     return {
         "status": "ok",
         "model_version": result.model_version,
@@ -165,10 +167,15 @@ def get_score() -> JSONResponse:
             content={
                 "status": "error",
                 "error_type": "internal_error",
-                "message": "Error interno al generar el ranking. Revisar logs del servicio n8n-bridge.",
+                "message": (
+                    "Error interno al generar el ranking. "
+                    "Revisar logs del servicio n8n-bridge."
+                ),
             },
         )
 
     metadata = _read_metadata_json()
     disclaimer = (metadata or {}).get("aviso", _FALLBACK_DISCLAIMER)
-    return JSONResponse(status_code=200, content=_serialize_grid_result(result, disclaimer))
+    return JSONResponse(
+        status_code=200, content=_serialize_grid_result(result, disclaimer)
+    )
