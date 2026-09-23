@@ -532,6 +532,56 @@ N8N_BRIDGE_RUNTIME: 127.0.0.1:8600->8600, data/ y models/ RW=false,
   score_current_grid() en host (fingerprint 33c2eacc…31ff)
 ```
 
+### Refresco FIRMS versionado y gate de desfase (SAPI-71 Fase B) — nota fechada 23-09-2026
+
+Decisiones (23-09-2026): desfase FIRMS con aviso sobre 3 días y bloqueo
+sobre 7; puntero `CURRENT.json` en esquema 2 (el esquema 1 nunca se
+escribió y ya no se acepta); primero FIRMS + gate, después DMC; el loop
+legacy queda apagado (ver abajo).
+
+- **Guard de la línea base.** `ensure_writable_firms_path()`
+  (`src/procesamiento/firms_source.py`) rechaza cualquier escritura sobre
+  `FIRMS_BASELINE_CSV`, su manifest o el snapshot del Hito 1 (rutas
+  canónicas, symlinks y hardlinks), antes de la red. Antes de este guard,
+  `NasaFirmsBackfill.run()` con el período 2021-08-30..2026-08-30 la
+  sobrescribía.
+- **Refresco manual** (`python -m src.refresh.firms_refresh refresh | status
+  | rollback --to <versión|baseline> | cleanup [--apply]`). Cada versión en
+  `data/processed/firms/versions/` son los bytes exactos de la vigente
+  (la línea base la primera vez, verificada contra `FIRMS_BASELINE_SHA256`)
+  más detecciones con `acq_date` estrictamente posterior a su
+  `coverage_end` y hasta ayer (UTC). Como `assign_episodes` recorre en orden
+  temporal, las features FIRMS de todo T ya cubierto quedan idénticas
+  (test con la línea base real). Versión inmutable → sidecar → puntero
+  atómico → `pointer_history.jsonl`; un fallo nunca reemplaza la versión
+  vigente. Lock de escritor único (`O_EXCL`, sin espera). Sin credencial,
+  sale con 78 sin tocar red; caída de red 69; respuesta inválida o vacía
+  (0 bytes, HTML, MAP_KEY inválida) 65; una respuesta con solo la cabecera
+  es "sin detecciones" y sí extiende la cobertura.
+- **Gate de desfase** (`classify_firms_lag`, `prototype_service.py`): lag =
+  fecha(T) − `coverage_end`. ≤3 días "FIRMS AL DÍA"; 4–7 "FIRMS
+  DESACTUALIZADO" (se puntúa y `GridScoreResult.firms_status` lo informa);
+  >7 `PrototypeUnavailableError` (503 en n8n-bridge). Motivo: el historial
+  FIRMS por celda contaría como "sin incendios" los días no consultados.
+  Estado al 23-09-2026: línea base, lag 2 días, sin cambio de ranking.
+- **Loop legacy apagado.** `analytics-backend` (`scripts/run_daily_loop.sh`
+  → `src.pipeline.run_daily`) escribe `nasa_firms_*.csv`/`dmc_meteo_*.json`
+  sin lock, usa la degradación `staging_meteo` y reentrena modelos legacy.
+  No debe correr mientras se usen los refrescos de Fase B; no se modifica
+  su código (se retirará en un issue aparte).
+
+**Resultados reales** (rama `feat/SAPI-71-firms-refresh-v2`, sobre el guard `f0b1a12`; sin
+refresco real ejecutado: `data/processed/firms/` no existe):
+
+```
+HOST: 613 passed, 3 skipped, 0 failed; cobertura 91.79%
+LINUX (contenedor sin red, tests de refresco/guard/gate/firms_source):
+  81 passed, 1 skipped (caso Windows-only)
+MODEL_D: fingerprint 33c2eacc…31ff sin cambios (modo normal y reproducible);
+  firms_origin=baseline, firms_lag_days=2
+BASELINE FIRMS: sha256 a9a85db4…bb271 sin cambios
+```
+
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
 
 `artifacts/hito1/reproducibility/manifest.json` es un snapshot histórico

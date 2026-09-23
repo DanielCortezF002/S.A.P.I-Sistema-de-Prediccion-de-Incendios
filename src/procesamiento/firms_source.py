@@ -19,8 +19,9 @@ Prioridad de `resolve_firms_source()`:
 1. `SAPI_REPRODUCIBILITY_MODE=1` -> snapshot congelado del Hito 1
    (`artifacts/hito1/reproducibility/firms/`), sin cambios respecto a antes.
 2. `CURRENT.json` presente -> la versión que apunta, SOLO si el puntero es
-   válido, el archivo vive dentro de `data/processed/firms/versions/` y su
-   sha256 coincide. Cualquier inconsistencia falla de forma explícita
+   válido (esquema 2, ver `POINTER_REQUIRED_FIELDS`), el archivo vive dentro
+   de `data/processed/firms/versions/` y su sha256 coincide. Lo publica
+   únicamente `src/refresh/firms_refresh.py`. Cualquier inconsistencia falla de forma explícita
    (`FirmsSourceError`), nunca cae en silencio a otra fuente.
 3. Sin puntero -> `FIRMS_BASELINE_CSV`.
 
@@ -33,7 +34,7 @@ import hashlib
 import json
 import os
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 from typing import Literal, Optional
 
@@ -47,6 +48,11 @@ FIRMS_BASELINE_CSV = (
 # de la última detección: "no hubo detecciones" y "no se consultó" son
 # cosas distintas.
 FIRMS_BASELINE_COVERAGE = (date(2021, 8, 30), date(2026, 8, 30))
+# sha256 de la línea base (artifacts/hito1/reproducibility/manifest.json,
+# verificado 09-09-2026). El refresco lo comprueba antes de usarla como base.
+FIRMS_BASELINE_SHA256 = (
+    "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271"
+)
 
 # Mismo archivo que la línea base (mismo sha256, ver
 # artifacts/hito1/reproducibility/manifest.json), versionado en git.
@@ -62,7 +68,17 @@ FIRMS_REPRODUCIBILITY_CSV = (
 FIRMS_CURRENT_DIR = REPO_ROOT / "data" / "processed" / "firms"
 FIRMS_CURRENT_POINTER = FIRMS_CURRENT_DIR / "CURRENT.json"
 FIRMS_VERSIONS_DIR = FIRMS_CURRENT_DIR / "versions"
-POINTER_SCHEMA_VERSION = 1
+# Esquema 2 (SAPI-71 Fase B): `relative_path` + `created_at`. El esquema 1
+# (`path`) nunca llegó a escribirse en disco y ya no se acepta.
+POINTER_SCHEMA_VERSION = 2
+POINTER_REQUIRED_FIELDS = (
+    "schema_version",
+    "relative_path",
+    "sha256",
+    "coverage_start",
+    "coverage_end",
+    "created_at",
+)
 
 FirmsOrigin = Literal["reproducibility", "current", "baseline"]
 
@@ -160,10 +176,11 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
         )
 
     try:
-        relative = str(pointer["path"])
+        relative = str(pointer["relative_path"])
         expected_sha = str(pointer["sha256"])
         coverage_start = date.fromisoformat(pointer["coverage_start"])
         coverage_end = date.fromisoformat(pointer["coverage_end"])
+        datetime.fromisoformat(pointer["created_at"])
     except (KeyError, TypeError, ValueError) as exc:
         raise FirmsSourceError(
             f"Puntero FIRMS incompleto en {pointer_path.name}: {exc}"

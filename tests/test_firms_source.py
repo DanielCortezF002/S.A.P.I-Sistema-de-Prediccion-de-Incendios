@@ -14,6 +14,7 @@ import pytest
 from src.procesamiento.firms_source import (
     FIRMS_BASELINE_COVERAGE,
     FIRMS_BASELINE_CSV,
+    FIRMS_BASELINE_SHA256,
     FIRMS_REPRODUCIBILITY_CSV,
     POINTER_SCHEMA_VERSION,
     FirmsSourceError,
@@ -40,10 +41,11 @@ def _write_version(
 def _write_pointer(pointer: Path, **overrides) -> None:
     payload = {
         "schema_version": POINTER_SCHEMA_VERSION,
-        "path": "v1.csv",
+        "relative_path": "v1.csv",
         "sha256": "",
         "coverage_start": "2021-08-30",
         "coverage_end": "2026-09-22",
+        "created_at": "2026-09-23T00:00:00+00:00",
     }
     payload.update(overrides)
     pointer.write_text(json.dumps(payload), encoding="utf-8")
@@ -115,10 +117,27 @@ def test_valid_pointer_resolves_to_current_version(tmp_path) -> None:
     [
         "{no es json",
         json.dumps(["lista"]),
-        json.dumps({"schema_version": 99, "path": "v1.csv"}),
-        json.dumps({"schema_version": POINTER_SCHEMA_VERSION, "path": "v1.csv"}),
+        json.dumps({"schema_version": 99, "relative_path": "v1.csv"}),
+        json.dumps(
+            {"schema_version": POINTER_SCHEMA_VERSION, "relative_path": "v1.csv"}
+        ),
+        json.dumps(
+            {
+                "schema_version": 1,
+                "path": "v1.csv",
+                "sha256": "0" * 64,
+                "coverage_start": "2021-08-30",
+                "coverage_end": "2026-09-22",
+            }
+        ),
     ],
-    ids=["json_invalido", "raiz_no_objeto", "esquema_desconocido", "claves_faltantes"],
+    ids=[
+        "json_invalido",
+        "raiz_no_objeto",
+        "esquema_desconocido",
+        "claves_faltantes",
+        "esquema_1_rechazado",
+    ],
 )
 def test_malformed_pointer_fails_explicitly(tmp_path, pointer_text) -> None:
     _write_version(tmp_path / "versions")
@@ -147,9 +166,25 @@ def test_pointer_to_missing_file_fails(tmp_path) -> None:
 def test_pointer_cannot_escape_versions_dir(tmp_path, escape) -> None:
     sha = _write_version(tmp_path / "versions")
     (tmp_path / "fuera.csv").write_text("x\n", encoding="utf-8")
-    _write_pointer(tmp_path / "CURRENT.json", path=escape, sha256=sha)
+    _write_pointer(tmp_path / "CURRENT.json", relative_path=escape, sha256=sha)
     with pytest.raises(FirmsSourceError, match="fuera de"):
         _resolve(tmp_path)
+
+
+def test_pointer_without_valid_created_at_fails(tmp_path) -> None:
+    sha = _write_version(tmp_path / "versions")
+    _write_pointer(tmp_path / "CURRENT.json", sha256=sha, created_at="ayer")
+    with pytest.raises(FirmsSourceError, match="incompleto"):
+        _resolve(tmp_path)
+
+
+def test_baseline_sha_constant_matches_reproducibility_snapshot() -> None:
+    """El snapshot del Hito 1 está versionado en git: fija la constante que
+    el refresco usa para verificar la línea base antes de extenderla."""
+    assert (
+        hashlib.sha256(FIRMS_REPRODUCIBILITY_CSV.read_bytes()).hexdigest()
+        == FIRMS_BASELINE_SHA256
+    )
 
 
 def test_pointer_with_reversed_coverage_fails(tmp_path) -> None:
