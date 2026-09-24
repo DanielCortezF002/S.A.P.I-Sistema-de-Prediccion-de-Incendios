@@ -40,19 +40,20 @@ def test_lag_over_seven_days_is_unavailable():
         svc.classify_firms_lag(pd.Timestamp("2026-09-07T00:00Z"), COVERAGE_END)
 
 
-def test_feature_matrix_refuses_stale_firms_before_reading_it(monkeypatch, tmp_path):
-    """El gate corre antes de leer el CSV: con 24 días de desfase no se
-    llega ni a abrir el archivo (que acá ni siquiera existe)."""
+def test_capture_refuses_stale_firms_before_reading_it(monkeypatch, tmp_path):
+    """El gate corre antes de leer el CSV: con 12 días de desfase respecto
+    del forecast_time del snapshot (2026-09-01) no se llega ni a abrir el
+    archivo (que acá ni siquiera existe)."""
     stale = FirmsSource(
         path=tmp_path / "no_se_lee.csv",
         origin="baseline",
         coverage_start=date(2021, 8, 30),
-        coverage_end=COVERAGE_END,
+        coverage_end=date(2026, 8, 20),
     )
+    monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
     monkeypatch.setattr(svc, "resolve_firms_source", lambda **_kwargs: stale)
-    meteo_row = pd.Series({"forecast_time": pd.Timestamp("2026-09-23", tz="UTC")})
-    with pytest.raises(svc.PrototypeUnavailableError, match="Refrescar FIRMS"):
-        svc.build_feature_matrix(pd.Timestamp("2026-09-23", tz="UTC"), meteo_row)
+    with pytest.raises(svc.PrototypeUnavailableError, match="12 días"):
+        svc.capture_scoring_inputs()
 
 
 def test_grid_result_firms_fields_default_to_none():

@@ -39,11 +39,15 @@ METADATA_PATH = MODEL_PATH.with_name("prototype_model_d_metadata.json")
 
 # Fallas de los insumos de datos que `score_current_grid()` deja pasar sin
 # envolver en `PrototypeUnavailableError`: un JSON DMC truncado/corrupto
-# (`json.load` en `parse_dmc_json`), un archivo FIRMS/DMC que desaparece
-# entre el `exists()`/`glob()` y su lectura, o un CSV FIRMS vacío o
-# malformado. Son indisponibilidad de datos (503), no un bug. Se listan
-# por tipo exacto -- nunca `ValueError`/`OSError` genéricos -- para que un
-# error de programación siga saliendo como 500 con traza en el log.
+# (`json.loads` en `parse_dmc_bytes`) o un CSV FIRMS vacío o malformado.
+# Son indisponibilidad de datos (503), no un bug. Se listan por tipo exacto
+# -- nunca `ValueError`/`OSError` genéricos -- para que un error de
+# programación siga saliendo como 500 con traza en el log.
+# Desde `ScoringInputs` (SAPI-71) las entradas fijadas -- modelo, DMC,
+# FIRMS y topografía -- ya no llegan por aquí: si una desaparece o es
+# ilegible, `read_pinned` lanza `PinnedInputError` y el resultado es un 503
+# `prototype_unavailable`. Este bloque cubre lo que sigue escapando: el
+# contenido corrupto de un archivo que sí se pudo leer.
 DATA_INPUT_ERRORS = (
     json.JSONDecodeError,
     FileNotFoundError,

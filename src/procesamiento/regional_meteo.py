@@ -75,21 +75,31 @@ def load_regional_meteo_series(
     con lo ya guardado — son evidencia para revisión manual, nunca datos a
     promediar/deduplicar en silencio junto con el archivo original.
     """
-    base = raw_dir or DATA_RAW_DIR
-    frames: list[pd.DataFrame] = []
+    files = regional_meteo_files(station_id, raw_dir or DATA_RAW_DIR)
+    return series_from_parsed([parse_dmc_json(path) for path in files], station_id)
 
-    for path in base.glob(f"dmc_historico_{station_id}_*.json"):
-        if "_conflicto_" in path.name:
-            continue
-        parsed = parse_dmc_json(path)
-        if not parsed.empty:
-            frames.append(parsed[parsed["codigo_estacion"] == station_id])
 
-    for path in base.glob("dmc_meteo_*.json"):
-        parsed = parse_dmc_json(path)
-        if not parsed.empty:
-            frames.append(parsed[parsed["codigo_estacion"] == station_id])
+def regional_meteo_files(station_id: str, base: Path) -> list[Path]:
+    """Archivos DMC que forman la serie, en el orden en que se concatenan:
+    históricos mensuales y luego diarios, cada grupo por nombre. El orden
+    importa porque `series_from_parsed` conserva la PRIMERA lectura de un
+    `momento` repetido; antes dependía del orden del filesystem."""
+    historicos = sorted(
+        path
+        for path in base.glob(f"dmc_historico_{station_id}_*.json")
+        if "_conflicto_" not in path.name
+    )
+    return historicos + sorted(base.glob("dmc_meteo_*.json"))
 
+
+def series_from_parsed(parsed_frames: list[pd.DataFrame], station_id: str) -> pd.DataFrame:
+    """Serie deduplicada y ordenada a partir de salidas de `parse_dmc_*`,
+    en el orden de `regional_meteo_files` (la primera lectura gana)."""
+    frames = [
+        parsed[parsed["codigo_estacion"] == station_id]
+        for parsed in parsed_frames
+        if not parsed.empty
+    ]
     if not frames:
         return pd.DataFrame(
             columns=["station_id", "momento", "temperatura", "humedad_relativa", "velocidad_viento_kmh"]

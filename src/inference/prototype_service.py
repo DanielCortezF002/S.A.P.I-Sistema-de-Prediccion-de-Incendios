@@ -23,21 +23,35 @@ valor.
 
 from __future__ import annotations
 
+import io
 import os
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import joblib
 import pandas as pd
 
+from src.config import DATA_RAW_DIR
 from src.geo.grid import all_cells
+from src.inference.scoring_inputs import (
+    DMC_STORE_DIR,
+    PinnedInputError,
+    ScoringInputs,
+    pin_dmc,
+    pin_firms,
+    read_pinned,
+    topography_sha256,
+)
 from src.procesamiento.dem_features import load_grid_topography
 from src.procesamiento.episodes import assign_episodes, first_arrival_by_cell
-from src.procesamiento.firms_source import FirmsSourceError, resolve_firms_source
+from src.procesamiento.firms_source import (
+    FIRMS_BASELINE_SHA256,
+    FirmsSourceError,
+    resolve_firms_source,
+)
 from src.procesamiento.raw_parser import DmcFormatError
-from src.procesamiento.regional_meteo import load_regional_meteo_series
 from src.procesamiento.temporal_features import LAG_HOURS, build_regional_meteo_features, historial_firms_features
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -48,6 +62,9 @@ CANDIDATE_STEP_HOURS = 6  # mismo valor congelado que scripts/build_temporal_dat
 # (resolve_firms_source), única fuente de verdad sobre qué CSV se lee.
 DEM_TERRAIN_DIR = REPO_ROOT / "data" / "processed" / "dem_terrain"
 MODEL_PATH = REPO_ROOT / "models" / "prototype_model_d.pkl"
+# DMC operacional: legacy en data/raw/ + almacén versionado del refresco
+# (solo lecturas posteriores a lo legacy, ver scoring_inputs.pin_dmc).
+DMC_RAW_DIR = DATA_RAW_DIR
 
 # Modo de reproducibilidad del Hito 1 (formalizado 09-09-2026, ver
 # docs/deploy.md "MODO HITO 1 REPRODUCIBLE"). Explicito, opt-in via
@@ -163,6 +180,9 @@ class GridScoreResult:
     firms_coverage_end: Optional[date] = None
     firms_lag_days: Optional[int] = None
     firms_status: Optional[str] = None
+    # Entradas exactas de esta corrida (ScoringInputs.manifest()) y su hash.
+    inputs_fingerprint: Optional[str] = None
+    scoring_inputs: Optional[dict] = None
 
 
 def classify_firms_lag(forecast_time: pd.Timestamp, coverage_end: date) -> tuple[int, str]:
@@ -179,13 +199,14 @@ def classify_firms_lag(forecast_time: pd.Timestamp, coverage_end: date) -> tuple
     return lag, FIRMS_STATUS_CURRENT if lag <= FIRMS_LAG_WARN_DAYS else FIRMS_STATUS_STALE
 
 
-def _load_model() -> tuple[object, dict]:
-    if not MODEL_PATH.exists():
+def _pin_model():
+    """(PinnedFile, modelo, metadata): el .pkl se lee UNA vez, se hashea y
+    se deserializa desde esos mismos bytes."""
+    try:
+        pinned, data = read_pinned(MODEL_PATH, role="model", origin="model")
+    except PinnedInputError:
         # `.relative_to` lanza ValueError si MODEL_PATH no cuelga de
-        # REPO_ROOT (p. ej. en tests que apuntan a un tmp_path) — se prueba
-        # antes de usarlo para no reemplazar un mensaje claro por un
-        # ValueError distinto sin relación con el problema real (falta el
-        # modelo).
+        # REPO_ROOT (p. ej. en tests que apuntan a un tmp_path).
         try:
             shown_path = str(MODEL_PATH.relative_to(REPO_ROOT))
         except ValueError:
@@ -193,9 +214,9 @@ def _load_model() -> tuple[object, dict]:
         raise PrototypeUnavailableError(
             f"No existe el modelo del prototipo en {shown_path}. "
             "Corre `python scripts/build_prototype_model.py` primero."
-        )
-    payload = joblib.load(MODEL_PATH)
-    return payload["model"], payload["metadata"]
+        ) from None
+    payload = joblib.load(io.BytesIO(data))
+    return pinned, payload["model"], payload["metadata"]
 
 
 def _latest_forecast_time(meteo_series: pd.DataFrame) -> pd.Timestamp:
@@ -238,7 +259,11 @@ def _resolve_meteo_row(forecast_time: pd.Timestamp, meteo_series: pd.DataFrame) 
     return meteo_feats.iloc[0]
 
 
-def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> pd.DataFrame:
+def build_feature_matrix(
+    forecast_time: pd.Timestamp,
+    meteo_row: pd.Series,
+    inputs: Optional[ScoringInputs] = None,
+) -> pd.DataFrame:
     """Construye la matriz de features (índice = cell_id, una fila por
     celda) para un `forecast_time`/`meteo_row` ya resueltos. Extraída como
     función propia (auditoría 2026-09-08) para poder inspeccionar/testear
@@ -251,33 +276,24 @@ def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> p
     meteorología regional es, por diseño, IDÉNTICA para las 50 celdas en
     un mismo T (una sola estación regional, nunca reetiquetada por
     celda); historial FIRMS y topografía sí varían por celda.
+
+    FIRMS y topografía salen de `inputs` (ScoringInputs, ver
+    `capture_scoring_inputs`): nada se vuelve a leer de disco. Sin
+    `inputs`, se capturan en el momento (uso de tests y diagnóstico).
     """
-    reproducibility = _reproducibility_mode()
-    try:
-        firms_source = resolve_firms_source(reproducibility=reproducibility)
-    except FirmsSourceError as exc:
-        raise PrototypeUnavailableError(f"Fuente FIRMS inválida: {exc}") from exc
-    firms_lag_days, firms_status = classify_firms_lag(forecast_time, firms_source.coverage_end)
-    fires_csv = firms_source.path
-    if not fires_csv.exists():
-        raise PrototypeUnavailableError(
-            f"No existe el histórico FIRMS en {_display_path(fires_csv)}."
+    if inputs is None:
+        inputs = capture_scoring_inputs(forecast_time)
+    if inputs.forecast_time != forecast_time:
+        raise ValueError(
+            f"forecast_time={forecast_time} no coincide con el fijado en ScoringInputs "
+            f"({inputs.forecast_time})."
         )
-    fires = pd.read_csv(fires_csv)
-    episodes = assign_episodes(fires)
+    episodes = assign_episodes(inputs.fires)
     arrivals = first_arrival_by_cell(episodes)
     arrivals_by_cell = {cell: group["first_arrival"] for cell, group in arrivals.groupby("cell_id")}
 
-    grid_cells = all_cells()
-    cell_ids = [c["cell_id"] for c in grid_cells]
-    if reproducibility:
-        if not REPRODUCIBILITY_TOPO_CSV.exists():
-            raise PrototypeUnavailableError(
-                f"No existe la tabla topográfica congelada en {REPRODUCIBILITY_TOPO_CSV.relative_to(REPO_ROOT)}."
-            )
-        topo = pd.read_csv(REPRODUCIBILITY_TOPO_CSV).set_index("cell_id")
-    else:
-        topo = load_grid_topography(grid_cells, DEM_TERRAIN_DIR).set_index("cell_id")
+    cell_ids = [c["cell_id"] for c in all_cells()]
+    topo = inputs.topography
 
     rows = []
     for cell_id in cell_ids:
@@ -296,16 +312,113 @@ def build_feature_matrix(forecast_time: pd.Timestamp, meteo_row: pd.Series) -> p
     # columna de feature) seguiría llevando el cell_id correcto consigo
     # mismo vía el índice — nunca se vuelve a alinear por posición entera.
     features_df = pd.DataFrame(rows).set_index("cell_id")
-    features_df.attrs["firms"] = {
-        "origin": firms_source.origin,
-        "coverage_end": firms_source.coverage_end,
-        "lag_days": firms_lag_days,
-        "status": firms_status,
-    }
     return features_df
 
 
-def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None) -> GridScoreResult:
+def _pin_topography(reproducibility: bool) -> tuple[str, pd.DataFrame]:
+    if reproducibility:
+        try:
+            _, data = read_pinned(
+                REPRODUCIBILITY_TOPO_CSV, role="topography", origin="reproducibility"
+            )
+        except PinnedInputError:
+            raise PrototypeUnavailableError(
+                "No existe la tabla topográfica congelada en "
+                f"{_display_path(REPRODUCIBILITY_TOPO_CSV)}."
+            ) from None
+        return "reproducibility", pd.read_csv(io.BytesIO(data)).set_index("cell_id")
+    return "dem", load_grid_topography(all_cells(), DEM_TERRAIN_DIR).set_index("cell_id")
+
+
+def capture_scoring_inputs(
+    forecast_time: Optional[Union[str, pd.Timestamp]] = None,
+) -> ScoringInputs:
+    """Fija, UNA vez y al inicio, todas las entradas de una corrida.
+
+    Orden: modo reproducible (una sola lectura de la variable) -> modelo ->
+    DMC (legacy + versionado, o solo el snapshot Hito 1) -> forecast_time y
+    fila meteorológica -> fuente FIRMS (un solo `resolve_firms_source`) ->
+    gate de desfase (antes de leer FIRMS) -> bytes FIRMS verificados ->
+    topografía. Cada archivo se lee una vez y se parsea desde esos bytes.
+    """
+    captured_at = datetime.now(timezone.utc)
+    reproducibility = _reproducibility_mode()
+    model_file, model, metadata = _pin_model()
+
+    try:
+        dmc = pin_dmc(
+            STATION_ID,
+            legacy_dir=REPRODUCIBILITY_DMC_DIR if reproducibility else DMC_RAW_DIR,
+            store_dir=None if reproducibility else DMC_STORE_DIR,
+        )
+    except DmcFormatError as exc:
+        raise PrototypeUnavailableError(
+            f"Archivo meteorológico DMC con formato incompatible: {exc}"
+        ) from exc
+    except PinnedInputError as exc:
+        raise PrototypeUnavailableError(f"Meteorología DMC inválida: {exc}") from exc
+    meteo_series = dmc.series
+    if meteo_series.empty:
+        raise PrototypeUnavailableError(
+            f"No hay datos meteorológicos reales para la estación {STATION_ID} en data/raw/."
+        )
+    forecast_time = _resolve_forecast_time(forecast_time, meteo_series)
+    meteo_row = _resolve_meteo_row(forecast_time, meteo_series)
+
+    try:
+        firms_source = resolve_firms_source(reproducibility=reproducibility)
+    except FirmsSourceError as exc:
+        raise PrototypeUnavailableError(f"Fuente FIRMS inválida: {exc}") from exc
+    firms_lag_days, firms_status = classify_firms_lag(forecast_time, firms_source.coverage_end)
+    if not firms_source.path.exists():
+        raise PrototypeUnavailableError(
+            f"No existe el histórico FIRMS en {_display_path(firms_source.path)}."
+        )
+    try:
+        firms = pin_firms(
+            firms_source,
+            expected_sha256=(
+                None if firms_source.origin == "current" else FIRMS_BASELINE_SHA256
+            ),
+        )
+    except PinnedInputError as exc:
+        raise PrototypeUnavailableError(f"Histórico FIRMS inválido: {exc}") from exc
+
+    topography_origin, topography = _pin_topography(reproducibility)
+
+    return ScoringInputs(
+        captured_at=captured_at,
+        reproducibility_mode=reproducibility,
+        forecast_time=forecast_time,
+        weather_timestamp=meteo_row["meteo_actual_momento"],
+        model=model_file,
+        model_version=metadata["model_version"],
+        firms=firms.file,
+        firms_coverage_start=firms_source.coverage_start,
+        firms_coverage_end=firms_source.coverage_end,
+        firms_lag_days=firms_lag_days,
+        firms_status=firms_status,
+        firms_pointer_version=firms.pointer_version,
+        dmc_files=dmc.files,
+        dmc_manifest_sha256=dmc.manifest_sha256,
+        dmc_coverage_start=cast(pd.Timestamp, meteo_series["momento"].min()),
+        dmc_coverage_end=cast(pd.Timestamp, meteo_series["momento"].max()),
+        dmc_pointer_version=dmc.pointer_version,
+        topography_origin=topography_origin,
+        topography_sha256=topography_sha256(topography),
+        model_object=model,
+        model_metadata=metadata,
+        meteo_series=meteo_series,
+        meteo_row=meteo_row,
+        fires=firms.fires,
+        topography=topography,
+    )
+
+
+def score_current_grid(
+    forecast_time: Optional[Union[str, pd.Timestamp]] = None,
+    inputs: Optional[ScoringInputs] = None,
+) -> GridScoreResult:
     """Puntúa las 50 celdas de la grilla para un `forecast_time` T.
 
     `forecast_time=None` -> usa el último T real con features disponibles
@@ -318,27 +431,20 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
     REPRODUCIBLE". El resultado sigue siendo honesto sobre su frescura:
     `forecast_time`/`weather_timestamp`/`classify_freshness()` reflejan la
     fecha real de esos datos (históricos), nunca la fecha de hoy.
+
+    Todas las entradas se fijan al inicio en un `ScoringInputs`
+    (`capture_scoring_inputs`); pasar `inputs` ya capturado puntúa
+    exactamente esa foto, aunque un refresco publique otra versión después.
     """
-    model, metadata = _load_model()
+    if inputs is None:
+        inputs = capture_scoring_inputs(forecast_time)
+    elif forecast_time is not None and pd.Timestamp(forecast_time) != inputs.forecast_time:
+        raise ValueError("forecast_time no coincide con el de ScoringInputs.")
+    model, metadata = inputs.model_object, inputs.model_metadata
     feature_columns: list[str] = metadata["feature_columns"]
     horizon_hours: int = metadata["horizon_hours"]
-
-    meteo_raw_dir = REPRODUCIBILITY_DMC_DIR if _reproducibility_mode() else None
-    try:
-        meteo_series = load_regional_meteo_series(STATION_ID, raw_dir=meteo_raw_dir)
-    except DmcFormatError as exc:
-        raise PrototypeUnavailableError(
-            f"Archivo meteorológico DMC con formato incompatible: {exc}"
-        ) from exc
-    if meteo_series.empty:
-        raise PrototypeUnavailableError(
-            f"No hay datos meteorológicos reales para la estación {STATION_ID} en data/raw/."
-        )
-
-    forecast_time = _resolve_forecast_time(forecast_time, meteo_series)
-    meteo_row = _resolve_meteo_row(forecast_time, meteo_series)
-    features_df = build_feature_matrix(forecast_time, meteo_row)
-    firms = features_df.attrs["firms"]
+    forecast_time, meteo_row = inputs.forecast_time, inputs.meteo_row
+    features_df = build_feature_matrix(forecast_time, meteo_row, inputs)
 
     grid_cells = all_cells()
     grid_by_id = {c["cell_id"]: c for c in grid_cells}
@@ -390,8 +496,11 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
             )
         )
 
-    weather_timestamp = meteo_row["meteo_actual_momento"]
-    age_hours = (pd.Timestamp.now(tz="UTC") - weather_timestamp).total_seconds() / 3600.0
+    weather_timestamp = inputs.weather_timestamp
+    # Antigüedad medida en el instante de captura: la misma foto da el mismo resultado.
+    age_hours = (
+        pd.Timestamp(inputs.captured_at) - weather_timestamp
+    ).total_seconds() / 3600.0
     freshness = classify_freshness(age_hours)
 
     return GridScoreResult(
@@ -412,8 +521,10 @@ def score_current_grid(forecast_time: Optional[Union[str, pd.Timestamp]] = None)
             "momento_observacion": meteo_row["meteo_actual_momento"],
         },
         cells=cells,
-        firms_origin=firms["origin"],
-        firms_coverage_end=firms["coverage_end"],
-        firms_lag_days=firms["lag_days"],
-        firms_status=firms["status"],
+        firms_origin=inputs.firms_origin,
+        firms_coverage_end=inputs.firms_coverage_end,
+        firms_lag_days=inputs.firms_lag_days,
+        firms_status=inputs.firms_status,
+        inputs_fingerprint=inputs.fingerprint,
+        scoring_inputs=inputs.manifest(),
     )

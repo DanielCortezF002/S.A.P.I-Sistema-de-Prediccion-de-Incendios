@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -119,3 +120,32 @@ def test_redact_removes_every_secret():
     text = "GET /api/area/csv/KEY123/x?usuario=u&token=TOK456 fallo"
     out = redact(text, ["KEY123", "TOK456", ""])
     assert "KEY123" not in out and "TOK456" not in out and out.count(REDACTED) == 2
+
+
+@pytest.mark.parametrize(
+    "secret",
+    ["sapi@dmc.cl", "tok+en/42=", "a%2Fb", "con espacio", "ñandú=1"],
+)
+def test_redact_removes_url_encoded_variants(secret):
+    from urllib.parse import quote, quote_plus
+
+    forms = [
+        secret,
+        quote_plus(secret),
+        quote(secret, safe=""),
+        quote(secret),
+        # escapes en minúscula (%2f): los aceptan los servidores y algunas libs
+        re.sub(r"%[0-9A-F]{2}", lambda m: m.group().lower(), quote_plus(secret)),
+    ]
+    text = " | ".join(f"url?token={form}" for form in forms)
+
+    out = redact(text, [secret])
+
+    for form in forms:
+        assert form not in out
+    assert out.count(REDACTED) == len(forms)
+
+
+def test_redact_keeps_non_secret_text():
+    out = redact("ConnectionError para 2026-09", ["sapi@dmc.cl", ""])
+    assert out == "ConnectionError para 2026-09"

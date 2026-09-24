@@ -19,8 +19,9 @@ streamlit-folium==0.27.4
 python-dotenv==1.2.3
 pyarrow==25.0.1
 # Runtime, no solo desarrollo/training (auditoria 09-09-2026): src/inference/
-# prototype_service.py::_load_model() hace joblib.load(MODEL_PATH) sobre
-# models/prototype_model_d.pkl, un HistGradientBoostingClassifier -- des-
+# prototype_service.py::_pin_model() lee los bytes de
+# models/prototype_model_d.pkl y hace joblib.load sobre ellos (SAPI-71,
+# ScoringInputs); es un HistGradientBoostingClassifier -- des-
 # erializar ese objeto requiere que scikit-learn sea importable en tiempo de
 # ejecucion (aunque prototype_service.py no escriba "import sklearn"), y
 # joblib.load() en si mismo requiere joblib. Sin estos dos, el modo

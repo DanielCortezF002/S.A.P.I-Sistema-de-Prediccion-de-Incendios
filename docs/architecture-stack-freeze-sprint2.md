@@ -607,9 +607,12 @@ diciendo "últimas 12 horas" aunque la respuesta sea mensual.
   Cada documento se relee con `parse_dmc_json` antes de publicarse.
 - **Almacenamiento** en `data/processed/dmc/330007/` (versiones mensuales
   inmutables, `pointers/`, `CURRENT.json`, `pointer_history.jsonl`), fuera
-  de `data/raw/`: `load_regional_meteo_series` no lo lee, así que el scoring
-  NO usa todavía datos refrescados (eso llega con `ScoringInputs`). Los
-  archivos legacy `dmc_historico_*`/`dmc_meteo_*` nunca se escriben.
+  de `data/raw/`: `load_regional_meteo_series` sigue sin leerlo. Cuando se
+  escribió esta nota el scoring tampoco lo usaba; desde la nota de
+  `ScoringInputs` de más abajo sí lo consume, por otra puerta
+  (`scoring_inputs.pin_dmc`: bloque legacy completo y, del almacén, solo
+  lecturas posteriores a la última legacy). Los archivos legacy
+  `dmc_historico_*`/`dmc_meteo_*` nunca se escriben.
 - **Fallos**: sin credenciales, 78 antes de cualquier escritura o request;
   red caída o 5xx, 3 intentos acotados y luego 69; HTTP 4xx, 69 sin
   reintento; JSON inválido, `timezone` distinto de UTC, `registros` que no
@@ -629,6 +632,132 @@ LINUX (contenedor sin red): 70 passed (refresco DMC, FIRMS y primitivas)
 MUTACIONES: perder lo publicado, no ordenar, pisar lo publicado y quitar el
   lock hacen fallar al menos un test cada una
 MODEL_D: fingerprint 33c2eacc…31ff sin cambios
+```
+
+### ScoringInputs: entradas fijadas por corrida (SAPI-71 Fase B) — nota fechada 23-09-2026
+
+Antes, una corrida de `score_current_grid()` tocaba disco en cuatro
+momentos distintos: `exists()` + `joblib.load(path)` del modelo; listado
+y lectura de ~64 JSON DMC; y, dentro de `build_feature_matrix`, un
+`resolve_firms_source()` (que hashea el CSV) seguido de un
+`pd.read_csv(path)` que volvía a abrir el archivo por ruta. Un refresco
+publicado entre esos pasos podía mezclar versiones.
+
+`capture_scoring_inputs()` (`src/inference/prototype_service.py`, tipos en
+`src/inference/scoring_inputs.py`) fija todo al inicio: el modo
+reproducible se lee una vez; cada archivo (modelo, DMC, FIRMS y la tabla
+topográfica congelada) se lee UNA vez, se hashea y se parsea desde esos
+bytes; FIRMS se verifica contra el sha256 del puntero o de la línea base
+(`FIRMS_BASELINE_SHA256`) y, si no coincide, la captura aborta
+(`PrototypeUnavailableError`). `score_current_grid(inputs=...)` usa solo
+esa copia en memoria: un test bloquea `open`, `read_bytes`, `glob`,
+`read_csv`, `joblib.load` y `resolve_firms_source` durante el scoring y el
+ranking sale idéntico. `GridScoreResult` expone `inputs_fingerprint` y
+`scoring_inputs` (manifest sin `captured_at`); la antigüedad se mide en el
+instante de captura.
+
+- **DMC legacy + versionado** (`pin_dmc`): el bloque legacy
+  (`data/raw/`, ordenado por nombre) se usa completo; del almacén de
+  `dmc_refresh` solo entran lecturas con `momento` posterior a la última
+  legacy. Un mismo (estación, momento) nunca se cuenta dos veces y, ante
+  valores distintos, gana legacy. El loader también concatena ahora por
+  nombre (antes, orden del filesystem; sin efecto con los datos actuales:
+  132 `momento` repetidos, 0 con valores distintos).
+- **Modo reproducible**: solo snapshots Hito 1; no consulta ningún
+  `CURRENT.json` (DMC ni FIRMS).
+- **Sin cambios científicos**: mismas funciones de features, target,
+  modelo y ranking; los tests que parcheaban internals (`_load_model`,
+  `load_regional_meteo_series`, `build_feature_matrix` con FIRMS parcheado)
+  pasan a `capture_scoring_inputs` en modo reproducible.
+
+**Resultados reales** (rama `feat/SAPI-71-scoring-inputs`, sobre `53bd673`;
+sin refresco real, sin `CURRENT.json` bajo `data/`):
+
+```
+HOST: 667 passed, 3 skipped, 0 failed; cobertura 92.11%
+  (scoring_inputs 99%, prototype_service 96%)
+LINUX sin data/ (como CI): 150 passed, 10 skipped (dependen de data/ local)
+MUTACIONES: releer FIRMS en el scoring, no filtrar el solapamiento DMC,
+  omitir la verificación de sha256 y leer el almacén en modo reproducible
+  hacen fallar su test
+MODEL_D: fingerprint 33c2eacc…31ff sin cambios (normal y reproducible)
+LATENCIA score_current_grid: ~14,1 s (antes ~15,5 s, misma máquina)
+```
+
+### Cierre de SAPI-71 Fase B: estado integrado — nota fechada 23-09-2026
+
+Las notas anteriores siguen siendo válidas para el commit en que se midió
+cada una; esta las reconcilia sobre el árbol que las combina: `origin/main`
+(`7a5ff61`), la corrección del refresco DMC, el endurecimiento previo al
+primer refresco (F8/F4/F5), la semántica definitiva de `record_count` y
+cobertura, `ScoringInputs` (`30a296c`), el endurecimiento de la
+clasificación de errores de acceso y la reproducibilidad de fin de línea
+(`.gitattributes`).
+
+- **Corrección DMC**: `registros` presente que no es entero da 65 (ausente
+  se tolera: el documento canónico no lo lleva). El docstring ya no afirma
+  que un conflicto llegue al historial en una corrida `unchanged`.
+- **Calidad de filas** (política inicial conservadora, no una propiedad
+  científica): por mes, hasta 1 % de filas con `null` explícito se publica;
+  más de 1 % da 65 y no se publica nada; un valor presente no numérico
+  (texto, `""`, bool, NaN/inf) o un campo ausente da 65 siempre. `total_rows`,
+  `null_rows`, `discard_rate` y `threshold` son metadata operacional: salen
+  en la CLI y en la línea `publish` del historial, nunca en el puntero. Si
+  la API usa `""` para "sin dato", cada corrida daría 65: se valida con el
+  primer payload real.
+- **Semántica del puntero** (`schema_version` 1, ver la nota de hardening):
+  `record_count` = lecturas válidas publicadas; `coverage_start`/
+  `coverage_end` = primer/último `momento` válido publicado.
+- **Rollback**: el puntero de destino pasa por la misma verificación que
+  `read_current`; cualquier falla es 65 sin tocar `CURRENT.json` ni el
+  historial.
+- **Credenciales**: un error de red se reporta solo por su tipo; `redact`
+  cubre el valor crudo y sus variantes URL-encoded. No ejecutar el refresco
+  con logging DEBUG (no probado con urllib3 real).
+- **Acceso a entradas fijadas**: un `OSError` al leer una entrada fijada
+  sale como `PinnedInputError` → 503 `prototype_unavailable` (antes, 500
+  `internal_error`). `CURRENT.json` ausente degrada a solo-legacy (mantiene
+  estable el fingerprint mientras no haya refresco publicado); ilegible
+  aborta la captura en vez de descartar en silencio lecturas publicadas.
+- **Reproducibilidad CRLF/LF**: tres artefactos congelados de
+  `artifacts/hito1/reproducibility/` (FIRMS, `dmc_historico_330007_2026-08.json`,
+  `dem/grid_topography.csv`) tienen su sha256 publicado sobre los bytes
+  originales, con CRLF, pero se versionaron normalizados a LF. Un checkout
+  Windows reponía los CR y el hash coincidía; uno LF (Linux, macOS, CI) no.
+  `ScoringInputs` verifica ese hash al puntuar, así que en LF el modo
+  reproducible abortaba. Corrección: `.gitattributes` marca **solo esas tres
+  rutas** `-text` y sus blobs vuelven a ser los bytes originales. El
+  contenido es idéntico salvo por los CR; ningún dato cambia, ningún hash
+  congelado se recalcula y `manifest.json` no se toca. **`.gitattributes`
+  es parte del contrato de reproducibilidad**: quitar esas líneas, o
+  normalizar esas rutas, vuelve a romper la verificación en LF.
+- **Refresco real: NO ejecutado.** No existe `data/processed/dmc/` ni
+  `data/processed/firms/`, ni ningún `CURRENT.json`.
+
+```
+HOST (checkout Windows, core.autocrlf=true, datos locales):
+  736 passed, 4 skipped, 0 failed; cobertura 92.26%
+  (dmc_refresh.py 96%, scoring_inputs.py 99%)
+DOCKER (Dockerfile.analytics --no-cache, checkout LF, sin volúmenes,
+  --network none, Python 3.14.7): 713 passed, 27 skipped, 0 failed;
+  cobertura 89.53%; los tres hashes congelados verificados dentro del
+  contenedor. Los 27 skips son tests que requieren data/ local, que la
+  imagen excluye.
+LF ANTES/DESPUÉS de .gitattributes: origin/main 3 failed -> 3 passed;
+  estado integrado 9 failed -> 9 passed (3 preexistentes + 6 de ScoringInputs)
+DIRIGIDOS (checkout LF, sin datos locales): reproducibilidad 39 passed /
+  11 skipped; ScoringInputs + n8n-bridge 48 / 1; DMC + primitivas +
+  contrato de almacén 110 / 1
+CONTRATO writer<->reader DMC: 6 passed (incluye 100 lecturas por mes con
+  exactamente 1 % de nulos: record_count y cobertura del puntero = lo que
+  pin_dmc fija)
+PROPERTY-BASED DMC (Hypothesis, 300 ejemplos/propiedad): 11 passed
+MODEL_D: fingerprint 33c2eacc…31ff idéntico en modo reproducible (checkout
+  LF y Windows) y operacional (data/raw real, sin punteros publicados)
+PYRIGHT: 0 en dmc_refresh.py, redact.py, scoring_inputs.py y
+  test_dmc_store_contract.py; prototype_service.py 16 (antes 17); quedan
+  12 solo-test preexistentes (3 en test_dmc_refresh.py, 9 en
+  test_scoring_inputs.py)
 ```
 
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
@@ -691,3 +820,88 @@ digest fijo, `apt-get install` sin versiones exactas) queda registrado
 como mejora futura de reproducibilidad de la capa de sistema operativo.
 No es un requisito retroactivo del baseline de Sprint 2 ni bloquea el
 veredicto de la sección 8 — se anota aquí únicamente para trazabilidad.
+
+### Hardening previo al primer refresco DMC (SAPI-71 Fase B) — nota fechada 23-09-2026
+
+Esta nota **no reescribe** la de "Refresco DMC versionado por mes" de más
+arriba: la complementa con el comportamiento que el código tiene desde el
+endurecimiento posterior a la corrección de `registros`. Sigue sin haberse
+ejecutado ningún refresco real (`data/processed/dmc/` no existe) y **no se
+autoriza ninguno** hasta completar el runbook del primer refresco controlado.
+
+- **`registros`**: si viene, debe ser un entero que calce con `len(datos)`;
+  `registros: null` explícito, texto o float dan 65. Solo se acepta ausente
+  (el documento canónico no lo lleva). Decisión consciente: no se flexibiliza
+  para el mes en curso vacío hasta observar un payload real que lo justifique;
+  mientras tanto, un 65 en las primeras 6 h de un mes es posible y no publica
+  nada.
+- **Calidad de filas** (`temperatura`, `humedadRelativa`, las columnas que
+  `parse_dmc_json` exige). Política inicial **conservadora, no una propiedad
+  científica**, ajustable solo con evidencia real:
+  - valor presente del que el parser no extrae un número finito (texto sin
+    número, `""`, bool, NaN/inf, objeto) o campo ausente: **65 siempre**, sin
+    convertir nada;
+  - `null` explícito: la fila cuenta como nula; si
+    `null_rows / total_rows > 0,01` (comparación exacta con `Fraction`),
+    **65 y no se publica ninguna versión** del mes; con `<= 0,01` se publica y
+    el parser descarta esas filas al leer;
+  - se evalúa sobre el payload mensual recibido y otra vez sobre la versión
+    fusionada antes de publicarla, y la relectura exige que `parse_dmc_json`
+    conserve exactamente `total_rows - null_rows` filas;
+  - metadata observable por mes: `total_rows`, `null_rows`, `discard_rate`,
+    `threshold`, en la salida de la CLI (`row_quality`) y en la línea
+    `publish` de `pointer_history.jsonl`. No entra al puntero ni a los bytes
+    canónicos.
+- **Semántica del puntero, fijada antes de la primera publicación real**
+  (`schema_version` sigue en 1: no existe almacén publicado ni un v1 anterior
+  que preservar, y la estructura no cambia):
+  - `record_count` (por mes y total) = lecturas **válidas** publicadas, las
+    que `parse_dmc_json` conserva. No es el total recibido de la API; ese
+    total vive solo en `row_quality.total_rows` (CLI e historial).
+  - `first_momento`/`last_momento` por mes, y con ellos `coverage_start`/
+    `coverage_end`, son el primer y el último `momento` **válido** publicado.
+    Una fila nula en el borde no mueve la cobertura.
+  - La versión mensual sigue guardando todas las lecturas recibidas, nulas
+    incluidas: los bytes canónicos no se filtran.
+  - Contrato con el lector: `len(serie fijada por ScoringInputs) ==
+    pointer["record_count"]`, anclado por
+    `test_pointer_counts_and_coverage_describe_only_valid_published_readings`
+    (writer) y por el test contractual con 1 % de nulos (writer↔lector).
+- **Credenciales (F8)**: van en el querystring; un error de red se reporta
+  solo por su tipo (`ConnectionError`, `Timeout`...), nunca con `str(exc)`,
+  que traía la URL con usuario y token URL-encoded. `redact` cubre además el
+  valor crudo y sus variantes URL-encoded. **No ejecutar el refresco con
+  logging DEBUG** hasta verificar que urllib3 no registra la URL con
+  credenciales (no probado con urllib3 real).
+- **Rollback (F4a/F4b)**: el puntero de destino pasa por la misma
+  verificación que `read_current` antes de publicarse: claves requeridas,
+  `schema_version`, `station_id`, `manifest_sha256`, ruta confinada en
+  `versions/` (sin separadores, `..`, unidad ni symlink que salga),
+  existencia y sha256 de cada versión, y que `manifest_sha256` empiece por el
+  identificador pedido. Cualquier rollback inválido sale con **65**, mensaje
+  JSON en stderr, sin traceback, sin tocar `CURRENT.json` ni el historial.
+  `read_current` es ahora igual de estricto (antes aceptaba punteros sin
+  `station_id` o con `months` vacío).
+- **Riesgos conocidos, no bloqueantes, a validar con el primer payload real**:
+  - el parser acepta texto que contenga un número: `"N/A 5"` se lee como `5`.
+    Clasificado como **deuda / contrato a validar con payload real**; no se
+    relaja ni se endurece ahora;
+  - `""` da 65: si la API usara cadena vacía como dato faltante, cada corrida
+    fallaría;
+  - versiones huérfanas (F3, deuda): si falla un mes posterior, la versión ya
+    escrita de un mes anterior queda en `versions/` sin puntero que la
+    referencie; no se publica.
+
+Cifras medidas sobre el commit del hardening, antes de fijar la semántica
+de `record_count`/cobertura; las del estado integrado están en la nota de
+cierre de SAPI-71 Fase B.
+
+```
+HOST (Windows, worktree sin data/ local): 681 passed, 29 skipped, 0 failed;
+  cobertura 89.13% (dmc_refresh 97%, redact 100%)
+DOCKER (Dockerfile.analytics, --network none verificado): 684 passed,
+  26 skipped, 0 failed; cobertura 89.22%; Python 3.14.7
+PROPERTY-BASED DMC (Hypothesis): 11 passed
+PYRIGHT: dmc_refresh.py y redact.py en 0; tests con los 3 preexistentes
+TESTS NUEVOS: 52 casos; 47 fallan sobre el código previo al endurecimiento
+```

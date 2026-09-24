@@ -230,17 +230,34 @@ def test_score_503_on_real_corrupt_dmc_json(monkeypatch, tmp_path):
     )
     monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
     monkeypatch.setattr(prototype_service, "REPRODUCIBILITY_DMC_DIR", tmp_path)
-    monkeypatch.setattr(
-        prototype_service,
-        "_load_model",
-        lambda: (object(), {"feature_columns": [], "horizon_hours": 6}),
-    )
 
     resp = client.get("/score")
 
     assert resp.status_code == 503
     assert resp.json()["error_type"] == "data_unavailable"
     assert "JSONDecodeError" in resp.json()["message"]
+
+
+def test_score_503_when_a_pinned_input_is_unreadable(monkeypatch, tmp_path):
+    """Un archivo DMC que existe pero no se puede leer (permisos, o bloqueo
+    de Windows por un refresco concurrente) es indisponibilidad de datos:
+    503, no el 500 de un error de programación."""
+    (tmp_path / "dmc_meteo_2026-09-20.json").write_text("{}", encoding="utf-8")
+    real_read_bytes = Path.read_bytes
+
+    def denier(self):
+        if self.name.startswith("dmc_"):
+            raise PermissionError(13, "Permission denied", str(self))
+        return real_read_bytes(self)
+
+    monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
+    monkeypatch.setattr(prototype_service, "REPRODUCIBILITY_DMC_DIR", tmp_path)
+    monkeypatch.setattr(Path, "read_bytes", denier)
+
+    resp = client.get("/score")
+
+    assert resp.status_code == 503
+    assert resp.json()["error_type"] == "prototype_unavailable"
 
 
 @pytest.mark.parametrize(
