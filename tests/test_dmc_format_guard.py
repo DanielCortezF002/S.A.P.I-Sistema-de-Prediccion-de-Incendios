@@ -94,7 +94,7 @@ def test_score_current_grid_maps_format_error_to_unavailable(monkeypatch) -> Non
     def _raise(*_args, **_kwargs):
         raise DmcFormatError("dmc_meteo_2026-09-22.json: se esperaba un objeto")
 
-    monkeypatch.setattr(svc, "load_regional_meteo_series", _raise)
+    monkeypatch.setattr(svc, "pin_dmc", _raise)
     with pytest.raises(svc.PrototypeUnavailableError, match="formato incompatible"):
         svc.score_current_grid()
 

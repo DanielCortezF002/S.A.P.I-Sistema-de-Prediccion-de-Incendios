@@ -631,6 +631,56 @@ MUTACIONES: perder lo publicado, no ordenar, pisar lo publicado y quitar el
 MODEL_D: fingerprint 33c2eacc…31ff sin cambios
 ```
 
+### ScoringInputs: entradas fijadas por corrida (SAPI-71 Fase B) — nota fechada 23-09-2026
+
+Antes, una corrida de `score_current_grid()` tocaba disco en cuatro
+momentos distintos: `exists()` + `joblib.load(path)` del modelo; listado
+y lectura de ~64 JSON DMC; y, dentro de `build_feature_matrix`, un
+`resolve_firms_source()` (que hashea el CSV) seguido de un
+`pd.read_csv(path)` que volvía a abrir el archivo por ruta. Un refresco
+publicado entre esos pasos podía mezclar versiones.
+
+`capture_scoring_inputs()` (`src/inference/prototype_service.py`, tipos en
+`src/inference/scoring_inputs.py`) fija todo al inicio: el modo
+reproducible se lee una vez; cada archivo (modelo, DMC, FIRMS y la tabla
+topográfica congelada) se lee UNA vez, se hashea y se parsea desde esos
+bytes; FIRMS se verifica contra el sha256 del puntero o de la línea base
+(`FIRMS_BASELINE_SHA256`) y, si no coincide, la captura aborta
+(`PrototypeUnavailableError`). `score_current_grid(inputs=...)` usa solo
+esa copia en memoria: un test bloquea `open`, `read_bytes`, `glob`,
+`read_csv`, `joblib.load` y `resolve_firms_source` durante el scoring y el
+ranking sale idéntico. `GridScoreResult` expone `inputs_fingerprint` y
+`scoring_inputs` (manifest sin `captured_at`); la antigüedad se mide en el
+instante de captura.
+
+- **DMC legacy + versionado** (`pin_dmc`): el bloque legacy
+  (`data/raw/`, ordenado por nombre) se usa completo; del almacén de
+  `dmc_refresh` solo entran lecturas con `momento` posterior a la última
+  legacy. Un mismo (estación, momento) nunca se cuenta dos veces y, ante
+  valores distintos, gana legacy. El loader también concatena ahora por
+  nombre (antes, orden del filesystem; sin efecto con los datos actuales:
+  132 `momento` repetidos, 0 con valores distintos).
+- **Modo reproducible**: solo snapshots Hito 1; no consulta ningún
+  `CURRENT.json` (DMC ni FIRMS).
+- **Sin cambios científicos**: mismas funciones de features, target,
+  modelo y ranking; los tests que parcheaban internals (`_load_model`,
+  `load_regional_meteo_series`, `build_feature_matrix` con FIRMS parcheado)
+  pasan a `capture_scoring_inputs` en modo reproducible.
+
+**Resultados reales** (rama `feat/SAPI-71-scoring-inputs`, sobre `53bd673`;
+sin refresco real, sin `CURRENT.json` bajo `data/`):
+
+```
+HOST: 667 passed, 3 skipped, 0 failed; cobertura 92.11%
+  (scoring_inputs 99%, prototype_service 96%)
+LINUX sin data/ (como CI): 150 passed, 10 skipped (dependen de data/ local)
+MUTACIONES: releer FIRMS en el scoring, no filtrar el solapamiento DMC,
+  omitir la verificación de sha256 y leer el almacén en modo reproducible
+  hacen fallar su test
+MODEL_D: fingerprint 33c2eacc…31ff sin cambios (normal y reproducible)
+LATENCIA score_current_grid: ~14,1 s (antes ~15,5 s, misma máquina)
+```
+
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
 
 `artifacts/hito1/reproducibility/manifest.json` es un snapshot histórico

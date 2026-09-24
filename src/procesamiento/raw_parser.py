@@ -61,10 +61,20 @@ def parse_dmc_json(json_path: str | Path) -> pd.DataFrame:
     """
     with open(json_path, encoding="utf-8") as f:
         data = json.load(f)
+    return parse_dmc_document(data, Path(json_path).name)
 
+
+def parse_dmc_bytes(raw: bytes, source_name: str) -> pd.DataFrame:
+    """Igual que `parse_dmc_json`, pero sobre bytes ya leídos (y fijados
+    por hash) en vez de volver a abrir un path (SAPI-71, ScoringInputs)."""
+    return parse_dmc_document(json.loads(raw.decode("utf-8")), source_name)
+
+
+def parse_dmc_document(data: object, source_name: str) -> pd.DataFrame:
+    """Núcleo de `parse_dmc_json` sobre un documento ya deserializado."""
     if not isinstance(data, dict):
         raise DmcFormatError(
-            f"{Path(json_path).name}: se esperaba un objeto {{codigo_estacion: respuesta}}, "
+            f"{source_name}: se esperaba un objeto {{codigo_estacion: respuesta}}, "
             f"se encontró {type(data).__name__}."
         )
 
@@ -74,7 +84,7 @@ def parse_dmc_json(json_path: str | Path) -> pd.DataFrame:
             continue
         if not _DMC_STATION_KEYS.intersection(contenido):
             raise DmcFormatError(
-                f"{Path(json_path).name}: la entrada {cod_estacion!r} no tiene ninguna clave DMC "
+                f"{source_name}: la entrada {cod_estacion!r} no tiene ninguna clave DMC "
                 f"reconocida ({', '.join(sorted(_DMC_STATION_KEYS))})."
             )
 

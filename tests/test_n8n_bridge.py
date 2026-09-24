@@ -230,11 +230,6 @@ def test_score_503_on_real_corrupt_dmc_json(monkeypatch, tmp_path):
     )
     monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
     monkeypatch.setattr(prototype_service, "REPRODUCIBILITY_DMC_DIR", tmp_path)
-    monkeypatch.setattr(
-        prototype_service,
-        "_load_model",
-        lambda: (object(), {"feature_columns": [], "horizon_hours": 6}),
-    )
 
     resp = client.get("/score")
 

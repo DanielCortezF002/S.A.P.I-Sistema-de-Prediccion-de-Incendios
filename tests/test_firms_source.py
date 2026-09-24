@@ -8,7 +8,6 @@ import re
 from datetime import date
 from pathlib import Path
 
-import pandas as pd
 import pytest
 
 from src.procesamiento.firms_source import (
@@ -205,12 +204,12 @@ def test_prototype_service_maps_firms_source_error_to_unavailable(monkeypatch) -
     def _raise(**_kwargs):
         raise FirmsSourceError("puntero roto")
 
+    monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
     monkeypatch.setattr(svc, "resolve_firms_source", _raise)
-    meteo_row = pd.Series({"forecast_time": pd.Timestamp("2026-09-01", tz="UTC")})
     with pytest.raises(
         svc.PrototypeUnavailableError, match="Fuente FIRMS inválida: puntero roto"
     ):
-        svc.build_feature_matrix(pd.Timestamp("2026-09-01", tz="UTC"), meteo_row)
+        svc.capture_scoring_inputs()
 
 
 def test_prototype_service_reports_missing_resolved_file(monkeypatch, tmp_path) -> None:
@@ -223,12 +222,12 @@ def test_prototype_service_reports_missing_resolved_file(monkeypatch, tmp_path) 
         coverage_start=date(2021, 8, 30),
         coverage_end=date(2026, 8, 30),
     )
+    monkeypatch.setenv("SAPI_REPRODUCIBILITY_MODE", "1")
     monkeypatch.setattr(svc, "resolve_firms_source", lambda **_kwargs: missing)
-    meteo_row = pd.Series({"forecast_time": pd.Timestamp("2026-09-01", tz="UTC")})
     with pytest.raises(
         svc.PrototypeUnavailableError, match="No existe el histórico FIRMS"
     ):
-        svc.build_feature_matrix(pd.Timestamp("2026-09-01", tz="UTC"), meteo_row)
+        svc.capture_scoring_inputs()
 
 
 def test_no_hardcoded_firms_baseline_path_outside_firms_source() -> None:

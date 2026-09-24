@@ -25,12 +25,12 @@ from src.inference.prototype_service import (
     _resolve_forecast_time,
     _resolve_meteo_row,
     build_feature_matrix,
-    load_regional_meteo_series,
     score_current_grid,
 )
 from src.procesamiento.firms_source import (  # noqa: E402
     FIRMS_REPRODUCIBILITY_CSV as REPRODUCIBILITY_FIRMS_CSV,
 )
+from src.procesamiento.regional_meteo import load_regional_meteo_series  # noqa: E402
 from src.procesamiento.pipeline_validators import FORBIDDEN_LEGACY_REFERENCES, validate_pipeline_isolation
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
