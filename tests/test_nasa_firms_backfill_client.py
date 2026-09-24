@@ -12,6 +12,7 @@ import pytest
 import requests
 
 from scripts.backfill_nasa_firms import main as backfill_main
+from test_firms_refresh import _no_network  # autouse: no live API in client tests
 from src.ingesta.nasa_firms_backfill import (
     NRT_SOURCE,
     SP_SOURCE,
@@ -26,10 +27,14 @@ from src.ingesta.nasa_firms_backfill import (
     split_windows,
 )
 
-_SAMPLE_CSV = (
-    "latitude,longitude,acq_date,acq_time,satellite,instrument\n"
-    "-33.10000,-71.20000,2026-06-03,945,N,VIIRS\n"
+# Synthetic observations with the actual per-product headers.
+_NRT_CSV = (
+    "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,"
+    "instrument,confidence,version,bright_ti5,frp,daynight\n"
+    "-33.10000,-71.20000,330.0,0.4,0.4,2026-06-03,945,N,VIIRS,n,2.0NRT,290.0,3.0,D\n"
 )
+_SAMPLE_CSV = _NRT_CSV.replace("daynight\n", "daynight,type\n").replace("2.0NRT", "2").replace(",D\n", ",D,2\n")
+
 _AVAILABILITY_CSV = (
     "data_id,min_date,max_date\n"
     f"{SP_SOURCE},2012-01-20,2026-06-05\n"
@@ -196,7 +201,7 @@ def test_download_window_raises_when_csv_missing_columns(tmp_path: Path) -> None
     response.raise_for_status = MagicMock()
     client.session.get = MagicMock(return_value=response)
 
-    with pytest.raises(ValueError, match="Respuesta FIRMS inválida"):
+    with pytest.raises(ValueError, match="Schema FIRMS inválido"):
         client.download_window(DateWindow(SP_SOURCE, date(2026, 6, 1), date(2026, 6, 1)))
 
 
@@ -208,8 +213,8 @@ def test_run_consolidates_windows_and_writes_manifest(tmp_path: Path) -> None:
         request_delay_seconds=0.0,
         sleep_fn=lambda _: None,
     )
-    duplicate_nrt = _SAMPLE_CSV
-    duplicate_sp = _SAMPLE_CSV.replace("VIIRS\n", "VIIRS\n")  # misma fila, otra fuente
+    duplicate_nrt = _NRT_CSV
+    duplicate_sp = _SAMPLE_CSV  # misma detección, esquema SP con type real
 
     def _fake_get(url: str, timeout: int = 60) -> MagicMock:
         response = MagicMock()
@@ -221,8 +226,8 @@ def test_run_consolidates_windows_and_writes_manifest(tmp_path: Path) -> None:
 
     client.session.get = MagicMock(side_effect=_fake_get)
     windows = [
-        DateWindow(SP_SOURCE, date(2026, 6, 1), date(2026, 6, 1)),
-        DateWindow(NRT_SOURCE, date(2026, 6, 2), date(2026, 6, 2)),
+        DateWindow(SP_SOURCE, date(2026, 6, 1), date(2026, 6, 3)),
+        DateWindow(NRT_SOURCE, date(2026, 6, 3), date(2026, 6, 3)),
     ]
 
     result = client.run(windows)
@@ -251,11 +256,14 @@ def test_run_sleeps_between_windows_when_delay_configured(tmp_path: Path) -> Non
     response.headers = {}
     response.text = _SAMPLE_CSV
     response.raise_for_status = MagicMock()
-    client.session.get = MagicMock(return_value=response)
+    def get(url, timeout=60):
+        response.text = _SAMPLE_CSV if SP_SOURCE in url else _NRT_CSV
+        return response
+    client.session.get = MagicMock(side_effect=get)
 
     windows = [
-        DateWindow(SP_SOURCE, date(2026, 6, 1), date(2026, 6, 1)),
-        DateWindow(NRT_SOURCE, date(2026, 6, 2), date(2026, 6, 2)),
+        DateWindow(SP_SOURCE, date(2026, 6, 1), date(2026, 6, 3)),
+        DateWindow(NRT_SOURCE, date(2026, 6, 3), date(2026, 6, 3)),
     ]
     client.run(windows)
 

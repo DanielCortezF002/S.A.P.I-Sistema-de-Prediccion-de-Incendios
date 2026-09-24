@@ -21,13 +21,14 @@ import pytest
 import requests
 
 import src.refresh.firms_refresh as fr
+from src.ingesta.firms_schema import project_base
 from src.ingesta.nasa_firms_backfill import NRT_SOURCE, SP_SOURCE, NasaFirmsBackfill
 from src.procesamiento.episodes import assign_episodes, first_arrival_by_cell
 from src.procesamiento.firms_source import (
     FIRMS_BASELINE_COVERAGE,
     FIRMS_REPRODUCIBILITY_CSV,
     FROZEN_FIRMS_PATHS,
-    POINTER_SCHEMA_VERSION,
+    PROJECTED_POINTER_SCHEMA_VERSION,
     resolve_firms_source,
 )
 from src.procesamiento.temporal_features import historial_firms_features
@@ -35,9 +36,9 @@ from src.procesamiento.temporal_features import historial_firms_features
 MAP_KEY = "clave-secreta-de-prueba-123"
 API_COLUMNS = (
     "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,"
-    "instrument,confidence,version,bright_ti5,frp,daynight,type"
+    "instrument,confidence,version,bright_ti5,frp,daynight"
 )
-BASE_HEADER = API_COLUMNS + ",firms_source,request_start_date"
+BASE_HEADER = API_COLUMNS + ",type,firms_source,request_start_date"
 BASE_END = FIRMS_BASELINE_COVERAGE[1]  # 2026-08-30
 TODAY = BASE_END + timedelta(days=7)  # cobertura objetivo: hasta 2026-09-05
 
@@ -72,7 +73,7 @@ def paths(tmp_path) -> fr.FirmsPaths:
     base = (
         BASE_HEADER + "\r\n"
         "-33.1,-71.2,330.1,0.5,0.4,2026-08-29,1850,N,VIIRS,n,2,290.1,3.2,D,0,"
-        "VIIRS_SNPP_NRT,2026-08-26\r\n"
+        "VIIRS_SNPP_SP,2026-08-26\r\n"
     ).encode("utf-8")
     baseline = tmp_path / "baseline.csv"
     baseline.write_bytes(base)
@@ -86,7 +87,7 @@ def paths(tmp_path) -> fr.FirmsPaths:
 
 
 def _row(day: date, lat: float = -33.05, time: int = 1745) -> str:
-    return f"{lat},-71.4,331.0,0.5,0.4,{day.isoformat()},{time},N,VIIRS,n,2.0NRT,291.0,4.1,D,0"
+    return f"{lat},-71.4,331.0,0.5,0.4,{day.isoformat()},{time},N,VIIRS,n,2.0NRT,291.0,4.1,D"
 
 
 class FakeFirms:
@@ -167,13 +168,14 @@ def test_first_refresh_extends_baseline_and_publishes_pointer(paths):
         "created_at",
     }
     assert required <= set(pointer)
-    assert pointer["schema_version"] == POINTER_SCHEMA_VERSION
+    assert pointer["schema_version"] == PROJECTED_POINTER_SCHEMA_VERSION
     assert pointer["base_sha256"] == _sha(base)
     assert pointer["base_origin"] == "baseline"
     version = paths.versions_dir / pointer["relative_path"]
     data = version.read_bytes()
-    assert data.startswith(base)  # la base queda byte a byte intacta
-    assert b"\n" not in data.replace(b"\r\n", b"")  # mismo fin de línea que la base
+    assert data.startswith(project_base(base))
+    assert paths.baseline_csv.read_bytes() == base
+    assert b"\r" not in data  # serialización canónica v1
     assert _sha(data) == pointer["sha256"]
     assert pointer["row_count"] == len(pd.read_csv(io.BytesIO(data))) == 7
     # El lector de inferencia acepta el puntero publicado.
@@ -230,7 +232,7 @@ def test_header_only_response_extends_coverage_without_rows(paths):
     pointer = _pointer(paths)
     assert outcome.status == "published" and outcome.new_rows == 0
     assert pointer["coverage_end"] == "2026-09-05"
-    assert pointer["sha256"] == paths.baseline_sha256
+    assert pointer["sha256"] == _sha(project_base(paths.baseline_csv.read_bytes()))
 
 
 def test_repeated_detections_in_a_response_are_deduplicated(paths):
@@ -477,7 +479,7 @@ def test_appending_later_days_leaves_features_before_coverage_end_identical(tmp_
     data, added = fr.build_version_bytes(
         base, new_rows, BASE_END, BASE_END + timedelta(days=5)
     )
-    assert added == 3 and data.startswith(base)
+    assert added == 3 and data.startswith(project_base(base))
 
     def _arrivals(raw: bytes) -> dict:
         arrivals = first_arrival_by_cell(assign_episodes(pd.read_csv(io.BytesIO(raw))))

@@ -93,7 +93,6 @@ def _detection(day: date) -> dict:
         "bright_ti5": 295.0,
         "frp": 5.0,
         "daynight": "D",
-        "type": 0,
         "firms_source": "VIIRS_SNPP_NRT",
         "request_start_date": day.isoformat(),
     }

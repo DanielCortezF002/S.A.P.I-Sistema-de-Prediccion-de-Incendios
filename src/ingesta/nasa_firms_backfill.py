@@ -22,10 +22,10 @@ import requests
 
 from src.config import DATA_PROCESSED_DIR, DATA_RAW_DIR, NASA_FIRMS_API_KEY, VALPARAISO_BBOX
 from src.procesamiento.firms_source import ensure_writable_firms_path
+from src.ingesta.firms_schema import NRT_SOURCE, SP_SOURCE, parse_source_csv
+from src.refresh.atomic import write_immutable
 
 FIRMS_API_BASE = "https://firms.modaps.eosdis.nasa.gov/api"
-SP_SOURCE = "VIIRS_SNPP_SP"
-NRT_SOURCE = "VIIRS_SNPP_NRT"
 MAX_DAYS_PER_REQUEST = 5
 
 _REQUIRED_COLUMNS = {
@@ -302,16 +302,10 @@ class NasaFirmsBackfill:
         ensure_writable_firms_path(raw_path)
 
         response = self._get_with_retry(self.window_url(window))
-        frame = pd.read_csv(io.StringIO(response.text))
-        missing = _REQUIRED_COLUMNS.difference(frame.columns)
-        if missing:
-            raise ValueError(f"Respuesta FIRMS inválida: faltan {sorted(missing)}")
+        frame = parse_source_csv(response.text, window.source, window.start_date, window.end_date)
 
         source_dir.mkdir(parents=True, exist_ok=True)
-        raw_path.write_text(response.text, encoding="utf-8")
-
-        frame["firms_source"] = window.source
-        frame["request_start_date"] = window.start_date.isoformat()
+        write_immutable(raw_path, response.text.encode("utf-8"))
         return raw_path, frame
 
     def run(self, windows: Iterable[DateWindow]) -> BackfillResult:
