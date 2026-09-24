@@ -1,0 +1,943 @@
+{
+  "id": "HFd64YLslwqfpf8W",
+  "name": "SAPI - Operational Pipeline",
+  "active": false,
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -384,
+        -112
+      ],
+      "id": "f33046b8-b5c8-4ad6-a695-67a82241410a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e73580f1-06d0-4603-b93b-bce11dde7168",
+              "name": "proyecto",
+              "value": "SAPI",
+              "type": "string"
+            },
+            {
+              "id": "230567c0-7b1f-420d-ac9b-f0e5b56ab612",
+              "name": "estado",
+              "value": "inicio_pipeline",
+              "type": "string"
+            },
+            {
+              "id": "b192c0ef-4866-45ac-a8bb-aa0d7fce9fde",
+              "name": "origen",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -208,
+        -208
+      ],
+      "id": "234859a7-089a-4a58-a507-0a80f7fa6853",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8600/score",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -64,
+        -208
+      ],
+      "id": "ad300e2b-82c8-4909-8a7d-8f6c266dd893",
+      "name": "HTTP Request",
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "98427667-45c1-45fd-925c-971059b89aa0",
+              "name": "modelo",
+              "value": "={{$json.model_version}}",
+              "type": "string"
+            },
+            {
+              "id": "3652bf21-b143-409a-ab6b-bf4255cf4855",
+              "name": "=estado_modelo",
+              "value": "={{$json.model_status}}",
+              "type": "string"
+            },
+            {
+              "id": "e5d8c6d3-cab2-41e2-9ecb-eb290ac5ae60",
+              "name": "frescura",
+              "value": "={{$json.freshness}}",
+              "type": "string"
+            },
+            {
+              "id": "0b1c3a65-0a15-4f0a-afb0-dc56975f302f",
+              "name": "estacion",
+              "value": "={{$json.station_name}}",
+              "type": "string"
+            },
+            {
+              "id": "90b8fe2f-798e-401f-a9dd-39c352032d94",
+              "name": "cantidad_celdas",
+              "value": "={{ $json.cells.length }}",
+              "type": "number"
+            },
+            {
+              "id": "4cebf3ca-db59-4c6c-951d-33dff4d1ccdc",
+              "name": "celdas_prioritarias",
+              "value": "={{ $json.cells.filter(c => c.display_rank === 1).map(c => c.cell_id).join(', ') }}",
+              "type": "string"
+            },
+            {
+              "id": "143db7ab-a352-4e6f-9020-6ed4aeab4d3a",
+              "name": "cantidad_prioritarias",
+              "value": "={{ $json.cells.filter(c => c.display_rank === 1).length }}",
+              "type": "number"
+            },
+            {
+              "id": "e143e09d-1367-45fe-ac92-d33d71d8d2b3",
+              "name": "regla_30_30_30",
+              "value": "={{ $json.meteo_actual.regla_30_30_30 }}",
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        272,
+        -224
+      ],
+      "id": "b5cdf96e-49a9-4d98-9e08-d1d8935cde49",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b29295c9-99b3-41d6-804d-d1872d6e9917",
+              "leftValue": "={{$json.frescura}} {{ $json.frescura }}",
+              "rightValue": "DESACTUALIZADOS",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        432,
+        -224
+      ],
+      "id": "fb666925-5bf9-4dd7-a451-3cb123e91f51",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d43d2a9-18cd-4778-8f1c-4234c4794d3f",
+              "name": "tipo_alerta",
+              "value": "DATOS_DESACTUALIZADOS",
+              "type": "string"
+            },
+            {
+              "id": "4152e6ef-5d22-408f-b435-04bab1d7a824",
+              "name": "mensaje",
+              "value": "Los datos de S.A.P.I. están desactualizados",
+              "type": "string"
+            },
+            {
+              "id": "9b35d593-66cb-4784-b918-148da8b36a29",
+              "name": "accion",
+              "value": "NO_USAR_PARA_DECISION_OPERACIONAL",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        624,
+        -320
+      ],
+      "id": "d2fecc6b-d5b8-469a-9aff-75d1465b166c",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa902468-04db-40d0-a627-85f3ab2416d4",
+              "name": "tipo_alerta ",
+              "value": " NINGUNA",
+              "type": "string"
+            },
+            {
+              "id": "0d24f899-1641-4453-8781-3e9daad93a5b",
+              "name": "mensaje",
+              "value": "Los datos de S.A.P.I. están vigentes",
+              "type": "string"
+            },
+            {
+              "id": "29e9fac4-9e68-432f-b322-74141aa61100",
+              "name": "accion",
+              "value": "CONTINUAR_PIPELINE",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        624,
+        -160
+      ],
+      "id": "dfaa6651-9a1a-47fc-97ca-62f54244a984",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        -240
+      ],
+      "id": "e6f7427a-8b23-43be-ac42-37b31718d00b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "CONFIGURE_OUTSIDE_GIT",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha_ejecucion": "={{$now.toISO()}}",
+            "modelo": "={{$json.modelo}}",
+            "estado_modelo": "={{$json.estado_modelo}}",
+            "frescura": "={{$json.frescura}}",
+            "estacion": "={{$json.estacion}}",
+            "cantidad_celdas": "={{$json.cantidad_celdas}}",
+            "tipo_alerta": "={{$json.tipo_alerta}}",
+            "mensaje": "={{$json.mensaje}}",
+            "accion": "={{$json.accion}}",
+            "celdas_prioritarias": "={{$json.celdas_prioritarias}}",
+            "cantidad_prioritarias": "={{$json.cantidad_prioritarias}}",
+            "regla_30_30_30": "={{ $json.regla_30_30_30 }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha_ejecucion",
+              "displayName": "fecha_ejecucion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "modelo",
+              "displayName": "modelo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado_modelo",
+              "displayName": "estado_modelo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "frescura",
+              "displayName": "frescura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estacion",
+              "displayName": "estacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "cantidad_celdas",
+              "displayName": "cantidad_celdas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "tipo_alerta",
+              "displayName": "tipo_alerta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "celdas_prioritarias",
+              "displayName": "celdas_prioritarias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "cantidad_prioritarias",
+              "displayName": "cantidad_prioritarias",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "regla_30_30_30",
+              "displayName": "regla_30_30_30",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {
+          "optimizeBulk": false
+        }
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        -16
+      ],
+      "id": "9a16da07-7cba-4934-8d44-f82c4a24bb91",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        -336
+      ],
+      "id": "90e4460a-85d0-46b5-83ef-890ecc5fe366",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3e71506c-78cc-48c3-8cd7-96f484480435",
+              "leftValue": "={{$json.status}}",
+              "rightValue": "ok",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        80,
+        -208
+      ],
+      "id": "88b3a52c-1ae6-45d1-95f1-10730a668fe9",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "64d9eef9-cb6b-443a-8ede-0af92d171e9c",
+              "name": "modelo",
+              "value": "NO_DISPONIBLE",
+              "type": "string"
+            },
+            {
+              "id": "a936d599-b201-42a4-8f3a-7f10c9562993",
+              "name": "estado_modelo",
+              "value": "ERROR",
+              "type": "string"
+            },
+            {
+              "id": "b4c25dcb-c860-49e7-959b-7e5b73cc25fa",
+              "name": "frescura",
+              "value": "NO_DISPONIBLE",
+              "type": "string"
+            },
+            {
+              "id": "b731811d-62b8-4780-8d82-9a1f8b463d90",
+              "name": "estacion",
+              "value": "NO_DISPONIBLE",
+              "type": "string"
+            },
+            {
+              "id": "5497c9ae-6d56-4422-9a14-891d95121ddd",
+              "name": "cantidad_celdas",
+              "value": "0",
+              "type": "number"
+            },
+            {
+              "id": "7dccb55b-b731-4f34-8d41-89bfc72b4728",
+              "name": "tipo_alerta",
+              "value": "ERROR_BRIDGE",
+              "type": "string"
+            },
+            {
+              "id": "7bc4a431-f18e-4325-bfb9-5465107b2f17",
+              "name": "mensaje",
+              "value": "No fue posible obtener datos desde S.A.P.I.",
+              "type": "string"
+            },
+            {
+              "id": "85a397e0-5e92-4e31-a958-472adfcc8d7f",
+              "name": "accion",
+              "value": "REVISAR_SERVICIO",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        400,
+        -16
+      ],
+      "id": "d5ea557b-50b1-4117-b0c0-45f4d6ad35a1",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "d8a67fe8-dade-4ac9-a23d-b87501c77de7",
+              "leftValue": "={{$json.tipo_alerta}}",
+              "rightValue": "=NINGUNA",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1168,
+        -160
+      ],
+      "id": "99e412f2-4103-4c7c-abdc-92e9982d6448",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "text": "=🚨 ALERTA S.A.P.I.\n\nTipo: {{ $json.tipo_alerta.replaceAll('_', ' ') }}\nEstado del modelo: {{ $json.estado_modelo }}\nFrescura: {{ $json.frescura.replaceAll('_', ' ') }}\nEstación: {{ $json.estacion.replaceAll('_', ' ') }}\nCeldas analizadas: {{ $json.cantidad_celdas }}\n\nMensaje: {{ $json.mensaje }}\n\nAcción: {{ $json.accion.replaceAll('_', ' ') }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1360,
+        -176
+      ],
+      "id": "d225c625-befa-4063-8d81-38cd3a40da10",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "CONFIGURE_OUTSIDE_GIT",
+          "mode": "id"
+        },
+        "limit": 2,
+        "orderBy": true,
+        "orderByColumn": "id"
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        128
+      ],
+      "id": "a8b8bccb-530c-4508-8aca-80e668ad7e04",
+      "name": "Get row(s)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const filas = $input.all();\n\nif (filas.length < 2) {\n  return [{\n    json: {\n      comparacion_valida: false,\n      cambio_prioridad: false,\n      motivo: \"No hay suficientes ejecuciones para comparar\"\n    }\n  }];\n}\n\nconst actual = filas[0].json;\nconst anterior = filas[1].json;\n\nreturn [{\n  json: {\n    comparacion_valida: true,\n    cambio_prioridad:\n      actual.celdas_prioritarias !== anterior.celdas_prioritarias,\n    actuales: actual.celdas_prioritarias,\n    anteriores: anterior.celdas_prioritarias,\n    cantidad_actual: actual.cantidad_prioritarias,\n    cantidad_anterior: anterior.cantidad_prioritarias\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1360,
+        128
+      ],
+      "id": "05f4829d-e69f-4f57-b0db-7e8a0a263fe6",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "57355679-cd55-4ac8-ade2-54d28fbd067b",
+              "leftValue": "={{$json.cambio_prioridad}}",
+              "rightValue": "is true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1536,
+        128
+      ],
+      "id": "1e64c050-8d73-4a4c-a817-ada34a436631",
+      "name": "If3"
+    },
+    {
+      "parameters": {
+        "text": "=⚠️ CAMBIO DE PRIORIDAD S.A.P.I.  Celdas anteriores: {{$json.anteriores}}  Celdas actuales: {{$json.actuales}}  Cantidad anterior: {{$json.cantidad_anterior}} Cantidad actual: {{$json.cantidad_actual}}  El grupo prioritario de Model D cambió desde la última ejecución.  Modelo exploratorio: ranking relativo, no probabilidad de incendio.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1760,
+        112
+      ],
+      "id": "f5cd14b6-c47c-4739-972f-57b5a4eafe67",
+      "name": "Send a text message1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "bfbbf504-0d02-4d47-a4a4-8dcbee5e7ca4",
+              "leftValue": "={{$json.regla_30_30_30}}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "18db15df-e83c-4bf0-a3f0-a775dbd217c5",
+              "leftValue": "={{$json.frescura}}",
+              "rightValue": "DESACTUALIZADOS",
+              "operator": {
+                "type": "string",
+                "operation": "notContains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1296,
+        -16
+      ],
+      "id": "ceb3da06-44bc-44dd-bb06-31d1355f3578",
+      "name": "If4"
+    },
+    {
+      "parameters": {
+        "text": "=🔥 ALERTA METEOROLÓGICA S.A.P.I.  Se detectaron condiciones compatibles con la regla 30-30-30.  Estación: {{$json.estacion}} Frescura: {{$json.frescura}}  Esta alerta corresponde a condiciones meteorológicas y es independiente del ranking de Model D.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1584,
+        -32
+      ],
+      "id": "68be4054-4a06-42e7-a2a1-1080921363e3",
+      "name": "Send a text message2"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert row": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get row(s)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "If4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If3": {
+      "main": [
+        [
+          {
+            "node": "Send a text message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If4": {
+      "main": [
+        [
+          {
+            "node": "Send a text message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "391fb274-da8f-4d3a-9131-ee79374ea1b0",
+  "activeVersionId": "d577c6e7-4df0-4128-b9be-4b3ae8e8a0df",
+  "updatedAt": "2026-09-22 22:45:13.179"
+}

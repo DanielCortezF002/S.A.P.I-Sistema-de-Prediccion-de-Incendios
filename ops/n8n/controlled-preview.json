@@ -1,0 +1,241 @@
+{
+  "id": "SapiControlledPreviewV1",
+  "name": "SAPI - Controlled preview (NO DELIVERY)",
+  "active": false,
+  "nodes": [
+    {
+      "id": "sapi-preview-0",
+      "name": "Manual pilot only",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "sapi-preview-1",
+      "name": "Read bridge",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        240,
+        0
+      ],
+      "parameters": {
+        "url": "http://host.docker.internal:8600/score",
+        "options": {
+          "timeout": 30000,
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true,
+              "responseFormat": "text"
+            }
+          }
+        }
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": false
+    },
+    {
+      "id": "sapi-preview-2",
+      "name": "Policy",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Conservative pilot policy. Pure functions; no I/O, credentials or delivery.\n// This is an operational filter, not a scientific probability threshold.\nfunction evaluate(envelope, nowIso, executionId) {\n  const base = { policy_version: 'sapi-pilot-v1', execution_id: String(executionId),\n    evaluated_at: nowIso, delivery: 'NOT_SENT', top_group: [], inputs_fingerprint: null };\n  const blocked = (reason, category = 'error') => ({ ...base, category, reason,\n    notification_identity: JSON.stringify(['sapi-pilot-v1', category, reason]),\n    message: `PRUEBA CONTROLADA — SAPI\\nRanking no habilitado: ${reason}.\\nNo implica riesgo bajo ni ausencia de incendios.\\nEjecución: ${base.execution_id}` });\n  if (envelope.error) {\n    const label = JSON.stringify(envelope.error);\n    const reason = /ETIMEDOUT|ESOCKETTIMEDOUT|timed?\\s*out|timeout/i.test(label) ? 'timeout'\n      : /ECONNREFUSED|connection refused/i.test(label) ? 'connection_refused' : 'transport_error';\n    return blocked(reason);\n  }\n  let p;\n  // n8n HTTP Request 4.x with fullResponse + text format returns the body under `data`.\n  const raw = 'data' in envelope ? envelope.data : envelope.body;\n  try { p = typeof raw === 'string' ? JSON.parse(raw) : raw; }\n  catch { return blocked('invalid_json'); }\n  if (envelope.statusCode !== 200) {\n    const expected = envelope.statusCode === 503 ? ['prototype_unavailable', 'data_unavailable']\n      : envelope.statusCode === 500 ? ['internal_error'] : [];\n    return blocked(expected.includes(p?.error_type) ? p.error_type : 'http_error');\n  }\n  const timestamp = x => typeof x === 'string' && /(?:Z|[+-]\\d{2}:\\d{2})$/.test(x)\n    && Number.isFinite(Date.parse(x));\n  if (!p || p.status !== 'ok' || p.model_version !== 'prototype_model_d_v1'\n      || p.model_status !== 'PROTOTYPE / EXPLORATORY' || p.station_id !== '330007'\n      || p.horizon_hours !== 6 || !timestamp(p.forecast_time) || !timestamp(p.weather_timestamp)\n      || !timestamp(nowIso) || !Number.isFinite(p.age_hours)\n      || !/^[0-9a-f]{64}$/.test(p.inputs_fingerprint || '')\n      || !['current', 'baseline'].includes(p.firms_origin)\n      || !/^\\d{4}-\\d{2}-\\d{2}$/.test(p.firms_coverage_end || '')\n      || !Number.isInteger(p.firms_lag_days) || typeof p.firms_status !== 'string'\n      || !p.meteo_actual || typeof p.meteo_actual.regla_30_30_30 !== 'boolean'\n      || !timestamp(p.meteo_actual.momento_observacion)\n      || !Array.isArray(p.cells) || p.cells.length !== 50) return blocked('incomplete_or_invalid_payload');\n  const cells = p.cells;\n  if (new Set(cells.map(c => c.cell_id)).size !== 50\n      || new Set(cells.map(c => c.rank)).size !== 50\n      || cells.some(c => !/^VP-(?:00[1-9]|0[1-4][0-9]|050)$/.test(c.cell_id)\n        || !Number.isFinite(c.score) || c.score < 0 || c.score > 1\n        || !Number.isInteger(c.rank) || c.rank < 1 || c.rank > 50\n        || !Number.isInteger(c.display_rank) || c.display_rank < 1\n        || !Number.isInteger(c.tie_group_size) || c.tie_group_size < 1)) return blocked('invalid_grid');\n  const top = cells.filter(c => c.display_rank === 1);\n  const maxScore = Math.max(...cells.map(c => c.score));\n  if (!top.length || cells.some(c => (c.score === maxScore) !== (c.display_rank === 1))\n      || top.some(c => c.tie_group_size !== top.length)) return blocked('incomplete_tie_group');\n  const now = Date.parse(nowIso), t = Date.parse(p.forecast_time), weather = Date.parse(p.weather_timestamp);\n  const end = t + 6 * 3600000;\n  if (now < t || now >= end || weather > t || t - weather > 1800000\n      || Date.parse(p.meteo_actual.momento_observacion) !== weather\n      || p.age_hours < 0 || p.age_hours > 12 || (now - weather) / 3600000 > 12\n      || p.freshness !== 'DATOS RECIENTES') return blocked('outside_valid_window', 'withheld');\n  const coverage = Date.parse(p.firms_coverage_end + 'T00:00:00Z');\n  const lag = (Date.parse(new Date(t).toISOString().slice(0, 10) + 'T00:00:00Z') - coverage) / 86400000;\n  if (!Number.isFinite(coverage) || new Date(coverage).toISOString().slice(0, 10) !== p.firms_coverage_end\n      || lag !== p.firms_lag_days || lag < 0 || lag > 3 || p.firms_status !== 'FIRMS AL DÍA')\n    return blocked('firms_not_current', 'withheld');\n  const group = top.map(c => c.cell_id).sort();\n  const rule = p.meteo_actual.regla_30_30_30;\n  const category = rule ? 'candidate' : 'withheld';\n  const reason = rule ? 'relative_top_group_and_meteo_rule' : 'meteo_rule_false';\n  return { ...base, category, reason, top_group: group, inputs_fingerprint: p.inputs_fingerprint,\n    notification_identity: JSON.stringify(['sapi-pilot-v1', category, p.model_version, p.station_id, group, rule]),\n    message: `PRUEBA CONTROLADA — SAPI\\nRanking exploratorio; NO probabilidad calibrada; NO confirmación de incendio.\\nT: ${p.forecast_time}\\nVentana: T < t <= ${new Date(end).toISOString()}\\nGrupo superior relativo (display_rank 1): ${group.join(', ')}\\nDMC regional: ${p.station_id}; observación: ${p.weather_timestamp}\\nRegla 30-30-30: ${rule} (feature y filtro operacional; no evidencia independiente).\\nFIRMS: anomalías térmicas satelitales; cobertura ${p.firms_coverage_end}; lag ${lag} días respecto de T.\\nEjecución: ${base.execution_id}\\nEntradas: ${p.inputs_fingerprint}\\nSolo preview; no usar para decisiones operacionales.` };\n}\n\nfunction deduplicate(current, previous) {\n  const changed = !previous || previous.notification_identity !== current.notification_identity;\n  return { ...current, condition_changed: changed,\n    would_notify: changed && current.category !== 'withheld',\n    recovered_from_error: !!previous && previous.category === 'error' && current.category !== 'error',\n    delivery: 'NOT_SENT' };\n}\n\nif (typeof module !== 'undefined') module.exports = { evaluate, deduplicate };\n\nreturn [{json: evaluate($input.first().json, new Date().toISOString(), $execution.id)}];"
+      }
+    },
+    {
+      "id": "sapi-preview-3",
+      "name": "Ensure preview ledger",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        0
+      ],
+      "parameters": {
+        "resource": "table",
+        "operation": "create",
+        "tableName": "sapi_controlled_preview_v1",
+        "columns": {
+          "column": [
+            {
+              "name": "record",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {
+          "createIfNotExists": true
+        }
+      }
+    },
+    {
+      "id": "sapi-preview-4",
+      "name": "Previous condition",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        960,
+        0
+      ],
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "value": "={{ $('Ensure preview ledger').first().json.id }}",
+          "mode": "id"
+        },
+        "limit": 1,
+        "orderBy": true,
+        "orderByColumn": "id",
+        "orderByDirection": "DESC"
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "id": "sapi-preview-5",
+      "name": "Dedupe",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        0
+      ],
+      "parameters": {
+        "jsCode": "// Conservative pilot policy. Pure functions; no I/O, credentials or delivery.\n// This is an operational filter, not a scientific probability threshold.\nfunction evaluate(envelope, nowIso, executionId) {\n  const base = { policy_version: 'sapi-pilot-v1', execution_id: String(executionId),\n    evaluated_at: nowIso, delivery: 'NOT_SENT', top_group: [], inputs_fingerprint: null };\n  const blocked = (reason, category = 'error') => ({ ...base, category, reason,\n    notification_identity: JSON.stringify(['sapi-pilot-v1', category, reason]),\n    message: `PRUEBA CONTROLADA — SAPI\\nRanking no habilitado: ${reason}.\\nNo implica riesgo bajo ni ausencia de incendios.\\nEjecución: ${base.execution_id}` });\n  if (envelope.error) {\n    const label = JSON.stringify(envelope.error);\n    const reason = /ETIMEDOUT|ESOCKETTIMEDOUT|timed?\\s*out|timeout/i.test(label) ? 'timeout'\n      : /ECONNREFUSED|connection refused/i.test(label) ? 'connection_refused' : 'transport_error';\n    return blocked(reason);\n  }\n  let p;\n  // n8n HTTP Request 4.x with fullResponse + text format returns the body under `data`.\n  const raw = 'data' in envelope ? envelope.data : envelope.body;\n  try { p = typeof raw === 'string' ? JSON.parse(raw) : raw; }\n  catch { return blocked('invalid_json'); }\n  if (envelope.statusCode !== 200) {\n    const expected = envelope.statusCode === 503 ? ['prototype_unavailable', 'data_unavailable']\n      : envelope.statusCode === 500 ? ['internal_error'] : [];\n    return blocked(expected.includes(p?.error_type) ? p.error_type : 'http_error');\n  }\n  const timestamp = x => typeof x === 'string' && /(?:Z|[+-]\\d{2}:\\d{2})$/.test(x)\n    && Number.isFinite(Date.parse(x));\n  if (!p || p.status !== 'ok' || p.model_version !== 'prototype_model_d_v1'\n      || p.model_status !== 'PROTOTYPE / EXPLORATORY' || p.station_id !== '330007'\n      || p.horizon_hours !== 6 || !timestamp(p.forecast_time) || !timestamp(p.weather_timestamp)\n      || !timestamp(nowIso) || !Number.isFinite(p.age_hours)\n      || !/^[0-9a-f]{64}$/.test(p.inputs_fingerprint || '')\n      || !['current', 'baseline'].includes(p.firms_origin)\n      || !/^\\d{4}-\\d{2}-\\d{2}$/.test(p.firms_coverage_end || '')\n      || !Number.isInteger(p.firms_lag_days) || typeof p.firms_status !== 'string'\n      || !p.meteo_actual || typeof p.meteo_actual.regla_30_30_30 !== 'boolean'\n      || !timestamp(p.meteo_actual.momento_observacion)\n      || !Array.isArray(p.cells) || p.cells.length !== 50) return blocked('incomplete_or_invalid_payload');\n  const cells = p.cells;\n  if (new Set(cells.map(c => c.cell_id)).size !== 50\n      || new Set(cells.map(c => c.rank)).size !== 50\n      || cells.some(c => !/^VP-(?:00[1-9]|0[1-4][0-9]|050)$/.test(c.cell_id)\n        || !Number.isFinite(c.score) || c.score < 0 || c.score > 1\n        || !Number.isInteger(c.rank) || c.rank < 1 || c.rank > 50\n        || !Number.isInteger(c.display_rank) || c.display_rank < 1\n        || !Number.isInteger(c.tie_group_size) || c.tie_group_size < 1)) return blocked('invalid_grid');\n  const top = cells.filter(c => c.display_rank === 1);\n  const maxScore = Math.max(...cells.map(c => c.score));\n  if (!top.length || cells.some(c => (c.score === maxScore) !== (c.display_rank === 1))\n      || top.some(c => c.tie_group_size !== top.length)) return blocked('incomplete_tie_group');\n  const now = Date.parse(nowIso), t = Date.parse(p.forecast_time), weather = Date.parse(p.weather_timestamp);\n  const end = t + 6 * 3600000;\n  if (now < t || now >= end || weather > t || t - weather > 1800000\n      || Date.parse(p.meteo_actual.momento_observacion) !== weather\n      || p.age_hours < 0 || p.age_hours > 12 || (now - weather) / 3600000 > 12\n      || p.freshness !== 'DATOS RECIENTES') return blocked('outside_valid_window', 'withheld');\n  const coverage = Date.parse(p.firms_coverage_end + 'T00:00:00Z');\n  const lag = (Date.parse(new Date(t).toISOString().slice(0, 10) + 'T00:00:00Z') - coverage) / 86400000;\n  if (!Number.isFinite(coverage) || new Date(coverage).toISOString().slice(0, 10) !== p.firms_coverage_end\n      || lag !== p.firms_lag_days || lag < 0 || lag > 3 || p.firms_status !== 'FIRMS AL DÍA')\n    return blocked('firms_not_current', 'withheld');\n  const group = top.map(c => c.cell_id).sort();\n  const rule = p.meteo_actual.regla_30_30_30;\n  const category = rule ? 'candidate' : 'withheld';\n  const reason = rule ? 'relative_top_group_and_meteo_rule' : 'meteo_rule_false';\n  return { ...base, category, reason, top_group: group, inputs_fingerprint: p.inputs_fingerprint,\n    notification_identity: JSON.stringify(['sapi-pilot-v1', category, p.model_version, p.station_id, group, rule]),\n    message: `PRUEBA CONTROLADA — SAPI\\nRanking exploratorio; NO probabilidad calibrada; NO confirmación de incendio.\\nT: ${p.forecast_time}\\nVentana: T < t <= ${new Date(end).toISOString()}\\nGrupo superior relativo (display_rank 1): ${group.join(', ')}\\nDMC regional: ${p.station_id}; observación: ${p.weather_timestamp}\\nRegla 30-30-30: ${rule} (feature y filtro operacional; no evidencia independiente).\\nFIRMS: anomalías térmicas satelitales; cobertura ${p.firms_coverage_end}; lag ${lag} días respecto de T.\\nEjecución: ${base.execution_id}\\nEntradas: ${p.inputs_fingerprint}\\nSolo preview; no usar para decisiones operacionales.` };\n}\n\nfunction deduplicate(current, previous) {\n  const changed = !previous || previous.notification_identity !== current.notification_identity;\n  return { ...current, condition_changed: changed,\n    would_notify: changed && current.category !== 'withheld',\n    recovered_from_error: !!previous && previous.category === 'error' && current.category !== 'error',\n    delivery: 'NOT_SENT' };\n}\n\nif (typeof module !== 'undefined') module.exports = { evaluate, deduplicate };\n\nconst row = $input.first().json;\nconst previous = row.record ? JSON.parse(row.record) : null;\nreturn [{json: deduplicate($('Policy').first().json, previous)}];"
+      }
+    },
+    {
+      "id": "sapi-preview-6",
+      "name": "Persist preview",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1440,
+        0
+      ],
+      "parameters": {
+        "operation": "insert",
+        "dataTableId": {
+          "__rl": true,
+          "value": "={{ $('Ensure preview ledger').first().json.id }}",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "record": "={{ JSON.stringify($json) }}"
+          }
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "sapi-preview-7",
+      "name": "Preview only - NO DELIVERY",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1680,
+        0
+      ],
+      "parameters": {
+        "jsCode": "return [{json: {...JSON.parse($input.first().json.record), delivery: 'NOT_SENT'}}];"
+      }
+    }
+  ],
+  "connections": {
+    "Manual pilot only": {
+      "main": [
+        [
+          {
+            "node": "Read bridge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read bridge": {
+      "main": [
+        [
+          {
+            "node": "Policy",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Policy": {
+      "main": [
+        [
+          {
+            "node": "Ensure preview ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ensure preview ledger": {
+      "main": [
+        [
+          {
+            "node": "Previous condition",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Previous condition": {
+      "main": [
+        [
+          {
+            "node": "Dedupe",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dedupe": {
+      "main": [
+        [
+          {
+            "node": "Persist preview",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Persist preview": {
+      "main": [
+        [
+          {
+            "node": "Preview only - NO DELIVERY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "America/Santiago",
+    "saveDataSuccessExecution": "all",
+    "saveDataErrorExecution": "all"
+  }
+}
