@@ -27,7 +27,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, cast
 
 import pandas as pd
 
@@ -83,6 +83,10 @@ def read_pinned(
         data = path.read_bytes()
     except FileNotFoundError:
         raise PinnedInputError(f"No existe {role} en {path.name}.") from None
+    except OSError as exc:
+        raise PinnedInputError(
+            f"{role} {path.name} ilegible: {type(exc).__name__}."
+        ) from None
     digest = sha256_bytes(data)
     if expected_sha256 is not None and digest != expected_sha256:
         raise PinnedInputError(
@@ -117,7 +121,14 @@ def _read_versioned_months(
             pointer_path.read_bytes()
         )  # el puntero también se lee una sola vez
     except FileNotFoundError:
-        return [], [], None
+        return [], [], None  # sin almacén publicado: la serie es solo legacy
+    except OSError as exc:
+        # Un puntero ilegible NO puede degradarse a "no hay almacén": eso
+        # descartaría en silencio lecturas ya publicadas y movería el
+        # forecast_time (y con él el fingerprint) sin que nadie se enterara.
+        raise PinnedInputError(
+            f"Puntero DMC ilegible en {pointer_path.name}: {type(exc).__name__}."
+        ) from None
     try:
         pointer = json.loads(raw_pointer.decode("utf-8"))
         months = pointer["months"]
@@ -165,7 +176,9 @@ def pin_dmc(station_id: str, *, legacy_dir: Path, store_dir: Optional[Path]) -> 
         files.append(pinned)
         legacy_frames.append(parse_dmc_bytes(data, path.name))
     legacy = series_from_parsed(legacy_frames, station_id)
-    legacy_end = legacy["momento"].max() if not legacy.empty else None
+    legacy_end = (
+        cast(pd.Timestamp, legacy["momento"].max()) if not legacy.empty else None
+    )
 
     pointer_version = None
     series = legacy
@@ -176,7 +189,7 @@ def pin_dmc(station_id: str, *, legacy_dir: Path, store_dir: Optional[Path]) -> 
         files.extend(versioned_files)
         versioned = series_from_parsed(versioned_frames, station_id)
         if legacy_end is not None and not versioned.empty:
-            versioned = versioned[versioned["momento"] > legacy_end]
+            versioned = versioned.loc[versioned["momento"] > legacy_end]
         if not versioned.empty:
             series = (
                 pd.concat([legacy, versioned], ignore_index=True)

@@ -556,3 +556,71 @@ def test_missing_pinned_file_is_explicit(tmp_path):
 
 def test_store_location_matches_dmc_writer():
     assert DMC_STORE_DIR == dmc.DmcPaths().root
+
+
+# --- I. Acceso fallido a datos ya publicados -----------------------------------
+
+_REAL_READ_BYTES = Path.read_bytes
+
+
+def _deny_reading(match: str):
+    """EACCES sobre un archivo concreto; en Windows también representa el
+    WinError 32 de un refresco concurrente que tiene el archivo abierto."""
+
+    def denier(self):
+        if match in self.name:
+            raise PermissionError(13, "Permission denied", str(self))
+        return _REAL_READ_BYTES(self)
+
+    return denier
+
+
+@pytest.fixture
+def store(env) -> Path:
+    """Almacén DMC con dos meses publicados por el writer real."""
+    publish_dmc(
+        env,
+        {
+            "2026-08": _readings("2026-08-31 22:00", "2026-08-31 23:45"),
+            "2026-09": _readings("2026-09-01 02:00", "2026-09-01 06:00"),
+        },
+        datetime(2026, 9, 1, 7, tzinfo=timezone.utc),
+    )
+    return env / "dmc"
+
+
+def test_unreadable_pointer_aborts_instead_of_dropping_the_store(store, monkeypatch):
+    """Un CURRENT.json ilegible NO puede degradarse a "no hay almacén": eso
+    descartaría lecturas publicadas y movería el forecast_time en silencio."""
+    monkeypatch.setattr(Path, "read_bytes", _deny_reading("CURRENT.json"))
+
+    with pytest.raises(PinnedInputError, match="Puntero DMC ilegible"):
+        pin_dmc("330007", legacy_dir=svc.DMC_RAW_DIR, store_dir=store)
+
+
+def test_unreadable_published_version_aborts_the_capture(store, monkeypatch):
+    monkeypatch.setattr(Path, "read_bytes", _deny_reading("dmc_330007_2026-09"))
+
+    with pytest.raises(PinnedInputError, match="ilegible"):
+        pin_dmc("330007", legacy_dir=svc.DMC_RAW_DIR, store_dir=store)
+
+
+def test_absent_pointer_still_means_an_empty_store(store):
+    """La otra mitad del contrato: ausente sí degrada a solo-legacy, y es
+    lo que mantiene estable el fingerprint mientras no haya refresco."""
+    (store / "330007" / "CURRENT.json").unlink()
+
+    pin = pin_dmc("330007", legacy_dir=svc.DMC_RAW_DIR, store_dir=store)
+
+    assert pin.pointer_version is None
+    assert {f.origin for f in pin.files} == {"legacy"}
+    assert pin.series["momento"].max() == LEGACY_END
+
+
+def test_capture_maps_an_access_error_to_prototype_unavailable(store, monkeypatch):
+    monkeypatch.setattr(Path, "read_bytes", _deny_reading("CURRENT.json"))
+
+    with pytest.raises(
+        svc.PrototypeUnavailableError, match="Meteorología DMC inválida"
+    ):
+        svc.capture_scoring_inputs()

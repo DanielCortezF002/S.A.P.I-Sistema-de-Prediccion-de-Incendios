@@ -28,7 +28,7 @@ import os
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional, Union, cast
 
 import joblib
 import pandas as pd
@@ -401,8 +401,8 @@ def capture_scoring_inputs(
         firms_pointer_version=firms.pointer_version,
         dmc_files=dmc.files,
         dmc_manifest_sha256=dmc.manifest_sha256,
-        dmc_coverage_start=meteo_series["momento"].min(),
-        dmc_coverage_end=meteo_series["momento"].max(),
+        dmc_coverage_start=cast(pd.Timestamp, meteo_series["momento"].min()),
+        dmc_coverage_end=cast(pd.Timestamp, meteo_series["momento"].max()),
         dmc_pointer_version=dmc.pointer_version,
         topography_origin=topography_origin,
         topography_sha256=topography_sha256(topography),
