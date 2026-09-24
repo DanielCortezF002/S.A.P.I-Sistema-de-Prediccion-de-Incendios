@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import json
 import random
+import re
 import socket
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import MagicMock
 
 import pytest
@@ -568,3 +570,429 @@ def test_station_matches_model_d_station():
     from src.inference.prototype_service import STATION_ID
 
     assert dmc.DMC_STATION_ID == STATION_ID
+
+
+# --- Hardening pre-refresh: F8 credenciales en errores de red ----------------
+
+# Credenciales con @ + / = %, espacio y un escape ya presente: sus formas
+# URL-encoded difieren de la cruda, que es lo que `redact` no veía.
+SPECIAL_CREDS = ("sapi+qa@dmc.cl", "tok+en/42= %ab")
+
+
+def _secret_forms(secret: str) -> set[str]:
+    from urllib.parse import quote, quote_plus
+
+    encoded = {quote_plus(secret), quote(secret, safe=""), quote(secret)}
+    lowered = {
+        re.sub(r"%[0-9A-F]{2}", lambda m: m.group().lower(), form) for form in encoded
+    }
+    return {secret} | encoded | lowered
+
+
+class _LeakyNetwork:
+    """Sesión que falla como urllib3/requests reales: el texto de la
+    excepción trae la URL preparada por `requests`, con las credenciales
+    URL-encoded en el querystring. Sin sockets."""
+
+    def __init__(self, exc_type):
+        self.exc_type = exc_type
+        self.calls = 0
+
+    def get(self, url, params=None, timeout=None):
+        self.calls += 1
+        prepared = requests.Request("GET", url, params=params).prepare().url
+        raise self.exc_type(
+            "HTTPSConnectionPool(host='climatologia.meteochile.gob.cl', port=443): "
+            f"Max retries exceeded with url: {prepared} (Caused by NewConnectionError)"
+        )
+
+
+def _assert_no_secret(text: str, creds=SPECIAL_CREDS) -> None:
+    for secret in creds:
+        for form in _secret_forms(secret):
+            assert form not in text, f"credencial expuesta como {form!r}"
+
+
+def test_encoded_credentials_really_differ_from_raw():
+    """Precondición del test: si las formas coincidieran, no probaría nada."""
+    prepared = str(
+        requests.Request(
+            "GET",
+            "https://x/y",
+            params={"usuario": SPECIAL_CREDS[0], "token": SPECIAL_CREDS[1]},
+        )
+        .prepare()
+        .url
+    )
+    assert SPECIAL_CREDS[0] not in prepared and SPECIAL_CREDS[1] not in prepared
+    assert "sapi%2Bqa%40dmc.cl" in prepared and "tok%2Ben%2F42%3D+%25ab" in prepared
+
+
+@pytest.mark.parametrize(
+    "exc_type",
+    [requests.ConnectionError, requests.Timeout, requests.exceptions.SSLError],
+)
+def test_network_error_never_exposes_raw_or_encoded_credentials(
+    paths, caplog, exc_type
+):
+    caplog.set_level("DEBUG")
+    session: Any = _LeakyNetwork(exc_type)
+
+    with pytest.raises(dmc.DmcRefreshError) as err:
+        dmc.refresh(
+            paths=paths,
+            session=session,
+            credentials=SPECIAL_CREDS,
+            now=NOW,
+            sleep=lambda _: None,
+        )
+
+    message = str(err.value)
+    assert err.value.exit_code == dmc.EXIT_NETWORK
+    assert session.calls == dmc.MAX_ATTEMPTS
+    assert exc_type.__name__ in message  # el tipo útil se conserva
+    assert "tras 3 intentos" in message
+    _assert_no_secret(message)
+    _assert_no_secret(caplog.text)
+    assert err.value.__cause__ is None and err.value.__context__ is None
+    _assert_nothing_published(paths)
+
+
+def test_cli_error_payload_never_exposes_credentials(paths, monkeypatch, capsys):
+    """Lo que la CLI imprime (el payload JSON de stderr) tampoco las trae."""
+    real_refresh = dmc.refresh
+    monkeypatch.setattr(dmc, "DMC_USUARIO", SPECIAL_CREDS[0])
+    monkeypatch.setattr(dmc, "DMC_TOKEN", SPECIAL_CREDS[1])
+    monkeypatch.setattr(
+        dmc,
+        "refresh",
+        lambda **kw: real_refresh(
+            paths=paths,
+            session=cast(Any, _LeakyNetwork(requests.ConnectionError)),
+            credentials=SPECIAL_CREDS,
+            now=NOW,
+            sleep=lambda _: None,
+            **kw,
+        ),
+    )
+
+    assert dmc.main(["refresh"]) == dmc.EXIT_NETWORK
+
+    out = capsys.readouterr()
+    payload = json.loads(out.err)
+    assert payload["status"] == "error" and "ConnectionError" in payload["error"]
+    _assert_no_secret(out.err)
+    _assert_no_secret(out.out)
+
+
+# --- Hardening pre-refresh: F4a/F4b rollback verificado ------------------------
+
+
+def _two_pointers(paths) -> str:
+    """Publica dos punteros; devuelve el manifest_sha256 del primero (que ya
+    no es el vigente). Su versión de 2026-09 solo la referencia él."""
+    _run(paths, FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(SEP)}))
+    first = _pointer(paths)["manifest_sha256"]
+    more = _records("2026-09-01T00:00", "2026-09-01T05:00")
+    _run(paths, FakeDmc({"2026-09": _payload(more)}), now=NOW + timedelta(hours=2))
+    assert _pointer(paths)["manifest_sha256"] != first
+    return first
+
+
+def _stored_pointer(paths, manifest: str) -> dict:
+    return json.loads(
+        (paths.pointers_dir / f"{manifest[:12]}.json").read_text(encoding="utf-8")
+    )
+
+
+def _plant_pointer(paths, pointer, *, rehash: bool = True) -> str:
+    """Escribe un puntero en pointers/ y devuelve su id. Con `rehash`, el
+    manifest se recalcula para que solo falle lo que el test altera."""
+    if rehash:
+        pointer = dict(pointer, manifest_sha256=dmc._manifest_sha(pointer["months"]))
+    to = pointer["manifest_sha256"][:12]
+    (paths.pointers_dir / f"{to}.json").write_text(json.dumps(pointer), "utf-8")
+    return to
+
+
+def _rollback_is_rejected(paths, to: str, match: str) -> None:
+    current, history = paths.pointer.read_bytes(), paths.history.read_bytes()
+    with pytest.raises(dmc.DmcRefreshError, match=match) as err:
+        dmc.rollback(to, paths=paths)
+    assert err.value.exit_code == dmc.EXIT_DATA
+    assert paths.pointer.read_bytes() == current  # CURRENT intacto
+    assert paths.history.read_bytes() == history  # sin línea de rollback
+    assert dmc.status(paths=paths)["origin"] == "current"
+    assert not paths.lock.exists()
+
+
+def test_rollback_to_valid_pointer_republishes_it(paths):
+    first = _two_pointers(paths)
+
+    pointer = dmc.rollback(first[:12], paths=paths)
+
+    assert pointer["manifest_sha256"] == first
+    current = dmc.read_current(paths)
+    assert current is not None and current["manifest_sha256"] == first
+    last = json.loads(paths.history.read_text("utf-8").splitlines()[-1])
+    assert last["event"] == "rollback" and last["manifest_sha256"] == first
+
+
+def test_rollback_rejects_tampered_manifest(paths):
+    """F4a: meses alterados con el manifest_sha256 original."""
+    first = _two_pointers(paths)
+    tampered = _stored_pointer(paths, first)
+    tampered["months"]["2026-08"]["record_count"] += 1
+    to = _plant_pointer(paths, tampered, rehash=False)
+    assert to == first[:12]
+
+    _rollback_is_rejected(paths, to, "manifest_sha256 no coincide")
+
+
+@pytest.mark.parametrize(
+    "relative_path",
+    [
+        "../CURRENT.json",
+        "..",
+        "sub/version.json",
+        "..\\CURRENT.json",
+        "C:version.json",
+        "/etc/passwd",
+        "",
+        42,
+    ],
+)
+def test_rollback_rejects_paths_outside_versions(paths, relative_path):
+    """F4a: el manifest calza, solo la ruta sale de versions/."""
+    first = _two_pointers(paths)
+    pointer = _stored_pointer(paths, first)
+    pointer["months"]["2026-09"]["relative_path"] = relative_path
+    to = _plant_pointer(paths, pointer)
+
+    _rollback_is_rejected(paths, to, "ruta fuera de versions/")
+
+
+def test_rollback_rejects_symlink_escaping_versions(paths, tmp_path):
+    first = _two_pointers(paths)
+    outside = tmp_path / "fuera.json"
+    outside.write_bytes(b"{}")
+    link = paths.versions_dir / "enlace.json"
+    try:
+        link.symlink_to(outside)
+    except OSError as exc:  # Windows sin privilegio de symlink
+        pytest.skip(f"symlink no disponible: {exc}")
+    pointer = _stored_pointer(paths, first)
+    pointer["months"]["2026-09"]["relative_path"] = "enlace.json"
+    to = _plant_pointer(paths, pointer)
+
+    _rollback_is_rejected(paths, to, "ruta fuera de versions/")
+
+
+def test_rollback_rejects_missing_version(paths):
+    """F4b: antes salía FileNotFoundError (exit 1) sin JSON."""
+    first = _two_pointers(paths)
+    name = _stored_pointer(paths, first)["months"]["2026-09"]["relative_path"]
+    (paths.versions_dir / name).unlink()
+
+    _rollback_is_rejected(paths, first[:12], "no existe la versión")
+
+
+def test_rollback_rejects_version_with_wrong_sha(paths):
+    first = _two_pointers(paths)
+    name = _stored_pointer(paths, first)["months"]["2026-09"]["relative_path"]
+    (paths.versions_dir / name).write_bytes(b'{"alterada": true}\n')
+
+    _rollback_is_rejected(paths, first[:12], "sha256 de .* no coincide")
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        b"{no es json",
+        b"\xff\xfe\x00",
+        b"[]",
+        b"null",
+        b'{"months": {}}',
+    ],
+    ids=["json_roto", "no_utf8", "lista", "null", "sin_claves"],
+)
+def test_rollback_rejects_corrupt_pointer_file(paths, content):
+    """F4b: puntero ilegible o sin estructura -> 65, nunca exit 1."""
+    first = _two_pointers(paths)
+    (paths.pointers_dir / f"{first[:12]}.json").write_bytes(content)
+
+    _rollback_is_rejected(paths, first[:12], "inválido")
+
+
+@pytest.mark.parametrize(
+    "field, value, match",
+    [
+        ("schema_version", dmc.POINTER_SCHEMA_VERSION + 1, "schema_version"),
+        ("station_id", "999999", "station_id"),
+        ("months", [], "months"),
+    ],
+)
+def test_rollback_rejects_pointer_with_wrong_structure(paths, field, value, match):
+    first = _two_pointers(paths)
+    pointer = dict(_stored_pointer(paths, first), **{field: value})
+    to = _plant_pointer(paths, pointer, rehash=False)
+
+    _rollback_is_rejected(paths, to, match)
+
+
+def test_rollback_rejects_pointer_filed_under_another_id(paths):
+    """Un puntero válido copiado con otro nombre no se republica."""
+    first = _two_pointers(paths)
+    content = (paths.pointers_dir / f"{first[:12]}.json").read_bytes()
+    (paths.pointers_dir / "abc123.json").write_bytes(content)
+
+    _rollback_is_rejected(paths, "abc123", "no corresponde al identificador")
+
+
+def test_cli_invalid_rollback_prints_structured_error(paths, monkeypatch, capsys):
+    first = _two_pointers(paths)
+    (paths.pointers_dir / f"{first[:12]}.json").write_bytes(b"{no es json")
+    real_rollback = dmc.rollback
+    monkeypatch.setattr(
+        dmc, "rollback", lambda to, **kw: real_rollback(to, paths=paths, **kw)
+    )
+
+    assert dmc.main(["rollback", "--to", first[:12]]) == dmc.EXIT_DATA
+
+    err = capsys.readouterr().err
+    assert "Traceback" not in err
+    assert json.loads(err)["status"] == "error"
+
+
+# --- Hardening pre-refresh: F5 calidad de filas ------------------------------
+
+
+def _month_rows(month: str, total: int, nulls: int = 0, field="temperatura") -> list:
+    start = datetime.fromisoformat(f"{month}-01T00:00")
+    rows = [_record(start + timedelta(minutes=15 * i)) for i in range(total)]
+    for record in rows[:nulls]:
+        record[field] = None
+    return rows
+
+
+@pytest.mark.parametrize(
+    "total, nulls, field",
+    [
+        (100, 0, "temperatura"),
+        (100, 1, "temperatura"),  # exactamente 1 %
+        (200, 2, "humedadRelativa"),  # exactamente 1 %
+    ],
+    ids=["0pct", "1pct_100", "1pct_200"],
+)
+def test_null_rows_up_to_threshold_are_published_and_observable(
+    paths, total, nulls, field
+):
+    sep = _month_rows("2026-09", total, nulls, field)
+    outcome = _run(paths, FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(sep)}))
+
+    expected = {
+        "total_rows": total,
+        "null_rows": nulls,
+        "discard_rate": nulls / total,
+        "threshold": 0.01,
+    }
+    assert outcome.status == "published"
+    assert outcome.row_quality["2026-09"] == expected
+    last = json.loads(paths.history.read_text("utf-8").splitlines()[-1])
+    assert last["row_quality"]["2026-09"] == expected
+    entry = _pointer(paths)["months"]["2026-09"]
+    parsed = parse_dmc_json(paths.versions_dir / entry["relative_path"])
+    assert entry["record_count"] == total and len(parsed) == total - nulls
+    assert _stored(paths, "2026-09") == sep  # nada se convierte en silencio
+
+
+@pytest.mark.parametrize(
+    "total, nulls", [(100, 2), (199, 2), (10, 1)], ids=["2pct", "1.005pct", "10pct"]
+)
+def test_null_rows_above_threshold_publish_nothing(paths, total, nulls):
+    rows = _month_rows("2026-08", total, nulls)
+    fake = FakeDmc({"2026-08": _payload(rows), "2026-09": _payload(SEP)})
+
+    with pytest.raises(dmc.DmcRefreshError, match="threshold=0.01") as err:
+        _run(paths, fake)
+
+    assert err.value.exit_code == dmc.EXIT_DATA
+    assert f"{nulls} de {total} filas" in str(err.value)
+    assert fake.calls == ["2026-08"]
+    _assert_nothing_published(paths)
+    assert not paths.versions_dir.exists() and not paths.history.exists()
+
+
+@pytest.mark.parametrize(
+    "field, value",
+    [
+        ("temperatura", "sin dato"),
+        ("temperatura", ""),
+        ("humedadRelativa", "N/A"),
+        ("humedadRelativa", True),
+        ("temperatura", float("nan")),
+        ("temperatura", float("inf")),
+        ("temperatura", {"valor": 1}),
+        ("temperatura", [18.8]),
+    ],
+)
+def test_present_non_numeric_value_is_always_rejected(paths, field, value):
+    rows = _month_rows("2026-08", 1000)
+    rows[500][field] = value  # una sola fila: 0,1 %
+    fake = FakeDmc({"2026-08": _payload(rows), "2026-09": _payload(SEP)})
+
+    with pytest.raises(dmc.DmcRefreshError, match="no es numérico") as err:
+        _run(paths, fake)
+
+    assert err.value.exit_code == dmc.EXIT_DATA
+    _assert_nothing_published(paths)
+    assert not paths.versions_dir.exists()
+
+
+def test_missing_required_field_is_rejected(paths):
+    rows = _month_rows("2026-08", 100)
+    del rows[3]["humedadRelativa"]
+    with pytest.raises(dmc.DmcRefreshError, match="sin campo 'humedadRelativa'"):
+        _run(paths, FakeDmc({"2026-08": _payload(rows), "2026-09": _payload(SEP)}))
+    _assert_nothing_published(paths)
+
+
+def test_null_within_threshold_plus_non_numeric_is_rejected(paths):
+    rows = _month_rows("2026-08", 200, nulls=1)  # 0,5 %: tolerado por sí solo
+    rows[1]["humedadRelativa"] = "error sensor"
+    with pytest.raises(dmc.DmcRefreshError, match="no es numérico"):
+        _run(paths, FakeDmc({"2026-08": _payload(rows), "2026-09": _payload(SEP)}))
+    _assert_nothing_published(paths)
+    assert not paths.versions_dir.exists()
+
+
+def test_rejected_month_leaves_existing_store_byte_identical(paths):
+    """Con un almacén ya publicado, un mes que supera el umbral no deja
+    versión, puntero ni historial nuevos."""
+    _run(paths, FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(SEP)}))
+    before = {
+        p: (paths.station_dir / p).read_bytes() for p in _files(paths.station_dir)
+    }
+    worse = _records("2026-09-01T00:00", "2026-09-01T05:00")
+    for record in worse[:3]:
+        record["humedadRelativa"] = None
+
+    with pytest.raises(dmc.DmcRefreshError, match="no se publica nada"):
+        _run(paths, FakeDmc({"2026-09": _payload(worse)}), now=NOW + timedelta(hours=1))
+
+    after = {p: (paths.station_dir / p).read_bytes() for p in _files(paths.station_dir)}
+    assert after == before
+
+
+def test_version_is_rejected_if_parser_drops_uncounted_rows(paths, monkeypatch):
+    """Invariante de relectura: parse_dmc_json conserva exactamente las
+    filas no nulas. Si descartara otra (p. ej. por un cambio del parser),
+    la versión no se publica."""
+    real_parse = dmc.parse_dmc_json
+    monkeypatch.setattr(dmc, "parse_dmc_json", lambda p: real_parse(p).iloc[1:])
+
+    with pytest.raises(dmc.DmcRefreshError, match="parse_dmc_json conserva") as err:
+        _run(paths, FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(SEP)}))
+
+    assert err.value.exit_code == dmc.EXIT_DATA
+    _assert_nothing_published(paths)

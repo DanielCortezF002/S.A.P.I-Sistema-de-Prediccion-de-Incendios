@@ -31,6 +31,25 @@ escribe nada, tampoco en `pointer_history.jsonl`, que solo recibe una
 línea cuando se publica o se hace rollback. Los archivos legacy de
 `data/raw/` nunca se escriben.
 
+Calidad de filas (política inicial conservadora, NO una propiedad
+científica; ajustable con evidencia real): `temperatura` y
+`humedadRelativa` son las columnas que `parse_dmc_json` exige. Un valor
+presente del que ese parser no extrae un número finito (texto, "", bool,
+NaN) o un campo ausente dan 65 siempre. Un `null` explícito cuenta como
+fila nula; si `null_rows / total_rows` supera `NULL_ROWS_MAX_RATE` (1 %),
+65 y no se publica nada. Los conteos (`total_rows`, `null_rows`,
+`discard_rate`, `threshold`) salen en la CLI y en la línea de historial
+de la publicación. El puntero y los bytes canónicos no cambian.
+
+Rollback: el puntero de destino pasa por la misma verificación que
+`read_current` (estructura, `schema_version`, `manifest_sha256`, rutas
+confinadas en `versions/`, existencia y sha256 de cada versión) antes de
+publicarse; cualquier falla es 65 sin tocar `CURRENT.json`.
+
+Credenciales: van en el querystring, así que los errores de red se
+reportan solo por su tipo (nunca `str(exc)`, que trae la URL) y todo
+mensaje pasa además por `redact`, que cubre variantes URL-encoded.
+
 Códigos de salida: 0 publicado / sin cambios, 2 uso, 65 datos inválidos o
 vacíos, 69 red o HTTP no exitoso, 75 bloqueado, 78 sin credenciales.
 """
@@ -39,18 +58,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
+from fractions import Fraction
 from pathlib import Path
 from typing import Any, Callable, Optional, Sequence
 
 import requests
 
 from src.config import DATA_PROCESSED_DIR, DMC_API_BASE_URL, DMC_TOKEN, DMC_USUARIO
-from src.procesamiento.raw_parser import DmcFormatError, parse_dmc_json
+from src.procesamiento.raw_parser import DmcFormatError, _clean_float, parse_dmc_json
 from src.refresh.atomic import (
     ImmutableVersionError,
     append_jsonl,
@@ -78,12 +99,44 @@ MAX_ATTEMPTS = 3
 REQUEST_TIMEOUT = 60
 PAUSE_BETWEEN_MONTHS = 1.2
 MOMENTO_FORMAT = "%Y-%m-%d %H:%M:%S"
+# Columnas que `parse_dmc_json` exige (su `dropna`); ver "Calidad de filas".
+REQUIRED_NUMERIC_FIELDS = ("temperatura", "humedadRelativa")
+# Política inicial conservadora (23-09-2026), no una propiedad científica:
+# a lo más 1 % de filas con `null` explícito por mes. Fracción exacta para
+# que "exactamente 1 %" no dependa del redondeo binario.
+NULL_ROWS_MAX_RATE = Fraction(1, 100)
 
 
 class DmcRefreshError(RuntimeError):
     def __init__(self, message: str, exit_code: int) -> None:
         super().__init__(message)
         self.exit_code = exit_code
+
+
+@dataclass(frozen=True)
+class RowQuality:
+    """Conteo observable de filas descartables de un mes."""
+
+    total_rows: int
+    null_rows: int
+
+    @property
+    def discard_rate(self) -> float:
+        return self.null_rows / self.total_rows if self.total_rows else 0.0
+
+    @property
+    def exceeds_threshold(self) -> bool:
+        return bool(self.total_rows) and (
+            Fraction(self.null_rows, self.total_rows) > NULL_ROWS_MAX_RATE
+        )
+
+    def as_dict(self) -> dict:
+        return {
+            "total_rows": self.total_rows,
+            "null_rows": self.null_rows,
+            "discard_rate": self.discard_rate,
+            "threshold": float(NULL_ROWS_MAX_RATE),
+        }
 
 
 @dataclass(frozen=True)
@@ -125,6 +178,7 @@ class RefreshOutcome:
     months_fetched: list[str] = field(default_factory=list)
     new_records: int = 0
     conflicts: int = 0
+    row_quality: dict[str, dict] = field(default_factory=dict)
 
 
 def _utcnow() -> datetime:
@@ -171,7 +225,9 @@ def _fetch_month(
         try:
             response = session.get(url, params=params, timeout=REQUEST_TIMEOUT)
         except requests.RequestException as exc:
-            last = f"{type(exc).__name__}: {exc}"
+            # Solo el tipo: `str(exc)` trae la URL con usuario y token
+            # URL-encoded, que `redact` sobre el valor crudo no detecta.
+            last = type(exc).__name__
         else:
             if response.status_code >= 500:
                 last = f"HTTP {response.status_code}"
@@ -250,6 +306,46 @@ def validate_month_payload(payload: Any, month: str) -> tuple[dict, list[dict]]:
     return (estacion if isinstance(estacion, dict) else {}), records
 
 
+def assess_rows(records: list[dict], month: str) -> RowQuality:
+    """Aplica la política de calidad de filas a lecturas ya validadas por
+    `validate_month_payload` (todas son dict con `momento`).
+
+    Presente y no numérico según `parse_dmc_json`, o campo ausente: 65
+    siempre, sin convertir nada. `null` explícito: cuenta la fila; si la
+    proporción supera `NULL_ROWS_MAX_RATE`, 65."""
+    null_rows = 0
+    for record in records:
+        has_null = False
+        for name in REQUIRED_NUMERIC_FIELDS:
+            if name not in record:
+                raise DmcRefreshError(
+                    f"Respuesta DMC {month}: lectura {record['momento']} sin "
+                    f"campo {name!r}.",
+                    EXIT_DATA,
+                )
+            value = record[name]
+            if value is None:
+                has_null = True
+                continue
+            number = None if isinstance(value, bool) else _clean_float(value)
+            if number is None or not math.isfinite(number):
+                raise DmcRefreshError(
+                    f"Respuesta DMC {month}: {name}={str(value)[:40]!r} no es "
+                    f"numérico (lectura {record['momento']}).",
+                    EXIT_DATA,
+                )
+        null_rows += has_null
+    quality = RowQuality(total_rows=len(records), null_rows=null_rows)
+    if quality.exceeds_threshold:
+        raise DmcRefreshError(
+            f"Respuesta DMC {month}: {null_rows} de {len(records)} filas con "
+            f"null (discard_rate={quality.discard_rate:.4f} > "
+            f"threshold={float(NULL_ROWS_MAX_RATE)}): no se publica nada.",
+            EXIT_DATA,
+        )
+    return quality
+
+
 # --- Merge y serialización canónica ------------------------------------------
 
 
@@ -285,13 +381,15 @@ def canonical_month_bytes(station: str, estacion: dict, records: list[dict]) -> 
 
 def validate_version_bytes(
     data: bytes, station: str, month: str, expected: int
-) -> None:
+) -> RowQuality:
     """Relee el documento final con el MISMO parser que usa la inferencia
-    antes de publicarlo."""
+    antes de publicarlo: aplica la política de filas a la versión completa
+    y exige que el parser conserve exactamente las filas no nulas."""
     document = json.loads(data.decode("utf-8"))
     _, records = validate_month_payload(document[station], month)
     if len(records) != expected:
         raise DmcRefreshError(f"Versión {month} no se relee íntegra.", EXIT_DATA)
+    quality = assess_rows(records, month)
     with tempfile.TemporaryDirectory() as tmp:
         probe = Path(tmp) / "version.json"
         probe.write_bytes(data)
@@ -303,6 +401,14 @@ def validate_version_bytes(
             )
     if expected and parsed.empty:
         raise DmcRefreshError(f"Versión {month} sin lecturas utilizables.", EXIT_DATA)
+    usable = quality.total_rows - quality.null_rows
+    if len(parsed) != usable:
+        raise DmcRefreshError(
+            f"Versión {month}: parse_dmc_json conserva {len(parsed)} filas, se "
+            f"esperaban {usable} ({quality.null_rows} nulas de {quality.total_rows}).",
+            EXIT_DATA,
+        )
+    return quality
 
 
 # --- Puntero -----------------------------------------------------------------
@@ -314,31 +420,79 @@ def _manifest_sha(months: dict) -> str:
     )
 
 
+# Lo que `status`, `refresh` y el lector de scoring leen de un puntero.
+_POINTER_REQUIRED_KEYS = (
+    "schema_version",
+    "station_id",
+    "months",
+    "manifest_sha256",
+    "coverage_start",
+    "coverage_end",
+    "record_count",
+)
+# Errores esperables al leer un puntero o una versión corruptos o ausentes.
+_POINTER_ERRORS = (OSError, KeyError, TypeError, ValueError)
+
+
+def _safe_version_path(paths: DmcPaths, name: object) -> Path:
+    """Ruta de una versión, confinada a `versions/` (sin separadores, sin
+    `..`, sin symlinks que salgan del directorio)."""
+    if (
+        not isinstance(name, str)
+        or not name
+        or name in (".", "..")
+        or Path(name).name != name
+        or any(sep in name for sep in ("/", "\\", ":"))
+    ):
+        raise ValueError(f"ruta fuera de versions/: {name!r}")
+    root = paths.versions_dir.resolve()
+    candidate = (paths.versions_dir / name).resolve()
+    if candidate.parent != root:
+        raise ValueError(f"ruta fuera de versions/: {name!r}")
+    return candidate
+
+
+def _verify_pointer(paths: DmcPaths, pointer: Any) -> dict:
+    """Única verificación de puntero, compartida por `read_current` y
+    `rollback`: estructura, `schema_version`, estación, `manifest_sha256`
+    y, por cada mes, ruta confinada, existencia y sha256 de la versión.
+    Lanza ValueError/KeyError/TypeError/OSError; no escribe nada."""
+    if not isinstance(pointer, dict):
+        raise ValueError(f"se esperaba un objeto, llegó {type(pointer).__name__}")
+    missing = [key for key in _POINTER_REQUIRED_KEYS if key not in pointer]
+    if missing:
+        raise ValueError(f"faltan claves {missing}")
+    if pointer["schema_version"] != POINTER_SCHEMA_VERSION:
+        raise ValueError(f"schema_version {pointer['schema_version']!r}")
+    if pointer["station_id"] != paths.station_id:
+        raise ValueError(f"station_id {pointer['station_id']!r}")
+    months = pointer["months"]
+    if not isinstance(months, dict) or not months:
+        raise ValueError("months vacío o no es un objeto")
+    if _manifest_sha(months) != pointer["manifest_sha256"]:
+        raise ValueError("manifest_sha256 no coincide")
+    for month, entry in months.items():
+        if not isinstance(entry, dict):
+            raise ValueError(f"entrada de {month!r} no es un objeto")
+        version = _safe_version_path(paths, entry["relative_path"])
+        if not version.is_file():
+            raise ValueError(f"no existe la versión {entry['relative_path']}")
+        if sha256_bytes(version.read_bytes()) != entry["sha256"]:
+            raise ValueError(f"sha256 de {entry['relative_path']} no coincide")
+    return pointer
+
+
 def read_current(paths: DmcPaths) -> Optional[dict]:
-    """Puntero vigente, verificando el sha256 de cada versión mensual."""
+    """Puntero vigente, verificado con `_verify_pointer`."""
     if not paths.pointer.exists():
         return None
     try:
         pointer = json.loads(paths.pointer.read_text(encoding="utf-8"))
-        months = pointer["months"]
-        if pointer.get("schema_version") != POINTER_SCHEMA_VERSION:
-            raise ValueError(f"schema_version {pointer.get('schema_version')!r}")
-        if _manifest_sha(months) != pointer["manifest_sha256"]:
-            raise ValueError("manifest_sha256 no coincide")
-        for month, entry in months.items():
-            name = entry["relative_path"]
-            if Path(name).name != name:
-                raise ValueError(f"ruta fuera de versions/: {name!r}")
-            if (
-                sha256_bytes((paths.versions_dir / name).read_bytes())
-                != entry["sha256"]
-            ):
-                raise ValueError(f"sha256 de {name} no coincide")
-    except (OSError, KeyError, TypeError, ValueError) as exc:
+        return _verify_pointer(paths, pointer)
+    except _POINTER_ERRORS as exc:
         raise DmcRefreshError(
             f"Puntero DMC vigente inválido: {exc}", EXIT_DATA
         ) from None
-    return pointer
 
 
 def _month_records(paths: DmcPaths, entry: dict) -> tuple[dict, list[dict]]:
@@ -387,6 +541,7 @@ def refresh(
                 else None
             )
             fetched, added_total, conflicts_total = [], 0, 0
+            row_quality: dict[str, dict] = {}
             for index, month in enumerate(months_to_fetch(coverage_end, now)):
                 if index:
                     sleep(PAUSE_BETWEEN_MONTHS)
@@ -406,6 +561,9 @@ def refresh(
                         f"Respuesta DMC vacía para {month}: no se publica nada.",
                         EXIT_DATA,
                     )
+                # Política sobre el payload mensual recibido; la versión
+                # fusionada se vuelve a evaluar en validate_version_bytes.
+                row_quality[month] = assess_rows(incoming, month).as_dict()
                 existing_estacion, existing = (
                     _month_records(paths, months[month])
                     if month in months
@@ -435,7 +593,9 @@ def refresh(
                 )
             manifest = _manifest_sha(months)
             if current and manifest == current["manifest_sha256"]:
-                return RefreshOutcome("unchanged", current, fetched, 0, conflicts_total)
+                return RefreshOutcome(
+                    "unchanged", current, fetched, 0, conflicts_total, row_quality
+                )
             ordered = sorted(months)
             pointer = {
                 "schema_version": POINTER_SCHEMA_VERSION,
@@ -451,9 +611,15 @@ def refresh(
                 "generator": GENERATOR,
             }
             atomic_write_json(paths.pointers_dir / f"{manifest[:12]}.json", pointer)
-            _publish(paths, pointer, "publish", conflicts=conflicts_total)
+            _publish(
+                paths,
+                pointer,
+                "publish",
+                conflicts=conflicts_total,
+                row_quality=row_quality,
+            )
             return RefreshOutcome(
-                "published", pointer, fetched, added_total, conflicts_total
+                "published", pointer, fetched, added_total, conflicts_total, row_quality
             )
     except RefreshLockedError as exc:
         raise DmcRefreshError(str(exc), EXIT_LOCKED) from None
@@ -464,8 +630,10 @@ def refresh(
 def rollback(
     to: str, *, paths: DmcPaths = DmcPaths(), break_stale: bool = False
 ) -> dict:
-    """Republica un puntero anterior (`pointers/<manifest_sha12>.json`),
-    re-verificando el sha256 de cada versión mensual que referencia."""
+    """Republica un puntero anterior (`pointers/<manifest_sha12>.json`)
+    solo si pasa `_verify_pointer` (la misma verificación que
+    `read_current`) y su `manifest_sha256` empieza por `to`. Si no, 65 sin
+    tocar `CURRENT.json` ni el historial."""
     if not to or Path(to).name != to or not all(c in "0123456789abcdef" for c in to):
         raise DmcRefreshError(f"Identificador de puntero inválido: {to!r}", EXIT_USAGE)
     try:
@@ -473,13 +641,17 @@ def rollback(
             source = paths.pointers_dir / f"{to}.json"
             if not source.is_file():
                 raise DmcRefreshError(f"No existe el puntero {to!r}", EXIT_USAGE)
-            pointer = json.loads(source.read_text(encoding="utf-8"))
-            for entry in pointer["months"].values():
-                data = (paths.versions_dir / entry["relative_path"]).read_bytes()
-                if sha256_bytes(data) != entry["sha256"]:
-                    raise DmcRefreshError(
-                        f"sha256 de {entry['relative_path']} no coincide.", EXIT_DATA
-                    )
+            try:
+                pointer = _verify_pointer(
+                    paths, json.loads(source.read_text(encoding="utf-8"))
+                )
+                if not str(pointer["manifest_sha256"]).startswith(to):
+                    raise ValueError("manifest_sha256 no corresponde al identificador")
+            except _POINTER_ERRORS as exc:
+                raise DmcRefreshError(
+                    f"Puntero DMC {to!r} inválido, no se hace rollback: {exc}",
+                    EXIT_DATA,
+                ) from None
             _publish(paths, pointer, "rollback")
             return pointer
     except RefreshLockedError as exc:
@@ -529,6 +701,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                 "months_fetched": outcome.months_fetched,
                 "new_records": outcome.new_records,
                 "conflicts": outcome.conflicts,
+                "row_quality": outcome.row_quality,
                 "coverage_end": outcome.pointer["coverage_end"],
                 "manifest_sha256": outcome.pointer["manifest_sha256"],
             }

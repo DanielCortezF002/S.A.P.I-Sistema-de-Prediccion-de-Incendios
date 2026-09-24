@@ -691,3 +691,73 @@ digest fijo, `apt-get install` sin versiones exactas) queda registrado
 como mejora futura de reproducibilidad de la capa de sistema operativo.
 No es un requisito retroactivo del baseline de Sprint 2 ni bloquea el
 veredicto de la sección 8 — se anota aquí únicamente para trazabilidad.
+
+### Hardening previo al primer refresco DMC (SAPI-71 Fase B) — nota fechada 23-09-2026
+
+Esta nota **no reescribe** la de "Refresco DMC versionado por mes" de más
+arriba: la complementa con el comportamiento que el código tiene desde el
+endurecimiento posterior a la corrección de `registros`. Sigue sin haberse
+ejecutado ningún refresco real (`data/processed/dmc/` no existe) y **no se
+autoriza ninguno** hasta completar el runbook del primer refresco controlado.
+
+- **`registros`**: si viene, debe ser un entero que calce con `len(datos)`;
+  `registros: null` explícito, texto o float dan 65. Solo se acepta ausente
+  (el documento canónico no lo lleva). Decisión consciente: no se flexibiliza
+  para el mes en curso vacío hasta observar un payload real que lo justifique;
+  mientras tanto, un 65 en las primeras 6 h de un mes es posible y no publica
+  nada.
+- **Calidad de filas** (`temperatura`, `humedadRelativa`, las columnas que
+  `parse_dmc_json` exige). Política inicial **conservadora, no una propiedad
+  científica**, ajustable solo con evidencia real:
+  - valor presente del que el parser no extrae un número finito (texto sin
+    número, `""`, bool, NaN/inf, objeto) o campo ausente: **65 siempre**, sin
+    convertir nada;
+  - `null` explícito: la fila cuenta como nula; si
+    `null_rows / total_rows > 0,01` (comparación exacta con `Fraction`),
+    **65 y no se publica ninguna versión** del mes; con `<= 0,01` se publica y
+    el parser descarta esas filas al leer;
+  - se evalúa sobre el payload mensual recibido y otra vez sobre la versión
+    fusionada antes de publicarla, y la relectura exige que `parse_dmc_json`
+    conserve exactamente `total_rows - null_rows` filas;
+  - metadata observable por mes: `total_rows`, `null_rows`, `discard_rate`,
+    `threshold`, en la salida de la CLI (`row_quality`) y en la línea
+    `publish` de `pointer_history.jsonl`. No entra al puntero ni a los bytes
+    canónicos.
+- **`record_count`** hoy cuenta todas las lecturas guardadas en la versión,
+  incluidas las filas con `null` (es `len` de las lecturas fusionadas). La
+  semántica objetivo ("lecturas válidas efectivamente utilizables") está
+  **pendiente de decisión** y no está implementada; ver la revisión de PR B.
+- **Credenciales (F8)**: van en el querystring; un error de red se reporta
+  solo por su tipo (`ConnectionError`, `Timeout`...), nunca con `str(exc)`,
+  que traía la URL con usuario y token URL-encoded. `redact` cubre además el
+  valor crudo y sus variantes URL-encoded. **No ejecutar el refresco con
+  logging DEBUG** hasta verificar que urllib3 no registra la URL con
+  credenciales (no probado con urllib3 real).
+- **Rollback (F4a/F4b)**: el puntero de destino pasa por la misma
+  verificación que `read_current` antes de publicarse: claves requeridas,
+  `schema_version`, `station_id`, `manifest_sha256`, ruta confinada en
+  `versions/` (sin separadores, `..`, unidad ni symlink que salga),
+  existencia y sha256 de cada versión, y que `manifest_sha256` empiece por el
+  identificador pedido. Cualquier rollback inválido sale con **65**, mensaje
+  JSON en stderr, sin traceback, sin tocar `CURRENT.json` ni el historial.
+  `read_current` es ahora igual de estricto (antes aceptaba punteros sin
+  `station_id` o con `months` vacío).
+- **Riesgos conocidos, no bloqueantes, a validar con el primer payload real**:
+  - el parser acepta texto que contenga un número: `"N/A 5"` se lee como `5`.
+    Clasificado como **deuda / contrato a validar con payload real**; no se
+    relaja ni se endurece ahora;
+  - `""` da 65: si la API usara cadena vacía como dato faltante, cada corrida
+    fallaría;
+  - versiones huérfanas (F3, deuda): si falla un mes posterior, la versión ya
+    escrita de un mes anterior queda en `versions/` sin puntero que la
+    referencie; no se publica.
+
+```
+HOST (Windows, worktree sin data/ local): 681 passed, 29 skipped, 0 failed;
+  cobertura 89.13% (dmc_refresh 97%, redact 100%)
+DOCKER (Dockerfile.analytics, --network none verificado): 684 passed,
+  26 skipped, 0 failed; cobertura 89.22%; Python 3.14.7
+PROPERTY-BASED DMC (Hypothesis): 11 passed
+PYRIGHT: dmc_refresh.py y redact.py en 0; tests con los 3 preexistentes
+TESTS NUEVOS: 52 casos; 47 fallan sobre el código previo al endurecimiento
+```
