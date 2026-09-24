@@ -902,8 +902,62 @@ def test_null_rows_up_to_threshold_are_published_and_observable(
     assert last["row_quality"]["2026-09"] == expected
     entry = _pointer(paths)["months"]["2026-09"]
     parsed = parse_dmc_json(paths.versions_dir / entry["relative_path"])
-    assert entry["record_count"] == total and len(parsed) == total - nulls
+    # record_count = lecturas válidas publicadas (lo que el parser conserva).
+    assert entry["record_count"] == len(parsed) == total - nulls
     assert _stored(paths, "2026-09") == sep  # nada se convierte en silencio
+
+
+def test_pointer_counts_and_coverage_describe_only_valid_published_readings(paths):
+    """Semántica fijada del puntero v1: record_count y coverage_* salen de las
+    lecturas válidas. Aquí las filas nulas son justo la primera y la última,
+    así que un writer que las contara movería conteo y cobertura."""
+    aug = _month_rows("2026-08", 100)
+    sep = _month_rows("2026-09", 200)
+    sep[0]["temperatura"] = None  # 2026-09-01 00:00
+    sep[-1]["humedadRelativa"] = None  # 2026-09-03 01:45
+    outcome = _run(
+        paths,
+        FakeDmc({"2026-08": _payload(aug), "2026-09": _payload(sep)}),
+        now=datetime(2026, 9, 3, 12, 0, tzinfo=timezone.utc),
+    )
+
+    assert outcome.status == "published"
+    pointer = _pointer(paths)
+    assert pointer["schema_version"] == 1 == dmc.POINTER_SCHEMA_VERSION
+    assert set(pointer) == {
+        "schema_version",
+        "source",
+        "station_id",
+        "months",
+        "manifest_sha256",
+        "coverage_start",
+        "coverage_end",
+        "record_count",
+        "created_at",
+        "base_manifest_sha256",
+        "generator",
+    }
+    assert set(pointer["months"]["2026-09"]) == {
+        "relative_path",
+        "sha256",
+        "record_count",
+        "first_momento",
+        "last_momento",
+    }
+    sep_entry = pointer["months"]["2026-09"]
+    assert sep_entry["record_count"] == 198
+    assert sep_entry["first_momento"] == sep[1]["momento"] == "2026-09-01 00:15:00"
+    assert sep_entry["last_momento"] == sep[-2]["momento"] == "2026-09-03 01:30:00"
+    assert pointer["record_count"] == 100 + 198
+    assert pointer["coverage_start"] == aug[0]["momento"]
+    assert pointer["coverage_end"] == "2026-09-03 01:30:00"
+    # Lo publicado sigue guardando las 200 lecturas; el parser conserva 198.
+    assert len(_stored(paths, "2026-09")) == 200
+    parsed = parse_dmc_json(paths.versions_dir / sep_entry["relative_path"])
+    assert len(parsed) == sep_entry["record_count"]
+    # status expone la misma semántica.
+    info = dmc.status(paths=paths, now=datetime(2026, 9, 3, 12, 0, tzinfo=timezone.utc))
+    assert info["record_count"] == 298 and info["coverage_end"] == "2026-09-03 01:30:00"
 
 
 @pytest.mark.parametrize(

@@ -723,10 +723,21 @@ autoriza ninguno** hasta completar el runbook del primer refresco controlado.
     `threshold`, en la salida de la CLI (`row_quality`) y en la línea
     `publish` de `pointer_history.jsonl`. No entra al puntero ni a los bytes
     canónicos.
-- **`record_count`** hoy cuenta todas las lecturas guardadas en la versión,
-  incluidas las filas con `null` (es `len` de las lecturas fusionadas). La
-  semántica objetivo ("lecturas válidas efectivamente utilizables") está
-  **pendiente de decisión** y no está implementada; ver la revisión de PR B.
+- **Semántica del puntero, fijada antes de la primera publicación real**
+  (`schema_version` sigue en 1: no existe almacén publicado ni un v1 anterior
+  que preservar, y la estructura no cambia):
+  - `record_count` (por mes y total) = lecturas **válidas** publicadas, las
+    que `parse_dmc_json` conserva. No es el total recibido de la API; ese
+    total vive solo en `row_quality.total_rows` (CLI e historial).
+  - `first_momento`/`last_momento` por mes, y con ellos `coverage_start`/
+    `coverage_end`, son el primer y el último `momento` **válido** publicado.
+    Una fila nula en el borde no mueve la cobertura.
+  - La versión mensual sigue guardando todas las lecturas recibidas, nulas
+    incluidas: los bytes canónicos no se filtran.
+  - Contrato con el lector: `len(serie fijada por ScoringInputs) ==
+    pointer["record_count"]`, anclado por
+    `test_pointer_counts_and_coverage_describe_only_valid_published_readings`
+    (writer) y por el test contractual con 1 % de nulos (writer↔lector).
 - **Credenciales (F8)**: van en el querystring; un error de red se reporta
   solo por su tipo (`ConnectionError`, `Timeout`...), nunca con `str(exc)`,
   que traía la URL con usuario y token URL-encoded. `redact` cubre además el

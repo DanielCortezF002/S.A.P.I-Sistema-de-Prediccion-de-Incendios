@@ -39,7 +39,14 @@ NaN) o un campo ausente dan 65 siempre. Un `null` explícito cuenta como
 fila nula; si `null_rows / total_rows` supera `NULL_ROWS_MAX_RATE` (1 %),
 65 y no se publica nada. Los conteos (`total_rows`, `null_rows`,
 `discard_rate`, `threshold`) salen en la CLI y en la línea de historial
-de la publicación. El puntero y los bytes canónicos no cambian.
+de la publicación, nunca en el puntero. Los bytes canónicos conservan
+todas las lecturas recibidas, nulas incluidas.
+
+Semántica del puntero (esquema 1, fijada antes de la primera publicación
+real): `record_count` es el número de lecturas VÁLIDAS publicadas (las que
+`parse_dmc_json` conserva), no el total recibido de la API; y
+`first_momento`/`last_momento` por mes, y con ellos `coverage_start`/
+`coverage_end`, son el primer y el último `momento` válido publicado.
 
 Rollback: el puntero de destino pasa por la misma verificación que
 `read_current` (estructura, `schema_version`, `manifest_sha256`, rutas
@@ -304,6 +311,17 @@ def validate_month_payload(payload: Any, month: str) -> tuple[dict, list[dict]]:
             )
     estacion = stations.get("estacion")
     return (estacion if isinstance(estacion, dict) else {}), records
+
+
+def valid_records(records: list[dict]) -> list[dict]:
+    """Lecturas que `parse_dmc_json` conserva: sin `null` en ningún campo
+    numérico requerido. Aplica a lecturas que ya pasaron `assess_rows`,
+    donde todo valor presente distinto de `null` es numérico."""
+    return [
+        record
+        for record in records
+        if all(record[name] is not None for name in REQUIRED_NUMERIC_FIELDS)
+    ]
 
 
 def assess_rows(records: list[dict], month: str) -> RowQuality:
@@ -573,16 +591,27 @@ def refresh(
                 data = canonical_month_bytes(
                     paths.station_id, existing_estacion or estacion, merged
                 )
-                validate_version_bytes(data, paths.station_id, month, len(merged))
+                quality = validate_version_bytes(
+                    data, paths.station_id, month, len(merged)
+                )
+                # El puntero describe lo publicado utilizable: conteo y
+                # cobertura salen de las lecturas válidas, no de las nulas.
+                valid = valid_records(merged)
+                if len(valid) != quality.total_rows - quality.null_rows:
+                    raise DmcRefreshError(
+                        f"Versión {month}: {len(valid)} lecturas válidas, se "
+                        f"esperaban {quality.total_rows - quality.null_rows}.",
+                        EXIT_DATA,
+                    )
                 sha = sha256_bytes(data)
                 name = f"dmc_{paths.station_id}_{month}_{sha[:12]}.json"
                 write_immutable(paths.versions_dir / name, data)
                 months[month] = {
                     "relative_path": name,
                     "sha256": sha,
-                    "record_count": len(merged),
-                    "first_momento": merged[0]["momento"],
-                    "last_momento": merged[-1]["momento"],
+                    "record_count": len(valid),
+                    "first_momento": valid[0]["momento"],
+                    "last_momento": valid[-1]["momento"],
                 }
                 fetched.append(month)
                 added_total += added
