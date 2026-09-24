@@ -607,9 +607,12 @@ diciendo "últimas 12 horas" aunque la respuesta sea mensual.
   Cada documento se relee con `parse_dmc_json` antes de publicarse.
 - **Almacenamiento** en `data/processed/dmc/330007/` (versiones mensuales
   inmutables, `pointers/`, `CURRENT.json`, `pointer_history.jsonl`), fuera
-  de `data/raw/`: `load_regional_meteo_series` no lo lee, así que el scoring
-  NO usa todavía datos refrescados (eso llega con `ScoringInputs`). Los
-  archivos legacy `dmc_historico_*`/`dmc_meteo_*` nunca se escriben.
+  de `data/raw/`: `load_regional_meteo_series` sigue sin leerlo. Cuando se
+  escribió esta nota el scoring tampoco lo usaba; desde la nota de
+  `ScoringInputs` de más abajo sí lo consume, por otra puerta
+  (`scoring_inputs.pin_dmc`: bloque legacy completo y, del almacén, solo
+  lecturas posteriores a la última legacy). Los archivos legacy
+  `dmc_historico_*`/`dmc_meteo_*` nunca se escriben.
 - **Fallos**: sin credenciales, 78 antes de cualquier escritura o request;
   red caída o 5xx, 3 intentos acotados y luego 69; HTTP 4xx, 69 sin
   reintento; JSON inválido, `timezone` distinto de UTC, `registros` que no
@@ -679,6 +682,82 @@ MUTACIONES: releer FIRMS en el scoring, no filtrar el solapamiento DMC,
   hacen fallar su test
 MODEL_D: fingerprint 33c2eacc…31ff sin cambios (normal y reproducible)
 LATENCIA score_current_grid: ~14,1 s (antes ~15,5 s, misma máquina)
+```
+
+### Cierre de SAPI-71 Fase B: estado integrado — nota fechada 23-09-2026
+
+Las notas anteriores siguen siendo válidas para el commit en que se midió
+cada una; esta las reconcilia sobre el árbol que las combina: `origin/main`
+(`7a5ff61`), la corrección del refresco DMC, el endurecimiento previo al
+primer refresco (F8/F4/F5), la semántica definitiva de `record_count` y
+cobertura, `ScoringInputs` (`30a296c`), el endurecimiento de la
+clasificación de errores de acceso y la reproducibilidad de fin de línea
+(`.gitattributes`).
+
+- **Corrección DMC**: `registros` presente que no es entero da 65 (ausente
+  se tolera: el documento canónico no lo lleva). El docstring ya no afirma
+  que un conflicto llegue al historial en una corrida `unchanged`.
+- **Calidad de filas** (política inicial conservadora, no una propiedad
+  científica): por mes, hasta 1 % de filas con `null` explícito se publica;
+  más de 1 % da 65 y no se publica nada; un valor presente no numérico
+  (texto, `""`, bool, NaN/inf) o un campo ausente da 65 siempre. `total_rows`,
+  `null_rows`, `discard_rate` y `threshold` son metadata operacional: salen
+  en la CLI y en la línea `publish` del historial, nunca en el puntero. Si
+  la API usa `""` para "sin dato", cada corrida daría 65: se valida con el
+  primer payload real.
+- **Semántica del puntero** (`schema_version` 1, ver la nota de hardening):
+  `record_count` = lecturas válidas publicadas; `coverage_start`/
+  `coverage_end` = primer/último `momento` válido publicado.
+- **Rollback**: el puntero de destino pasa por la misma verificación que
+  `read_current`; cualquier falla es 65 sin tocar `CURRENT.json` ni el
+  historial.
+- **Credenciales**: un error de red se reporta solo por su tipo; `redact`
+  cubre el valor crudo y sus variantes URL-encoded. No ejecutar el refresco
+  con logging DEBUG (no probado con urllib3 real).
+- **Acceso a entradas fijadas**: un `OSError` al leer una entrada fijada
+  sale como `PinnedInputError` → 503 `prototype_unavailable` (antes, 500
+  `internal_error`). `CURRENT.json` ausente degrada a solo-legacy (mantiene
+  estable el fingerprint mientras no haya refresco publicado); ilegible
+  aborta la captura en vez de descartar en silencio lecturas publicadas.
+- **Reproducibilidad CRLF/LF**: tres artefactos congelados de
+  `artifacts/hito1/reproducibility/` (FIRMS, `dmc_historico_330007_2026-08.json`,
+  `dem/grid_topography.csv`) tienen su sha256 publicado sobre los bytes
+  originales, con CRLF, pero se versionaron normalizados a LF. Un checkout
+  Windows reponía los CR y el hash coincidía; uno LF (Linux, macOS, CI) no.
+  `ScoringInputs` verifica ese hash al puntuar, así que en LF el modo
+  reproducible abortaba. Corrección: `.gitattributes` marca **solo esas tres
+  rutas** `-text` y sus blobs vuelven a ser los bytes originales. El
+  contenido es idéntico salvo por los CR; ningún dato cambia, ningún hash
+  congelado se recalcula y `manifest.json` no se toca. **`.gitattributes`
+  es parte del contrato de reproducibilidad**: quitar esas líneas, o
+  normalizar esas rutas, vuelve a romper la verificación en LF.
+- **Refresco real: NO ejecutado.** No existe `data/processed/dmc/` ni
+  `data/processed/firms/`, ni ningún `CURRENT.json`.
+
+```
+HOST (checkout Windows, core.autocrlf=true, datos locales):
+  736 passed, 4 skipped, 0 failed; cobertura 92.26%
+  (dmc_refresh.py 96%, scoring_inputs.py 99%)
+DOCKER (Dockerfile.analytics --no-cache, checkout LF, sin volúmenes,
+  --network none, Python 3.14.7): 713 passed, 27 skipped, 0 failed;
+  cobertura 89.53%; los tres hashes congelados verificados dentro del
+  contenedor. Los 27 skips son tests que requieren data/ local, que la
+  imagen excluye.
+LF ANTES/DESPUÉS de .gitattributes: origin/main 3 failed -> 3 passed;
+  estado integrado 9 failed -> 9 passed (3 preexistentes + 6 de ScoringInputs)
+DIRIGIDOS (checkout LF, sin datos locales): reproducibilidad 39 passed /
+  11 skipped; ScoringInputs + n8n-bridge 48 / 1; DMC + primitivas +
+  contrato de almacén 110 / 1
+CONTRATO writer<->reader DMC: 6 passed (incluye 100 lecturas por mes con
+  exactamente 1 % de nulos: record_count y cobertura del puntero = lo que
+  pin_dmc fija)
+PROPERTY-BASED DMC (Hypothesis, 300 ejemplos/propiedad): 11 passed
+MODEL_D: fingerprint 33c2eacc…31ff idéntico en modo reproducible (checkout
+  LF y Windows) y operacional (data/raw real, sin punteros publicados)
+PYRIGHT: 0 en dmc_refresh.py, redact.py, scoring_inputs.py y
+  test_dmc_store_contract.py; prototype_service.py 16 (antes 17); quedan
+  12 solo-test preexistentes (3 en test_dmc_refresh.py, 9 en
+  test_scoring_inputs.py)
 ```
 
 ### Reconciliación con `manifest.json` (R2/R3) — nota fechada 21-09-2026
@@ -812,6 +891,10 @@ autoriza ninguno** hasta completar el runbook del primer refresco controlado.
   - versiones huérfanas (F3, deuda): si falla un mes posterior, la versión ya
     escrita de un mes anterior queda en `versions/` sin puntero que la
     referencie; no se publica.
+
+Cifras medidas sobre el commit del hardening, antes de fijar la semántica
+de `record_count`/cobertura; las del estado integrado están en la nota de
+cierre de SAPI-71 Fase B.
 
 ```
 HOST (Windows, worktree sin data/ local): 681 passed, 29 skipped, 0 failed;
