@@ -1,0 +1,9 @@
+# SAPI-71 -- artefactos congelados de reproducibilidad (Hito 1, R3).
+# Su sha256 esta publicado sobre los bytes ORIGINALES (CRLF) en
+# artifacts/hito1/reproducibility/manifest.json y, para FIRMS, en
+# src/procesamiento/firms_source.py::FIRMS_BASELINE_SHA256. Sin conversion
+# de fin de linea: el blob versionado es exactamente el archivo cuyo hash se
+# congelo, identico en Windows, Linux y macOS. No agregar patrones amplios.
+/artifacts/hito1/reproducibility/firms/nasa_firms_2021-08-30_2026-08-30.csv -text
+/artifacts/hito1/reproducibility/dmc/dmc_historico_330007_2026-08.json -text
+/artifacts/hito1/reproducibility/dem/grid_topography.csv -text
