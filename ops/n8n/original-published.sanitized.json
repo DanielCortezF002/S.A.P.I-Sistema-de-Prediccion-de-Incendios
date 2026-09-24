@@ -1,0 +1,487 @@
+{
+  "versionId": "d577c6e7-4df0-4128-b9be-4b3ae8e8a0df",
+  "name": "Version d577c6e7",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -16,
+        -176
+      ],
+      "id": "f33046b8-b5c8-4ad6-a695-67a82241410a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e73580f1-06d0-4603-b93b-bce11dde7168",
+              "name": "proyecto",
+              "value": "SAPI",
+              "type": "string"
+            },
+            {
+              "id": "230567c0-7b1f-420d-ac9b-f0e5b56ab612",
+              "name": "estado",
+              "value": "inicio_pipeline",
+              "type": "string"
+            },
+            {
+              "id": "b192c0ef-4866-45ac-a8bb-aa0d7fce9fde",
+              "name": "origen",
+              "value": "n8n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        208,
+        -64
+      ],
+      "id": "234859a7-089a-4a58-a507-0a80f7fa6853",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "url": "http://host.docker.internal:8600/score",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        400,
+        -64
+      ],
+      "id": "ad300e2b-82c8-4909-8a7d-8f6c266dd893",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "98427667-45c1-45fd-925c-971059b89aa0",
+              "name": "modelo",
+              "value": "={{$json.model_version}}",
+              "type": "string"
+            },
+            {
+              "id": "3652bf21-b143-409a-ab6b-bf4255cf4855",
+              "name": "=estado_modelo",
+              "value": "={{$json.model_status}}",
+              "type": "string"
+            },
+            {
+              "id": "e5d8c6d3-cab2-41e2-9ecb-eb290ac5ae60",
+              "name": "frescura",
+              "value": "={{$json.freshness}}",
+              "type": "string"
+            },
+            {
+              "id": "0b1c3a65-0a15-4f0a-afb0-dc56975f302f",
+              "name": "estacion",
+              "value": "={{$json.station_name}}",
+              "type": "string"
+            },
+            {
+              "id": "90b8fe2f-798e-401f-a9dd-39c352032d94",
+              "name": "cantidad_celdas",
+              "value": "={{$json.cells.length}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        576,
+        -64
+      ],
+      "id": "b5cdf96e-49a9-4d98-9e08-d1d8935cde49",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b29295c9-99b3-41d6-804d-d1872d6e9917",
+              "leftValue": "={{$json.frescura}} {{ $json.frescura }}",
+              "rightValue": "DESACTUALIZADOS",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        736,
+        -64
+      ],
+      "id": "fb666925-5bf9-4dd7-a451-3cb123e91f51",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2d43d2a9-18cd-4778-8f1c-4234c4794d3f",
+              "name": "tipo_alerta",
+              "value": "DATOS_DESACTUALIZADOS",
+              "type": "string"
+            },
+            {
+              "id": "4152e6ef-5d22-408f-b435-04bab1d7a824",
+              "name": "mensaje",
+              "value": "Los datos de S.A.P.I. están desactualizados",
+              "type": "string"
+            },
+            {
+              "id": "9b35d593-66cb-4784-b918-148da8b36a29",
+              "name": "accion",
+              "value": "NO_USAR_PARA_DECISION_OPERACIONAL",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        944,
+        -176
+      ],
+      "id": "d2fecc6b-d5b8-469a-9aff-75d1465b166c",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fa902468-04db-40d0-a627-85f3ab2416d4",
+              "name": "tipo_alerta ",
+              "value": " NINGUNA",
+              "type": "string"
+            },
+            {
+              "id": "0d24f899-1641-4453-8781-3e9daad93a5b",
+              "name": "mensaje",
+              "value": "Los datos de S.A.P.I. están vigentes",
+              "type": "string"
+            },
+            {
+              "id": "29e9fac4-9e68-432f-b322-74141aa61100",
+              "name": "accion",
+              "value": "CONTINUAR_PIPELINE",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        960,
+        48
+      ],
+      "id": "dfaa6651-9a1a-47fc-97ca-62f54244a984",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1152,
+        -80
+      ],
+      "id": "e6f7427a-8b23-43be-ac42-37b31718d00b",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "dataTableId": {
+          "__rl": true,
+          "value": "CONFIGURE_OUTSIDE_GIT",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "fecha_ejecucion": "={{$now.toISO()}}",
+            "modelo": "={{$json.modelo}}",
+            "estado_modelo": "={{$json.estado_modelo}}",
+            "frescura": "={{$json.frescura}}",
+            "estacion": "={{$json.estacion}}",
+            "cantidad_celdas": "={{$json.cantidad_celdas}}",
+            "tipo_alerta": "={{$json.tipo_alerta}}",
+            "mensaje": "={{$json.mensaje}}",
+            "accion": "={{$json.accion}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "fecha_ejecucion",
+              "displayName": "fecha_ejecucion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "modelo",
+              "displayName": "modelo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estado_modelo",
+              "displayName": "estado_modelo",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "frescura",
+              "displayName": "frescura",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "estacion",
+              "displayName": "estacion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "cantidad_celdas",
+              "displayName": "cantidad_celdas",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "tipo_alerta",
+              "displayName": "tipo_alerta",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "mensaje",
+              "displayName": "mensaje",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            },
+            {
+              "id": "accion",
+              "displayName": "accion",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "readOnly": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        1344,
+        -80
+      ],
+      "id": "9a16da07-7cba-4934-8d44-f82c4a24bb91",
+      "name": "Insert row"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -16,
+        16
+      ],
+      "id": "90e4460a-85d0-46b5-83ef-890ecc5fe366",
+      "name": "Schedule Trigger"
+    }
+  ],
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Insert row",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "createdAt": "2026-09-22 15:03:00.086",
+  "updatedAt": "2026-09-22 15:07:12",
+  "active": false
+}

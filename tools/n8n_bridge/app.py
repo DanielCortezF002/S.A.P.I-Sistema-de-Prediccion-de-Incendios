@@ -113,6 +113,15 @@ def _serialize_grid_result(result: GridScoreResult, disclaimer: str) -> dict:
         "weather_timestamp": result.weather_timestamp.isoformat(),
         "age_hours": result.age_hours,
         "freshness": result.freshness,
+        "firms_origin": result.firms_origin,
+        "firms_coverage_end": (
+            result.firms_coverage_end.isoformat()
+            if result.firms_coverage_end is not None
+            else None
+        ),
+        "firms_lag_days": result.firms_lag_days,
+        "firms_status": result.firms_status,
+        "inputs_fingerprint": result.inputs_fingerprint,
         "meteo_actual": meteo_actual,
         "cells": [_serialize_cell(c) for c in result.cells],
     }
