@@ -24,9 +24,12 @@ datosEstaciones: {estacion, datos}}}`, claves ordenadas, lecturas por
 misma entrada produce siempre los mismos bytes. Merge por mes: lecturas ya
 publicadas ∪ lecturas nuevas, clave (estación, `momento` UTC). Si un
 `momento` ya publicado llega con otro contenido, gana el publicado
-(append-only) y el conflicto se informa en la corrida y en el historial
-(no en el manifest, para no romper la idempotencia). Los archivos
-legacy de `data/raw/` nunca se escriben.
+(append-only) y el conflicto se informa en la corrida (salida de la CLI).
+Queda fuera del manifest para no romper la idempotencia: por eso una
+corrida cuyo único cambio es un conflicto termina en `unchanged` y no
+escribe nada, tampoco en `pointer_history.jsonl`, que solo recibe una
+línea cuando se publica o se hace rollback. Los archivos legacy de
+`data/raw/` nunca se escriben.
 
 Códigos de salida: 0 publicado / sin cambios, 2 uso, 65 datos inválidos o
 vacíos, 69 red o HTTP no exitoso, 75 bloqueado, 78 sin credenciales.
@@ -196,7 +199,12 @@ def _fetch_month(
 
 def validate_month_payload(payload: Any, month: str) -> tuple[dict, list[dict]]:
     """(estacion, lecturas) de una respuesta mensual; lanza DmcRefreshError
-    si no tiene la forma verificada o trae lecturas fuera del mes."""
+    si no tiene la forma verificada o trae lecturas fuera del mes.
+
+    `registros` ausente se acepta: el documento canónico no lo lleva y
+    `validate_version_bytes` relee ese documento con esta misma función. Si
+    viene, debe ser un entero y calzar con `len(datos)`.
+    """
     if not isinstance(payload, dict):
         raise DmcRefreshError(
             f"Respuesta DMC {month}: se esperaba un objeto, llegó {type(payload).__name__} "
@@ -210,11 +218,16 @@ def validate_month_payload(payload: Any, month: str) -> tuple[dict, list[dict]]:
         )
     stations = payload.get("datosEstaciones")
     records = stations.get("datos") if isinstance(stations, dict) else None
-    if not isinstance(records, list):
+    if not isinstance(stations, dict) or not isinstance(records, list):
         raise DmcRefreshError(
             f"Respuesta DMC {month} sin datosEstaciones.datos.", EXIT_DATA
         )
     declared = payload.get("registros")
+    if "registros" in payload and not isinstance(declared, int):
+        raise DmcRefreshError(
+            f"Respuesta DMC {month}: registros={declared!r} no es un entero.",
+            EXIT_DATA,
+        )
     if isinstance(declared, int) and declared != len(records):
         raise DmcRefreshError(
             f"Respuesta DMC {month} incompleta: registros={declared}, datos={len(records)}.",
@@ -233,10 +246,8 @@ def validate_month_payload(payload: Any, month: str) -> tuple[dict, list[dict]]:
             raise DmcRefreshError(
                 f"Respuesta DMC {month}: lectura de otro mes ({momento}).", EXIT_DATA
             )
-    estacion = (
-        stations.get("estacion") if isinstance(stations.get("estacion"), dict) else {}
-    )
-    return estacion, records
+    estacion = stations.get("estacion")
+    return (estacion if isinstance(estacion, dict) else {}), records
 
 
 # --- Merge y serialización canónica ------------------------------------------
