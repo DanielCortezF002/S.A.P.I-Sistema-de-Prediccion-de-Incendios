@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "base_sha": "7ef8d3c9f7ecb4758718255b8e48d6468f8613ea",
+  "scope": "host parity relative to CI; Docker improvements described per step",
+  "workflow_defect_confirmed": false,
+  "merge_authorization": false,
+  "contracts": {
+    ".github/workflows/ci.yml": "687bfe87639b1ab77674dfddc9349fb5d8269a54d0ca9c30d3b8d4b41c222623",
+    "pytest.ini": "8b0b57e2e3f66fe5d4d2d179ae2cb948571e4ee5852d656f11d8c87b68c11310",
+    "requirements.txt": "063cb413560b4f5c9e574adfcc987fb75f56ad9071d28dc02efb7a12d6242bcc",
+    "requirements-dev.txt": "0ec4d5176530f48e0209f022fd96008041d5aaffc00ed36bec5d3b0620e5c274",
+    "Dockerfile.analytics": "5a6feabdb22cf34750d1f09bc7889fca79c662d75067298c9a8b399d3f835442",
+    ".dockerignore": "01d7a9da725cfabf4212c3179bba4430a7490ac344e341ad2df5d9c3b7e76040",
+    "docker/initdb/01_extensions.sql": "a6f930447ac37ac87795cfa0652ad6d44f6cf683422cb0226f00b181e33fb1bd",
+    "docker/initdb/02_schema.sql": "c7eb0b4c1d5140121fe994ec7e5494807b2a64546cf32683ed4ce969f25f8059",
+    "docker/initdb/03_gist_indexes.sql": "0a841c376b011ea6d9d1c1bebf4a1591a2ff8932cf1b08f5e1afe6f260c44b90",
+    "docker/initdb/04_seed_valparaiso.sql": "9a888396ef6223bf2446aa25c17923bd3ac9dab8689c09a05c3c91b581a644f4",
+    "docker/initdb/05_add_orientacion.sql": "f16304f21a9735c4d0b5ce55afba5fc8c28963dc9983a40e13cad234123a6c1e"
+  },
+  "steps": [
+    {
+      "workflow_step": "actions/checkout@v4",
+      "local_step": "identity",
+      "parity": "EQUIVALENT",
+      "reason": "Existing clean commit/tree identity replaces Actions checkout; dirty state prevents canonical PASS."
+    },
+    {
+      "workflow_step": "Set up Python",
+      "local_step": "environment",
+      "parity": "EQUIVALENT",
+      "reason": "Checks Python 3.14 and reports patch version; does not install an interpreter."
+    },
+    {
+      "workflow_step": "Install dependencies",
+      "local_step": "environment",
+      "parity": "PARTIAL",
+      "reason": "Checks every pinned direct dependency, no fresh pip install on host. Docker builds requirements-dev.txt including runtime dependencies."
+    },
+    {
+      "workflow_step": "Initialize database schema",
+      "local_step": "host_database",
+      "parity": "NOT_REPRODUCIBLE_LOCALLY",
+      "reason": "Host intentionally has no managed PostGIS and never touches an existing database. Docker uses disposable PostGIS 15-3.4, internal network, no host ports, same SQL order/options; trust auth only on isolated network."
+    },
+    {
+      "workflow_step": "Format check",
+      "local_step": "format",
+      "parity": "EXACT",
+      "reason": "Same black arguments, invoked through current Python module."
+    },
+    {
+      "workflow_step": "Lint",
+      "local_step": "lint",
+      "parity": "EXACT",
+      "reason": "Same flake8 arguments, invoked through current Python module."
+    },
+    {
+      "workflow_step": "Run tests",
+      "local_step": "tests",
+      "parity": "PARTIAL",
+      "reason": "Same pytest.ini/80 percent coverage policy and suite; adds machine reports. Host denies network and lacks CI database/real ignored datasets. Docker has isolated database; Linux image differs from ubuntu-latest."
+    }
+  ],
+  "gaps": [
+    "CI_PARITY_GAP: Ubuntu runner provisioning and Actions event/permission semantics are external.",
+    "CI_PARITY_GAP: host checks installed dependencies instead of installing; no PostGIS initialization.",
+    "CI_PARITY_GAP: Docker uses analytics Python 3.14 slim, system geo libraries and git, not ubuntu-latest. Build permits dependency downloads; runtime network is internal.",
+    "CI_PARITY_GAP: public CI database fixture authentication is replaced by trust on disposable internal Docker network; no production credentials.",
+    "CI_PARITY_GAP: local secret, fingerprint and artifact checks extend CI; workflow has no dedicated secret/artifact steps.",
+    "CI_PARITY_GAP: pytest reports are extra flags; host Python socket network is blocked; ignored real data stays absent."
+  ]
+}

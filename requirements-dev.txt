@@ -4,6 +4,8 @@
 # scikit-learn/joblib/rasterio/imbalanced-learn se heredan de requirements.txt
 # desde el 09-09-2026 (son runtime, no solo training -- ver requirements.txt).
 -r requirements.txt
+# Local CI workflow parser (also exercised by tests/test_ci_local.py).
+PyYAML==6.0.3
 scipy==1.18.1
 xgboost==3.4.1
 pytest==9.1.1
