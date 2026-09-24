@@ -23,6 +23,7 @@ import src.refresh.atomic as atomic
 import src.refresh.dmc_refresh as dmc
 from src.config import DATA_RAW_DIR
 from src.procesamiento.raw_parser import parse_dmc_json
+from src.refresh.lock import refresh_lock
 
 STATION = dmc.DMC_STATION_ID
 CREDS = ("usuario-prueba", "token-secreto-XYZ")
@@ -299,6 +300,10 @@ def _bad_json():
         (_payload(SEP + [_record(datetime(2026, 10, 1))]), "otro mes"),
         (_payload(SEP + [{"temperatura": "1 °C"}]), "momento válido"),
         (_payload(SEP + [{"momento": "01-09-2026 00:00"}]), "momento válido"),
+        (_payload(SEP, registros="3000"), "no es un entero"),
+        (_payload(SEP, registros=3000.0), "no es un entero"),
+        (dict(_payload(SEP), datosEstaciones={"datos": "Sin Información"}), "datos"),
+        (dict(_payload(SEP), datosEstaciones=[]), "datos"),
     ],
     ids=[
         "json_corrupto",
@@ -307,6 +312,10 @@ def _bad_json():
         "otro_mes",
         "sin_momento",
         "formato",
+        "registros_texto",
+        "registros_float",
+        "datos_no_lista",
+        "datos_estaciones_no_dict",
     ],
 )
 def test_invalid_payload_is_rejected_before_publishing(paths, september, match):
@@ -466,6 +475,26 @@ def test_tampered_published_version_blocks_refresh(paths):
     assert dmc.status(paths=paths)["origin"] == "invalid_pointer"
 
 
+def test_version_name_taken_with_other_bytes_fails_with_65(paths):
+    """Guarda de inmutabilidad: si el nombre de la versión ya existe con
+    otros bytes (corrupción externa o colisión de sha12), aborta con 65."""
+    merged, _, _ = dmc.merge_records([], AUG)
+    data = dmc.canonical_month_bytes(
+        STATION, {"codigoNacional": STATION, "nombreEstacion": "Rodelillo"}, merged
+    )
+    name = f"dmc_{STATION}_2026-08_{atomic.sha256_bytes(data)[:12]}.json"
+    paths.versions_dir.mkdir(parents=True, exist_ok=True)
+    (paths.versions_dir / name).write_bytes(b'{"corrupto": true}\n')
+    fake = FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(SEP)})
+
+    with pytest.raises(dmc.DmcRefreshError, match="inmutables") as err:
+        _run(paths, fake)
+
+    assert err.value.exit_code == dmc.EXIT_DATA
+    assert fake.calls == ["2026-08"]  # aborta antes de pedir el mes en curso
+    _assert_nothing_published(paths)
+
+
 # --- Rollback, status, CLI, aislamiento --------------------------------------
 
 
@@ -490,6 +519,24 @@ def test_rollback_rejects_invalid_or_unknown_ids(paths, target):
     with pytest.raises(dmc.DmcRefreshError) as err:
         dmc.rollback(target, paths=paths)
     assert err.value.exit_code == dmc.EXIT_USAGE
+
+
+def test_rollback_under_a_held_lock_exits_75_without_republishing(paths):
+    """El rollback también es escritor: con el lock tomado sale 75 y deja
+    `CURRENT.json` como estaba."""
+    _run(paths, FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(SEP)}))
+    first = _pointer(paths)["manifest_sha256"]
+    more = _records("2026-09-01T00:00", "2026-09-01T05:00")
+    _run(paths, FakeDmc({"2026-09": _payload(more)}), now=NOW + timedelta(hours=2))
+    published = paths.pointer.read_bytes()
+    assert _pointer(paths)["manifest_sha256"] != first
+
+    with refresh_lock(paths.lock):
+        with pytest.raises(dmc.DmcRefreshError) as err:
+            dmc.rollback(first[:12], paths=paths)
+
+    assert err.value.exit_code == dmc.EXIT_LOCKED
+    assert paths.pointer.read_bytes() == published
 
 
 def test_status_reports_coverage_and_age(paths):
