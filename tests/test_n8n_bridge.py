@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -165,6 +166,42 @@ def test_score_disclaimer_falls_back_when_metadata_unreadable(monkeypatch):
 
     assert resp.status_code == 200
     assert resp.json()["disclaimer"] == bridge_app._FALLBACK_DISCLAIMER
+
+
+def test_score_operational_provenance_is_additive_and_private(monkeypatch):
+    result = dataclasses.replace(
+        _fixture_result(),
+        firms_origin="current",
+        firms_coverage_end=date(2026, 9, 19),
+        firms_lag_days=1,
+        firms_status="CURRENT",
+        inputs_fingerprint="a" * 64,
+        scoring_inputs={"private_path": "C:/private/input.csv"},
+    )
+    monkeypatch.setattr(bridge_app, "score_current_grid", lambda: result)
+    monkeypatch.setattr(bridge_app, "_read_metadata_json", lambda: None)
+    body = client.get("/score").json()
+    assert body["firms_origin"] == "current"
+    assert body["firms_coverage_end"] == "2026-09-19"
+    assert body["firms_lag_days"] == 1
+    assert body["firms_status"] == "CURRENT"
+    assert body["inputs_fingerprint"] == "a" * 64
+    assert "scoring_inputs" not in body
+    assert "private" not in json.dumps(body)
+    assert body["cells"] == bridge_app._serialize_grid_result(result, "")["cells"]
+
+
+def test_score_legacy_result_keeps_nullable_provenance(monkeypatch):
+    monkeypatch.setattr(bridge_app, "score_current_grid", lambda: _fixture_result())
+    body = client.get("/score").json()
+    for key in (
+        "firms_origin",
+        "firms_coverage_end",
+        "firms_lag_days",
+        "firms_status",
+        "inputs_fingerprint",
+    ):
+        assert key in body and body[key] is None
 
 
 def test_score_503_on_prototype_unavailable(monkeypatch):
