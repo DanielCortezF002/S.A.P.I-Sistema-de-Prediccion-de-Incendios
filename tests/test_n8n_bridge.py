@@ -19,7 +19,9 @@ from fastapi.testclient import TestClient
 
 import src.inference.prototype_service as prototype_service
 import tools.n8n_bridge.app as bridge_app
+from src.geo.grid import all_cells
 from src.inference.prototype_service import (
+    FIRMS_STATUS_CURRENT,
     CellScore,
     GridScoreResult,
     PrototypeUnavailableError,
@@ -36,23 +38,36 @@ BRIDGE_PORT = "8600"
 client = TestClient(bridge_app.app)
 
 
-def _fixture_result() -> GridScoreResult:
-    cell = CellScore(
-        cell_id="C01",
-        score=0.42,
-        rank=1,
-        display_rank=1,
-        tie_group_size=1,
-        geometry={
-            "min_lon": -71.6,
-            "min_lat": -33.1,
-            "max_lon": -71.5,
-            "max_lat": -33.0,
-        },
-        elevation=512.3,
-        slope=8.1,
-        historical_count=3,
-    )
+FINGERPRINT = "a" * 64
+
+
+def _cells_from_scores(scores: list[float]) -> list[CellScore]:
+    """Celdas VP-001..VP-0NN en orden de rank, con display_rank y
+    tie_group_size calculados como `score_current_grid()` (method="min")."""
+    grid = all_cells()
+    return [
+        CellScore(
+            cell_id=grid[i]["cell_id"],
+            score=score,
+            rank=i + 1,
+            display_rank=1 + sum(s > score for s in scores),
+            tie_group_size=scores.count(score),
+            geometry={
+                k: grid[i][k] for k in ("min_lon", "min_lat", "max_lon", "max_lat")
+            },
+            elevation=512.3,
+            slope=8.1,
+            historical_count=3,
+        )
+        for i, score in enumerate(scores)
+    ]
+
+
+def _fixture_result(scores: list[float] | None = None) -> GridScoreResult:
+    """Resultado que cumple el contrato de salida del puente (50 celdas,
+    procedencia FIRMS y fingerprint completos)."""
+    if scores is None:
+        scores = [0.42 - 0.005 * i for i in range(50)]
     return GridScoreResult(
         forecast_time=pd.Timestamp("2026-09-20T12:00:00Z"),
         horizon_hours=6,
@@ -70,7 +85,12 @@ def _fixture_result() -> GridScoreResult:
             "regla_30_30_30": False,
             "momento_observacion": pd.Timestamp("2026-09-20T06:00:00Z"),
         },
-        cells=[cell],
+        cells=_cells_from_scores(scores),
+        firms_origin="current",
+        firms_coverage_end=date(2026, 9, 19),
+        firms_lag_days=1,
+        firms_status=FIRMS_STATUS_CURRENT,
+        inputs_fingerprint=FINGERPRINT,
     )
 
 
@@ -138,24 +158,20 @@ def test_score_200_shape_and_disclaimer(monkeypatch):
     assert body["weather_timestamp"] == "2026-09-20T06:00:00+00:00"
     assert body["freshness"] == "DATOS RECIENTES"
     assert body["meteo_actual"]["momento_observacion"] == "2026-09-20T06:00:00+00:00"
-    assert body["cells"] == [
-        {
-            "cell_id": "C01",
-            "score": 0.42,
-            "rank": 1,
-            "display_rank": 1,
-            "tie_group_size": 1,
-            "geometry": {
-                "min_lon": -71.6,
-                "min_lat": -33.1,
-                "max_lon": -71.5,
-                "max_lat": -33.0,
-            },
-            "elevation": 512.3,
-            "slope": 8.1,
-            "historical_count": 3,
-        }
-    ]
+    assert len(body["cells"]) == 50
+    assert body["cells"][0] == {
+        "cell_id": "VP-001",
+        "score": 0.42,
+        "rank": 1,
+        "display_rank": 1,
+        "tie_group_size": 1,
+        "geometry": {
+            k: all_cells()[0][k] for k in ("min_lon", "min_lat", "max_lon", "max_lat")
+        },
+        "elevation": 512.3,
+        "slope": 8.1,
+        "historical_count": 3,
+    }
 
 
 def test_score_disclaimer_falls_back_when_metadata_unreadable(monkeypatch):
@@ -171,11 +187,6 @@ def test_score_disclaimer_falls_back_when_metadata_unreadable(monkeypatch):
 def test_score_operational_provenance_is_additive_and_private(monkeypatch):
     result = dataclasses.replace(
         _fixture_result(),
-        firms_origin="current",
-        firms_coverage_end=date(2026, 9, 19),
-        firms_lag_days=1,
-        firms_status="CURRENT",
-        inputs_fingerprint="a" * 64,
         scoring_inputs={"private_path": "C:/private/input.csv"},
     )
     monkeypatch.setattr(bridge_app, "score_current_grid", lambda: result)
@@ -184,24 +195,28 @@ def test_score_operational_provenance_is_additive_and_private(monkeypatch):
     assert body["firms_origin"] == "current"
     assert body["firms_coverage_end"] == "2026-09-19"
     assert body["firms_lag_days"] == 1
-    assert body["firms_status"] == "CURRENT"
-    assert body["inputs_fingerprint"] == "a" * 64
+    assert body["firms_status"] == FIRMS_STATUS_CURRENT
+    assert body["inputs_fingerprint"] == FINGERPRINT
     assert "scoring_inputs" not in body
     assert "private" not in json.dumps(body)
     assert body["cells"] == bridge_app._serialize_grid_result(result, "")["cells"]
 
 
-def test_score_legacy_result_keeps_nullable_provenance(monkeypatch):
-    monkeypatch.setattr(bridge_app, "score_current_grid", lambda: _fixture_result())
-    body = client.get("/score").json()
-    for key in (
-        "firms_origin",
-        "firms_coverage_end",
-        "firms_lag_days",
-        "firms_status",
-        "inputs_fingerprint",
-    ):
-        assert key in body and body[key] is None
+def test_score_legacy_result_without_provenance_fails_closed(monkeypatch):
+    """BRIDGE-01: un resultado sin procedencia FIRMS ni fingerprint ya no
+    sale como 200 con campos null -- n8n no puede auditarlo."""
+    legacy = dataclasses.replace(
+        _fixture_result(),
+        firms_origin=None,
+        firms_coverage_end=None,
+        firms_lag_days=None,
+        firms_status=None,
+        inputs_fingerprint=None,
+    )
+    monkeypatch.setattr(bridge_app, "score_current_grid", lambda: legacy)
+    resp = client.get("/score")
+    assert resp.status_code == 500
+    assert resp.json()["error_type"] == "internal_error"
 
 
 def test_score_503_on_prototype_unavailable(monkeypatch):
@@ -329,15 +344,9 @@ def test_score_500_hides_internal_details(monkeypatch, exc):
 def test_score_passes_model_d_ranking_through_unchanged(monkeypatch):
     """El puente no reordena, redondea ni recalcula: devuelve el orden y
     los scores exactos de `score_current_grid()` (Model D / ranking)."""
-    base = _fixture_result()
-    scores = [0.13129336874795144, 0.12, 0.12, 0.05]
-    cells = [
-        dataclasses.replace(
-            base.cells[0], cell_id=f"VP-00{i}", score=s, rank=i, display_rank=i
-        )
-        for i, s in enumerate(scores, start=1)
-    ]
-    result = dataclasses.replace(base, cells=cells)
+    scores = [0.13129336874795144, 0.12, 0.12] + [0.05 - 0.0005 * i for i in range(47)]
+    result = _fixture_result(scores)
+    cells = result.cells
     monkeypatch.setattr(bridge_app, "score_current_grid", lambda: result)
     monkeypatch.setattr(bridge_app, "_read_metadata_json", lambda: None)
 
