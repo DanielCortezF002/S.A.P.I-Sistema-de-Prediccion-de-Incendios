@@ -4,6 +4,7 @@
     python -m app.control_center --demo --presentation  # modo presentación
     python -m app.control_center --live                 # lee SAPI_SCORE_URL (GET /score)
     python -m app.control_center --live --score-url http://127.0.0.1:8600/score
+    python -m app.control_center --replay <accepted-run.json>  # REPLAY, sin ningún servicio
 
 Sirve `app/pages/dashboard.py` como script principal, en la raíz del servidor
 (`http://localhost:<puerto>/`). Así el frontend de Streamlit no sondea
@@ -31,8 +32,16 @@ REPO_ROOT = PAGE.parents[2]
 DEFAULT_PORT = 8501
 
 
-def page_query(demo: bool, presentation: bool) -> str:
-    params = (["demo=1"] if demo else []) + (["presentation=1"] if presentation else [])
+REPLAY_ENV = "SAPI_REPLAY_ARTIFACT"  # mismo nombre que lee app/pages/dashboard.py
+REPLAY_EXPECT_ENV = "SAPI_REPLAY_EXPECTED_FINGERPRINT"
+
+
+def page_query(demo: bool, presentation: bool, replay: bool = False) -> str:
+    params = (
+        (["demo=1"] if demo else [])
+        + (["replay=1"] if replay else [])
+        + (["presentation=1"] if presentation else [])
+    )
     return "?" + "&".join(params) if params else ""
 
 
@@ -74,6 +83,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--demo", action="store_true", help="fixture sintética local")
     mode.add_argument("--live", action="store_true", help="lee GET /score del bridge")
+    mode.add_argument(
+        "--replay",
+        type=Path,
+        metavar="ARTEFACTO",
+        help="reproduce una corrida capturada",
+    )
+    parser.add_argument(
+        "--expect-fingerprint",
+        help="con --replay: fingerprint registrado en la captura (ancla anti-edición)",
+    )
     parser.add_argument("--presentation", action="store_true", help="modo presentación")
     parser.add_argument(
         "--score-url",
@@ -89,10 +108,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     env = dict(os.environ)
+    env.pop(REPLAY_ENV, None)
+    env.pop(REPLAY_EXPECT_ENV, None)
     if args.score_url:
         env["SAPI_SCORE_URL"] = args.score_url
+    if args.replay is not None:
+        from src.output.accepted_run import verify_artifact_file
+
+        reasons = verify_artifact_file(args.replay, args.expect_fingerprint)
+        if reasons:
+            print(
+                "Artefacto no verificable; no se inicia el replay: "
+                + ", ".join(reasons)
+            )
+            return 3
+        env[REPLAY_ENV] = str(args.replay.resolve())
+        if args.expect_fingerprint:
+            env[REPLAY_EXPECT_ENV] = args.expect_fingerprint
     base = f"http://127.0.0.1:{args.port}"
-    url = base + "/" + page_query(args.demo, args.presentation)
+    url = base + "/" + page_query(args.demo, args.presentation, args.replay is not None)
     print(f"Centro de Control SAPI: {url}")
     if args.live:
         print(

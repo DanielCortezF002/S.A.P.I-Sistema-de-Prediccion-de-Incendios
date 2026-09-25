@@ -37,10 +37,12 @@ from typing import Any, Mapping, Optional
 from urllib.parse import urlsplit
 
 from src.geo.grid import COLS, ROWS, all_cells
+from src.output.contract import OUTPUT_SCHEMA_VERSION, input_identity_violations
 
 DEMO, LOADING, LIVE_READY = "DEMO", "LOADING", "LIVE_READY"
 DATA_UNAVAILABLE, PROTOTYPE_UNAVAILABLE = "DATA_UNAVAILABLE", "PROTOTYPE_UNAVAILABLE"
 INVALID_RESULT, NETWORK_ERROR = "INVALID_RESULT", "NETWORK_ERROR"
+REPLAY_READY = "REPLAY_READY"  # artefacto de corrida aceptada verificado (solo lectura)
 STATES = (
     DEMO,
     LOADING,
@@ -49,10 +51,11 @@ STATES = (
     PROTOTYPE_UNAVAILABLE,
     INVALID_RESULT,
     NETWORK_ERROR,
+    REPLAY_READY,
 )
 
 # Modo de la vista (qué se pidió), distinto del estado (qué se obtuvo).
-MODE_DEMO, MODE_LIVE = "DEMO", "LIVE"
+MODE_DEMO, MODE_LIVE, MODE_REPLAY = "DEMO", "LIVE", "REPLAY"
 # Conexión en vivo, medida SOLO en la última consulta (no es un estado permanente).
 CONN_CONNECTED, CONN_UNAVAILABLE, CONN_INVALID = (
     "CONNECTED",
@@ -67,7 +70,7 @@ GRID = {c["cell_id"]: c for c in all_cells()}  # geometría oficial (src/geo/gri
 EXPECTED_CELL_IDS = tuple(GRID)
 TOP_N = 5  # mismo corte "Top-5" documentado en src/inference/prototype_service.py
 # Contrato canónico de /score (tools/n8n_bridge/output_contract.py) y receta de alerta.
-OUTPUT_SCHEMA_VERSION, ALERT_SCHEMA_VERSION = "sapi-output-v1", "sapi-alert-v1"
+ALERT_SCHEMA_VERSION = "sapi-alert-v1"
 
 # Valores que hoy emite SAPI (prototype_service / firms_source); se presentan,
 # no se reinterpretan: el panel no decide frescura ni define umbrales.
@@ -162,6 +165,10 @@ class DashboardView:
     alert: Optional[AlertPreview] = None
     fetched_at: Optional[str] = None  # hora de la consulta de VISTA (UTC ISO)
     endpoint: Optional[str] = None  # host:puerto/ruta, sin credenciales ni query
+    # Solo en REPLAY: identidad del artefacto, cuándo se capturó y origen de datos.
+    artifact_fingerprint: Optional[str] = None
+    captured_at: Optional[str] = None
+    data_origin: Optional[str] = None
 
     @property
     def top(self) -> tuple[Cell, ...]:
@@ -169,9 +176,9 @@ class DashboardView:
 
     @property
     def has_ranking(self) -> bool:
-        return self.state in (LIVE_READY, DEMO) and len(self.cells) == len(
-            EXPECTED_CELL_IDS
-        )
+        return self.state in (LIVE_READY, DEMO, REPLAY_READY) and len(
+            self.cells
+        ) == len(EXPECTED_CELL_IDS)
 
     @property
     def firms_warning(self) -> bool:
@@ -545,6 +552,7 @@ def from_payload(
     if alert is None or alert.status != "READY":
         reasons += [f"alert:{r}" for r in alert_reasons] or ["alert:not_ready"]
     reasons += _identity_reasons(data, alert)
+    reasons += input_identity_violations(data.get("input_identity"))
     if reasons:
         return DashboardView(
             INVALID_RESULT, reasons=tuple(sorted(set(reasons))), synthetic=demo, **base

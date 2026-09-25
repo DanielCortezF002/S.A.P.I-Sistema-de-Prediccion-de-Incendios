@@ -24,7 +24,6 @@
     "momento_observacion": "2026-09-24T17:45:00+00:00"
   },
   "input_identity": {
-    "_synthetic": "SYNTHETIC / DEMO - identidades inventadas; no corresponden a archivos reales",
     "code": null,
     "model": {
       "sha256": "b9b210d8dbd5e49ca549fd62eaebfb20df41d3ff069d52c4484474fb2ece511c",

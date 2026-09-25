@@ -44,7 +44,6 @@ def live_payload() -> dict:
     """La fixture sin sus marcas sintéticas: forma de una respuesta sapi-output-v1."""
     p = copy.deepcopy(FIXTURE)
     p.pop("_synthetic")
-    p["input_identity"].pop("_synthetic")
     return p
 
 
@@ -121,6 +120,7 @@ def test_state_machine_is_explicit():
         "PROTOTYPE_UNAVAILABLE",
         "INVALID_RESULT",
         "NETWORK_ERROR",
+        "REPLAY_READY",
     )
     assert set(ui.STATE_COPY) == set(sc.STATES) - {sc.LOADING}
 
@@ -175,11 +175,13 @@ def test_identity_hashes_truncated_and_full_copyable():
     assert ("Inputs fingerprint", FIXTURE["inputs_fingerprint"]) in ui.full_hashes(view)
 
 
-def test_malformed_identity_field_is_dropped():
+def test_malformed_identity_metadata_is_rejected():
     p = copy.deepcopy(FIXTURE)
     p["input_identity"]["model"]["sha256"] = "<script>x</script>"
     view = sc.from_payload(p, demo=True)
-    assert "model_sha256" not in view.identity and "<script>" not in ui.render(view)
+    assert view.state == sc.INVALID_RESULT and not view.cells
+    assert "input_identity_model_unsafe_value" in view.reasons
+    assert "<script>" not in ui.render(view)
 
 
 def test_top5_exactly_ranks_1_to_5():
@@ -725,7 +727,6 @@ def test_secrets_ignored():
         traceback=f"Traceback ... {SECRET}",
     )
     p["cells"][0]["debug"] = SECRET
-    p["input_identity"] = {"dmc": {"token": SECRET, "manifest_sha256": SECRET}}
     views = (
         live_view(p),
         sc.from_payload(
@@ -739,7 +740,15 @@ def test_secrets_ignored():
     )
     assert (
         views[0].state == sc.LIVE_READY
-    )  # los extras se ignoran, no rompen el resultado
+    )  # los extras de primer nivel se ignoran (lista blanca)
+    secret_identity = live_payload()
+    secret_identity["input_identity"]["dmc"] = {
+        "token": SECRET,
+        "manifest_sha256": SECRET,
+    }
+    rejected = live_view(secret_identity)  # metadata de identidad con forma de secreto
+    assert rejected.state == sc.INVALID_RESULT and SECRET not in ui.render(rejected)
+    views = views + (rejected,)
     for view in views:
         blobs = [ui.render(view), ui.technical_details(view), view.alert_text or ""]
         blobs += [v for _, v in ui.full_hashes(view)]

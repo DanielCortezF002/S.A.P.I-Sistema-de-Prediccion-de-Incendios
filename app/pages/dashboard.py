@@ -9,12 +9,14 @@ vuelve a leer el resultado. La vista previa de alerta solo muestra texto.
     python -m app.control_center --demo          → demo (sin backend ni internet)
     python -m app.control_center --demo --presentation
     python -m app.control_center --live          → lee SAPI_SCORE_URL (src/config.py)
+    python -m app.control_center --replay <accepted-run.json>  → REPLAY sin servicios
 
 También sigue disponible como página de la app principal (`/dashboard`).
 """
 
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -32,7 +34,10 @@ import streamlit as st  # noqa: E402
 from app.components import ops_dashboard as ui  # noqa: E402
 from app.theme.css import build_stylesheet  # noqa: E402
 from app.utils.score_contract import (  # noqa: E402
+    INVALID_RESULT,
     LIVE_READY,
+    MODE_REPLAY as VIEW_MODE_REPLAY,
+    DashboardView,
     fetch_live,
     load_demo,
     now_utc_iso,
@@ -40,6 +45,10 @@ from app.utils.score_contract import (  # noqa: E402
 from src import config  # noqa: E402
 
 MODE_LIVE, MODE_DEMO = "En vivo (servicio de score)", "Demostración (datos sintéticos)"
+MODE_REPLAY = "Replay (corrida capturada)"
+# Ruta del artefacto: SOLO del lado servidor (la fija el lanzador), nunca desde la URL.
+REPLAY_ENV = "SAPI_REPLAY_ARTIFACT"
+REPLAY_EXPECT_ENV = "SAPI_REPLAY_EXPECTED_FINGERPRINT"
 ORDER_RANK, ORDER_CELL = "Rank (orden del servicio)", "ID de celda"
 REFRESH_HELP = "Actualizar vista no actualiza las fuentes de datos."
 LAST_SUCCESS_KEY = "ops_last_live_success"
@@ -49,17 +58,27 @@ def _html(markup: str) -> None:
     st.markdown(markup, unsafe_allow_html=True)
 
 
-def _mode_controls(demo_param: bool, presentation: bool) -> tuple[str, bool]:
+def _requested_mode() -> str:
+    if st.query_params.get("replay") == "1":
+        return MODE_REPLAY
+    return MODE_DEMO if st.query_params.get("demo") == "1" else MODE_LIVE
+
+
+def _mode_controls(requested: str, presentation: bool) -> tuple[str, bool]:
     if presentation:  # el modo queda fijado por la URL; sin controles de desarrollo
-        mode = MODE_DEMO if demo_param else MODE_LIVE
         refresh = st.button("Actualizar vista", help=REFRESH_HELP)
-        return mode, refresh
+        return requested, refresh
+    options = (MODE_LIVE, MODE_DEMO) + (
+        (MODE_REPLAY,) if os.environ.get(REPLAY_ENV) else ()
+    )
+    if requested not in options:
+        options += (requested,)
     left, right = st.columns([3, 1], vertical_alignment="bottom")
     with left:
         mode = st.radio(
             "Fuente de datos",
-            (MODE_LIVE, MODE_DEMO),
-            index=1 if demo_param else 0,
+            options,
+            index=options.index(requested),
             horizontal=True,
             key="ops_mode",
         )
@@ -67,12 +86,28 @@ def _mode_controls(demo_param: bool, presentation: bool) -> tuple[str, bool]:
         refresh = st.button(
             "Actualizar vista", use_container_width=True, help=REFRESH_HELP
         )
-    if (mode == MODE_DEMO) != demo_param:
+    if mode != requested:
+        for key in ("demo", "replay"):
+            st.query_params.pop(key, None)
         if mode == MODE_DEMO:
             st.query_params["demo"] = "1"
-        else:
-            st.query_params.pop("demo", None)
+        elif mode == MODE_REPLAY:
+            st.query_params["replay"] = "1"
     return mode, refresh
+
+
+def _load_replay() -> DashboardView:
+    """Artefacto fijado por el lanzador; solo lectura, sin red ni servicios."""
+    from src.output.accepted_run import load_replay
+
+    path = os.environ.get(REPLAY_ENV)
+    if not path:
+        return DashboardView(
+            INVALID_RESULT,
+            mode=VIEW_MODE_REPLAY,
+            reasons=("replay_artifact_not_configured",),
+        )
+    return load_replay(path, os.environ.get(REPLAY_EXPECT_ENV) or None)
 
 
 def _alert_text_drawer(view) -> None:
@@ -133,16 +168,17 @@ def main() -> None:
     _html(build_stylesheet())
     _html(ui.dashboard_css())
 
-    demo_param = st.query_params.get("demo") == "1"
     presentation = st.query_params.get("presentation") == "1"
-    mode, refresh = _mode_controls(demo_param, presentation)
+    mode, refresh = _mode_controls(_requested_mode(), presentation)
 
-    # Demo y en vivo nunca comparten caché: un fallo en vivo jamás muestra la fixture.
+    # Demo, en vivo y replay nunca comparten caché: un fallo en vivo jamás muestra otra cosa.
     cache_key = f"ops_view::{mode}"
     placeholder = st.empty()
     if refresh or cache_key not in st.session_state:
         if mode == MODE_DEMO:
             view = load_demo()
+        elif mode == MODE_REPLAY:
+            view = _load_replay()
         else:
             placeholder.markdown(ui.loading(), unsafe_allow_html=True)
             view = fetch_live(config.SAPI_SCORE_URL)

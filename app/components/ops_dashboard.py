@@ -31,8 +31,10 @@ from app.utils.score_contract import (
     INVALID_RESULT,
     LIVE_READY,
     MODE_DEMO,
+    MODE_REPLAY,
     NETWORK_ERROR,
     PROTOTYPE_UNAVAILABLE,
+    REPLAY_READY,
     SRC_AVAILABLE,
     SRC_BLOCKED,
     SRC_CURRENT,
@@ -80,6 +82,12 @@ STATE_COPY: dict[str, tuple[str, str, str]] = {
         "OPERATIVO",
         "Ranking vigente de la última evaluación del servicio de score.",
         "ok",
+    ),
+    REPLAY_READY: (
+        "REPLAY",
+        "Reproducción verificada de una corrida aceptada y capturada. No es una consulta "
+        "en vivo: muestra exactamente el resultado capturado.",
+        "replay",
     ),
     DEMO: (
         "DEMO",
@@ -148,6 +156,7 @@ _DEMO_FILL, _DEMO_STRIPE, _DEMO_TEXT = "#f4e6bd", "#ead7a0", "#4a3700"
 _WARN_FILL, _WARN_TEXT = "#fbeed9", "#5e3500"
 _ERR_FILL, _ERR_TEXT = "#f9e2de", "#6e1a10"
 _OK_FILL, _OK_TEXT = "#e3eef8", "#173a5e"
+_REPLAY_FILL, _REPLAY_TEXT = "#e6e1f3", "#34245e"
 
 
 def dashboard_css() -> str:
@@ -162,6 +171,11 @@ def dashboard_css() -> str:
     border-radius: var(--sapi-radius-banner); padding: 16px 20px 14px;
     box-shadow: 0 6px 18px -10px rgba(16,28,42,.55); }}
   .ops-band--demo {{ border: 4px dashed {_DEMO_FILL}; }}
+  .ops-band--replay {{ border: 4px double {_REPLAY_FILL}; }}
+  .ops-pill--replay {{ color: {_REPLAY_TEXT}; background: {_REPLAY_FILL};
+    border-color: {_REPLAY_TEXT}; }}
+  .ops-chip--replay {{ background: {_REPLAY_FILL}; color: {_REPLAY_TEXT};
+    border-color: {_REPLAY_TEXT}; font-weight: 800; letter-spacing: .06em; }}
   .ops-band__top {{ display: flex; flex-wrap: wrap; align-items: center;
     justify-content: space-between; gap: 8px 16px; }}
   .sapi-ops .ops-band h1 {{ margin: 0 !important; padding: 0 !important; font-size: 22px !important;
@@ -388,6 +402,8 @@ def _pill(view: DashboardView) -> str:
     label, _, tone = state_copy(view)
     if view.state == DEMO:
         label = "DEMO · DATOS DEMOSTRATIVOS"
+    elif view.state == REPLAY_READY:
+        label = "REPLAY · CORRIDA ACEPTADA"
     return (
         '<div class="ops-status"><span class="ops-status__label">Estado del sistema</span>'
         f'<span class="ops-pill ops-pill--{tone}" role="status">{_e(label)}</span></div>'
@@ -404,7 +420,27 @@ def _utc_clock(iso: str | None) -> str:
 
 
 def mode_line(view: DashboardView, last_success: str | None = None) -> str:
-    """MODO (DEMO / EN VIVO) y, en vivo, resultado de la ÚLTIMA consulta."""
+    """MODO (DEMO / EN VIVO / REPLAY) y, en vivo, resultado de la ÚLTIMA consulta."""
+    if view.mode == MODE_REPLAY:
+        chips = ['<span class="ops-chip ops-chip--replay">MODO: REPLAY</span>']
+        if view.data_origin == "SYNTHETIC":
+            chips.append('<span class="ops-chip ops-chip--demo">SYNTHETIC</span>')
+        if view.captured_at:
+            chips.append(
+                '<span class="ops-chip" title="Cuándo se capturó el artefacto. No es la hora '
+                'de evaluación.">Capturado: '
+                f'<b data-time="captured">{_e(_utc_clock(view.captured_at))}</b></span>'
+            )
+        if view.artifact_fingerprint:
+            chips.append(
+                '<span class="ops-chip">Artefacto: '
+                f'<b data-artifact="{_e(view.artifact_fingerprint)}">'
+                f"{_e(short_hash(view.artifact_fingerprint))}</b></span>"
+            )
+        chips.append(
+            '<span class="ops-chip">Sin conexión: servicios no requeridos</span>'
+        )
+        return f'<div class="ops-modeline">{"".join(chips)}</div>'
     if view.mode == MODE_DEMO:
         chips = [
             '<span class="ops-chip ops-chip--demo">MODO: DEMO</span>',
@@ -474,7 +510,10 @@ def header(view: DashboardView, last_success: str | None = None) -> str:
             + "".join(f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in items)
             + "</dl>"
         )
-    band_cls = "ops-band ops-band--demo" if view.mode == MODE_DEMO else "ops-band"
+    band_cls = {
+        MODE_DEMO: "ops-band ops-band--demo",
+        MODE_REPLAY: "ops-band ops-band--replay",
+    }.get(view.mode, "ops-band")
     band = (
         f'<header class="{band_cls}"><div class="ops-band__top">'
         "<h1>S.A.P.I. <span>· Centro de Control</span></h1>"
@@ -487,6 +526,12 @@ def header(view: DashboardView, last_success: str | None = None) -> str:
             "Fixture sintética (SYNTHETIC DEMO) para presentación y desarrollo de la interfaz. "
             "No son resultados del modelo, no provienen de incendios reales ni del servicio "
             "en vivo.</div>"
+        )
+    if view.mode == MODE_REPLAY and view.data_origin == "SYNTHETIC":
+        demo = (
+            '<div class="ops-demo" role="note"><strong>SYNTHETIC</strong>'
+            "Artefacto capturado desde datos sintéticos (fixture de prueba). No son resultados "
+            "operacionales ni provienen de incendios reales.</div>"
         )
     warn = ""
     if view.firms_warning:
@@ -811,6 +856,7 @@ def limitations() -> str:
 TECH_FIELDS = (
     ("inputs_fingerprint", "Inputs fingerprint"),
     ("alert_fingerprint", "Alert fingerprint"),
+    ("artifact_fingerprint", "Artifact fingerprint"),
     ("model_sha256", "Modelo SHA-256"),
     ("firms_sha256", "FIRMS SHA-256"),
     ("dmc_manifest_sha256", "DMC manifest SHA-256"),
@@ -831,6 +877,7 @@ def full_hashes(view: DashboardView) -> list[tuple[str, str]]:
     values = {
         "inputs_fingerprint": view.inputs_fingerprint,
         "alert_fingerprint": _alert_fingerprint(view),
+        "artifact_fingerprint": view.artifact_fingerprint,
         **view.identity,
     }
     return [(label, values[k]) for k, label in TECH_FIELDS if values.get(k)]
@@ -839,11 +886,12 @@ def full_hashes(view: DashboardView) -> list[tuple[str, str]]:
 def alert_panel(view: DashboardView) -> str:
     """Vista previa estructurada de la alerta, desde el MISMO resultado canónico."""
     alert = view.alert
-    demo_chip = (
-        '<span class="ops-chip ops-chip--demo">DATOS DEMOSTRATIVOS</span>'
-        if view.mode == MODE_DEMO
-        else ""
-    )
+    demo_chip = {
+        MODE_DEMO: '<span class="ops-chip ops-chip--demo">DATOS DEMOSTRATIVOS</span>',
+        MODE_REPLAY: '<span class="ops-chip ops-chip--replay">REPLAY</span>',
+    }.get(view.mode, "")
+    if view.mode == MODE_REPLAY and view.data_origin == "SYNTHETIC":
+        demo_chip += '<span class="ops-chip ops-chip--demo">SYNTHETIC</span>'
     head = (
         '<div class="ops-alert__head"><span class="ops-chip ops-chip--muted">'
         f"NO ENVIADA · SOLO VISTA PREVIA</span>{demo_chip}</div>"
@@ -887,7 +935,17 @@ def technical_details(
     conn = view.connection
     alert_fp = _alert_fingerprint(view)
     rows = [
-        ("Modo", "DEMO" if view.mode == MODE_DEMO else "EN VIVO"),
+        ("Modo", {MODE_DEMO: "DEMO", MODE_REPLAY: "REPLAY"}.get(view.mode, "EN VIVO")),
+        ("Origen de datos", view.data_origin),
+        ("Capturado", view.captured_at),
+        (
+            "Artifact fingerprint",
+            (
+                short_hash(view.artifact_fingerprint)
+                if view.artifact_fingerprint
+                else None
+            ),
+        ),
         ("Conexión (última consulta)", CONNECTION_COPY[conn][0] if conn else None),
         ("Endpoint", "fixture local" if view.mode == MODE_DEMO else view.endpoint),
         ("Estado interno", view.state),
