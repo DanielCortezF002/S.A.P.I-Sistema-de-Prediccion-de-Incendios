@@ -1,16 +1,26 @@
-"""Contrato de lectura del Centro de Control: respuesta del bridge → estado de vista.
+"""Contrato de lectura del Centro de Control: respuesta del bridge → vista validada.
 
-Puro (sin Streamlit ni red, salvo `fetch_live`, que solo hace GET). Consume el
-mismo contrato que expone `tools/n8n_bridge/app.py` en `GET /score`; no calcula
-ni reordena scores. Toda respuesta termina en exactamente uno de estos estados:
+Un solo adaptador canónico alimenta el panel y la vista previa de alerta:
 
-    READY · DEMO · DATA_UNAVAILABLE · PROTOTYPE_UNAVAILABLE · INVALID · NETWORK_ERROR
-    (LOADING lo maneja la página mientras espera)
+    respuesta de GET /score (GridScoreResult serializado por tools/n8n_bridge)
+      → `canonical_result`  (lista blanca, forma del bridge, sin campos extra)
+      ├─ validación de presentación de este módulo
+      └─ `src.notifications.alert_payload.build_alert` (misma entrada canónica)
+      → `DashboardView` (celdas del panel + `AlertPreview`)
 
-Nunca se muestra un ranking parcial: si algo del contrato falla, el estado
-es INVALID y no hay celdas. Solo se copian campos de una lista blanca; los
-mensajes de error upstream no se muestran nunca (solo se extraen de ellos,
-por patrón estricto, la fecha y el desfase FIRMS cuando el servicio bloquea).
+Si cualquiera de las dos validaciones rechaza el resultado, el estado es
+INVALID_RESULT para ambos: nunca hay un panel "válido" con una alerta que diga
+otra cosa. El rank, el cell_id y el score del backend no se tocan ni se reordenan.
+
+Máquina de estados (exactamente uno por vista):
+
+    DEMO · LOADING · LIVE_READY · DATA_UNAVAILABLE · PROTOTYPE_UNAVAILABLE
+    · INVALID_RESULT · NETWORK_ERROR
+
+DEMO solo sale de `load_demo()` (fixture local explícita). Una respuesta en vivo
+con marca sintética es INVALID_RESULT: el modo demo nunca se activa solo. Los
+mensajes de error upstream no se muestran nunca (solo se extraen de ellos, por
+patrón estricto, la fecha y el desfase FIRMS cuando el servicio bloquea).
 """
 
 from __future__ import annotations
@@ -19,29 +29,40 @@ import json
 import math
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Optional
+from urllib.parse import urlsplit
 
 from src.geo.grid import COLS, ROWS, all_cells
 
-LOADING, READY, DEMO = "LOADING", "READY", "DEMO"
+DEMO, LOADING, LIVE_READY = "DEMO", "LOADING", "LIVE_READY"
 DATA_UNAVAILABLE, PROTOTYPE_UNAVAILABLE = "DATA_UNAVAILABLE", "PROTOTYPE_UNAVAILABLE"
-INVALID, NETWORK_ERROR = "INVALID", "NETWORK_ERROR"
+INVALID_RESULT, NETWORK_ERROR = "INVALID_RESULT", "NETWORK_ERROR"
 STATES = (
-    LOADING,
-    READY,
     DEMO,
+    LOADING,
+    LIVE_READY,
     DATA_UNAVAILABLE,
     PROTOTYPE_UNAVAILABLE,
-    INVALID,
+    INVALID_RESULT,
     NETWORK_ERROR,
+)
+
+# Modo de la vista (qué se pidió), distinto del estado (qué se obtuvo).
+MODE_DEMO, MODE_LIVE = "DEMO", "LIVE"
+# Conexión en vivo, medida SOLO en la última consulta (no es un estado permanente).
+CONN_CONNECTED, CONN_UNAVAILABLE, CONN_INVALID = (
+    "CONNECTED",
+    "UNAVAILABLE",
+    "INVALID_RESPONSE",
 )
 
 DEMO_FIXTURE = (
     Path(__file__).resolve().parent.parent / "data" / "demo_score_synthetic.json"
 )
-EXPECTED_CELL_IDS = tuple(c["cell_id"] for c in all_cells())
+GRID = {c["cell_id"]: c for c in all_cells()}  # geometría oficial (src/geo/grid.py)
+EXPECTED_CELL_IDS = tuple(GRID)
 TOP_N = 5  # mismo corte "Top-5" documentado en src/inference/prototype_service.py
 
 # Valores que hoy emite SAPI (prototype_service / firms_source); se presentan,
@@ -66,11 +87,33 @@ _ISO_TZ = re.compile(r"\d{4}-\d{2}-\d{2}T[0-9:.]+(Z|[+-]\d{2}:\d{2})")
 _ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 _LABEL = re.compile(r"[A-Za-z0-9 ._/()ÁÉÍÓÚÑáéíóúñ-]{1,64}")
 _STATION_ID = re.compile(r"[0-9]{1,12}")
+_GEOMETRY_KEYS = ("min_lon", "min_lat", "max_lon", "max_lat")
+_GEOMETRY_TOLERANCE = 1e-4  # grados; el bridge redondea a 4-5 decimales
 # Mensaje de `classify_firms_lag` cuando FIRMS supera el desfase máximo upstream
 # (prototype_service.FIRMS_LAG_MAX_DAYS). Solo se extraen fecha y número.
 _FIRMS_BLOCKED_MSG = re.compile(
     r"El histórico FIRMS termina el (\d{4}-\d{2}-\d{2}), (\d{1,4}) días antes"
 )
+
+# Campos de primer nivel que el adaptador copia (forma de tools/n8n_bridge/app.py).
+_TOP_LEVEL = (
+    "status",
+    "model_version",
+    "model_status",
+    "forecast_time",
+    "horizon_hours",
+    "station_id",
+    "station_name",
+    "weather_timestamp",
+    "age_hours",
+    "freshness",
+    "firms_origin",
+    "firms_coverage_end",
+    "firms_lag_days",
+    "firms_status",
+    "inputs_fingerprint",
+)
+_CELL_FIELDS = ("cell_id", "score", "rank", "display_rank", "tie_group_size")
 
 
 @dataclass(frozen=True)
@@ -85,8 +128,21 @@ class Cell:
 
 
 @dataclass(frozen=True)
+class AlertPreview:
+    """Lo que SAPI generaría como notificación. Nunca se envía desde el panel."""
+
+    status: str  # READY | UNAVAILABLE | INVALID (vocabulario de alert_payload)
+    text: str
+    fingerprint: Optional[str] = None
+    scoring_time: Optional[str] = None
+    firms_coverage_end: Optional[str] = None
+    top: tuple[tuple[int, int, str, float], ...] = ()  # (rank, display_rank, id, score)
+
+
+@dataclass(frozen=True)
 class DashboardView:
     state: str
+    mode: str = MODE_LIVE
     cells: tuple[Cell, ...] = ()
     scoring_time: Optional[str] = None
     inputs_fingerprint: Optional[str] = None
@@ -99,7 +155,9 @@ class DashboardView:
     dmc: Mapping[str, Any] = field(default_factory=dict)
     identity: Mapping[str, str] = field(default_factory=dict)
     firms_blocked: bool = False
-    alert_text: Optional[str] = None
+    alert: Optional[AlertPreview] = None
+    fetched_at: Optional[str] = None  # hora de la consulta de VISTA (UTC ISO)
+    endpoint: Optional[str] = None  # host:puerto/ruta, sin credenciales ni query
 
     @property
     def top(self) -> tuple[Cell, ...]:
@@ -107,11 +165,28 @@ class DashboardView:
 
     @property
     def has_ranking(self) -> bool:
-        return self.state in (READY, DEMO) and len(self.cells) == len(EXPECTED_CELL_IDS)
+        return self.state in (LIVE_READY, DEMO) and len(self.cells) == len(
+            EXPECTED_CELL_IDS
+        )
 
     @property
     def firms_warning(self) -> bool:
         return self.has_ranking and self.firms.get("status") == FIRMS_STALE
+
+    @property
+    def alert_text(self) -> Optional[str]:
+        return self.alert.text if self.alert else None
+
+    @property
+    def connection(self) -> Optional[str]:
+        """Resultado de la última consulta en vivo; None en demo."""
+        if self.mode != MODE_LIVE or self.state == LOADING:
+            return None
+        if self.state == NETWORK_ERROR:
+            return CONN_UNAVAILABLE
+        if self.state == INVALID_RESULT:
+            return CONN_INVALID
+        return CONN_CONNECTED  # el servicio respondió según contrato
 
     def source_status(self) -> dict[str, str]:
         """Estado FIRMS / DMC / TOPOGRAFÍA / MODELO con semántica upstream."""
@@ -164,6 +239,55 @@ def _grid_position(cell_id: str) -> tuple[int, int]:
     return index // COLS, index % COLS
 
 
+def now_utc_iso() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def safe_endpoint(url: str) -> str:
+    """host:puerto/ruta para mostrar; nunca usuario, clave, query ni fragmento."""
+    try:
+        parts = urlsplit(url)
+        host = parts.hostname or "?"
+        port = f":{parts.port}" if parts.port else ""
+    except ValueError:
+        return "endpoint inválido"
+    return f"{host}{port}{parts.path}"
+
+
+# ── Adaptador canónico ─────────────────────────────────────────────────────────
+def canonical_result(data: Mapping) -> dict:
+    """Respuesta del bridge → dict con SOLO los campos de la lista blanca.
+
+    Es la única entrada tanto del panel como de `build_alert`. No cambia
+    valores: copia rank, display_rank, tie_group_size, cell_id y score tal
+    como vienen (y la geometría, si viene, para contrastarla con la grilla).
+    """
+    out = {k: data[k] for k in _TOP_LEVEL if k in data}
+    meteo = data.get("meteo_actual")
+    if isinstance(meteo, Mapping):
+        out["meteo_actual"] = {
+            k: meteo[k]
+            for k in ("temperatura", "humedad_relativa", "velocidad_viento_kmh")
+            if k in meteo
+        }
+    cells = data.get("cells")
+    if isinstance(cells, list):
+        canon = []
+        for c in cells:
+            if not isinstance(c, Mapping):
+                canon.append(c)  # la validación lo rechaza
+                continue
+            cell = {k: c[k] for k in _CELL_FIELDS if k in c}
+            geometry = c.get("geometry")
+            if isinstance(geometry, Mapping):
+                cell["geometry"] = {k: geometry.get(k) for k in _GEOMETRY_KEYS}
+            canon.append(cell)
+        out["cells"] = canon
+    elif "cells" in data:
+        out["cells"] = cells
+    return out
+
+
 def _validate_metadata(data: Mapping) -> list[str]:
     r: list[str] = []
     if data.get("status") != "ok":
@@ -205,6 +329,17 @@ def _validate_metadata(data: Mapping) -> list[str]:
     return r
 
 
+def _geometry_matches_grid(c: Mapping) -> bool:
+    g = c.get("geometry")
+    if g is None:
+        return True  # opcional: el mapa usa siempre la grilla oficial
+    ref = GRID[c["cell_id"]]
+    return all(
+        _is_finite(g.get(k)) and abs(g[k] - ref[k]) <= _GEOMETRY_TOLERANCE
+        for k in _GEOMETRY_KEYS
+    )
+
+
 def validate(data: Mapping) -> list[str]:
     """Motivos de rechazo (vacío = apto). Validación de presentación: lo mínimo
     para no mostrar un ranking engañoso (no replica la del backend)."""
@@ -223,6 +358,8 @@ def validate(data: Mapping) -> list[str]:
             r.append("invalid_score")
         if c.get("cell_id") not in EXPECTED_CELL_IDS:
             r.append("unknown_cell_id")
+        elif not _geometry_matches_grid(c):
+            r.append("geometry_mismatch_with_grid")
         for key in ("rank", "display_rank", "tie_group_size"):
             if not (_is_int(c.get(key)) and c[key] >= 1):
                 r.append(f"invalid_{key}")
@@ -298,23 +435,40 @@ def _identity(data: Mapping) -> dict[str, str]:
     return out
 
 
-def _alert_text(data: Any) -> Optional[str]:
-    """Texto de la alerta que SAPI generaría (módulo puro, nunca envía)."""
+def build_alert_preview(canonical: Mapping) -> tuple[Optional[AlertPreview], list[str]]:
+    """(vista previa, motivos de rechazo de alert_payload). Nunca envía nada."""
+    from src.notifications.alert_payload import build_alert, render_text
+
     try:
-        from src.notifications.alert_payload import build_alert, render_text
+        payload = build_alert(canonical)
+        text = render_text(payload)
+    except Exception:  # noqa: BLE001 -- una plantilla rota nunca rompe el panel
+        return None, ["alert_render_failed"]
+    top = tuple(
+        (c["rank"], c["display_rank"], c["cell_id"], c["score"])
+        for c in payload.get("top_cells", [])
+    )
+    firms = payload.get("firms") or {}
+    preview = AlertPreview(
+        status=payload["status"],
+        text=text,
+        fingerprint=payload.get("alert_fingerprint"),
+        scoring_time=payload.get("scoring_time"),
+        firms_coverage_end=firms.get("coverage_end"),
+        top=top,
+    )
+    return preview, list(payload.get("reasons") or [])
 
-        return render_text(build_alert(data))
-    except Exception:  # noqa: BLE001 -- la vista previa nunca rompe el panel
-        return None
 
-
-def _from_error(data: Mapping) -> DashboardView:
+def _from_error(data: Mapping, base: dict) -> DashboardView:
     kind = data.get("error_type")
-    alert = _alert_text(data)
+    canonical = {"status": "error", "error_type": kind}
     if kind == "data_unavailable":
-        return DashboardView(DATA_UNAVAILABLE, reasons=(kind,), alert_text=alert)
+        alert, _ = build_alert_preview(canonical)
+        return DashboardView(DATA_UNAVAILABLE, reasons=(kind,), alert=alert, **base)
     if kind not in ("prototype_unavailable", "internal_error"):
-        return DashboardView(INVALID, reasons=("unknown_error_type",))
+        return DashboardView(INVALID_RESULT, reasons=("unknown_error_type",), **base)
+    alert, _ = build_alert_preview(canonical)
     match = _FIRMS_BLOCKED_MSG.search(str(data.get("message", "")))
     if kind == "prototype_unavailable" and match:
         return DashboardView(
@@ -322,23 +476,51 @@ def _from_error(data: Mapping) -> DashboardView:
             reasons=(kind, "firms_lag_exceeds_upstream_max"),
             firms={"coverage_end": match.group(1), "lag_days": int(match.group(2))},
             firms_blocked=True,
-            alert_text=alert,
+            alert=alert,
+            **base,
         )
-    return DashboardView(PROTOTYPE_UNAVAILABLE, reasons=(kind,), alert_text=alert)
+    return DashboardView(PROTOTYPE_UNAVAILABLE, reasons=(kind,), alert=alert, **base)
 
 
-def from_payload(data: Any, *, demo: bool = False) -> DashboardView:
-    """Respuesta del bridge (éxito o error) → vista. `demo=True` solo para la fixture local."""
+def from_payload(
+    data: Any,
+    *,
+    demo: bool = False,
+    fetched_at: Optional[str] = None,
+    endpoint: Optional[str] = None,
+) -> DashboardView:
+    """Respuesta del bridge (éxito o error) → vista.
+
+    `demo=True` solo lo usa `load_demo()` para la fixture local explícita.
+    """
+    base = {
+        "mode": MODE_DEMO if demo else MODE_LIVE,
+        "fetched_at": fetched_at,
+        "endpoint": endpoint,
+    }
     if not isinstance(data, Mapping):
-        return DashboardView(INVALID, reasons=("response_not_object",))
+        return DashboardView(INVALID_RESULT, reasons=("response_not_object",), **base)
     if not data:
-        return DashboardView(INVALID, reasons=("empty_response",))
-    synthetic = demo or "_synthetic" in data
+        return DashboardView(INVALID_RESULT, reasons=("empty_response",), **base)
+    marked = "_synthetic" in data
+    if marked != demo:
+        # Nunca datos sintéticos por la vía en vivo, ni fixture sin su marca.
+        reason = (
+            "synthetic_marker_in_live_response" if marked else "demo_marker_missing"
+        )
+        return DashboardView(INVALID_RESULT, reasons=(reason,), **base)
     if data.get("status") == "error":
-        return _from_error(data)
-    reasons = validate(data)
+        return _from_error(data, base)
+
+    canonical = canonical_result(data)
+    reasons = validate(canonical)
+    alert, alert_reasons = build_alert_preview(canonical)
+    if alert is None or alert.status != "READY":
+        reasons += [f"alert:{r}" for r in alert_reasons] or ["alert:not_ready"]
     if reasons:
-        return DashboardView(INVALID, reasons=tuple(reasons), synthetic=synthetic)
+        return DashboardView(
+            INVALID_RESULT, reasons=tuple(sorted(set(reasons))), synthetic=demo, **base
+        )
     cells = tuple(
         Cell(
             c["rank"],
@@ -349,29 +531,43 @@ def from_payload(data: Any, *, demo: bool = False) -> DashboardView:
             *_grid_position(c["cell_id"]),
         )
         # orden del backend, sin re-rankear
-        for c in sorted(data["cells"], key=lambda c: c["rank"])
+        for c in sorted(canonical["cells"], key=lambda c: c["rank"])
     )
+    assert alert is not None
+    dashboard_top = tuple(
+        (c.rank, c.display_rank, c.cell_id, c.score) for c in cells[:TOP_N]
+    )
+    if alert.top != dashboard_top:  # defensa: ambas salidas deben ser el mismo ranking
+        return DashboardView(
+            INVALID_RESULT,
+            reasons=("alert_dashboard_mismatch",),
+            synthetic=demo,
+            **base,
+        )
     return DashboardView(
-        state=DEMO if synthetic else READY,
+        state=DEMO if demo else LIVE_READY,
         cells=cells,
-        scoring_time=data["forecast_time"],
-        inputs_fingerprint=data["inputs_fingerprint"],
+        scoring_time=canonical["forecast_time"],
+        inputs_fingerprint=canonical["inputs_fingerprint"],
         firms={
-            k: data[f"firms_{k}"]
+            k: canonical[f"firms_{k}"]
             for k in ("origin", "coverage_end", "lag_days", "status")
         },
-        model_version=data.get("model_version"),
-        model_status=data.get("model_status"),
-        meteo_freshness=data.get("freshness"),
-        synthetic=synthetic,
-        dmc=_dmc(data),
+        model_version=canonical.get("model_version"),
+        model_status=canonical.get("model_status"),
+        meteo_freshness=canonical.get("freshness"),
+        synthetic=demo,
+        dmc=_dmc(canonical),
         identity=_identity(data),
-        alert_text=_alert_text(data),
+        alert=alert,
+        **base,
     )
 
 
 def load_demo() -> DashboardView:
-    return from_payload(json.loads(DEMO_FIXTURE.read_text(encoding="utf-8")), demo=True)
+    """Única entrada al modo DEMO: la fixture local marcada como sintética."""
+    data = json.loads(DEMO_FIXTURE.read_text(encoding="utf-8"))
+    return from_payload(data, demo=True, fetched_at=now_utc_iso())
 
 
 def fetch_live(
@@ -381,26 +577,29 @@ def fetch_live(
     import requests
 
     http = session or requests
+    base = {"fetched_at": now_utc_iso(), "endpoint": safe_endpoint(url)}
     try:
         response = http.get(
             url, timeout=timeout, headers={"Accept": "application/json"}
         )
     except requests.Timeout:
-        return DashboardView(NETWORK_ERROR, reasons=("timeout",))
+        return DashboardView(NETWORK_ERROR, reasons=("timeout",), **base)
     except requests.RequestException:
-        return DashboardView(NETWORK_ERROR, reasons=("connection_failed",))
+        return DashboardView(NETWORK_ERROR, reasons=("connection_failed",), **base)
     if getattr(response, "content", None) == b"":
-        return DashboardView(INVALID, reasons=("empty_response",))
+        return DashboardView(INVALID_RESULT, reasons=("empty_response",), **base)
     try:
         data = response.json()
     except ValueError:
-        return DashboardView(INVALID, reasons=("response_not_json",))
+        return DashboardView(INVALID_RESULT, reasons=("response_not_json",), **base)
     if response.status_code == 200:
-        return from_payload(data)
+        return from_payload(data, **base)
     is_error_body = isinstance(data, Mapping) and data.get("status") == "error"
     if response.status_code in (500, 503) and is_error_body:
-        return from_payload(data)
-    return DashboardView(INVALID, reasons=(f"http_{response.status_code}",))
+        return from_payload(data, **base)
+    return DashboardView(
+        INVALID_RESULT, reasons=(f"http_{response.status_code}",), **base
+    )
 
 
 GRID_SHAPE = (ROWS, COLS)

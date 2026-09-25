@@ -24,11 +24,15 @@ from app.utils.score_contract import (
     DEMO,
     EXPECTED_CELL_IDS,
     FIRMS_STALE,
+    CONN_CONNECTED,
+    CONN_INVALID,
+    CONN_UNAVAILABLE,
     GRID_SHAPE,
-    INVALID,
+    INVALID_RESULT,
+    LIVE_READY,
+    MODE_DEMO,
     NETWORK_ERROR,
     PROTOTYPE_UNAVAILABLE,
-    READY,
     SRC_AVAILABLE,
     SRC_BLOCKED,
     SRC_CURRENT,
@@ -72,7 +76,7 @@ LIMITATIONS = (
 # Estado del sistema: (etiqueta, explicación, tono). Vocabulario cerrado; nunca
 # "seguro", "sin incendios" ni niveles de riesgo.
 STATE_COPY: dict[str, tuple[str, str, str]] = {
-    READY: (
+    LIVE_READY: (
         "OPERATIVO",
         "Ranking vigente de la última evaluación del servicio de score.",
         "ok",
@@ -84,17 +88,19 @@ STATE_COPY: dict[str, tuple[str, str, str]] = {
     ),
     DATA_UNAVAILABLE: (
         "DATOS NO DISPONIBLES",
-        "Un insumo de datos (meteorología DMC o FIRMS) no está disponible o es ilegible. "
-        f"No se puede presentar un ranking vigente. {NO_RANKING_NOTE}",
+        "No hay datos suficientes para generar la evaluación actual: un insumo "
+        "(meteorología DMC o FIRMS) no está disponible o es ilegible. "
+        f"{NO_RANKING_NOTE}",
         "warn",
     ),
     PROTOTYPE_UNAVAILABLE: (
         "EVALUACIÓN NO DISPONIBLE",
-        "El servicio respondió, pero no pudo generar el ranking. No se muestra ningún "
-        f"resultado anterior ni estimado. {NO_RANKING_NOTE}",
+        "El servicio de evaluación no está disponible: respondió, pero no pudo generar "
+        "el ranking. No se muestra ningún resultado anterior ni estimado. "
+        f"{NO_RANKING_NOTE}",
         "warn",
     ),
-    INVALID: (
+    INVALID_RESULT: (
         "RESULTADO INVÁLIDO",
         "La respuesta del servicio no cumple el contrato esperado y se descartó completa. "
         "No se muestran celdas para evitar un ranking engañoso.",
@@ -102,19 +108,27 @@ STATE_COPY: dict[str, tuple[str, str, str]] = {
     ),
     NETWORK_ERROR: (
         "SERVICIO NO DISPONIBLE",
-        "No fue posible contactar el servicio de evaluación. Revise que el bridge esté "
-        "en ejecución y vuelva a actualizar la vista.",
+        "No fue posible consultar el servicio SAPI. Revise que el bridge esté en "
+        f"ejecución y vuelva a actualizar la vista. {NO_RANKING_NOTE}",
         "error",
     ),
 }
 _TIMEOUT_TEXT = (
-    "El servicio de evaluación no respondió dentro del tiempo de espera. "
+    "No fue posible consultar el servicio SAPI: no respondió dentro del tiempo de espera. "
     f"No se muestra ningún resultado. {NO_RANKING_NOTE}"
 )
 _FIRMS_BLOCKED_TEXT = (
     "El servicio no generó el ranking porque el histórico FIRMS supera el desfase "
     f"máximo que SAPI acepta para puntuar. {NO_RANKING_NOTE}"
 )
+
+# Conexión en vivo (solo la última consulta) → (texto, tono)
+CONNECTION_COPY: dict[str, tuple[str, str]] = {
+    CONN_CONNECTED: ("CONECTADO", "ok"),
+    CONN_UNAVAILABLE: ("NO DISPONIBLE", "error"),
+    CONN_INVALID: ("RESPUESTA INVÁLIDA", "error"),
+}
+N8N_IDENTITY_BOUNDARY = "ALERT_IDENTITY_RECONCILIATION_REQUIRED_BEFORE_TELEGRAM"
 
 # Estado de fuente → (símbolo, texto, tono)
 SOURCE_BADGE: dict[str, tuple[str, str, str]] = {
@@ -169,6 +183,32 @@ def dashboard_css() -> str:
     color: var(--ops-on-navy); overflow-wrap: anywhere; }}
   .ops-meta dd small {{ display: block; font-size: 12px; line-height: 16px; font-weight: 500;
     color: var(--ops-on-navy-muted); }}
+  .ops-modeline {{ display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 12px 0 0; }}
+  .ops-chip {{ display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+    line-height: 16px; font-weight: 600; padding: 3px 10px; border-radius: 999px;
+    background: rgba(255,255,255,.08); color: var(--ops-on-navy);
+    border: 1px solid var(--ops-rule); }}
+  .ops-chip small {{ font-weight: 500; opacity: .8; }}
+  .ops-chip--live, .ops-chip--demo {{ font-weight: 800; letter-spacing: .06em; }}
+  .ops-chip--demo {{ background: {_DEMO_FILL}; color: {_DEMO_TEXT};
+    border-color: {_DEMO_TEXT}; }}
+  .ops-chip--ok {{ background: {_OK_FILL}; color: {_OK_TEXT}; border-color: {_OK_FILL}; }}
+  .ops-chip--error {{ background: {_ERR_FILL}; color: {_ERR_TEXT};
+    border-color: {_ERR_FILL}; }}
+  .ops-chip--muted {{ background: var(--sapi-surface-muted); color: var(--sapi-text-primary);
+    border-color: var(--sapi-border-card); }}
+  .ops-alert {{ border: 1px dashed var(--sapi-border-card);
+    border-radius: var(--sapi-radius-card); padding: 12px 14px; font-size: 14px;
+    line-height: 20px; }}
+  .ops-alert__head {{ display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }}
+  .ops-alert__meta {{ display: flex; flex-wrap: wrap; gap: 6px 24px; margin: 0 0 8px; }}
+  .ops-alert__meta dt {{ font-size: 11px; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; opacity: .75; }}
+  .ops-alert__meta dd {{ margin: 0; font-weight: 700; }}
+  .ops-alert__top {{ margin: 0 0 8px; padding-left: 0; list-style: none; }}
+  .ops-alert__top li {{ padding: 2px 0; }}
+  .sapi-ops p.ops-alert__note {{ margin: 0; font-size: 13px !important; opacity: .85; }}
+  .is-presentation .ops-alert {{ font-size: 17px; line-height: 25px; }}
   .ops-demo {{ margin: 12px 0 0; padding: 14px 18px; border-radius: var(--sapi-radius-card);
     color: {_DEMO_TEXT}; border: 2px solid {_DEMO_TEXT};
     background: repeating-linear-gradient(135deg, {_DEMO_FILL} 0 14px, {_DEMO_STRIPE} 14px 28px);
@@ -188,6 +228,7 @@ def dashboard_css() -> str:
     border-radius: var(--sapi-radius-card); padding: 16px 18px 18px; }}
   .ops-panel + .ops-panel, .ops-section {{ margin-top: 20px; }}
   .ops-main {{ margin-bottom: 20px; }}
+  .sapi-ops > .ops-panel {{ margin-bottom: 20px; }}
   .ops-main > .ops-panel {{ margin-top: 0; }}
   .sapi-ops .ops-panel h2 {{ margin: 0 0 4px !important; padding: 0 !important;
     font-size: 18px !important;
@@ -350,23 +391,62 @@ def _pill(view: DashboardView) -> str:
     )
 
 
-def header(view: DashboardView) -> str:
+def _utc_clock(iso: str | None) -> str:
+    """Hora de la consulta de vista (HH:MM:SS UTC); nunca se confunde con datos."""
+    try:
+        moment = datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+    except ValueError:
+        return "—"
+    return moment.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def mode_line(view: DashboardView, last_success: str | None = None) -> str:
+    """MODO (DEMO / EN VIVO) y, en vivo, resultado de la ÚLTIMA consulta."""
+    if view.mode == MODE_DEMO:
+        chips = [
+            '<span class="ops-chip ops-chip--demo">MODO: DEMO</span>',
+            '<span class="ops-chip">Sin conexión al servicio: fixture local</span>',
+        ]
+    else:
+        chips = ['<span class="ops-chip ops-chip--live">MODO: EN VIVO</span>']
+        conn = view.connection
+        if conn is not None:
+            text, tone = CONNECTION_COPY[conn]
+            chips.append(
+                f'<span class="ops-chip ops-chip--{tone}" data-connection="{conn}">'
+                f"CONEXIÓN: {text} <small>(última consulta)</small></span>"
+            )
+        if last_success and conn != CONN_CONNECTED:
+            chips.append(
+                f'<span class="ops-chip">Última consulta exitosa: {_e(_utc_clock(last_success))} '
+                "(sus datos no se muestran)</span>"
+            )
+    chips.append(
+        '<span class="ops-chip" title="Hora en que este panel leyó el servicio. '
+        'No indica la frescura de los datos.">Última consulta de vista: '
+        f'<b data-time="view">{_e(_utc_clock(view.fetched_at))}</b></span>'
+    )
+    return f'<div class="ops-modeline">{"".join(chips)}</div>'
+
+
+def header(view: DashboardView, last_success: str | None = None) -> str:
     meta = ""
     if view.has_ranking:
         firms = view.firms
         lag = firms["lag_days"]
         items = [
             (
-                "Evaluación",
-                f'<span title="{_e(view.scoring_time)}">'
-                f"{_e(_human_time(view.scoring_time))}</span>",
+                "Hora de evaluación",
+                f'<span data-time="scoring" title="{_e(view.scoring_time)}">'
+                f"{_e(_human_time(view.scoring_time))}</span><small>momento puntuado</small>",
+            ),
+            (
+                "Cobertura FIRMS hasta",
+                f'<span data-time="firms">{_e(firms["coverage_end"])}</span>'
+                f"<small>{_e(firms['status'])} · desfase {_e(lag)} "
+                f"{_plural(lag, 'día', 'días')}</small>",
             ),
             ("Celdas evaluadas", f"{len(view.cells)} de {len(EXPECTED_CELL_IDS)}"),
-            (
-                "FIRMS",
-                f"{_e(firms['status'])}<small>cobertura hasta {_e(firms['coverage_end'])} · "
-                f"desfase {_e(lag)} {_plural(lag, 'día', 'días')}</small>",
-            ),
             (
                 "Meteorología DMC",
                 _e(view.dmc.get("freshness", NOT_IN_RESPONSE))
@@ -391,18 +471,14 @@ def header(view: DashboardView) -> str:
             + "".join(f"<div><dt>{k}</dt><dd>{v}</dd></div>" for k, v in items)
             + "</dl>"
         )
-    band_cls = (
-        "ops-band ops-band--demo"
-        if view.state == DEMO or view.synthetic
-        else "ops-band"
-    )
+    band_cls = "ops-band ops-band--demo" if view.mode == MODE_DEMO else "ops-band"
     band = (
         f'<header class="{band_cls}"><div class="ops-band__top">'
         "<h1>S.A.P.I. <span>· Centro de Control</span></h1>"
-        f"{_pill(view)}</div>{meta}</header>"
+        f"{_pill(view)}</div>{mode_line(view, last_success)}{meta}</header>"
     )
     demo = ""
-    if view.state == DEMO or view.synthetic:
+    if view.mode == MODE_DEMO:
         demo = (
             '<div class="ops-demo" role="note"><strong>DATOS DEMOSTRATIVOS</strong>'
             "Fixture sintética (SYNTHETIC DEMO) para presentación y desarrollo de la interfaz. "
@@ -594,7 +670,7 @@ def _val(value) -> str:
     return _na() if value is None else _e(value)
 
 
-def data_status(view: DashboardView) -> str:
+def data_status(view: DashboardView, presentation: bool = False) -> str:
     st = view.source_status()
     f, d, ident = view.firms, view.dmc, view.identity
     lag = f.get("lag_days")
@@ -658,6 +734,8 @@ def data_status(view: DashboardView) -> str:
             _val(ident.get("model_sha256") and short_hash(ident["model_sha256"])),
         ),
     ]
+    if presentation:  # sin hashes de desarrollo en la pantalla principal
+        topo_rows, model_rows = topo_rows[:1], model_rows[:2]
     cards = [
         _src_card("FIRMS", st["FIRMS"], firms_rows),
         _src_card("DMC", st["DMC"], dmc_rows),
@@ -729,37 +807,105 @@ def limitations() -> str:
 
 TECH_FIELDS = (
     ("inputs_fingerprint", "Inputs fingerprint"),
+    ("alert_fingerprint", "Alert fingerprint"),
     ("model_sha256", "Modelo SHA-256"),
     ("firms_sha256", "FIRMS SHA-256"),
     ("dmc_manifest_sha256", "DMC manifest SHA-256"),
     ("topography_sha256", "Topografía SHA-256"),
 )
+_ALERT_NOT_READY = {
+    "UNAVAILABLE": "SAPI no generaría una alerta de ranking: la evaluación no está disponible.",
+    "INVALID": "SAPI no generaría una alerta: el resultado no es válido.",
+}
+
+
+def _alert_fingerprint(view: DashboardView) -> str | None:
+    return view.alert.fingerprint if view.alert else None
 
 
 def full_hashes(view: DashboardView) -> list[tuple[str, str]]:
     """(etiqueta, hash completo) disponibles, para copiar desde la página."""
-    values = {"inputs_fingerprint": view.inputs_fingerprint, **view.identity}
+    values = {
+        "inputs_fingerprint": view.inputs_fingerprint,
+        "alert_fingerprint": _alert_fingerprint(view),
+        **view.identity,
+    }
     return [(label, values[k]) for k, label in TECH_FIELDS if values.get(k)]
 
 
-def technical_details(view: DashboardView, read_at: str | None = None) -> str:
+def alert_panel(view: DashboardView) -> str:
+    """Vista previa estructurada de la alerta, desde el MISMO resultado canónico."""
+    alert = view.alert
+    demo_chip = (
+        '<span class="ops-chip ops-chip--demo">DATOS DEMOSTRATIVOS</span>'
+        if view.mode == MODE_DEMO
+        else ""
+    )
+    head = (
+        '<div class="ops-alert__head"><span class="ops-chip ops-chip--muted">'
+        f"NO ENVIADA · SOLO VISTA PREVIA</span>{demo_chip}</div>"
+    )
+    if alert is None or alert.status != "READY":
+        status = alert.status if alert else "NONE"
+        text = _ALERT_NOT_READY.get(status, _ALERT_NOT_READY["INVALID"])
+        if view.state == NETWORK_ERROR:
+            text = "Sin respuesta del servicio SAPI: no hay alerta que previsualizar."
+        body = f"<p>{_e(text)} {_e(NO_RANKING_NOTE)}</p>"
+        return f'<div class="ops-alert" data-alert-status="{_e(status)}">{head}{body}</div>'
+    rows = []
+    for rank, display, cid, score in alert.top:
+        shared = (
+            f" <small>(posición compartida {display})</small>"
+            if display != rank
+            else ""
+        )
+        rows.append(
+            f'<li data-rank="{rank}"><b>#{rank}</b> Celda {_e(cid)} · '
+            f"score relativo {score:.4f}{shared}</li>"
+        )
+    meta = (
+        '<dl class="ops-alert__meta">'
+        f"<div><dt>Hora de evaluación</dt><dd>{_e(_human_time(alert.scoring_time))}</dd></div>"
+        f"<div><dt>Cobertura FIRMS hasta</dt><dd>{_e(alert.firms_coverage_end)}</dd></div>"
+        f"<div><dt>Celdas priorizadas</dt><dd>{len(alert.top)} de {len(view.cells)}</dd></div>"
+        "</dl>"
+    )
+    disclaimer = f'<p class="ops-alert__note">{_e(CLARIFICATION)} {_e(FIRMS_NOTE)}</p>'
+    return (
+        f'<div class="ops-alert" data-alert-status="READY">{head}{meta}'
+        f'<ol class="ops-alert__top">{"".join(rows)}</ol>{disclaimer}</div>'
+    )
+
+
+def technical_details(
+    view: DashboardView, read_at: str | None = None, last_success: str | None = None
+) -> str:
     ident = view.identity
+    conn = view.connection
+    alert_fp = _alert_fingerprint(view)
     rows = [
+        ("Modo", "DEMO" if view.mode == MODE_DEMO else "EN VIVO"),
+        ("Conexión (última consulta)", CONNECTION_COPY[conn][0] if conn else None),
+        ("Endpoint", "fixture local" if view.mode == MODE_DEMO else view.endpoint),
         ("Estado interno", view.state),
         ("Motivos", ", ".join(view.reasons) or "—"),
-        ("Hora de evaluación", view.scoring_time),
-        ("Vista leída", read_at),
+        ("Última consulta de vista", view.fetched_at or read_at),
+        ("Última consulta exitosa", last_success),
+        ("Hora de evaluación (scoring)", view.scoring_time),
+        ("Celdas evaluadas", len(view.cells) if view.cells else None),
         (
             "Inputs fingerprint",
             short_hash(view.inputs_fingerprint) if view.inputs_fingerprint else None,
         ),
+        ("Alert fingerprint", short_hash(alert_fp) if alert_fp else None),
+        ("Identidad n8n", N8N_IDENTITY_BOUNDARY),
         ("Modelo", view.model_version),
         (
             "Modelo SHA-256",
             ident.get("model_sha256") and short_hash(ident["model_sha256"]),
         ),
         ("FIRMS origen", view.firms.get("origin")),
-        ("FIRMS cobertura", view.firms.get("coverage_end")),
+        ("FIRMS cobertura hasta", view.firms.get("coverage_end")),
         ("FIRMS desfase (días)", view.firms.get("lag_days")),
         ("FIRMS estado", view.firms.get("status")),
         ("FIRMS puntero", ident.get("firms_pointer_version")),
@@ -773,10 +919,6 @@ def technical_details(view: DashboardView, read_at: str | None = None) -> str:
         ),
         ("DMC cobertura hasta", ident.get("dmc_coverage_end")),
         ("DMC puntero", ident.get("dmc_pointer_version")),
-        (
-            "Fuente",
-            "Fixture sintética local" if view.synthetic else "GET /score (bridge)",
-        ),
     ]
     body = "".join(
         f"<dt>{_e(k)}</dt><dd>{_e(v) if v not in (None, '') else _na()}</dd>"
@@ -810,9 +952,11 @@ def wrap(inner: str, presentation: bool = False) -> str:
     return f'<div class="{cls}">{inner}</div>'
 
 
-def render_overview(view: DashboardView, presentation: bool = False) -> str:
+def render_overview(
+    view: DashboardView, presentation: bool = False, last_success: str | None = None
+) -> str:
     """Estado del sistema + Top 5 + mapa (o panel de estado si no hay ranking)."""
-    parts = [header(view)]
+    parts = [header(view, last_success)]
     if view.has_ranking:
         parts += ['<div class="ops-main">', top_list(view), geo_map(view), "</div>"]
     else:
@@ -825,9 +969,20 @@ def render(view: DashboardView, presentation: bool = False) -> str:
     parts = [
         dashboard_css(),
         render_overview(view, presentation),
-        wrap(data_status(view), presentation),
+        wrap(data_status(view, presentation), presentation),
     ]
     if view.has_ranking and not presentation:
         parts.append(wrap(ranking_table(view), presentation))
+    parts.append(wrap(alert_section(view), presentation))
     parts.append(wrap(limitations(), presentation))
     return "".join(parts)
+
+
+def alert_section(view: DashboardView) -> str:
+    return (
+        '<section class="ops-panel" aria-labelledby="ops-alert-h">'
+        '<h2 id="ops-alert-h">Vista previa de alerta</h2>'
+        '<p class="ops-sub">Lo que SAPI generaría para una notificación futura, a partir del '
+        "mismo resultado que muestra este panel. Nada se envía: no hay conexión con "
+        f"Telegram ni n8n.</p>{alert_panel(view)}</section>"
+    )

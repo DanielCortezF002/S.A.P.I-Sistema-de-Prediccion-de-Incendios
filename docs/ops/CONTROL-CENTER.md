@@ -1,90 +1,137 @@
 # Centro de Control SAPI (solo lectura)
 
 Una sola pantalla para saber si SAPI está operativo, con qué datos evaluó, cuándo, qué
-50 celdas priorizó y qué alerta generaría. Página Streamlit dentro de la app existente
-(`app/pages/dashboard.py`, ruta `/dashboard`). No es otro proyecto ni otro framework.
+50 celdas priorizó y qué alerta generaría. Es la capa de presentación del MVP: la misma
+página muestra datos DEMO o el resultado EN VIVO aceptado del bridge. Página Streamlit de
+la app existente (`app/pages/dashboard.py`). No es otro proyecto ni otro framework.
 
-## Lanzar
+## Lanzar (un comando)
 
 ```bash
-# Demo: fixture sintética local. Sin backend ni internet.
-streamlit run app/app.py            # → http://localhost:8501/dashboard?demo=1
-# Modo presentación (tipografía grande, sin detalles de desarrollo)
-#                                   → http://localhost:8501/dashboard?demo=1&presentation=1
-
-# En vivo: lee el bridge existente (tools/n8n_bridge/app.py)
-SAPI_SCORE_URL=http://127.0.0.1:8600/score streamlit run app/app.py
-#                                   → http://localhost:8501/dashboard
+python -m app.control_center --demo                 # presentación sin bridge, n8n ni internet
+python -m app.control_center --demo --presentation  # modo presentación (César / Matías)
+python -m app.control_center --live                 # lee SAPI_SCORE_URL con GET /score
+python -m app.control_center --live --score-url http://127.0.0.1:8600/score
 ```
 
-`SAPI_SCORE_URL` vale `http://127.0.0.1:8600/score` por defecto. `presentation=1` también
-funciona en vivo (`/dashboard?presentation=1`).
+El comando abre `http://127.0.0.1:8501/` (`--port`, `--no-browser`). En la misma URL:
+`/?demo=1`, `/?demo=1&presentation=1`, `/?presentation=1`.
 
-## Fuente de datos
+- **Configuración:** `SAPI_SCORE_URL` en `src/config.py` (por variable de entorno o `.env`,
+  como el resto de la configuración). Por defecto es `http://127.0.0.1:8600/score`. Desde
+  el contenedor web se usa `http://host.docker.internal:8600/score`.
+- **El lanzador no inicia nada más:** ni bridge, ni n8n, ni refresh FIRMS/DMC, ni Docker,
+  ni el operador. En modo en vivo, el bridge tiene que estar corriendo antes.
+- Sigue disponible como página de la app principal (`streamlit run app/app.py`, luego
+  `/dashboard`).
 
-- **En vivo:** un único `GET /score` del bridge. `Actualizar vista` repite ese GET.
-  **Actualizar vista no actualiza las fuentes de datos** (FIRMS, DMC, CURRENT).
-- **Demo:** `app/data/demo_score_synthetic.json`, marcada `_synthetic`. Se ve con banda
-  punteada, píldora `DEMO · DATOS DEMOSTRATIVOS` y un aviso grande `DATOS DEMOSTRATIVOS`.
-  Si una respuesta en vivo trae `_synthetic`, también se presenta como demo.
-- Demo y en vivo usan cachés separadas: si el modo en vivo falla, nunca muestra valores de la demo.
+### Los dos 404 del navegador
 
-## Estados del sistema
+Eran `GET /dashboard/_stcore/health` y `GET /dashboard/_stcore/host-config`. No son
+recursos del Centro de Control. Cuando una página se abre por subruta, el frontend de
+Streamlit 1.62 prueba primero `<subruta>/_stcore/*` y después la raíz. Pasa con cualquier
+subruta (también `/nonexistent_page`); el backend no responde nada de eso. El lanzador sirve
+la página en la raíz, así que esos sondeos no existen: en demo, presentación y en vivo, el
+navegador registra **0 respuestas ≥ 400 y 0 errores de consola** (lo verifica
+`test_application_owned_resources_do_not_404` con Chromium). Si la página se abre como
+`/dashboard` dentro de `app/app.py`, esos dos sondeos siguen apareciendo: son del framework
+y no afectan el funcionamiento.
 
-| Estado            | Cuándo                                                                         |
-| ----------------- | ------------------------------------------------------------------------------ |
-| OPERATIVO         | `200` con un ranking que pasa la validación de presentación                    |
-| DEMO              | fixture sintética                                                              |
-| DATOS NO DISPONIBLES | `error_type=data_unavailable`                                               |
-| EVALUACIÓN NO DISPONIBLE | `prototype_unavailable` / `internal_error`. Si el mensaje upstream es el de desfase FIRMS sobre el máximo, FIRMS se muestra **BLOQUEADO** con fecha y desfase (solo esos dos valores se extraen; el mensaje nunca se muestra) |
-| RESULTADO INVÁLIDO | respuesta vacía, no JSON, HTTP inesperado o contrato roto                     |
-| SERVICIO NO DISPONIBLE | error de conexión o tiempo de espera agotado                              |
+## Un solo contrato de presentación
 
-Sin ranking válido no se dibuja Top 5, mapa ni tabla, y el panel dice que la ausencia de
-ranking no indica que la situación sea segura.
+```
+GET /score (GridScoreResult serializado por tools/n8n_bridge)
+  → canonical_result()   lista blanca, forma del bridge, valores intactos
+     ├─ validación de presentación (app/utils/score_contract.py)
+     └─ build_alert() de src/notifications/alert_payload.py (misma entrada)
+  → DashboardView: panel + AlertPreview
+```
 
-**Validación de presentación** (`app/utils/score_contract.py`, no replica la del backend):
-exactamente 50 celdas de la grilla oficial, `cell_id` y `rank` únicos, rank 1..50,
-score finito en [0, 1], orden de score coherente con el rank, metadatos de empate
-consistentes, `inputs_fingerprint` hex de 64, hora de evaluación ISO y metadatos FIRMS con
-los valores que SAPI emite. Cualquier fallo descarta la respuesta entera.
+Si cualquiera de las dos validaciones rechaza el resultado, **ambas salidas** quedan en
+INVALID_RESULT; nunca hay un panel válido junto a una alerta que diga otra cosa. Por
+ejemplo, un `firms_lag_days` que no calza con la cobertura y la hora de evaluación se
+rechaza en los dos. El Top 5 del panel y el de la alerta se comparan
+`(rank, display_rank, cell_id, score)` por `(rank, display_rank, cell_id, score)`.
+**El rank del backend es la autoridad:** no se reordena; los empates solo se marcan.
 
-## Qué muestra
+Validación de presentación (no replica la del backend): exactamente 50 celdas de la grilla
+oficial; `cell_id` y `rank` únicos; rank de 1 a 50; score finito en [0, 1]; orden coherente;
+metadatos de empate consistentes; `inputs_fingerprint` hex de 64; hora ISO; metadatos FIRMS
+con los valores que SAPI emite; y, si la respuesta trae geometría, que coincida con
+`src/geo/grid.py`. El mapa siempre dibuja esa grilla oficial (EPSG:4326), que es la
+geografía real de las 50 celdas, en demo y en vivo.
 
-1. **Estado del sistema** y evaluación: hora, celdas evaluadas, FIRMS, meteorología DMC, modelo.
-2. **Top 5**: ranks 1–5 del servicio, score relativo y empates señalados sin cambiar el rank.
-3. **Mapa**: las 50 celdas en su posición real (geometría de `src/geo/grid.py`, EPSG:4326,
-   sin mapa base, así funciona sin internet). La intensidad es score / score máximo de la
-   evaluación. El tooltip muestra celda, rank y score relativo.
-4. **Estado de datos**: FIRMS, DMC, TOPOGRAFÍA y MODELO con texto y símbolo
-   (✓ AL DÍA, ● DISPONIBLE, ▲ CON AVISO, ■ BLOQUEADO, ✕ NO DISPONIBLE, ? DESCONOCIDO).
-   FIRMS y DMC reflejan la clasificación upstream (`FIRMS AL DÍA` / `FIRMS DESACTUALIZADO`,
-   frescura DMC); el panel no define umbrales propios.
-5. **Ranking completo**: las 50 filas en el orden del backend, con búsqueda por celda y
-   un orden de vista por ID. El rank canónico siempre es visible y nunca cambia.
-6. **Vista previa de alerta**: el interruptor `Vista previa` muestra el texto que generaría
-   `src/notifications/alert_payload.py` (módulo puro). No hay botón de envío.
-7. **Limitaciones** y **Detalles técnicos** (fingerprint, identidades y valores de estado sin
-   procesar; los hashes completos aparecen en bloques copiables).
+## Estados
 
-Identidades del modelo, de FIRMS, de DMC y de topografía se leen de `scoring_inputs` si la
-respuesta lo trae. **El bridge actual no lo serializa**, así que en vivo esos campos dicen
-`NO DISPONIBLE EN RESPUESTA`. La demo los incluye con hashes sintéticos.
+| Estado                  | Cuándo                                         | Qué se ve                                   |
+| ----------------------- | ---------------------------------------------- | ------------------------------------------- |
+| `DEMO`                  | solo `?demo=1` o `--demo` (fixture local)       | ranking sintético, rotulado DATOS DEMOSTRATIVOS |
+| `LOADING`               | mientras se espera el GET                      | esqueleto sin valores                       |
+| `LIVE_READY`            | `200` que pasa ambas validaciones               | OPERATIVO, ranking completo                 |
+| `DATA_UNAVAILABLE`      | `error_type=data_unavailable`                  | "No hay datos suficientes para generar la evaluación actual." |
+| `PROTOTYPE_UNAVAILABLE` | `prototype_unavailable` / `internal_error`     | "El servicio de evaluación no está disponible." FIRMS **BLOQUEADO** si el desfase supera el máximo upstream |
+| `INVALID_RESULT`        | vacío, no JSON, HTTP inesperado, contrato roto, o marca sintética en vivo | RESULTADO INVÁLIDO, sin celdas |
+| `NETWORK_ERROR`         | sin conexión o tiempo de espera agotado         | "No fue posible consultar el servicio SAPI." |
+
+Sin ranking válido no hay Top 5, mapa, tabla ni alerta de ranking, y la página dice que la
+ausencia de ranking no indica que la situación sea segura. **Nunca hay recurso a la demo:**
+demo y en vivo tienen cachés separadas, y una respuesta en vivo con `_synthetic` se
+rechaza.
+
+**Encabezado:** `MODO: DEMO` o `MODO: EN VIVO`. En vivo, también `CONEXIÓN: CONECTADO /
+NO DISPONIBLE / RESPUESTA INVÁLIDA`, medida **solo en la última consulta**. Si esa consulta
+falló, se muestra la hora de la última consulta exitosa, pero no sus datos.
+
+**Tres horas distintas:**
+
+- **Última consulta de vista:** cuándo el panel leyó el servicio. No indica frescura.
+- **Hora de evaluación:** el momento puntuado por el modelo (`forecast_time`).
+- **Cobertura FIRMS hasta:** fin del histórico satelital usado.
+
+## Vista previa de alerta e identidad
+
+El panel "Vista previa de alerta" muestra, desde el mismo resultado, el Top 5, la hora de
+evaluación, la cobertura FIRMS y el aviso científico. El interruptor `Vista previa` muestra
+el texto completo. **Nada se envía:** no hay Telegram, n8n ni botón de envío.
+
+`alert_fingerprint` (sha256 determinista de la alerta; no incluye `generated_at`) aparece
+truncado en **Detalles técnicos** y completo en un bloque copiable.
+
+**`ALERT_IDENTITY_RECONCILIATION_REQUIRED_BEFORE_TELEGRAM`.** `alert_fingerprint` identifica
+una evaluación: hora, entradas, modelo, FIRMS y Top 5. `notification_identity` de
+`ops/n8n/policy.js` identifica una condición:
+`['sapi-pilot-v1', categoría, modelo, estación, grupo display_rank 1, regla 30-30-30]`.
+Hoy no son equivalentes, y el fingerprint **no** se usa para deduplicar. Antes de cualquier
+envío por Telegram hay que decidir una sola semántica de identidad y alinear n8n con ella.
+Esta tarea no modifica n8n.
+
+## Qué muestra cada modo
+
+- **Presentación:** SAPI, estado, modo, Top 5, mapa de 50 celdas, cobertura FIRMS, estado de
+  datos sin hashes, vista previa de alerta y limitaciones. Sin tabla completa ni detalles
+  técnicos.
+- **Operador:** lo anterior, más el ranking completo (búsqueda por celda y orden de vista por
+  ID; el rank no cambia) y **Detalles técnicos**: modo, conexión, endpoint (sin
+  credenciales ni query), horas, celdas evaluadas, inputs/alert fingerprint, identidad del
+  modelo y metadatos FIRMS/DMC. Identidades de modelo/FIRMS/DMC/topografía solo si la
+  respuesta trae `scoring_inputs`. **El bridge actual no lo serializa**, así que en vivo
+  esos campos dicen `NO DISPONIBLE EN RESPUESTA`.
 
 ## Lenguaje científico
 
-- Siempre "score relativo" o "prioridad relativa", nunca probabilidad ni porcentaje.
-  Texto fijo: *"El score representa prioridad relativa dentro de las celdas evaluadas. No
-  corresponde a una probabilidad calibrada ni confirma la existencia de un incendio."*
-- FIRMS = anomalías térmicas satelitales, no incendios confirmados.
-- No hay niveles ALTO, MEDIO ni BAJO, ni textos como "seguro" o "sin incendios".
-  Los tests lo verifican en todos los estados.
+Siempre "score relativo" o "prioridad relativa": *"El score representa prioridad relativa
+dentro de las celdas evaluadas. No corresponde a una probabilidad calibrada ni confirma la
+existencia de un incendio."* FIRMS = anomalías térmicas satelitales. No hay niveles
+ALTO/MEDIO/BAJO, porcentajes, "seguro", "sin incendios" ni "no hay riesgo". Los tests lo
+verifican en todos los estados.
 
-## Solo lectura (intencional)
+## Solo lectura
 
-La página no refresca FIRMS ni DMC, no publica ni revierte `CURRENT`, no limpia, no programa
-tareas y no llama a Telegram ni a n8n. Solo usa `GET`. Solo se muestran campos de una lista
-blanca, escapados: nunca credenciales (`NASA_FIRMS_API_KEY`, `DMC_USUARIO`, `DMC_TOKEN`,
-`Authorization`), entornos, trazas ni mensajes de error upstream.
+Única acción: `Actualizar vista`, que repite el `GET /score` y **no actualiza las fuentes de
+datos**. No hay rutas ni acciones POST/PUT/DELETE, refresh FIRMS/DMC, publicación de
+`CURRENT`, scoring, n8n ni Telegram. Solo se muestran campos de una lista blanca, escapados:
+nunca `NASA_FIRMS_API_KEY`, `DMC_USUARIO`, `DMC_TOKEN`, `Authorization`, cookies, entorno,
+trazas ni mensajes de error upstream.
 
-Tests: `tests/test_ops_dashboard.py`.
+Tests: `tests/test_ops_dashboard.py` (incluye un stub HTTP local en 127.0.0.1 que imita
+el bridge).
