@@ -14,6 +14,13 @@ from src.ops.attempt2_operator.events import sha256_file
 SHA = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
 
+def _ts() -> dict:
+    return {
+        "started_at": "2026-09-24T12:01:00+00:00",
+        "finished_at": "2026-09-24T12:02:00+00:00",
+    }
+
+
 def _boot(tmp_path: Path) -> Attempt2Operator:
     op = Attempt2Operator.init_run(
         evidence_root=tmp_path,
@@ -58,6 +65,8 @@ def test_unauthorized_firms_writer(tmp_path: Path):
             "firms",
             {
                 "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
                 "stdout": "",
                 "stderr": "",
                 "sanitization_status": "PASS",
@@ -76,6 +85,8 @@ def test_firms_exit65(tmp_path: Path):
         "firms",
         {
             "exit_code": 65,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "schema mismatch",
             "sanitization_status": "PASS",
@@ -97,6 +108,8 @@ def test_firms_schema_mismatch(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -116,6 +129,8 @@ def test_hash_mismatch(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -135,6 +150,8 @@ def test_dmc_validation_failure(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -150,6 +167,8 @@ def test_dmc_validation_failure(tmp_path: Path):
         "dmc",
         {
             "exit_code": 65,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "quality_ok": False,
             "pointer_ok": False,
             "sanitization_status": "PASS",
@@ -168,6 +187,8 @@ def test_invalid_scoring_contract(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -183,6 +204,8 @@ def test_invalid_scoring_contract(tmp_path: Path):
         "dmc",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "quality_ok": True,
             "pointer_ok": True,
             "sanitization_status": "PASS",
@@ -205,6 +228,8 @@ def test_bridge_500(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -220,6 +245,8 @@ def test_bridge_500(tmp_path: Path):
         "dmc",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "quality_ok": True,
             "pointer_ok": True,
             "sanitization_status": "PASS",
@@ -253,6 +280,8 @@ def test_n8n_fail_closed_incomplete(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -268,6 +297,8 @@ def test_n8n_fail_closed_incomplete(tmp_path: Path):
         "dmc",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "quality_ok": True,
             "pointer_ok": True,
             "sanitization_status": "PASS",
@@ -305,6 +336,8 @@ def test_telegram_without_authorization(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -320,6 +353,8 @@ def test_telegram_without_authorization(tmp_path: Path):
         "dmc",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "quality_ok": True,
             "pointer_ok": True,
             "sanitization_status": "PASS",
@@ -361,6 +396,8 @@ def test_schedule_without_authorization(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",
@@ -376,6 +413,8 @@ def test_schedule_without_authorization(tmp_path: Path):
         "dmc",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "quality_ok": True,
             "pointer_ok": True,
             "sanitization_status": "PASS",
@@ -415,6 +454,8 @@ def test_different_evidence_no_overwrite(tmp_path: Path):
     op.authorize("FIRMS_WRITER_AUTHORIZATION")
     payload = {
         "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
         "stdout": "a",
         "stderr": "",
         "sanitization_status": "PASS",
@@ -437,6 +478,8 @@ def test_tampered_evidence_detected(tmp_path: Path):
         "firms",
         {
             "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
             "stdout": "",
             "stderr": "",
             "sanitization_status": "PASS",

@@ -57,6 +57,8 @@ def test_synthetic_e2e_accepted(tmp_path: Path):
 
     firms = {
         "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
         "stdout": "ok",
         "stderr": "",
         "stdout_sha256": None,
@@ -81,6 +83,8 @@ def test_synthetic_e2e_accepted(tmp_path: Path):
     op.authorize("DMC_WRITER_AUTHORIZATION")
     dmc = {
         "exit_code": 0,
+            "started_at": "2026-09-24T12:01:00+00:00",
+            "finished_at": "2026-09-24T12:02:00+00:00",
         "quality_ok": True,
         "pointer_ok": True,
         "sanitization_status": "PASS",

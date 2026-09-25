@@ -83,3 +83,18 @@ def authorize_record(
     if existing is True:
         return True
     return bool(requested)
+
+
+# Hard invariant vocabulary — must never be conflated
+CURRENT_STATES = frozenset({"PRESENT", "ABSENT", "UNKNOWN"})
+RUNTIME_STATES = frozenset({"RUNNING", "STOPPED", "UNKNOWN", "AVAILABLE", "UNAVAILABLE"})
+TECHNICAL_RESULTS = frozenset({"PASS", "FAIL", "INCOMPLETE"})
+
+
+def assert_unknown_invariants() -> None:
+    """Runtime assertion helpers for tests / self-checks."""
+    assert "UNKNOWN" != "ABSENT"
+    assert "UNKNOWN" != "STOPPED"
+    assert "UNKNOWN" != "SAFE"
+    assert "UNKNOWN" != "PASS"
+    assert "ABSENT" not in ("STOPPED", "PASS", "SAFE")

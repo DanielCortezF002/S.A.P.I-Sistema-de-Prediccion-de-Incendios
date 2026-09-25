@@ -8,6 +8,7 @@ from typing import Any
 
 from src.ops.attempt2_operator.canonical import authorize_record
 from src.ops.attempt2_operator.events import content_hash, sha256_file, utc_now_iso
+from src.ops.attempt2_operator.collectors.preflight_collect import collect_real_preflight
 from src.ops.attempt2_operator.redaction import credential_presence, redact_text, sha256_text
 from src.ops.attempt2_operator.run_store import (
     Attempt2Run,
@@ -19,6 +20,10 @@ from src.ops.attempt2_operator.states import (
     GATE_FOR_STATE,
     HUMAN_GATES,
     Attempt2State,
+)
+from src.ops.attempt2_operator.validator_hooks import (
+    run_dmc_validator_hook,
+    run_firms_validator_hook,
 )
 from src.ops.attempt2_operator.validators import (
     validate_bridge_result,
@@ -122,7 +127,7 @@ class Attempt2Operator:
         if st == Attempt2State.PREFLIGHT_FAILED:
             return {
                 "state": st.value,
-                "next": "Fix preflight failures, then re-run preflight",
+                "next": "Preflight incomplete/failed — fix issues, then re-run preflight",
                 "command": "python -m src.ops.attempt2_operator preflight --run <run_dir>",
             }
         if st == Attempt2State.PREFLIGHT_READY:
@@ -473,9 +478,30 @@ class Attempt2Operator:
             snapshot["code"] = code
 
         self.run.write_json("preflight/attempt2-preflight.snapshot.json", snapshot)
+        # Canonical Phase-2 preflight object (same content, explicit name)
+        self.run.write_json("preflight/preflight.json", snapshot)
         result = validate_preflight_snapshot(
             snapshot, expected_code_sha=state.get("expected_code_sha")
         )
+        # Fold overall_status from real collector if present
+        if snapshot.get("overall_status") in ("FAIL", "INCOMPLETE") and result.get(
+            "ready_for_authorization"
+        ):
+            # Real collector overrides optimistic validator only when stricter
+            if snapshot.get("overall_status") == "FAIL":
+                result = {
+                    **result,
+                    "ready_for_authorization": False,
+                    "technical_result": "FAIL",
+                }
+            elif snapshot.get("overall_status") == "INCOMPLETE" and snapshot.get(
+                "failures"
+            ):
+                result = {
+                    **result,
+                    "ready_for_authorization": False,
+                    "technical_result": "INCOMPLETE",
+                }
         self.run.write_json("preflight/attempt2-preflight.validation.json", result)
 
         if result["ready_for_authorization"]:
@@ -506,6 +532,7 @@ class Attempt2Operator:
                 result=outcome,
                 evidence_refs=[
                     "preflight/attempt2-preflight.snapshot.json",
+                    "preflight/preflight.json",
                     "preflight/attempt2-preflight.validation.json",
                 ],
             )
@@ -516,62 +543,111 @@ class Attempt2Operator:
                 result=outcome,
                 evidence_refs=[
                     "preflight/attempt2-preflight.snapshot.json",
+                    "preflight/preflight.json",
                     "preflight/attempt2-preflight.validation.json",
                 ],
             )
         return result
 
     def _collect_preflight(self, *, refresh_runtime: bool) -> dict[str, Any]:
-        """Fresh runtime observations — never reuse old evidence as live facts."""
+        """Fresh read-only collectors — never reuse old evidence as live facts."""
         state = self.run.read_state()
-        if self.repo and not state.get("dry_run"):
-            ident = git_identity(self.repo)
-        else:
-            # dry-run / synthetic: use run identity
-            ident = {
+        repo = self.repo
+        if repo is None and not state.get("dry_run"):
+            repo = Path.cwd()
+        if repo is not None:
+            return collect_real_preflight(
+                repo=Path(repo),
+                run_id=state["run_id"],
+                expected_code_sha=state.get("expected_code_sha"),
+            )
+        # dry-run without repo: synthetic ABSENT currents (explicit, not UNKNOWN)
+        return {
+            "schema_version": 1,
+            "run_id": state["run_id"],
+            "expected_code_sha": state.get("expected_code_sha"),
+            "observed_code_sha": state.get("code_sha"),
+            "tree_sha": state.get("tree_sha"),
+            "dirty": False,
+            "code": {
                 "head_sha": state.get("code_sha"),
                 "tree_sha": state.get("tree_sha"),
                 "worktree_clean": True,
                 "status_entries": [],
+                "expected_main_sha": state.get("expected_code_sha"),
                 "observed_at": utc_now_iso(),
-            }
-        # normalize key names for validator
-        code = {
-            "head_sha": ident.get("head_sha") or ident.get("code_sha") or state.get("code_sha"),
-            "tree_sha": ident.get("tree_sha") or state.get("tree_sha"),
-            "worktree_clean": ident.get("worktree_clean"),
-            "status_entries": ident.get("status_entries") or [],
-            "expected_main_sha": state.get("expected_code_sha"),
-            "observed_at": ident.get("observed_at") or utc_now_iso(),
-        }
-        creds = credential_presence(
-            ["NASA_FIRMS_MAP_KEY", "DMC_API_KEY", "TELEGRAM_BOT_TOKEN"]
-        )
-        return {
-            "schema_version": 1,
-            "code": code,
-            "firms": {"current": {"present": False, "state": "ABSENT"}},
-            "dmc": {"current": {"present": False, "state": "ABSENT"}},
+            },
+            "firms": {"current": {"state": "ABSENT", "known": True, "present": False}},
+            "dmc": {"current": {"state": "ABSENT", "known": True, "present": False}},
+            "firms_current_state": "ABSENT",
+            "dmc_current_state": "ABSENT",
+            "stores": {},
+            "artifacts": {"overall_status": "INCOMPLETE"},
+            "credentials": {"credentials": []},
+            "runtime": {
+                "docker": {"status": "UNKNOWN", "observed_at": utc_now_iso()},
+                "n8n": {"status": "UNKNOWN", "observed_at": utc_now_iso()},
+                "bridge": {"status": "UNKNOWN", "observed_at": utc_now_iso()},
+            },
+            "workspace_safety": {"status": "NOT_AVAILABLE"},
+            "tool_results": [],
+            "warnings": ["dry_run_without_repo"],
+            "failures": [],
+            "overall_status": "INCOMPLETE",
+            "observed_at": utc_now_iso(),
             "attempt1": {"preserve": True},
             "docker": {"status": "UNKNOWN", "observed_at": utc_now_iso()},
-            "n8n": {"status": "UNKNOWN", "schedule_enabled": False},
-            "bridge": {"status": "UNKNOWN"},
-            "credentials": creds,
-            "policy": {
-                "human_authorization": False,
-                "telegram_authorization": False,
-                "schedule_authorization": False,
-            },
+            "policy": {"human_authorization": False},
             "tests": {},
-            "note": "Fresh collection; post-reboot must re-observe.",
+            "note": "Dry-run synthetic fallback; real collectors require --repo",
         }
+
+    def _enforce_import_binding(self, phase: str, payload: dict[str, Any]) -> None:
+        state = self.run.read_state()
+        run_id = state["run_id"]
+        expected_sha = state.get("expected_code_sha")
+        observed_sha = state.get("code_sha")
+
+        if payload.get("run_id") and payload["run_id"] != run_id:
+            raise RuntimeError(f"wrong_run: payload.run_id={payload.get('run_id')} != {run_id}")
+        step = payload.get("step") or payload.get("phase")
+        allowed_steps = {
+            phase,
+            f"{phase}_writer",
+            f"02-{phase}",
+            f"03-{phase}",
+            f"02-{phase.upper()}",
+            f"03-{phase.upper()}",
+        }
+        if step and str(step).lower() not in {s.lower() for s in allowed_steps}:
+            raise RuntimeError(f"wrong_step: payload.step={step} expected={phase}")
+        code_sha = payload.get("code_sha")
+        if code_sha and expected_sha and code_sha.lower() != str(expected_sha).lower():
+            raise RuntimeError(
+                f"stale_or_wrong_sha: payload.code_sha={code_sha} expected={expected_sha}"
+            )
+        for req in ("started_at", "finished_at", "exit_code"):
+            if phase in ("firms", "dmc") and req not in payload:
+                raise RuntimeError(f"missing_binding_field:{req}")
 
     def import_result(self, phase: str, payload: dict[str, Any]) -> dict[str, Any]:
         phase = phase.lower()
-        fp = content_hash(payload)
         state = self.run.read_state()
+        payload = dict(payload)
+        # Bind identity fields (do not invent secrets)
+        payload.setdefault("run_id", state["run_id"])
+        payload.setdefault("step", phase)
+        payload.setdefault("code_sha", state.get("expected_code_sha") or state.get("code_sha"))
+        if "expected_command_identity" not in payload:
+            if phase == "firms":
+                payload["expected_command_identity"] = "python -m src.refresh.firms_refresh refresh"
+            elif phase == "dmc":
+                payload["expected_command_identity"] = "python -m src.refresh.dmc_refresh refresh"
+
+        self._enforce_import_binding(phase, payload)
+
+        fp = content_hash(payload)
         imports = dict(state.get("import_fingerprints") or {})
-        key = f"{phase}:{fp}"
         if imports.get(phase) == fp:
             return {
                 "result": "DUPLICATE",
@@ -586,7 +662,6 @@ class Attempt2Operator:
             )
 
         # redact any embedded logs
-        payload = dict(payload)
         if "stdout" in payload:
             red, hit = redact_text(payload.get("stdout"))
             payload["stdout"] = red
@@ -639,6 +714,75 @@ class Attempt2Operator:
         validation = validate_fn(payload)
         self.run.write_json(f"validation/{phase}.json", validation)
 
+        tool_hook = None
+        if phase == "firms":
+            tool_hook = run_firms_validator_hook(
+                work_dir=self.run.root / "validation" / "toolpack",
+                before=payload.get("before")
+                or {"firms_current": {"present": False}},
+                after=payload.get("after")
+                or {"firms_current": payload.get("firms_current_after")},
+                delta=payload.get("delta")
+                or {
+                    "firms_current_transition": {
+                        "after_present": bool(
+                            (payload.get("firms_current_after") or {}).get("present")
+                        ),
+                        "changed": payload.get("exit_code") == 0,
+                    },
+                    "baseline_sha_changed": False,
+                    "model_sha_changed": False,
+                    "hito1_changed": False,
+                    "files_added": payload.get("files_added") or [],
+                    "files_changed": [],
+                    "files_removed": [],
+                    "lock_changes": [],
+                    "worst_classification": "EXPECTED",
+                },
+                command_evidence={
+                    "exit_code": payload.get("exit_code"),
+                    "stdout_sha256": payload.get("stdout_sha256"),
+                    "stderr_sha256": payload.get("stderr_sha256"),
+                    "sanitization_status": payload.get("sanitization_status"),
+                    "metadata": payload.get("metadata") or {},
+                },
+                code_sha=state.get("code_sha"),
+            )
+            self.run.write_json(
+                "validation/firms_toolpack.json", tool_hook.to_dict()
+            )
+        elif phase == "dmc":
+            tool_hook = run_dmc_validator_hook(
+                work_dir=self.run.root / "validation" / "toolpack",
+                before=payload.get("before") or {"dmc_current": {"present": False}},
+                after=payload.get("after")
+                or {"dmc_current": payload.get("dmc_current_after")},
+                delta=payload.get("delta")
+                or {
+                    "dmc_current_transition": {
+                        "changed": payload.get("exit_code") == 0,
+                        "after_present": bool(
+                            (payload.get("dmc_current_after") or {}).get("present")
+                        ),
+                    },
+                    "model_sha_changed": False,
+                    "hito1_changed": False,
+                    "files_added": [],
+                    "files_changed": [],
+                    "files_removed": [],
+                    "worst_classification": "EXPECTED",
+                },
+                command_evidence={
+                    "exit_code": payload.get("exit_code"),
+                    "stdout_sha256": payload.get("stdout_sha256"),
+                    "stderr_sha256": payload.get("stderr_sha256"),
+                    "sanitization_status": payload.get("sanitization_status"),
+                },
+                external=payload.get("external"),
+                code_sha=state.get("code_sha"),
+            )
+            self.run.write_json("validation/dmc_toolpack.json", tool_hook.to_dict())
+
         success_map = {
             "firms": (Attempt2State.FIRMS_VALIDATED, Attempt2State.FIRMS_VALIDATION_FAILED),
             "dmc": (Attempt2State.DMC_VALIDATED, Attempt2State.DMC_VALIDATION_FAILED),
@@ -658,7 +802,12 @@ class Attempt2Operator:
                 "last_error": None if ok else validation.get("hard_failures"),
             },
         )
-        return {"result": "PASS" if ok else "FAIL", "validation": validation, "fingerprint": fp}
+        return {
+            "result": "PASS" if ok else "FAIL",
+            "validation": validation,
+            "fingerprint": fp,
+            "tool_hook": tool_hook.to_dict() if tool_hook else None,
+        }
 
     def report(self) -> dict[str, Any]:
         state = self.run.read_state()
