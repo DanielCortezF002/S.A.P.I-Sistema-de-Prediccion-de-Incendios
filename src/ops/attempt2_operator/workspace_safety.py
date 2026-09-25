@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
 
+ALLOWED_STATUSES = frozenset({"PASS", "FAIL", "INCOMPLETE", "NOT_AVAILABLE"})
+
 
 class WorkspaceSafetyProvider(Protocol):
     def check(self, repo: Path) -> dict[str, Any]:
@@ -21,6 +23,7 @@ class NotAvailableWorkspaceSafety:
             "provider": "NotAvailableWorkspaceSafety",
             "repo": str(repo),
             "observed_at": datetime.now(timezone.utc).isoformat(),
+            "evidence": {},
             "note": "Integration point only — never silently PASS",
         }
 
@@ -34,8 +37,18 @@ def set_workspace_safety_provider(provider: WorkspaceSafetyProvider) -> None:
 
 
 def check_workspace_safety(repo: Path) -> dict[str, Any]:
-    result = _PROVIDER.check(Path(repo))
-    # Hard rule: missing provider must not look like PASS
-    if result.get("status") == "PASS" and type(_PROVIDER) is NotAvailableWorkspaceSafety:
-        result = {**result, "status": "NOT_AVAILABLE"}
+    result = dict(_PROVIDER.check(Path(repo)))
+    status = result.get("status")
+    if status not in ALLOWED_STATUSES:
+        result["status"] = "INCOMPLETE"
+        result["note"] = f"invalid_status_coerced_from:{status}"
+    # Hard rule: default stub must not look like PASS
+    if (
+        result.get("status") == "PASS"
+        and type(_PROVIDER) is NotAvailableWorkspaceSafety
+    ):
+        result["status"] = "NOT_AVAILABLE"
+        result["note"] = "stub_cannot_pass"
+    result.setdefault("evidence", {})
+    result.setdefault("observed_at", datetime.now(timezone.utc).isoformat())
     return result

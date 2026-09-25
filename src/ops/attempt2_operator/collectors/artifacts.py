@@ -1,4 +1,4 @@
-"""Local artifact identity checks — missing → NOT_AVAILABLE / INCOMPLETE, never PASS."""
+"""Local artifact identity checks — missing → NOT_AVAILABLE, never PASS."""
 
 from __future__ import annotations
 
@@ -6,6 +6,8 @@ import hashlib
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+from src.ops.attempt2_operator.paths import StoreRoots
 
 MODEL_SHA_EXPECTED = (
     "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
@@ -39,6 +41,7 @@ def _check_file(path: Path, expected: str) -> dict[str, Any]:
             "observed_sha256": None,
             "match": False,
             "status": "NOT_AVAILABLE",
+            "discovery": "explicit_path",
         }
     observed = _sha256_file(path)
     if observed is None:
@@ -49,6 +52,7 @@ def _check_file(path: Path, expected: str) -> dict[str, Any]:
             "observed_sha256": None,
             "match": False,
             "status": "INCOMPLETE",
+            "discovery": "explicit_path",
         }
     match = observed.lower() == expected.lower()
     return {
@@ -58,42 +62,74 @@ def _check_file(path: Path, expected: str) -> dict[str, Any]:
         "observed_sha256": observed,
         "match": match,
         "status": "PASS" if match else "FAIL",
+        "discovery": "explicit_path",
     }
 
 
-def collect_artifact_identities(repo: Path) -> dict[str, Any]:
-    repo = Path(repo)
-    model = _check_file(repo / "models" / "prototype_model_d.pkl", MODEL_SHA_EXPECTED)
-    # baseline path from project convention
+def resolve_firms_baseline_path(
+    roots: StoreRoots,
+    *,
+    explicit: Path | None = None,
+) -> tuple[Path | None, list[str]]:
+    """Return first existing deterministic candidate (or None)."""
+    tried: list[str] = []
+    candidates = [explicit] if explicit else []
+    candidates.extend(roots.firms_baseline_candidates())
+    for p in candidates:
+        if p is None:
+            continue
+        tried.append(str(p))
+        if p.is_file():
+            return p, tried
+    return None, tried
+
+
+def collect_artifact_identities(
+    repo: Path,
+    *,
+    data_root: Path | None = None,
+    models_root: Path | None = None,
+    firms_baseline_path: Path | None = None,
+    model_path: Path | None = None,
+) -> dict[str, Any]:
+    roots = StoreRoots.from_repo(repo, data_root=data_root, models_root=models_root)
+
+    # Model — explicit deterministic path
+    mpath = Path(model_path) if model_path else roots.model_path()
+    model = _check_file(mpath, MODEL_SHA_EXPECTED)
+
+    # Baseline — project contract path (firms_source.FIRMS_BASELINE_CSV layout)
+    expected_baseline = FIRMS_BASELINE_SHA_EXPECTED
     try:
-        from src.procesamiento.firms_source import FIRMS_BASELINE_CSV, FIRMS_BASELINE_SHA256
+        from src.procesamiento.firms_source import FIRMS_BASELINE_SHA256
 
-        baseline_path = FIRMS_BASELINE_CSV
-        expected = FIRMS_BASELINE_SHA256
+        expected_baseline = FIRMS_BASELINE_SHA256
     except Exception:  # noqa: BLE001
-        baseline_path = (
-            repo
-            / "data"
-            / "processed"
-            / "firms"
-            / "nasa_firms_baseline.csv"
-        )
-        expected = FIRMS_BASELINE_SHA_EXPECTED
-        # also try under common path
-        alt = list((repo / "data").rglob("*baseline*.csv")) if (repo / "data").exists() else []
-        if not baseline_path.exists() and alt:
-            baseline_path = alt[0]
-
-    # Prefer constant expected from task if import fails path discovery
-    if expected != FIRMS_BASELINE_SHA_EXPECTED:
-        # still verify against project constant; surface both
         pass
-    baseline = _check_file(Path(baseline_path), FIRMS_BASELINE_SHA_EXPECTED)
+
+    found, tried = resolve_firms_baseline_path(roots, explicit=firms_baseline_path)
+    if found is None:
+        baseline = {
+            "path": tried[0] if tried else str(roots.code_root / "data/processed"),
+            "exists": False,
+            "expected_sha256": expected_baseline,
+            "observed_sha256": None,
+            "match": False,
+            "status": "NOT_AVAILABLE",
+            "discovery": "explicit_candidates",
+            "candidates_tried": tried,
+        }
+    else:
+        baseline = _check_file(found, expected_baseline)
+        baseline["candidates_tried"] = tried
+        baseline["discovery"] = "explicit_candidates"
 
     statuses = [model["status"], baseline["status"]]
     if any(s == "FAIL" for s in statuses):
         overall = "FAIL"
-    elif any(s in ("NOT_AVAILABLE", "INCOMPLETE") for s in statuses):
+    elif any(s == "NOT_AVAILABLE" for s in statuses):
+        overall = "NOT_AVAILABLE"
+    elif any(s == "INCOMPLETE" for s in statuses):
         overall = "INCOMPLETE"
     else:
         overall = "PASS"
@@ -102,6 +138,11 @@ def collect_artifact_identities(repo: Path) -> dict[str, Any]:
         "model": model,
         "firms_baseline": baseline,
         "overall_status": overall,
+        "roots": {
+            "code_root": str(roots.code_root),
+            "data_root": str(roots.data_root),
+            "models_root": str(roots.models_root),
+        },
         "observed_at": _utc_now(),
-        "note": "Missing artifact is NOT_AVAILABLE/INCOMPLETE — never PASS",
+        "note": "Missing artifact is NOT_AVAILABLE — never PASS. No whole-store crawl.",
     }

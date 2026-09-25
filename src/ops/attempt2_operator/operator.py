@@ -125,9 +125,23 @@ class Attempt2Operator:
         if st == Attempt2State.PREFLIGHT_PENDING:
             return {"state": st.value, "next": "Wait for / re-run preflight", "command": None}
         if st == Attempt2State.PREFLIGHT_FAILED:
+            # ONE next action from highest-priority blocking reason
+            pf_path = self.run.root / "preflight" / "preflight.json"
+            reason_code = "PREFLIGHT_FAILED"
+            detail = "Fix preflight failures, then re-run preflight"
+            if pf_path.is_file():
+                try:
+                    pf = json.loads(pf_path.read_text(encoding="utf-8"))
+                    top = pf.get("highest_priority_reason") or {}
+                    if top.get("code"):
+                        reason_code = top["code"]
+                        detail = f"Address {reason_code} ({top.get('detail')}), then re-run preflight"
+                except (OSError, json.JSONDecodeError):
+                    pass
             return {
                 "state": st.value,
-                "next": "Preflight incomplete/failed — fix issues, then re-run preflight",
+                "next": detail,
+                "reason_code": reason_code,
                 "command": "python -m src.ops.attempt2_operator preflight --run <run_dir>",
             }
         if st == Attempt2State.PREFLIGHT_READY:
