@@ -40,12 +40,17 @@ y no afectan el funcionamiento.
 ## Un solo contrato de presentación
 
 ```
-GET /score (GridScoreResult serializado por tools/n8n_bridge)
+GET /score (contrato sapi-output-v1 de tools/n8n_bridge; ver BRIDGE-OUTPUT-CONTRACT.md)
   → canonical_result()   lista blanca, forma del bridge, valores intactos
      ├─ validación de presentación (app/utils/score_contract.py)
      └─ build_alert() de src/notifications/alert_payload.py (misma entrada)
+  → alert_identity declarada por el bridge == fingerprint recalculado
   → DashboardView: panel + AlertPreview
 ```
+
+Si falta `output_schema_version` o `alert_identity`, o si la identidad no coincide con el
+contenido, el resultado es INVALID_RESULT (`missing_alert_identity` o
+`alert_identity_mismatch`), igual que en n8n.
 
 Si cualquiera de las dos validaciones rechaza el resultado, **ambas salidas** quedan en
 INVALID_RESULT; nunca hay un panel válido junto a una alerta que diga otra cosa. Por
@@ -97,13 +102,11 @@ el texto completo. **Nada se envía:** no hay Telegram, n8n ni botón de envío.
 `alert_fingerprint` (sha256 determinista de la alerta; no incluye `generated_at`) aparece
 truncado en **Detalles técnicos** y completo en un bloque copiable.
 
-**`ALERT_IDENTITY_RECONCILIATION_REQUIRED_BEFORE_TELEGRAM`.** `alert_fingerprint` identifica
-una evaluación: hora, entradas, modelo, FIRMS y Top 5. `notification_identity` de
-`ops/n8n/policy.js` identifica una condición:
-`['sapi-pilot-v1', categoría, modelo, estación, grupo display_rank 1, regla 30-30-30]`.
-Hoy no son equivalentes, y el fingerprint **no** se usa para deduplicar. Antes de cualquier
-envío por Telegram hay que decidir una sola semántica de identidad y alinear n8n con ella.
-Esta tarea no modifica n8n.
+**Identidad única.** El fingerprint que muestra el panel es exactamente la
+`notification_identity` que usa `ops/n8n/policy.js`: una sola receta que identifica esta
+evaluación (hora, entradas, modelo, FIRMS y Top 5) y se mantiene estable al reintentar.
+n8n la verifica y bloquea si falta o está alterada. Telegram sigue apagado detrás de un
+gate humano.
 
 ## Qué muestra cada modo
 
@@ -113,9 +116,9 @@ Esta tarea no modifica n8n.
 - **Operador:** lo anterior, más el ranking completo (búsqueda por celda y orden de vista por
   ID; el rank no cambia) y **Detalles técnicos**: modo, conexión, endpoint (sin
   credenciales ni query), horas, celdas evaluadas, inputs/alert fingerprint, identidad del
-  modelo y metadatos FIRMS/DMC. Identidades de modelo/FIRMS/DMC/topografía solo si la
-  respuesta trae `scoring_inputs`. **El bridge actual no lo serializa**, así que en vivo
-  esos campos dicen `NO DISPONIBLE EN RESPUESTA`.
+  modelo y metadatos FIRMS/DMC. Las identidades de modelo, FIRMS, DMC y topografía salen
+  de `input_identity`. Lo que el bridge publica como null (por ejemplo, sin
+  `scoring_inputs`) aparece como `NO DISPONIBLE EN RESPUESTA`.
 
 ## Lenguaje científico
 

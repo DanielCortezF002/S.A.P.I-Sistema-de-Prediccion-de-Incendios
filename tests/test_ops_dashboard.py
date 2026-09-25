@@ -34,11 +34,17 @@ FIRMS_BLOCKED_MSG = (
 )
 
 
+def signed(p: dict) -> dict:
+    """Recalcula alert_identity como lo hace el bridge (receta única de alert_payload)."""
+    p["alert_identity"]["alert_fingerprint"] = build_alert(p)["alert_fingerprint"]
+    return p
+
+
 def live_payload() -> dict:
-    """La fixture sin sus marcas sintéticas: forma de una respuesta real del bridge."""
+    """La fixture sin sus marcas sintéticas: forma de una respuesta sapi-output-v1."""
     p = copy.deepcopy(FIXTURE)
     p.pop("_synthetic")
-    p.pop("scoring_inputs")  # el bridge actual no lo serializa
+    p["input_identity"].pop("_synthetic")
     return p
 
 
@@ -48,7 +54,7 @@ def stale_payload() -> dict:
     p.update(
         firms_coverage_end="2026-09-19", firms_lag_days=5, firms_status=sc.FIRMS_STALE
     )
-    return p
+    return signed(p)
 
 
 def live_view(payload=None) -> sc.DashboardView:
@@ -149,15 +155,17 @@ def test_dmc_metadata_rendered_from_response():
 
 
 def test_missing_identity_says_not_in_response():
-    view = live_view()
-    assert view.identity == {}
+    p = live_payload()
+    p["input_identity"] = dict.fromkeys(("code", "model", "firms", "dmc", "topography"))
+    view = live_view(p)
+    assert view.state == sc.LIVE_READY and view.identity == {}
     model = re.search(r'data-source="MODELO".*?</article>', ui.render(view), re.S)[0]
     assert ui.NOT_IN_RESPONSE in model and "prototype_model_d_v1" in model
 
 
 def test_identity_hashes_truncated_and_full_copyable():
     view = sc.load_demo()
-    sha = FIXTURE["scoring_inputs"]["model"]["sha256"]
+    sha = FIXTURE["input_identity"]["model"]["sha256"]
     assert view.identity["model_sha256"] == sha
     html = ui.render(view)
     assert sha[:12] + "…" in html and sha not in html  # truncado en pantalla
@@ -169,7 +177,7 @@ def test_identity_hashes_truncated_and_full_copyable():
 
 def test_malformed_identity_field_is_dropped():
     p = copy.deepcopy(FIXTURE)
-    p["scoring_inputs"]["model"]["sha256"] = "<script>x</script>"
+    p["input_identity"]["model"]["sha256"] = "<script>x</script>"
     view = sc.from_payload(p, demo=True)
     assert "model_sha256" not in view.identity and "<script>" not in ui.render(view)
 
@@ -284,8 +292,8 @@ def test_presentation_mode_hides_developer_details():
     assert 'class="ops-table"' not in html and 'class="ops-tech"' not in html
     for sha in [FIXTURE["inputs_fingerprint"]] + [
         v["sha256"] if "sha256" in v else v["manifest_sha256"]
-        for k, v in FIXTURE["scoring_inputs"].items()
-        if k != "_synthetic"
+        for v in FIXTURE["input_identity"].values()
+        if isinstance(v, dict)
     ]:
         assert sha[:12] not in html  # sin hashes de desarrollo en presentación
     assert (
@@ -589,11 +597,7 @@ def test_alert_fingerprint_displayed_truncated_and_copyable():
     tech = ui.technical_details(view)
     assert f"{fp[:12]}…" in tech and fp not in tech
     assert ("Alert fingerprint", fp) in ui.full_hashes(view)
-    assert (
-        ui.N8N_IDENTITY_BOUNDARY
-        == "ALERT_IDENTITY_RECONCILIATION_REQUIRED_BEFORE_TELEGRAM"
-    )
-    assert ui.N8N_IDENTITY_BOUNDARY in tech
+    assert ui.N8N_IDENTITY_NOTE in tech
 
 
 def test_alert_preview_for_unavailable_states():
@@ -721,7 +725,7 @@ def test_secrets_ignored():
         traceback=f"Traceback ... {SECRET}",
     )
     p["cells"][0]["debug"] = SECRET
-    p["scoring_inputs"] = {"dmc": {"token": SECRET, "manifest_sha256": SECRET}}
+    p["input_identity"] = {"dmc": {"token": SECRET, "manifest_sha256": SECRET}}
     views = (
         live_view(p),
         sc.from_payload(

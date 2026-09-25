@@ -56,7 +56,7 @@ identity (READY) = {schema_version, status, scoring_time, inputs_fingerprint, mo
                     top_n, cells: [[rank, display_rank, tie_group_size, cell_id, score], ...]}
 identity (UNAVAILABLE/INVALID) = {schema_version, status, reasons (ordenados)}
 ```
-- Los scores se serializan con el `repr` de `float` (el más corto que reproduce el valor, determinista).
+- Los scores entran siempre como `float` y se serializan con su `repr` (el más corto que reproduce el valor). JSON no distingue `1` de `1.0`, así que la receta fija el tipo.
 - **`generated_at` no participa:** la misma entrada da el mismo fingerprint en cualquier momento.
 - `stable_json(alert)` devuelve el JSON canónico sin `generated_at`.
 - El módulo no guarda estado de dedupe: solo produce la identidad.
@@ -94,12 +94,17 @@ Solo lee el archivo: sin HTTP.
 
 Demo: `tests/fixtures/alert_demo/` (**SYNTHETIC DEMO ONLY**: valores inventados y salidas esperadas `expected_*`).
 
-## Integración futura con n8n
-n8n (o el operador) podría llamar `build_alert(resultado_de_score)` después del scoring aceptado:
-- usar `alert_fingerprint` como identidad de dedupe;
-- enviar solo `status == "READY"` y detenerse en UNAVAILABLE o INVALID.
+## Identidad única con el bridge y n8n
+Este fingerprint es **la** identidad de notificación de SAPI:
+- el bridge lo publica en `/score` como `alert_identity.alert_fingerprint` (contrato
+  `sapi-output-v1`, ver `tools/n8n_bridge/BRIDGE-OUTPUT-CONTRACT.md`);
+- el Control Center lo recalcula y rechaza el resultado si no coincide;
+- `ops/n8n/policy.js` usa ese valor como `notification_identity`. Antes lo **verifica**
+  con esta misma receta, portada a JavaScript con el `repr` de float de Python, y bloquea
+  (`blocked`, nunca notificable) si falta o no corresponde.
 
-Esto **no** se conecta hoy. Requiere, en este orden:
-1. la aceptación operacional del Attempt 2;
-2. un **gate humano separado** para Telegram;
-3. alinear esta identidad con la `notification_identity` de `ops/n8n/policy.js`, que hoy deduplica por categoría y grupo superior.
+Los tests `tests/test_output_pipeline.py` comprueban que Python y JavaScript producen los
+mismos bytes, incluidos los scores `0.0`, `1.0` y `1e-05`.
+
+Telegram sigue **sin conectarse**. Requiere la aceptación operacional del Attempt 2 y un
+**gate humano separado**.

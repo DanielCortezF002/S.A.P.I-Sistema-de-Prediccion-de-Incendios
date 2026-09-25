@@ -118,8 +118,8 @@ def _technical(view, last_success: str | None) -> None:
             st.caption(f"{label} (completo, copiable)")
             st.code(value, language=None)
         st.caption(
-            f"{ui.N8N_IDENTITY_BOUNDARY}: el alert fingerprint todavía no coincide con "
-            "notification_identity de ops/n8n/policy.js y no se usa para deduplicar."
+            "El alert fingerprint es la notification_identity que usa ops/n8n/policy.js "
+            "(misma receta, verificada contra el contenido). Nada se envía desde aquí."
         )
 
 

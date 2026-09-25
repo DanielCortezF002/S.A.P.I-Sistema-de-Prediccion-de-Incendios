@@ -128,7 +128,10 @@ CONNECTION_COPY: dict[str, tuple[str, str]] = {
     CONN_UNAVAILABLE: ("NO DISPONIBLE", "error"),
     CONN_INVALID: ("RESPUESTA INVÁLIDA", "error"),
 }
-N8N_IDENTITY_BOUNDARY = "ALERT_IDENTITY_RECONCILIATION_REQUIRED_BEFORE_TELEGRAM"
+# Identidad única: ops/n8n/policy.js usa (y verifica) este mismo alert fingerprint.
+N8N_IDENTITY_NOTE = (
+    "notification_identity de n8n = alert fingerprint (misma receta, verificada)"
+)
 
 # Estado de fuente → (símbolo, texto, tono)
 SOURCE_BADGE: dict[str, tuple[str, str, str]] = {
@@ -898,7 +901,7 @@ def technical_details(
             short_hash(view.inputs_fingerprint) if view.inputs_fingerprint else None,
         ),
         ("Alert fingerprint", short_hash(alert_fp) if alert_fp else None),
-        ("Identidad n8n", N8N_IDENTITY_BOUNDARY),
+        ("Identidad n8n", N8N_IDENTITY_NOTE),
         ("Modelo", view.model_version),
         (
             "Modelo SHA-256",
@@ -909,6 +912,10 @@ def technical_details(
         ("FIRMS desfase (días)", view.firms.get("lag_days")),
         ("FIRMS estado", view.firms.get("status")),
         ("FIRMS puntero", ident.get("firms_pointer_version")),
+        (
+            "FIRMS SHA-256",
+            ident.get("firms_sha256") and short_hash(ident["firms_sha256"]),
+        ),
         ("DMC estación", view.dmc.get("station_id")),
         ("DMC observación", view.dmc.get("weather_timestamp")),
         ("DMC frescura", view.dmc.get("freshness")),
@@ -919,6 +926,11 @@ def technical_details(
         ),
         ("DMC cobertura hasta", ident.get("dmc_coverage_end")),
         ("DMC puntero", ident.get("dmc_pointer_version")),
+        ("Topografía origen", ident.get("topography_origin")),
+        (
+            "Topografía SHA-256",
+            ident.get("topography_sha256") and short_hash(ident["topography_sha256"]),
+        ),
     ]
     body = "".join(
         f"<dt>{_e(k)}</dt><dd>{_e(v) if v not in (None, '') else _na()}</dd>"

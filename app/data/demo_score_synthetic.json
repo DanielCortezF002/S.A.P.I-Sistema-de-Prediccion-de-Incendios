@@ -23,31 +23,53 @@
     "regla_30_30_30": false,
     "momento_observacion": "2026-09-24T17:45:00+00:00"
   },
-  "scoring_inputs": {
+  "input_identity": {
     "_synthetic": "SYNTHETIC / DEMO - identidades inventadas; no corresponden a archivos reales",
+    "code": null,
     "model": {
-      "name": "prototype_model_d.pkl",
       "sha256": "b9b210d8dbd5e49ca549fd62eaebfb20df41d3ff069d52c4484474fb2ece511c",
-      "model_version": "prototype_model_d_v1"
+      "name": "prototype_model_d.pkl",
+      "version": "prototype_model_d_v1"
     },
     "firms": {
       "sha256": "4eae18014fa1d1c3ae318ee08a08f26c4b10f8fb34ed29fc3ca351f30b0d64fa",
+      "origin": "current",
       "pointer_version": "demo-firms-v0",
-      "coverage_end": "2026-09-23",
-      "lag_days": 1,
-      "status": "FIRMS AL DÍA"
+      "coverage_start": "2024-01-01",
+      "coverage_end": "2026-09-23"
     },
     "dmc": {
       "manifest_sha256": "3c6f7137e3b513227f589ca0c6a54dea317923938e3831cd79776bd7c41b162c",
+      "pointer_version": "demo-dmc-v0",
       "coverage_start": "2026-08-01T00:00:00+00:00",
-      "coverage_end": "2026-09-24T17:45:00+00:00",
-      "pointer_version": "demo-dmc-v0"
+      "coverage_end": "2026-09-24T17:45:00+00:00"
     },
     "topography": {
-      "origin": "baseline",
-      "sha256": "2593d7f4ad7a2f501ec26b649e79f1125ee891843c9e9bd86f1c4d0a46983da7"
-    }
+      "sha256": "2593d7f4ad7a2f501ec26b649e79f1125ee891843c9e9bd86f1c4d0a46983da7",
+      "origin": "baseline"
+    },
+    "reproducibility_mode": false
   },
+  "output_schema_version": "sapi-output-v1",
+  "alert_identity": {
+    "schema_version": "sapi-alert-v1",
+    "alert_fingerprint": "3bfbffcc5055cba87ffae30c97127c72774984af9194aabd436dc0aa60127028",
+    "top_n": 5
+  },
+  "limitations": [
+    {
+      "code": "RANKING_RELATIVO",
+      "text": "Ranking exploratorio de prioridad relativa (Model D). El score relativo no es una probabilidad calibrada."
+    },
+    {
+      "code": "FIRMS_ANOMALIAS_TERMICAS",
+      "text": "FIRMS reporta anomalías térmicas satelitales; no confirma la existencia de un incendio."
+    },
+    {
+      "code": "VALIDACION_HISTORICA",
+      "text": "La validación disponible es histórica; no existe validación operacional point-in-time con datos FIRMS NRT."
+    }
+  ],
   "cells": [
     {
       "cell_id": "VP-028",

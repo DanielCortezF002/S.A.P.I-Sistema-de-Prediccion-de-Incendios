@@ -437,13 +437,15 @@ def build_alert(
         "model": ok["model"],
         "firms": ok["firms"],
         "top_n": top_n,
+        # score siempre como float: JSON no distingue 1 de 1.0 y ops/n8n/policy.js
+        # reproduce esta misma receta (formato de float de Python) para verificarla.
         "cells": [
             [
                 c["rank"],
                 c["display_rank"],
                 c["tie_group_size"],
                 c["cell_id"],
-                c["score"],
+                float(c["score"]),
             ]
             for c in shown
         ],

@@ -33,6 +33,7 @@ from src.inference.prototype_service import (
     score_current_grid,
 )
 from tools.n8n_bridge.contract import InvalidScoreResultError, validate_grid_result
+from tools.n8n_bridge.output_contract import attach_output_contract
 
 logger = logging.getLogger("sapi.n8n_bridge")
 
@@ -196,9 +197,11 @@ def get_score() -> JSONResponse:
         validate_grid_result(result)
         metadata = _read_metadata_json()
         disclaimer = (metadata or {}).get("aviso", _FALLBACK_DISCLAIMER)
-        return JSONResponse(
-            status_code=200, content=_serialize_grid_result(result, disclaimer)
+        # sapi-output-v1: mismo resultado + identidades canónicas (entradas y alerta).
+        content = attach_output_contract(
+            _serialize_grid_result(result, disclaimer), result.scoring_inputs
         )
+        return JSONResponse(status_code=200, content=content)
     except InvalidScoreResultError as exc:
         logger.error("Model D score result violates bridge contract: %s", exc)
         return _invalid_result_response()

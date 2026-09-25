@@ -19,6 +19,7 @@ from fastapi.testclient import TestClient
 
 import src.inference.prototype_service as prototype_service
 import tools.n8n_bridge.app as bridge_app
+from src.inference.scoring_inputs import _canonical_sha
 from src.geo.grid import all_cells
 from src.inference.prototype_service import (
     FIRMS_STATUS_CURRENT,
@@ -185,9 +186,12 @@ def test_score_disclaimer_falls_back_when_metadata_unreadable(monkeypatch):
 
 
 def test_score_operational_provenance_is_additive_and_private(monkeypatch):
+    manifest = {"private_path": "C:/private/input.csv"}
     result = dataclasses.replace(
         _fixture_result(),
-        scoring_inputs={"private_path": "C:/private/input.csv"},
+        scoring_inputs=manifest,
+        # sapi-output-v1 exige que el fingerprint sea el hash del manifest
+        inputs_fingerprint=_canonical_sha(manifest),
     )
     monkeypatch.setattr(bridge_app, "score_current_grid", lambda: result)
     monkeypatch.setattr(bridge_app, "_read_metadata_json", lambda: None)
@@ -196,7 +200,7 @@ def test_score_operational_provenance_is_additive_and_private(monkeypatch):
     assert body["firms_coverage_end"] == "2026-09-19"
     assert body["firms_lag_days"] == 1
     assert body["firms_status"] == FIRMS_STATUS_CURRENT
-    assert body["inputs_fingerprint"] == FINGERPRINT
+    assert body["inputs_fingerprint"] == _canonical_sha(manifest)
     assert "scoring_inputs" not in body
     assert "private" not in json.dumps(body)
     assert body["cells"] == bridge_app._serialize_grid_result(result, "")["cells"]

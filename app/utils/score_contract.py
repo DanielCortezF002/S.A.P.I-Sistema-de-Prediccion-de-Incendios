@@ -2,10 +2,12 @@
 
 Un solo adaptador canónico alimenta el panel y la vista previa de alerta:
 
-    respuesta de GET /score (GridScoreResult serializado por tools/n8n_bridge)
+    respuesta de GET /score (contrato sapi-output-v1 de tools/n8n_bridge)
       → `canonical_result`  (lista blanca, forma del bridge, sin campos extra)
       ├─ validación de presentación de este módulo
       └─ `src.notifications.alert_payload.build_alert` (misma entrada canónica)
+      → `alert_identity` declarada == fingerprint recalculado (la misma
+        `notification_identity` que verifica ops/n8n/policy.js)
       → `DashboardView` (celdas del panel + `AlertPreview`)
 
 Si cualquiera de las dos validaciones rechaza el resultado, el estado es
@@ -64,6 +66,8 @@ DEMO_FIXTURE = (
 GRID = {c["cell_id"]: c for c in all_cells()}  # geometría oficial (src/geo/grid.py)
 EXPECTED_CELL_IDS = tuple(GRID)
 TOP_N = 5  # mismo corte "Top-5" documentado en src/inference/prototype_service.py
+# Contrato canónico de /score (tools/n8n_bridge/output_contract.py) y receta de alerta.
+OUTPUT_SCHEMA_VERSION, ALERT_SCHEMA_VERSION = "sapi-output-v1", "sapi-alert-v1"
 
 # Valores que hoy emite SAPI (prototype_service / firms_source); se presentan,
 # no se reinterpretan: el panel no decide frescura ni define umbrales.
@@ -413,13 +417,13 @@ _IDENTITY_FIELDS = {
 
 
 def _identity(data: Mapping) -> dict[str, str]:
-    """Identidades opcionales de `scoring_inputs` (manifest de ScoringInputs).
+    """Identidades de `input_identity` (sapi-output-v1, desde ScoringInputs).
 
-    El bridge actual no las serializa: si no vienen, el panel dice
+    Lo que el bridge marca null (no existe upstream) se muestra como
     "NO DISPONIBLE EN RESPUESTA". Solo se aceptan hashes hex de 64, fechas ISO
     y etiquetas cortas; cualquier otro valor se ignora campo a campo.
     """
-    si = data.get("scoring_inputs")
+    si = data.get("input_identity")
     if not isinstance(si, Mapping):
         return {}
     out: dict[str, str] = {}
@@ -458,6 +462,29 @@ def build_alert_preview(canonical: Mapping) -> tuple[Optional[AlertPreview], lis
         top=top,
     )
     return preview, list(payload.get("reasons") or [])
+
+
+def _identity_reasons(data: Mapping, alert: Optional[AlertPreview]) -> list[str]:
+    """La identidad declarada por el bridge debe ser la que calcula la receta única.
+
+    Sin contrato sapi-output-v1 o sin identidad no hay ranking: el panel nunca
+    muestra una identidad distinta de la que usaría n8n.
+    """
+    declared = data.get("alert_identity")
+    if (
+        data.get("output_schema_version") != OUTPUT_SCHEMA_VERSION
+        or not isinstance(declared, Mapping)
+        or declared.get("schema_version") != ALERT_SCHEMA_VERSION
+        or declared.get("top_n") != TOP_N
+        or not (
+            isinstance(declared.get("alert_fingerprint"), str)
+            and _HEX64.fullmatch(declared["alert_fingerprint"])
+        )
+    ):
+        return ["missing_alert_identity"]
+    if alert is not None and alert.fingerprint != declared["alert_fingerprint"]:
+        return ["alert_identity_mismatch"]
+    return []
 
 
 def _from_error(data: Mapping, base: dict) -> DashboardView:
@@ -517,6 +544,7 @@ def from_payload(
     alert, alert_reasons = build_alert_preview(canonical)
     if alert is None or alert.status != "READY":
         reasons += [f"alert:{r}" for r in alert_reasons] or ["alert:not_ready"]
+    reasons += _identity_reasons(data, alert)
     if reasons:
         return DashboardView(
             INVALID_RESULT, reasons=tuple(sorted(set(reasons))), synthetic=demo, **base

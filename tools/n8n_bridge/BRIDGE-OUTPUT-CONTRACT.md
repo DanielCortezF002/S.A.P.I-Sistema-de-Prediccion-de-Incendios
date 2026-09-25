@@ -48,6 +48,44 @@ días y la regla 30-30-30. El puente puntúa y entrega un lag FIRMS de 4 a 7 (`F
 **negativo** (cobertura FIRMS posterior a la fecha de T: la implementación lo trata como
 `FIRMS AL DÍA`). Retenerlos le corresponde a n8n (`firms_not_current`).
 
+## Respuesta 200: contrato canónico `sapi-output-v1`
+
+Es el mismo resultado validado arriba, en su forma de transporte. No es un segundo
+resultado. Lo consumen sin transformación el Control Center, `alert_payload` y
+`ops/n8n/policy.js` (`tools/n8n_bridge/output_contract.py`). A los campos existentes se
+agregan:
+
+| Campo | Contenido |
+|---|---|
+| `output_schema_version` | `"sapi-output-v1"` |
+| `input_identity` | Identidades de `ScoringInputs.manifest()`, filtradas por lista blanca: `model {sha256, name, version}`, `firms {sha256, origin, pointer_version, coverage_start, coverage_end}`, `dmc {manifest_sha256, pointer_version, coverage_start, coverage_end}`, `topography {sha256, origin}`, `reproducibility_mode`, `code` |
+| `alert_identity` | `{schema_version: "sapi-alert-v1", alert_fingerprint, top_n: 5}` |
+| `limitations` | Las del payload de alerta |
+
+- **Equivalencias de nombres:** `forecast_time` es la hora de evaluación (`scoring_time`
+  en la alerta). `cells`, `firms_*` e `inputs_fingerprint` no cambian. El rank del
+  backend es la autoridad: nadie lo reordena.
+- **Integridad de entradas:** si el resultado trae `scoring_inputs`, `inputs_fingerprint`
+  tiene que ser su hash canónico; si no lo es, responde 500. Solo se publican hashes hex
+  de 64, identificadores `[A-Za-z0-9._-]` y fechas ISO. Nada con espacios ni `:` fuera de
+  una fecha, así que un valor como `Authorization: Bearer …` no pasa.
+- **Sin inventar:** lo que no existe upstream queda en `null`. Hoy `code` (identidad de
+  código o corrida) siempre es null, y sin `scoring_inputs` los cuatro bloques también.
+  El DMC se pasa tal como viene en el manifest; este contrato no toca módulos DMC.
+- **Identidad de alerta:** sale de la única receta de `src/notifications/alert_payload.py`.
+  Si esa receta no acepta el resultado, responde 500 y nunca 200 sin identidad.
+  `ops/n8n/policy.js` la recalcula y bloquea el resultado si falta o no coincide.
+  Detalle en `docs/ops/ALERT-PAYLOAD.md`.
+- **Deduplicación en n8n:** con la identidad por evaluación, reintentar el mismo resultado
+  no notifica dos veces. Una **evaluación nueva** (entradas, hora o Top 5 distintos) es
+  una alerta nueva aunque el grupo superior no cambie. La supresión anterior de
+  "condición persistente" (por grupo superior) ya no existe; decidir si se reintroduce,
+  como política y no como segunda identidad, queda para el gate humano de Telegram.
+
+Fixtures para n8n: `ops/n8n/fixtures/canonical-notification.json` (la política lo acepta)
+y `tampered-identity.json` (lo bloquea). Ambos son la salida real del bridge para un
+resultado sintético y `tests/test_output_pipeline.py` los mantiene al día.
+
 ## Errores (taxonomía existente, sin tipos nuevos)
 
 | HTTP | `error_type` | Significado |
