@@ -173,25 +173,45 @@ State transitions: `PREFLIGHT_READY` -> `ATTEMPT2_AUTHORIZATION_REQUIRED` -> `AT
    State transitions to `SCORING_VALIDATED`.
 
 ### Step 11: Output Plane Manifest Acceptance
-1. Operator advances to `BRIDGE_READY` / `OUTPUT_ACCEPTANCE`.
-2. Presentation layers (Streamlit / dashboard consumption) generate `OUTPUT-PLANE-MANIFEST.json`.
-3. Operator verifies and binds the output contract:
+1. Operator advances to `BRIDGE_READY`.
+2. Capture the accepted bridge result as an Output accepted-run artifact (GET only). This
+   prints the artifact path and its `artifact_fingerprint`:
    ```bash
-   python -m src.ops.attempt2_operator accept-output --manifest OUTPUT-PLANE-MANIFEST.json --score-artifact ./data/predictions/scores.parquet
+   python -m src.output.accepted_run capture --url http://127.0.0.1:8600/score
    ```
-4. Step through manual review of downstream orchestrations (`N8N_MANUAL_READY`).
+3. Build the per-run acceptance record in the Operations consumer contract. It is built
+   from the persistent Output plane manifest (anchored fingerprint) and that artifact:
+   ```bash
+   python -m src.convergence.output_acceptance build \
+       --output-manifest <OUTPUT_PLANE_MANIFEST.json> --expect-output-fingerprint <fp> \
+       --accepted-run <accepted-run.json> --expect-artifact-fingerprint <fp> --out <run dir>
+   ```
+   The Output plane's own `OUTPUT_PLANE_MANIFEST.json` is plane readiness evidence, not the
+   per-run record. The Operations consumer rejects it if it is passed directly. For the same
+   reason, do not pass it to `init --output-manifest`: `init` records the fingerprint without
+   enforcing verification.
+4. Bind the record while importing the bridge result (there is no separate `accept-output`
+   command):
+   ```bash
+   python -m src.ops.attempt2_operator import-result --run <RUN> --phase bridge \
+       --from bridge.json --output-manifest <run dir>/OUTPUT-PLANE-MANIFEST.json
+   ```
+5. Step through manual review of downstream orchestrations (`N8N_MANUAL_READY`).
 
 ### Step 12: Final Operational Acceptance
 1. Operator advances to `ACCEPTANCE_READY`.
 2. Final acceptance check executes:
    ```bash
-   python -m src.ops.attempt2_operator advance
+   python -m src.ops.attempt2_operator next --run <RUN> --advance
    ```
 3. State transitions to `ACCEPTED`.
 4. Run report generation:
    ```bash
-   python -m src.ops.attempt2_operator report
+   python -m src.ops.attempt2_operator report --run <RUN>
    ```
+5. Only after `ACCEPTED`, open the Control Center live
+   (`python -m app.control_center --live`). Telegram and the schedule remain separate human
+   gates and are not part of this flow.
 
 > [!CAUTION]
 > **Scientific Integrity Rule**:
