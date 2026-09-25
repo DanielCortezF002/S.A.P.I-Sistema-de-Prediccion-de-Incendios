@@ -133,9 +133,30 @@ class Attempt2Operator:
                 try:
                     pf = json.loads(pf_path.read_text(encoding="utf-8"))
                     top = pf.get("highest_priority_reason") or {}
-                    if top.get("code"):
+                    if top.get("remediation"):
+                        reason_code = top.get("code") or reason_code
+                        detail = top["remediation"]
+                    elif top.get("code"):
                         reason_code = top["code"]
-                        detail = f"Address {reason_code} ({top.get('detail')}), then re-run preflight"
+                        detail = (
+                            f"Address {reason_code} ({top.get('detail')}), "
+                            "then re-run preflight"
+                        )
+                    # Quiescence finding may be nested
+                    q = pf.get("quiescence") or {}
+                    qtop = q.get("highest_priority_finding") or {}
+                    if q.get("status") in ("NOT_QUIESCENT", "INCOMPLETE") and qtop.get(
+                        "remediation"
+                    ):
+                        # Prefer quiescence remediation when that blocks
+                        if (top.get("code") or "").startswith("QG-") or top.get(
+                            "code"
+                        ) in (
+                            "OPERATIONAL_NOT_QUIESCENT",
+                            "OPERATIONAL_QUIESCENCE_INCOMPLETE",
+                        ):
+                            reason_code = qtop.get("id") or reason_code
+                            detail = qtop["remediation"]
                 except (OSError, json.JSONDecodeError):
                     pass
             return {

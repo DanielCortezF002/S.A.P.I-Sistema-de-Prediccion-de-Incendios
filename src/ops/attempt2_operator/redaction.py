@@ -9,8 +9,8 @@ from typing import Any
 _SECRET_PATTERNS = [
     re.compile(r"(?i)(api[_-]?key|token|password|authorization|secret|bearer)\s*[=:]\s*\S+"),
     re.compile(r"(?i)(NASA_FIRMS_API_KEY|DMC_TOKEN|DMC_USUARIO|MAP_KEY)\s*[=:]\s*\S+"),
-    re.compile(r"(?i)MAP_KEY[=:]\S+"),
-    re.compile(r"(?i)Bearer\s+[A-Za-z0-9\-._~+/]+=*"),
+    re.compile(r"(?i)(MAP_KEY)[=:]\S+"),
+    re.compile(r"(?i)(Bearer)\s+[A-Za-z0-9\-._~+/]+=*"),
     re.compile(r"(?i)(sk-[A-Za-z0-9]{16,})"),
 ]
 

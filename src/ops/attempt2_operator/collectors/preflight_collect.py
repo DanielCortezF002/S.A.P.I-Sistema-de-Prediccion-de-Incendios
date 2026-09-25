@@ -14,6 +14,8 @@ from src.ops.attempt2_operator.collectors.git_state import collect_git_state
 from src.ops.attempt2_operator.collectors.runtime import collect_runtime
 from src.ops.attempt2_operator.collectors.store_state import collect_store_state
 from src.ops.attempt2_operator.paths import StoreRoots
+from src.ops.attempt2_operator.quiescence import collect_quiescence
+from src.ops.attempt2_operator.quiescence.findings import FINDING_REMEDIATION
 from src.ops.attempt2_operator.workspace_safety import check_workspace_safety
 
 # Highest-priority first for `next` UX
@@ -21,10 +23,12 @@ REASON_PRIORITY = (
     "CODE_SHA_MISMATCH",
     "DIRTY_CODE",
     "WORKSPACE_SAFETY_FAIL",
+    "OPERATIONAL_NOT_QUIESCENT",
     "ARTIFACT_IDENTITY_FAIL",
     "ARTIFACT_NOT_FOUND",
     "FIRMS_CURRENT_UNKNOWN",
     "DMC_CURRENT_UNKNOWN",
+    "OPERATIONAL_QUIESCENCE_INCOMPLETE",
     "WORKSPACE_SAFETY_NOT_AVAILABLE",
     "ARTIFACT_INCOMPLETE",
     "GIT_STATE_UNKNOWN",
@@ -50,6 +54,11 @@ def build_reasons(
         "artifact_identity_incomplete": ("ARTIFACT_INCOMPLETE", "INCOMPLETE"),
         "firms_current_unknown": ("FIRMS_CURRENT_UNKNOWN", "INCOMPLETE"),
         "dmc_current_unknown": ("DMC_CURRENT_UNKNOWN", "INCOMPLETE"),
+        "operational_not_quiescent": ("OPERATIONAL_NOT_QUIESCENT", "FAIL"),
+        "operational_quiescence_incomplete": (
+            "OPERATIONAL_QUIESCENCE_INCOMPLETE",
+            "INCOMPLETE",
+        ),
         "workspace_safety_not_available": ("WORKSPACE_SAFETY_NOT_AVAILABLE", "INCOMPLETE"),
         "git_state_unknown": ("GIT_STATE_UNKNOWN", "INCOMPLETE"),
     }
@@ -95,6 +104,11 @@ def collect_real_preflight(
     credentials = collect_credential_presence()
     runtime = collect_runtime()
     workspace = check_workspace_safety(repo)
+    quiescence = collect_quiescence(
+        repo=repo,
+        data_root=roots.data_root,
+        runtime=runtime,
+    )
 
     warnings: list[str] = []
     failures: list[str] = []
@@ -121,14 +135,56 @@ def collect_real_preflight(
         failures.append("workspace_safety_fail")
     elif workspace.get("status") == "INCOMPLETE":
         warnings.append("workspace_safety_not_available")
+    # Quiescence is independent of workspace-safety stub
+    q_status = quiescence.get("status")
+    if q_status == "NOT_QUIESCENT":
+        failures.append("operational_not_quiescent")
+    elif q_status == "INCOMPLETE":
+        warnings.append("operational_quiescence_incomplete")
+    elif q_status != "QUIESCENT":
+        warnings.append("operational_quiescence_incomplete")
 
     reasons = build_reasons(failures=failures, warnings=warnings)
+    # Prefer precise quiescence finding for next UX when that is the blocker
+    if q_status in ("NOT_QUIESCENT", "INCOMPLETE") and quiescence.get(
+        "highest_priority_finding"
+    ):
+        top = quiescence["highest_priority_finding"]
+        reasons.insert(
+            0,
+            {
+                "code": top.get("id") or "OPERATIONAL_NOT_QUIESCENT",
+                "severity": "FAIL" if q_status == "NOT_QUIESCENT" else "INCOMPLETE",
+                "detail": top.get("detail") or "quiescence_blocked",
+                "remediation": top.get("remediation")
+                or FINDING_REMEDIATION.get(top.get("id", ""), ""),
+            },
+        )
     if failures:
         overall = "FAIL"
     elif warnings or git.get("status") == "INCOMPLETE":
         overall = "INCOMPLETE"
-    elif expected_code_sha and git.get("sha_match") is True and git.get("dirty") is False:
+    elif (
+        expected_code_sha
+        and git.get("sha_match") is True
+        and git.get("dirty") is False
+        and workspace.get("status") == "PASS"
+        and q_status == "QUIESCENT"
+    ):
         overall = "PASS"
+    elif expected_code_sha and git.get("sha_match") is True and git.get("dirty") is False:
+        # Clean SHA alone is not enough — need workspace safety PASS + QUIESCENT
+        overall = "INCOMPLETE"
+        if workspace.get("status") != "PASS" and not any(
+            r.get("code") == "WORKSPACE_SAFETY_NOT_AVAILABLE" for r in reasons
+        ):
+            warnings.append("workspace_safety_not_available")
+            reasons = build_reasons(failures=failures, warnings=warnings)
+        if q_status != "QUIESCENT" and not any(
+            r.get("code", "").startswith("QG-") for r in reasons
+        ):
+            warnings.append("operational_quiescence_incomplete")
+            reasons = build_reasons(failures=failures, warnings=warnings)
     elif expected_code_sha is None and git.get("dirty") is False and git.get("head_sha"):
         overall = "INCOMPLETE"  # no expected SHA → incomplete by policy
         reasons.append(
@@ -167,6 +223,7 @@ def collect_real_preflight(
         "credentials": credentials,
         "runtime": runtime,
         "workspace_safety": workspace,
+        "quiescence": quiescence,
         "tool_results": tool_results or [],
         "warnings": warnings,
         "failures": failures,
