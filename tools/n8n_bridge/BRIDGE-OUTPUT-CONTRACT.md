@@ -79,8 +79,12 @@ agregan:
 - **Deduplicación en n8n:** con la identidad por evaluación, reintentar el mismo resultado
   no notifica dos veces. Una **evaluación nueva** (entradas, hora o Top 5 distintos) es
   una alerta nueva aunque el grupo superior no cambie. La supresión anterior de
-  "condición persistente" (por grupo superior) ya no existe; decidir si se reintroduce,
-  como política y no como segunda identidad, queda para el gate humano de Telegram.
+  "condición persistente" (por grupo superior) ya no existe. Si se reintroduce, será como
+  opción de la política de supresión `sapi-suppression-v1` (`deduplicate(..., policy)`),
+  nunca como segunda identidad. La decisión queda para el gate humano de Telegram. Ver
+  `docs/ops/ACCEPTED-RUN-ARTIFACT.md`.
+- **Fuente única de la lista blanca:** `src/output/contract.py`, que comparten el bridge,
+  el Control Center y el artefacto de corrida aceptada.
 
 Fixtures para n8n: `ops/n8n/fixtures/canonical-notification.json` (la política lo acepta)
 y `tampered-identity.json` (lo bloquea). Ambos son la salida real del bridge para un

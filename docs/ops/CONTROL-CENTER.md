@@ -12,7 +12,14 @@ python -m app.control_center --demo                 # presentación sin bridge, 
 python -m app.control_center --demo --presentation  # modo presentación (César / Matías)
 python -m app.control_center --live                 # lee SAPI_SCORE_URL con GET /score
 python -m app.control_center --live --score-url http://127.0.0.1:8600/score
+python -m app.control_center --replay <accepted-run.json>  # REPLAY de una corrida capturada
+python -m src.output.readiness                      # ¿Output Plane listo? (READY/NOT_READY/INCOMPLETE)
 ```
+
+REPLAY muestra una corrida aceptada y capturada (ver `docs/ops/ACCEPTED-RUN-ARTIFACT.md`)
+con `MODO: REPLAY`, su hora de captura (distinta de la hora de evaluación), el
+`artifact_fingerprint` y la etiqueta `SYNTHETIC` si corresponde. No usa red ni
+servicios. La ruta del artefacto la fija el lanzador en el servidor, nunca la URL.
 
 El comando abre `http://127.0.0.1:8501/` (`--port`, `--no-browser`). En la misma URL:
 `/?demo=1`, `/?demo=1&presentation=1`, `/?presentation=1`.
@@ -77,6 +84,7 @@ geografía real de las 50 celdas, en demo y en vivo.
 | `PROTOTYPE_UNAVAILABLE` | `prototype_unavailable` / `internal_error`     | "El servicio de evaluación no está disponible." FIRMS **BLOQUEADO** si el desfase supera el máximo upstream |
 | `INVALID_RESULT`        | vacío, no JSON, HTTP inesperado, contrato roto, o marca sintética en vivo | RESULTADO INVÁLIDO, sin celdas |
 | `NETWORK_ERROR`         | sin conexión o tiempo de espera agotado         | "No fue posible consultar el servicio SAPI." |
+| `REPLAY_READY`          | `--replay` con un artefacto íntegro             | REPLAY · CORRIDA ACEPTADA, ranking capturado |
 
 Sin ranking válido no hay Top 5, mapa, tabla ni alerta de ranking, y la página dice que la
 ausencia de ranking no indica que la situación sea segura. **Nunca hay recurso a la demo:**
@@ -87,7 +95,7 @@ rechaza.
 NO DISPONIBLE / RESPUESTA INVÁLIDA`, medida **solo en la última consulta**. Si esa consulta
 falló, se muestra la hora de la última consulta exitosa, pero no sus datos.
 
-**Tres horas distintas:**
+**Tres horas distintas** (en REPLAY, la primera es la **hora de captura**):
 
 - **Última consulta de vista:** cuándo el panel leyó el servicio. No indica frescura.
 - **Hora de evaluación:** el momento puntuado por el modelo (`forecast_time`).

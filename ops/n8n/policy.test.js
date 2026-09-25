@@ -3,7 +3,7 @@
 // kept current by tests/test_output_pipeline.py: their alert_fingerprint comes from Python.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { evaluate, deduplicate, alertFingerprint } = require('./policy');
+const { evaluate, deduplicate, alertFingerprint, DEFAULT_SUPPRESSION_POLICY } = require('./policy');
 const CANONICAL = require('./fixtures/canonical-notification.json');
 const TAMPERED = require('./fixtures/tampered-identity.json');
 const now = '2026-09-24T13:00:00Z';
@@ -112,4 +112,39 @@ for (const [name,envelope,category,reason] of [
 ]) test(`n8n runtime envelope ${name}`, () => {
   const r=evaluate(envelope,now,'rt-'+name);
   assert.equal(r.category,category); assert.equal(r.reason,reason);
+});
+
+// --- Suppression policy hook: identity untouched, default safe, explicit choices only.
+const at = (p, iso, id) => evaluate({statusCode:200,body:p}, iso, id);
+test('default suppression policy is explicit, frozen and versioned',()=>{
+  assert.ok(Object.isFrozen(DEFAULT_SUPPRESSION_POLICY));
+  const r=deduplicate(run(payload()),null);
+  assert.equal(r.suppression_policy,'sapi-suppression-v1'); assert.equal(r.would_notify,true);
+  assert.equal(r.suppressed_by,null); assert.equal(r.delivery,'NOT_SENT');
+});
+test('time-window option suppresses a new evaluation of the same category within the window',()=>{
+  const policy={...DEFAULT_SUPPRESSION_POLICY, window_minutes:120};
+  const a=at(payload(),'2026-09-24T13:00:00Z','a');
+  const b=at(resign(Object.assign(payload(),{inputs_fingerprint:'c'.repeat(64)})),'2026-09-24T14:00:00Z','b');
+  const r=deduplicate(b,a,policy);
+  assert.notEqual(r.notification_identity,a.notification_identity);  // identity untouched
+  assert.equal(r.would_notify,false); assert.equal(r.suppressed_by,'time_window');
+  assert.equal(deduplicate(b,a).would_notify,true);  // default: no window
+});
+test('category option can also silence operator error notices',()=>{
+  const policy={...DEFAULT_SUPPRESSION_POLICY, never_notify_categories:['withheld','blocked','error']};
+  const e=evaluate(matrix[1][1],now,'e');
+  assert.equal(deduplicate(e,null).would_notify,true);
+  const r=deduplicate(e,null,policy); assert.equal(r.would_notify,false); assert.equal(r.suppressed_by,'category');
+});
+for (const [name,policy] of [
+  ['missing', null], ['unknown key', {...DEFAULT_SUPPRESSION_POLICY, send:true}],
+  ['wrong version', {...DEFAULT_SUPPRESSION_POLICY, version:'x'}],
+  ['retries allowed', {...DEFAULT_SUPPRESSION_POLICY, suppress_same_identity:false}],
+  ['blocked notifiable', {...DEFAULT_SUPPRESSION_POLICY, never_notify_categories:['withheld']}],
+  ['bad window', {...DEFAULT_SUPPRESSION_POLICY, window_minutes:-5}],
+]) test(`invalid suppression policy never notifies: ${name}`,()=>{
+  const r=deduplicate(run(payload()),null,policy);
+  assert.equal(r.would_notify,false); assert.equal(r.suppressed_by,'invalid_suppression_policy');
+  assert.equal(r.delivery,'NOT_SENT');
 });

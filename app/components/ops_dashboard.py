@@ -174,7 +174,7 @@ def dashboard_css() -> str:
   .ops-band--replay {{ border: 4px double {_REPLAY_FILL}; }}
   .ops-pill--replay {{ color: {_REPLAY_TEXT}; background: {_REPLAY_FILL};
     border-color: {_REPLAY_TEXT}; }}
-  .ops-chip--replay {{ background: {_REPLAY_FILL}; color: {_REPLAY_TEXT};
+  .ops-chip.ops-chip--replay {{ background: {_REPLAY_FILL}; color: {_REPLAY_TEXT};
     border-color: {_REPLAY_TEXT}; font-weight: 800; letter-spacing: .06em; }}
   .ops-band__top {{ display: flex; flex-wrap: wrap; align-items: center;
     justify-content: space-between; gap: 8px 16px; }}

@@ -194,18 +194,50 @@ function evaluate(envelope, nowIso, executionId) {
     message: `PRUEBA CONTROLADA — SAPI\nRanking exploratorio; NO probabilidad calibrada; NO confirmación de incendio.\nT: ${p.forecast_time}\nVentana: T < t <= ${new Date(end).toISOString()}\nGrupo superior relativo (display_rank 1): ${group.join(', ')}\nDMC regional: ${p.station_id}; observación: ${p.weather_timestamp}\nRegla 30-30-30: ${rule} (feature y filtro operacional; no evidencia independiente).\nFIRMS: anomalías térmicas satelitales; cobertura ${p.firms_coverage_end}; lag ${lag} días respecto de T.\nEjecución: ${base.execution_id}\nEntradas: ${p.inputs_fingerprint}\nAlerta: ${id.alert_fingerprint}\nSolo preview; no usar para decisiones operacionales.` };
 }
 
+// Suppression is POLICY, kept separate from identity: `notification_identity` is never
+// changed here. The default reproduces the current safe behaviour; any other choice
+// (time window, extra categories, allowing identical retries) is a future human decision
+// and must be passed explicitly. An invalid policy never notifies.
+const SUPPRESSION_POLICY_VERSION = 'sapi-suppression-v1';
+const DEFAULT_SUPPRESSION_POLICY = Object.freeze({
+  version: SUPPRESSION_POLICY_VERSION,
+  suppress_same_identity: true,       // same identity + category never notifies twice (retries)
+  window_minutes: null,               // null = no time-window suppression
+  never_notify_categories: Object.freeze(['withheld', 'blocked']),
+});
+function validSuppressionPolicy(policy) {
+  const keys = ['version', 'suppress_same_identity', 'window_minutes', 'never_notify_categories'];
+  return !!policy && typeof policy === 'object' && Object.keys(policy).every(k => keys.includes(k))
+    && policy.version === SUPPRESSION_POLICY_VERSION && policy.suppress_same_identity === true
+    && (policy.window_minutes === null || (Number.isInteger(policy.window_minutes) && policy.window_minutes > 0))
+    && Array.isArray(policy.never_notify_categories)
+    && ['withheld', 'blocked'].every(c => policy.never_notify_categories.includes(c))
+    && policy.never_notify_categories.every(c => ['withheld', 'blocked', 'error', 'candidate'].includes(c));
+}
+
 // Retry-safe: the same alert (same identity and category) never notifies twice.
 // `blocked` (integrity failure) and `withheld` are never notifiable.
-function deduplicate(current, previous) {
+function deduplicate(current, previous, policy = DEFAULT_SUPPRESSION_POLICY) {
+  const base = { ...current, suppression_policy: policy && policy.version, delivery: 'NOT_SENT' };
+  if (!validSuppressionPolicy(policy)) {
+    return { ...base, condition_changed: false, would_notify: false,
+      suppressed_by: 'invalid_suppression_policy', recovered_from_error: false };
+  }
   const changed = !previous || previous.notification_identity !== current.notification_identity
     || previous.category !== current.category;
-  return { ...current, condition_changed: changed,
-    would_notify: changed && current.category !== 'withheld' && current.category !== 'blocked',
-    recovered_from_error: !!previous && previous.category === 'error' && current.category !== 'error',
-    delivery: 'NOT_SENT' };
+  let suppressedBy = null;
+  if (policy.never_notify_categories.includes(current.category)) suppressedBy = 'category';
+  else if (!changed) suppressedBy = 'same_identity';
+  else if (policy.window_minutes !== null && previous && previous.category === current.category
+      && Date.parse(current.evaluated_at) - Date.parse(previous.evaluated_at) < policy.window_minutes * 60000)
+    suppressedBy = 'time_window';
+  return { ...base, condition_changed: changed, would_notify: suppressedBy === null,
+    suppressed_by: suppressedBy,
+    recovered_from_error: !!previous && previous.category === 'error' && current.category !== 'error' };
 }
 
 if (typeof module !== 'undefined') {
   module.exports = { evaluate, deduplicate, alertFingerprint, nonReadyFingerprint,
-    canonicalJson, pyFloatRepr, sha256Hex, PyFloat };
+    canonicalJson, pyFloatRepr, sha256Hex, PyFloat, DEFAULT_SUPPRESSION_POLICY,
+    SUPPRESSION_POLICY_VERSION };
 }
