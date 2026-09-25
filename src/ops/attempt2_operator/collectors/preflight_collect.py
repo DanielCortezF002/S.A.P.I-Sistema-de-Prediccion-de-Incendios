@@ -13,9 +13,11 @@ from src.ops.attempt2_operator.collectors.firms_current import collect_firms_cur
 from src.ops.attempt2_operator.collectors.git_state import collect_git_state
 from src.ops.attempt2_operator.collectors.runtime import collect_runtime
 from src.ops.attempt2_operator.collectors.store_state import collect_store_state
+from src.ops.attempt2_operator.data_plane_manifest import verify_data_plane_manifest
 from src.ops.attempt2_operator.paths import StoreRoots
 from src.ops.attempt2_operator.quiescence.collect import collect_quiescence
 from src.ops.attempt2_operator.quiescence.findings import FINDING_REMEDIATION
+from src.ops.attempt2_operator.workspace_manifest import verify_workspace_manifest
 from src.ops.attempt2_operator.workspace_safety import check_workspace_safety
 
 # Highest-priority first for `next` UX
@@ -23,6 +25,7 @@ REASON_PRIORITY = (
     "CODE_SHA_MISMATCH",
     "DIRTY_CODE",
     "WORKSPACE_SAFETY_FAIL",
+    "DATA_MANIFEST_FAIL",
     "OPERATIONAL_NOT_QUIESCENT",
     "ARTIFACT_IDENTITY_FAIL",
     "ARTIFACT_NOT_FOUND",
@@ -30,6 +33,7 @@ REASON_PRIORITY = (
     "DMC_CURRENT_UNKNOWN",
     "OPERATIONAL_QUIESCENCE_INCOMPLETE",
     "WORKSPACE_SAFETY_NOT_AVAILABLE",
+    "DATA_MANIFEST_INCOMPLETE",
     "ARTIFACT_INCOMPLETE",
     "GIT_STATE_UNKNOWN",
 )
@@ -49,6 +53,8 @@ def build_reasons(
         "expected_code_sha_mismatch": ("CODE_SHA_MISMATCH", "FAIL"),
         "dirty_worktree": ("DIRTY_CODE", "FAIL"),
         "workspace_safety_fail": ("WORKSPACE_SAFETY_FAIL", "FAIL"),
+        "data_manifest_fail": ("DATA_MANIFEST_FAIL", "FAIL"),
+        "data_manifest_tampered": ("DATA_MANIFEST_FAIL", "FAIL"),
         "artifact_identity_fail": ("ARTIFACT_IDENTITY_FAIL", "FAIL"),
         "artifact_not_found": ("ARTIFACT_NOT_FOUND", "INCOMPLETE"),
         "artifact_identity_incomplete": ("ARTIFACT_INCOMPLETE", "INCOMPLETE"),
@@ -60,6 +66,7 @@ def build_reasons(
             "INCOMPLETE",
         ),
         "workspace_safety_not_available": ("WORKSPACE_SAFETY_NOT_AVAILABLE", "INCOMPLETE"),
+        "data_manifest_incomplete": ("DATA_MANIFEST_INCOMPLETE", "INCOMPLETE"),
         "git_state_unknown": ("GIT_STATE_UNKNOWN", "INCOMPLETE"),
     }
     reasons: list[dict[str, str]] = []
@@ -86,6 +93,8 @@ def collect_real_preflight(
     models_root: Path | None = None,
     firms_baseline_path: Path | None = None,
     model_path: Path | None = None,
+    workspace_manifest_path: Path | str | None = None,
+    data_plane_manifest_path: Path | str | None = None,
 ) -> dict[str, Any]:
     collection_started_at = _utc_now()
     roots = StoreRoots.from_repo(repo, data_root=data_root, models_root=models_root)
@@ -103,12 +112,59 @@ def collect_real_preflight(
     )
     credentials = collect_credential_presence()
     runtime = collect_runtime()
-    workspace = check_workspace_safety(repo)
+
+    # Workspace Safety / Workspace Manifest check
+    ws_ver: dict[str, Any] | None = None
+    if workspace_manifest_path:
+        ws_ver = verify_workspace_manifest(
+            workspace_manifest_path,
+            expected_code_sha=expected_code_sha,
+            expected_workspace_root=repo,
+        )
+        if ws_ver.get("status") == "PASS":
+            workspace = {
+                "status": "PASS",
+                "overall_status": "PASS",
+                "provider": "WorkspaceManifestVerifier",
+                "manifest_path": str(workspace_manifest_path),
+                "fingerprint": ws_ver.get("manifest_fingerprint"),
+                "materialization_id": ws_ver.get("materialization_id"),
+                "evidence": ws_ver,
+            }
+        else:
+            workspace = {
+                "status": "FAIL",
+                "overall_status": "FAIL",
+                "provider": "WorkspaceManifestVerifier",
+                "manifest_path": str(workspace_manifest_path),
+                "findings": ws_ver.get("findings", []),
+                "evidence": ws_ver,
+            }
+    else:
+        workspace = check_workspace_safety(
+            repo,
+            expected_code_sha=expected_code_sha,
+            stores={
+                "raw": roots.data_root / "raw",
+                "processed": roots.data_root / "processed",
+                "models": roots.models_root,
+            },
+        )
+
+    # Quiescence check
     quiescence = collect_quiescence(
         repo=repo,
         data_root=roots.data_root,
         runtime=runtime,
     )
+
+    # Optional external data plane manifest check
+    data_plane: dict[str, Any] | None = None
+    if data_plane_manifest_path is not None:
+        data_plane = verify_data_plane_manifest(
+            data_plane_manifest_path,
+            expected_code_sha=expected_code_sha,
+        )
 
     warnings: list[str] = []
     failures: list[str] = []
@@ -135,6 +191,13 @@ def collect_real_preflight(
         failures.append("workspace_safety_fail")
     elif workspace.get("status") == "INCOMPLETE":
         warnings.append("workspace_safety_not_available")
+
+    if data_plane is not None:
+        if data_plane.get("status") == "FAIL":
+            failures.append("data_manifest_fail")
+        elif data_plane.get("status") in ("INCOMPLETE", "NOT_AVAILABLE"):
+            warnings.append("data_manifest_incomplete")
+
     # Quiescence is independent of workspace-safety stub
     q_status = quiescence.get("status")
     if q_status == "NOT_QUIESCENT":
@@ -223,6 +286,8 @@ def collect_real_preflight(
         "credentials": credentials,
         "runtime": runtime,
         "workspace_safety": workspace,
+        "workspace_manifest": ws_ver if workspace_manifest_path else None,
+        "data_plane": data_plane,
         "quiescence": quiescence,
         "tool_results": tool_results or [],
         "warnings": warnings,

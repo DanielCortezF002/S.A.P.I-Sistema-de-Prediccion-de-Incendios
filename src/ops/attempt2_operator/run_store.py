@@ -64,6 +64,10 @@ class Attempt2Run:
         self.manifest_path = root / "manifest.json"
         self.events = EventLog(root / "events.jsonl")
 
+    @property
+    def run_id(self) -> str:
+        return self.root.name
+
     @classmethod
     def create(
         cls,

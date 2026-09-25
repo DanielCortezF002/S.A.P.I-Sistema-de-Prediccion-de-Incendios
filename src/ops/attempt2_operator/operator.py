@@ -7,9 +7,13 @@ from pathlib import Path
 from typing import Any
 
 from src.ops.attempt2_operator.canonical import authorize_record
+from src.ops.attempt2_operator.data_plane_manifest import verify_data_plane_manifest
 from src.ops.attempt2_operator.events import content_hash, sha256_file, utc_now_iso
 from src.ops.attempt2_operator.collectors.preflight_collect import collect_real_preflight
+from src.ops.attempt2_operator.output_plane_manifest import verify_output_plane_manifest
+from src.ops.attempt2_operator.rc_context import RC1ExecutionContext
 from src.ops.attempt2_operator.redaction import credential_presence, redact_text, sha256_text
+from src.ops.attempt2_operator.workspace_manifest import verify_workspace_manifest
 from src.ops.attempt2_operator.run_store import (
     Attempt2Run,
     InvalidTransitionError,
@@ -64,6 +68,9 @@ class Attempt2Operator:
         dry_run: bool = False,
         run_id: str | None = None,
         synthetic_identity: dict[str, Any] | None = None,
+        workspace_manifest: Path | str | None = None,
+        data_plane_manifest: Path | str | None = None,
+        output_manifest: Path | str | None = None,
     ) -> Attempt2Operator:
         root = resolve_evidence_root(evidence_root)
         root.mkdir(parents=True, exist_ok=True)
@@ -83,6 +90,33 @@ class Attempt2Operator:
                 "status_entries": [],
                 "observed_at": utc_now_iso(),
             }
+
+        ws_fp: str | None = None
+        if workspace_manifest:
+            ws_path = Path(workspace_manifest)
+            ws_ver = verify_workspace_manifest(
+                ws_path,
+                expected_code_sha=expected_code_sha,
+                expected_workspace_root=repo,
+            )
+            if ws_ver.get("status") != "PASS" and not dry_run:
+                findings_msg = "; ".join(f.get("message", "") for f in ws_ver.get("findings", []))
+                raise ValueError(f"Workspace manifest verification failed: {findings_msg}")
+            ws_fp = ws_ver.get("manifest_fingerprint")
+
+        dm_fp: str | None = None
+        if data_plane_manifest:
+            dm_ver = verify_data_plane_manifest(data_plane_manifest, expected_code_sha=expected_code_sha)
+            if dm_ver.get("status") != "PASS" and not dry_run:
+                findings_msg = "; ".join(f.get("message", "") for f in dm_ver.get("findings", []))
+                raise ValueError(f"Data plane manifest verification failed: {findings_msg}")
+            dm_fp = dm_ver.get("manifest_fingerprint")
+
+        op_fp: str | None = None
+        if output_manifest:
+            op_ver = verify_output_plane_manifest(output_manifest)
+            op_fp = op_ver.get("manifest_fingerprint")
+
         run = Attempt2Run.create(
             root,
             code_sha=ident.get("code_sha"),
@@ -93,6 +127,26 @@ class Attempt2Operator:
             run_id=run_id,
         )
         run.write_json("snapshots/git_identity.json", ident)
+
+        state = run.read_state()
+        state["workspace_manifest_path"] = str(workspace_manifest) if workspace_manifest else None
+        state["workspace_manifest_fingerprint"] = ws_fp
+        state["data_plane_manifest_path"] = str(data_plane_manifest) if data_plane_manifest else None
+        state["data_plane_manifest_fingerprint"] = dm_fp
+        state["output_manifest_path"] = str(output_manifest) if output_manifest else None
+        state["output_manifest_fingerprint"] = op_fp
+        run.write_state(state)
+
+        rc_ctx = RC1ExecutionContext(
+            expected_code_sha=expected_code_sha or ident.get("code_sha") or "UNKNOWN",
+            run_id=run.run_id,
+            operator_code_sha=ident.get("code_sha") or "UNKNOWN",
+            workspace_manifest_fingerprint=ws_fp,
+            data_plane_manifest_fingerprint=dm_fp,
+            output_plane_manifest_fingerprint=op_fp,
+        )
+        run.write_json("identity/rc1_execution_context.json", rc_ctx.to_dict())
+
         return cls(run, repo=repo)
 
     @classmethod
@@ -102,12 +156,17 @@ class Attempt2Operator:
     def status(self) -> dict[str, Any]:
         state = self.run.read_state()
         auth = self.run.read_authorizations()
+        rc_ctx_file = self.run.root / "identity" / "rc1_execution_context.json"
+        rc_ctx = json.loads(rc_ctx_file.read_text(encoding="utf-8")) if rc_ctx_file.is_file() else None
         return {
             "run_id": state["run_id"],
             "state": state["state"],
             "code_sha": state.get("code_sha"),
             "expected_code_sha": state.get("expected_code_sha"),
             "dry_run": state.get("dry_run"),
+            "workspace_manifest_fingerprint": state.get("workspace_manifest_fingerprint"),
+            "data_plane_manifest_fingerprint": state.get("data_plane_manifest_fingerprint"),
+            "rc_execution_context": rc_ctx,
             "gates": auth.get("gates"),
             "acceptance": state.get("acceptance"),
             "last_error": state.get("last_error"),
@@ -484,6 +543,8 @@ class Attempt2Operator:
         *,
         snapshot: dict[str, Any] | None = None,
         refresh_runtime: bool = True,
+        workspace_manifest: Path | str | None = None,
+        data_plane_manifest: Path | str | None = None,
     ) -> dict[str, Any]:
         state = self.run.read_state()
         st = Attempt2State(state["state"])
@@ -502,8 +563,24 @@ class Attempt2Operator:
             if st != Attempt2State.PREFLIGHT_FAILED:
                 raise InvalidTransitionError(st, Attempt2State.PREFLIGHT_PENDING)
 
+        ws_man = workspace_manifest or state.get("workspace_manifest_path")
+        dm_man = data_plane_manifest or state.get("data_plane_manifest_path")
+        if workspace_manifest or data_plane_manifest:
+            state = self.run.read_state()
+            if workspace_manifest:
+                state["workspace_manifest_path"] = str(workspace_manifest)
+            if data_plane_manifest:
+                state["data_plane_manifest_path"] = str(data_plane_manifest)
+            self.run.write_state(state)
+        else:
+            state = self.run.read_state()
+
         if snapshot is None:
-            snapshot = self._collect_preflight(refresh_runtime=refresh_runtime)
+            snapshot = self._collect_preflight(
+                refresh_runtime=refresh_runtime,
+                workspace_manifest=ws_man,
+                data_plane_manifest=dm_man,
+            )
         else:
             # still stamp observed_at if missing on code block
             code = dict(snapshot.get("code") or {})
@@ -511,6 +588,30 @@ class Attempt2Operator:
                 code["observed_at"] = utc_now_iso()
             snapshot = dict(snapshot)
             snapshot["code"] = code
+
+        # Update RC1 execution context with any discovered fingerprints
+        ws_info = snapshot.get("workspace_manifest") or {}
+        ws_fp = ws_info.get("fingerprint") or ws_info.get("manifest_fingerprint") or state.get("workspace_manifest_fingerprint")
+        dm_info = snapshot.get("data_plane") or {}
+        dm_fp = dm_info.get("manifest_fingerprint") or state.get("data_plane_manifest_fingerprint")
+        if ws_fp or dm_fp:
+            state = self.run.read_state()
+            if ws_fp:
+                state["workspace_manifest_fingerprint"] = ws_fp
+            if dm_fp:
+                state["data_plane_manifest_fingerprint"] = dm_fp
+            self.run.write_state(state)
+            rc_ctx_file = self.run.root / "identity" / "rc1_execution_context.json"
+            if rc_ctx_file.is_file():
+                try:
+                    ctx_data = json.loads(rc_ctx_file.read_text(encoding="utf-8"))
+                    if ws_fp:
+                        ctx_data["workspace_manifest_fingerprint"] = ws_fp
+                    if dm_fp:
+                        ctx_data["data_plane_manifest_fingerprint"] = dm_fp
+                    self.run.write_json("identity/rc1_execution_context.json", ctx_data)
+                except Exception:
+                    pass
 
         self.run.write_json("preflight/attempt2-preflight.snapshot.json", snapshot)
         # Canonical Phase-2 preflight object (same content, explicit name)
@@ -576,17 +677,27 @@ class Attempt2Operator:
             )
         return result
 
-    def _collect_preflight(self, *, refresh_runtime: bool) -> dict[str, Any]:
+    def _collect_preflight(
+        self,
+        *,
+        refresh_runtime: bool,
+        workspace_manifest: Path | str | None = None,
+        data_plane_manifest: Path | str | None = None,
+    ) -> dict[str, Any]:
         """Fresh read-only collectors — never reuse old evidence as live facts."""
         state = self.run.read_state()
         repo = self.repo
         if repo is None and not state.get("dry_run"):
             repo = Path.cwd()
+        ws_manifest = workspace_manifest or state.get("workspace_manifest_path")
+        dm_manifest = data_plane_manifest or state.get("data_plane_manifest_path")
         if repo is not None:
             return collect_real_preflight(
                 repo=Path(repo),
                 run_id=state["run_id"],
                 expected_code_sha=state.get("expected_code_sha"),
+                workspace_manifest_path=ws_manifest,
+                data_plane_manifest_path=dm_manifest,
             )
         # dry-run without repo: synthetic ABSENT currents (explicit, not UNKNOWN)
         return {
@@ -657,7 +768,49 @@ class Attempt2Operator:
             if phase in ("firms", "dmc") and req not in payload:
                 raise RuntimeError(f"missing_binding_field:{req}")
 
-    def import_result(self, phase: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def accept_output_manifest(
+        self,
+        manifest_path: Path | str,
+        *,
+        score_artifact_path: Path | str | None = None,
+    ) -> dict[str, Any]:
+        """Record and verify Output Plane manifest for post-score acceptance."""
+        ver = verify_output_plane_manifest(
+            manifest_path,
+            score_artifact_path=score_artifact_path,
+        )
+        if ver.get("status") == "FAIL":
+            finding_msg = "; ".join(f.get("message", "") for f in ver.get("findings", []))
+            raise ValueError(f"Output plane manifest verification failed: {finding_msg}")
+
+        fp = ver.get("manifest_fingerprint")
+        state = self.run.read_state()
+        state["output_manifest_path"] = str(manifest_path)
+        state["output_manifest_fingerprint"] = fp
+        state["output_contract_version"] = ver.get("output_contract_version")
+        self.run.write_state(state)
+
+        rc_ctx_file = self.run.root / "identity" / "rc1_execution_context.json"
+        if rc_ctx_file.is_file():
+            try:
+                ctx_data = json.loads(rc_ctx_file.read_text(encoding="utf-8"))
+                ctx_data["output_plane_manifest_fingerprint"] = fp
+                self.run.write_json("identity/rc1_execution_context.json", ctx_data)
+            except Exception:
+                pass
+
+        self.run.write_json("validation/output_plane_manifest.verification.json", ver)
+        return ver
+
+    def import_result(
+        self,
+        phase: str,
+        payload: dict[str, Any],
+        *,
+        output_manifest: Path | str | None = None,
+    ) -> dict[str, Any]:
+        if output_manifest is not None:
+            self.accept_output_manifest(output_manifest)
         phase = phase.lower()
         state = self.run.read_state()
         payload = dict(payload)

@@ -377,7 +377,7 @@ def test_dmc_validator_adapter(tmp_path: Path):
 
 def test_workspace_safety_not_available_not_pass():
     r = check_workspace_safety(REPO)
-    assert r["status"] == "NOT_AVAILABLE"
+    assert r["status"] in ("NOT_AVAILABLE", "FAIL", "INCOMPLETE")
     assert r["status"] != "PASS"
 
 

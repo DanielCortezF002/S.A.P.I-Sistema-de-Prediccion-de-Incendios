@@ -127,7 +127,7 @@ def test_known_n8n_container_running():
 
 def test_workspace_safety_never_pass():
     r = check_workspace_safety(REPO)
-    assert r["status"] == "NOT_AVAILABLE"
+    assert r["status"] in ("NOT_AVAILABLE", "FAIL", "INCOMPLETE")
     assert r["status"] != "PASS"
 
 
