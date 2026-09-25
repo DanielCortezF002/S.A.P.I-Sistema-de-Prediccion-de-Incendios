@@ -1,0 +1,16 @@
+SAPI — Priorización territorial (evaluación exploratoria)
+Evaluación: 2026-09-20T12:00:00+00:00
+Modelo: prototype_model_d_v1 (PROTOTYPE / EXPLORATORY)
+Cobertura FIRMS (anomalías térmicas): hasta 2026-09-19, desfase 1 día, FIRMS AL DÍA, origen current
+Datos meteorológicos: DATOS RECIENTES
+Entradas: 80f37caac691
+
+Celdas priorizadas (5 de 50, en orden del ranking):
+1. Celda VP-012 | score relativo 0.140 (empate: 3 celdas comparten este score)
+1. Celda VP-027 | score relativo 0.140 (empate: 3 celdas comparten este score)
+1. Celda VP-031 | score relativo 0.140 (empate: 3 celdas comparten este score)
+4. Celda VP-004 | score relativo 0.121
+5. Celda VP-008 | score relativo 0.098 (empate: 2 celdas comparten este score)
++ 1 celda más comparte el score de la última posición mostrada.
+
+Nota: Ranking exploratorio de prioridad relativa (Model D). El score relativo no es una probabilidad calibrada. FIRMS reporta anomalías térmicas satelitales; no confirma la existencia de un incendio. La validación disponible es histórica; no existe validación operacional point-in-time con datos FIRMS NRT.

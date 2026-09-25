@@ -1,0 +1,828 @@
+{
+  "_synthetic_demo": "SYNTHETIC DEMO ONLY - valores inventados; no son resultados cientificos de SAPI",
+  "status": "ok",
+  "model_version": "prototype_model_d_v1",
+  "model_status": "PROTOTYPE / EXPLORATORY",
+  "disclaimer": "PROTOTIPO EXPLORATORIO (demo sintetica)",
+  "forecast_time": "2026-09-20T12:00:00+00:00",
+  "horizon_hours": 6,
+  "station_id": "330007",
+  "station_name": "Rodelillo",
+  "weather_timestamp": "2026-09-20T11:45:00+00:00",
+  "age_hours": 0.5,
+  "freshness": "DATOS RECIENTES",
+  "firms_origin": "current",
+  "firms_coverage_end": "2026-09-19",
+  "firms_lag_days": 1,
+  "firms_status": "FIRMS AL DÍA",
+  "inputs_fingerprint": "80f37caac69132b7a5f21506ad6d9919dd79452cf9897ef5ad4c9b93eb57c722",
+  "meteo_actual": {
+    "temperatura": 20.0,
+    "humedad_relativa": 40.0,
+    "velocidad_viento_kmh": 10.0,
+    "regla_30_30_30": false,
+    "momento_observacion": "2026-09-20T11:45:00+00:00"
+  },
+  "cells": [
+    {
+      "cell_id": "VP-012",
+      "score": 0.14,
+      "rank": 1,
+      "display_rank": 1,
+      "tie_group_size": 3,
+      "geometry": {
+        "min_lon": -71.5389,
+        "min_lat": -33.105,
+        "max_lon": -71.4978,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-027",
+      "score": 0.14,
+      "rank": 2,
+      "display_rank": 1,
+      "tie_group_size": 3,
+      "geometry": {
+        "min_lon": -71.3334,
+        "min_lat": -33.07,
+        "max_lon": -71.2923,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-031",
+      "score": 0.14,
+      "rank": 3,
+      "display_rank": 1,
+      "tie_group_size": 3,
+      "geometry": {
+        "min_lon": -71.58,
+        "min_lat": -33.035,
+        "max_lon": -71.5389,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-004",
+      "score": 0.121,
+      "rank": 4,
+      "display_rank": 4,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4567,
+        "min_lat": -33.14,
+        "max_lon": -71.4156,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-008",
+      "score": 0.098,
+      "rank": 5,
+      "display_rank": 5,
+      "tie_group_size": 2,
+      "geometry": {
+        "min_lon": -71.2923,
+        "min_lat": -33.14,
+        "max_lon": -71.2512,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-040",
+      "score": 0.098,
+      "rank": 6,
+      "display_rank": 5,
+      "tie_group_size": 2,
+      "geometry": {
+        "min_lon": -71.2101,
+        "min_lat": -33.035,
+        "max_lon": -71.169,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-001",
+      "score": 0.09,
+      "rank": 7,
+      "display_rank": 7,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.58,
+        "min_lat": -33.14,
+        "max_lon": -71.5389,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-002",
+      "score": 0.0885,
+      "rank": 8,
+      "display_rank": 8,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.5389,
+        "min_lat": -33.14,
+        "max_lon": -71.4978,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-003",
+      "score": 0.087,
+      "rank": 9,
+      "display_rank": 9,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4978,
+        "min_lat": -33.14,
+        "max_lon": -71.4567,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-005",
+      "score": 0.0855,
+      "rank": 10,
+      "display_rank": 10,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4156,
+        "min_lat": -33.14,
+        "max_lon": -71.3745,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-006",
+      "score": 0.084,
+      "rank": 11,
+      "display_rank": 11,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3745,
+        "min_lat": -33.14,
+        "max_lon": -71.3334,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-007",
+      "score": 0.0825,
+      "rank": 12,
+      "display_rank": 12,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3334,
+        "min_lat": -33.14,
+        "max_lon": -71.2923,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-009",
+      "score": 0.081,
+      "rank": 13,
+      "display_rank": 13,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2512,
+        "min_lat": -33.14,
+        "max_lon": -71.2101,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-010",
+      "score": 0.0795,
+      "rank": 14,
+      "display_rank": 14,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2101,
+        "min_lat": -33.14,
+        "max_lon": -71.169,
+        "max_lat": -33.105
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-011",
+      "score": 0.078,
+      "rank": 15,
+      "display_rank": 15,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.58,
+        "min_lat": -33.105,
+        "max_lon": -71.5389,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-013",
+      "score": 0.0765,
+      "rank": 16,
+      "display_rank": 16,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4978,
+        "min_lat": -33.105,
+        "max_lon": -71.4567,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-014",
+      "score": 0.075,
+      "rank": 17,
+      "display_rank": 17,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4567,
+        "min_lat": -33.105,
+        "max_lon": -71.4156,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-015",
+      "score": 0.0735,
+      "rank": 18,
+      "display_rank": 18,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4156,
+        "min_lat": -33.105,
+        "max_lon": -71.3745,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-016",
+      "score": 0.072,
+      "rank": 19,
+      "display_rank": 19,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3745,
+        "min_lat": -33.105,
+        "max_lon": -71.3334,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-017",
+      "score": 0.0705,
+      "rank": 20,
+      "display_rank": 20,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3334,
+        "min_lat": -33.105,
+        "max_lon": -71.2923,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-018",
+      "score": 0.069,
+      "rank": 21,
+      "display_rank": 21,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2923,
+        "min_lat": -33.105,
+        "max_lon": -71.2512,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-019",
+      "score": 0.0675,
+      "rank": 22,
+      "display_rank": 22,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2512,
+        "min_lat": -33.105,
+        "max_lon": -71.2101,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-020",
+      "score": 0.066,
+      "rank": 23,
+      "display_rank": 23,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2101,
+        "min_lat": -33.105,
+        "max_lon": -71.169,
+        "max_lat": -33.07
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-021",
+      "score": 0.0645,
+      "rank": 24,
+      "display_rank": 24,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.58,
+        "min_lat": -33.07,
+        "max_lon": -71.5389,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-022",
+      "score": 0.063,
+      "rank": 25,
+      "display_rank": 25,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.5389,
+        "min_lat": -33.07,
+        "max_lon": -71.4978,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-023",
+      "score": 0.0615,
+      "rank": 26,
+      "display_rank": 26,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4978,
+        "min_lat": -33.07,
+        "max_lon": -71.4567,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-024",
+      "score": 0.06,
+      "rank": 27,
+      "display_rank": 27,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4567,
+        "min_lat": -33.07,
+        "max_lon": -71.4156,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-025",
+      "score": 0.0585,
+      "rank": 28,
+      "display_rank": 28,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4156,
+        "min_lat": -33.07,
+        "max_lon": -71.3745,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-026",
+      "score": 0.057,
+      "rank": 29,
+      "display_rank": 29,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3745,
+        "min_lat": -33.07,
+        "max_lon": -71.3334,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-028",
+      "score": 0.0555,
+      "rank": 30,
+      "display_rank": 30,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2923,
+        "min_lat": -33.07,
+        "max_lon": -71.2512,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-029",
+      "score": 0.054,
+      "rank": 31,
+      "display_rank": 31,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2512,
+        "min_lat": -33.07,
+        "max_lon": -71.2101,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-030",
+      "score": 0.0525,
+      "rank": 32,
+      "display_rank": 32,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2101,
+        "min_lat": -33.07,
+        "max_lon": -71.169,
+        "max_lat": -33.035
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-032",
+      "score": 0.051,
+      "rank": 33,
+      "display_rank": 33,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.5389,
+        "min_lat": -33.035,
+        "max_lon": -71.4978,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-033",
+      "score": 0.0495,
+      "rank": 34,
+      "display_rank": 34,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4978,
+        "min_lat": -33.035,
+        "max_lon": -71.4567,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-034",
+      "score": 0.048,
+      "rank": 35,
+      "display_rank": 35,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4567,
+        "min_lat": -33.035,
+        "max_lon": -71.4156,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-035",
+      "score": 0.0465,
+      "rank": 36,
+      "display_rank": 36,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4156,
+        "min_lat": -33.035,
+        "max_lon": -71.3745,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-036",
+      "score": 0.045,
+      "rank": 37,
+      "display_rank": 37,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3745,
+        "min_lat": -33.035,
+        "max_lon": -71.3334,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-037",
+      "score": 0.0435,
+      "rank": 38,
+      "display_rank": 38,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3334,
+        "min_lat": -33.035,
+        "max_lon": -71.2923,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-038",
+      "score": 0.042,
+      "rank": 39,
+      "display_rank": 39,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2923,
+        "min_lat": -33.035,
+        "max_lon": -71.2512,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-039",
+      "score": 0.0405,
+      "rank": 40,
+      "display_rank": 40,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2512,
+        "min_lat": -33.035,
+        "max_lon": -71.2101,
+        "max_lat": -33.0
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-041",
+      "score": 0.039,
+      "rank": 41,
+      "display_rank": 41,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.58,
+        "min_lat": -33.0,
+        "max_lon": -71.5389,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-042",
+      "score": 0.0375,
+      "rank": 42,
+      "display_rank": 42,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.5389,
+        "min_lat": -33.0,
+        "max_lon": -71.4978,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-043",
+      "score": 0.036,
+      "rank": 43,
+      "display_rank": 43,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4978,
+        "min_lat": -33.0,
+        "max_lon": -71.4567,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-044",
+      "score": 0.0345,
+      "rank": 44,
+      "display_rank": 44,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4567,
+        "min_lat": -33.0,
+        "max_lon": -71.4156,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-045",
+      "score": 0.033,
+      "rank": 45,
+      "display_rank": 45,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.4156,
+        "min_lat": -33.0,
+        "max_lon": -71.3745,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-046",
+      "score": 0.0315,
+      "rank": 46,
+      "display_rank": 46,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3745,
+        "min_lat": -33.0,
+        "max_lon": -71.3334,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-047",
+      "score": 0.03,
+      "rank": 47,
+      "display_rank": 47,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.3334,
+        "min_lat": -33.0,
+        "max_lon": -71.2923,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-048",
+      "score": 0.0285,
+      "rank": 48,
+      "display_rank": 48,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2923,
+        "min_lat": -33.0,
+        "max_lon": -71.2512,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-049",
+      "score": 0.027,
+      "rank": 49,
+      "display_rank": 49,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2512,
+        "min_lat": -33.0,
+        "max_lon": -71.2101,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    },
+    {
+      "cell_id": "VP-050",
+      "score": 0.0255,
+      "rank": 50,
+      "display_rank": 50,
+      "tie_group_size": 1,
+      "geometry": {
+        "min_lon": -71.2101,
+        "min_lat": -33.0,
+        "max_lon": -71.169,
+        "max_lat": -32.965
+      },
+      "elevation": null,
+      "slope": null,
+      "historical_count": 0
+    }
+  ]
+}
