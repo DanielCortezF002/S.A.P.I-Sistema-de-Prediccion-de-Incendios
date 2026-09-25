@@ -14,7 +14,7 @@ from src.ops.attempt2_operator.collectors.git_state import collect_git_state
 from src.ops.attempt2_operator.collectors.runtime import collect_runtime
 from src.ops.attempt2_operator.collectors.store_state import collect_store_state
 from src.ops.attempt2_operator.paths import StoreRoots
-from src.ops.attempt2_operator.quiescence import collect_quiescence
+from src.ops.attempt2_operator.quiescence.collect import collect_quiescence
 from src.ops.attempt2_operator.quiescence.findings import FINDING_REMEDIATION
 from src.ops.attempt2_operator.workspace_safety import check_workspace_safety
 

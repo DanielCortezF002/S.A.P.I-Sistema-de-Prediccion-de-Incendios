@@ -5,9 +5,10 @@ from src.ops.attempt2_operator.collectors.credentials import collect_credential_
 from src.ops.attempt2_operator.collectors.dmc_current import collect_dmc_current
 from src.ops.attempt2_operator.collectors.firms_current import collect_firms_current
 from src.ops.attempt2_operator.collectors.git_state import collect_git_state
-from src.ops.attempt2_operator.collectors.preflight_collect import collect_real_preflight
 from src.ops.attempt2_operator.collectors.runtime import collect_runtime
 from src.ops.attempt2_operator.collectors.store_state import collect_store_state
+
+# preflight_collect imports quiescence — avoid circular import via package __init__
 
 __all__ = [
     "collect_git_state",
@@ -17,5 +18,4 @@ __all__ = [
     "collect_artifact_identities",
     "collect_credential_presence",
     "collect_runtime",
-    "collect_real_preflight",
 ]
