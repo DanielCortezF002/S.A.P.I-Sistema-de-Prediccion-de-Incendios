@@ -259,7 +259,7 @@ def collect_runtime() -> dict[str, Any]:
         "collection_finished_at": finished,
         "containers_inspected": len(containers),
         "note": (
-            "UNKNOWN≠STOPPED. Port-open alone never RUNNING. "
+            "UNKNOWN!=STOPPED. Port-open alone never RUNNING. "
             "Docker inspect is read-only (no start/stop/pull/compose)."
         ),
         "mutations": False,

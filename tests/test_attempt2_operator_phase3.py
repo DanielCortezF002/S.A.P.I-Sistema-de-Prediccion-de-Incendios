@@ -131,6 +131,44 @@ def test_workspace_safety_never_pass():
     assert r["status"] != "PASS"
 
 
+def test_incomplete_preflight_never_ready(tmp_path: Path):
+    """overall_status INCOMPLETE (e.g. workspace_safety stub) must not authorize."""
+    op = Attempt2Operator.init_run(
+        evidence_root=tmp_path,
+        dry_run=True,
+        expected_code_sha=SHA,
+        run_id="SAPI-ATTEMPT2-P3-INCOMPLETE",
+        synthetic_identity={"code_sha": SHA, "tree_sha": "f" * 40, "worktree_clean": True},
+    )
+    snap = {
+        "code": {
+            "head_sha": SHA,
+            "worktree_clean": True,
+            "observed_at": "2026-09-24T12:00:00+00:00",
+        },
+        "firms": {"current": {"present": False, "state": "ABSENT"}},
+        "dmc": {"current": {"present": False, "state": "ABSENT"}},
+        "attempt1": {"preserve": True},
+        "docker": {"status": "AVAILABLE"},
+        "policy": {"human_authorization": False},
+        "tests": {},
+        "overall_status": "INCOMPLETE",
+        "failures": [],
+        "warnings": ["workspace_safety_not_available"],
+        "highest_priority_reason": {
+            "code": "WORKSPACE_SAFETY_NOT_AVAILABLE",
+            "severity": "INCOMPLETE",
+            "detail": "workspace_safety_not_available",
+        },
+    }
+    result = op.preflight(snapshot=snap)
+    assert result["ready_for_authorization"] is False
+    assert result["technical_result"] == "INCOMPLETE"
+    assert op.run.current_state() == Attempt2State.PREFLIGHT_FAILED
+    nxt = op.next_action()
+    assert nxt["reason_code"] == "WORKSPACE_SAFETY_NOT_AVAILABLE"
+
+
 def test_preflight_reason_ordering():
     reasons = build_reasons(
         failures=["dirty_worktree", "expected_code_sha_mismatch"],

@@ -138,7 +138,7 @@ def validate_preflight_snapshot(
         "firms_current": firms,
         "dmc_current": dmc,
         "human_authorization": False,
-        "note": "UNKNOWN CURRENT is not ABSENT. PASS≠ACCEPTED_EVIDENCE.",
+        "note": "UNKNOWN CURRENT is not ABSENT. PASS!=ACCEPTED_EVIDENCE.",
     }
     out["content_hash"] = content_hash(out)
     return out

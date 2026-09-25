@@ -189,6 +189,7 @@ def collect_real_preflight(
         "docker": runtime.get("docker") or {"status": "UNKNOWN"},
         "n8n": runtime.get("n8n") or {"status": "UNKNOWN"},
         "bridge": runtime.get("bridge") or {"status": "UNKNOWN"},
+        "web": runtime.get("web") or {"status": "UNKNOWN"},
         "policy": {"human_authorization": False},
         "tests": {},
     }

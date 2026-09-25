@@ -497,25 +497,17 @@ class Attempt2Operator:
         result = validate_preflight_snapshot(
             snapshot, expected_code_sha=state.get("expected_code_sha")
         )
-        # Fold overall_status from real collector if present
+        # Fold overall_status from real collector if present.
+        # INCOMPLETE (e.g. workspace_safety NOT_AVAILABLE) must never become PASS.
         if snapshot.get("overall_status") in ("FAIL", "INCOMPLETE") and result.get(
             "ready_for_authorization"
         ):
-            # Real collector overrides optimistic validator only when stricter
-            if snapshot.get("overall_status") == "FAIL":
-                result = {
-                    **result,
-                    "ready_for_authorization": False,
-                    "technical_result": "FAIL",
-                }
-            elif snapshot.get("overall_status") == "INCOMPLETE" and snapshot.get(
-                "failures"
-            ):
-                result = {
-                    **result,
-                    "ready_for_authorization": False,
-                    "technical_result": "INCOMPLETE",
-                }
+            overall = snapshot["overall_status"]
+            result = {
+                **result,
+                "ready_for_authorization": False,
+                "technical_result": overall,
+            }
         self.run.write_json("preflight/attempt2-preflight.validation.json", result)
 
         if result["ready_for_authorization"]:

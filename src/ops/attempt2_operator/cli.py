@@ -12,10 +12,19 @@ from src.ops.attempt2_operator.run_store import InvalidTransitionError, resolve_
 
 
 def _print(obj: object) -> None:
+    # Prefer UTF-8 on Windows consoles so notes with non-ASCII survive.
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+    except Exception:
+        pass
     if isinstance(obj, (dict, list)):
-        sys.stdout.write(json.dumps(obj, indent=2, ensure_ascii=False, default=str) + "\n")
+        text = json.dumps(obj, indent=2, ensure_ascii=False, default=str) + "\n"
     else:
-        sys.stdout.write(str(obj) + "\n")
+        text = str(obj) + "\n"
+    try:
+        sys.stdout.write(text)
+    except UnicodeEncodeError:
+        sys.stdout.buffer.write(text.encode("utf-8", errors="replace"))
 
 
 def _load_json(path: Path) -> dict:
