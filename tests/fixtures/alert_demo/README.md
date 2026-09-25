@@ -1,0 +1,1 @@
+SYNTHETIC DEMO ONLY. `synthetic_score.json` has invented values (bridge shape: 3 tied cells at the top and a tie that crosses the top-5 cut). The `expected_*` files are the renderer output for that input with `--generated-at 2026-09-25T00:00:00+00:00`. None of this is a scientific result from SAPI.

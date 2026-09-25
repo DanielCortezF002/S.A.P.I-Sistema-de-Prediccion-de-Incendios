@@ -1,0 +1,9 @@
+{
+  "alert_fingerprint": "e94cd2971d2ec02fbdbf74c58351612f9028d4042ee7f385e8cff65901342c31",
+  "disable_web_page_preview": true,
+  "length": 1117,
+  "parse_mode": null,
+  "send": false,
+  "status": "READY",
+  "text": "VISTA PREVIA — NO ENVIADO\nSAPI — Priorización territorial (evaluación exploratoria)\nEvaluación: 2026-09-20T12:00:00+00:00\nModelo: prototype_model_d_v1 (PROTOTYPE / EXPLORATORY)\nCobertura FIRMS (anomalías térmicas): hasta 2026-09-19, desfase 1 día, FIRMS AL DÍA, origen current\nDatos meteorológicos: DATOS RECIENTES\nEntradas: 80f37caac691\n\nCeldas priorizadas (5 de 50, en orden del ranking):\n1. Celda VP-012 | score relativo 0.140 (empate: 3 celdas comparten este score)\n1. Celda VP-027 | score relativo 0.140 (empate: 3 celdas comparten este score)\n1. Celda VP-031 | score relativo 0.140 (empate: 3 celdas comparten este score)\n4. Celda VP-004 | score relativo 0.121\n5. Celda VP-008 | score relativo 0.098 (empate: 2 celdas comparten este score)\n+ 1 celda más comparte el score de la última posición mostrada.\n\nNota: Ranking exploratorio de prioridad relativa (Model D). El score relativo no es una probabilidad calibrada. FIRMS reporta anomalías térmicas satelitales; no confirma la existencia de un incendio. La validación disponible es histórica; no existe validación operacional point-in-time con datos FIRMS NRT."
+}
