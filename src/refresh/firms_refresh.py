@@ -40,6 +40,7 @@ from src.ingesta.firms_schema import CONTRACT, project_base, project_frame, seri
 from src.ingesta.nasa_firms_backfill import (
     NasaFirmsBackfill,
     build_windows,
+    reconcile_source_observations,
 )
 from src.procesamiento.firms_source import (
     FIRMS_BASELINE_CSV,
@@ -174,7 +175,9 @@ def build_version_bytes(
     """
     try:
         projected_base = project_base(base)
-        new_rows = project_frame(new_rows, require_sp_type=True)
+        # Validate every source row before precedence can remove a counterpart.
+        project_frame(new_rows, require_sp_type=True)
+        new_rows = project_frame(reconcile_source_observations(new_rows), require_sp_type=True)
     except ValueError as exc:
         raise FirmsRefreshError(str(exc), EXIT_DATA) from exc
     if new_rows.empty:
@@ -241,11 +244,8 @@ def _download_new_rows(
         if index < len(windows) - 1 and client.request_delay_seconds:
             client.sleep_fn(client.request_delay_seconds)
     combined = pd.concat(frames, ignore_index=True)
-    # Legacy backfill's keep-first sensor/time/position dedupe loses distinct
-    # tied observations. Only exact full-record repetitions are redundant:
-    # all source values (including SP type) and provenance participate here.
-    # build_version_bytes orders the retained records without choosing a winner.
-    return combined.drop_duplicates().reset_index(drop=True), end, raw_files
+    # Source windows have all validated before reconciliation or publication.
+    return reconcile_source_observations(combined), end, raw_files
 
 
 # --- Publicación -------------------------------------------------------------

@@ -298,7 +298,7 @@ def test_nm02_complete_manifest_identical_when_raw_path_bytes_and_clock_are_froz
     assert json.loads(pointers[0])["new_rows"] == 3
 
 
-def test_nm02_mixed_sp_nrt_ties_keep_all_observations_and_raw_classification(tmp_path):
+def test_mixed_sp_nrt_same_detection_prefers_sp_and_preserves_raw_classification(tmp_path):
     paths = new_paths(tmp_path / "store")
     standard = row(version="2", type="2")
     near_real_time = row(frp="9.9")
@@ -319,12 +319,12 @@ def test_nm02_mixed_sp_nrt_ties_keep_all_observations_and_raw_classification(tmp
             [],
         ),
     )
-    assert outcome.new_rows == 2
+    assert outcome.new_rows == 1
     frame = pd.read_csv(
         paths.versions_dir / outcome.pointer["relative_path"], dtype=str
     ).iloc[1:]
-    assert set(frame["firms_source"]) == {schema.SP_SOURCE, schema.NRT_SOURCE}
-    assert set(frame["frp"]) == {"4.1", "9.9"}
+    assert set(frame["firms_source"]) == {schema.SP_SOURCE}
+    assert set(frame["frp"]) == {"4.1"}
     for raw in outcome.pointer["raw_artifacts"]:
         source_frame = pd.read_csv(raw["path"], dtype=str)
         if Path(raw["path"]).parent.name == schema.SP_SOURCE:
@@ -352,3 +352,58 @@ def test_nm02_only_exact_repetitions_are_consolidated_raw_stays_complete(tmp_pat
     )
     assert records(actual) == records(expected)
     assert validate_publication(paths)["result"] == "FIRMS ACCEPTED"
+
+
+def test_cross_product_permutations_have_one_sp_and_identical_resolved_bytes(tmp_path, monkeypatch):
+    from src.ingesta.nasa_firms_backfill import DateWindow
+
+    versions, contents, hashes = [], [], []
+    sources = (schema.SP_SOURCE, schema.NRT_SOURCE)
+    for index, source_order in enumerate((sources, sources[::-1], sources)):
+        paths = new_paths(tmp_path / str(index))
+        # Same legacy key after rounding and zero-padding, different lexical tokens.
+        standard = row(version="2", type="2", latitude="-33.050001", acq_time="945")
+        nrt = row()
+        unrelated = row(latitude="-33.1")
+        nrt_rows = [nrt, unrelated, nrt] if index != 2 else [unrelated, nrt, nrt]
+        monkeypatch.setattr(fr, "build_windows", lambda *args, order=source_order: [
+            DateWindow(source, START, START) for source in order
+        ])
+        outcome = fr.refresh(
+            paths=paths, map_key="offline", today=START + timedelta(days=1),
+            client_factory=factory_for(
+                {schema.SP_SOURCE: csv_text([standard, standard]),
+                 schema.NRT_SOURCE: csv_text(nrt_rows)},
+                {s: Availability(s, START, START) for s in sources}, [],
+            ),
+        )
+        source = resolve_firms_source(reproducibility=False, pointer_path=paths.pointer,
+                                      versions_dir=paths.versions_dir, baseline_csv=paths.baseline_csv)
+        data = source.path.read_bytes()
+        actual = schema.validate_operational(data).iloc[1:]
+        shared = actual[pd.to_numeric(actual.latitude).round(5).eq(-33.05)]
+        assert len(shared) == 1
+        assert shared.firms_source.tolist() == [schema.SP_SOURCE]
+        assert outcome.new_rows == 2
+        assert validate_publication(paths)["result"] == "FIRMS ACCEPTED"
+        versions.append(data)
+        hashes.append(outcome.pointer["sha256"])
+        contents.append(actual.to_csv(index=False))
+    assert len(set(versions)) == len(set(hashes)) == len(set(contents)) == 1
+
+
+def test_sp_type_distinctions_survive_projection_with_multiplicity(tmp_path):
+    from src.ingesta.nasa_firms_backfill import reconcile_source_observations
+
+    paths = new_paths(tmp_path / "store")
+    sp = schema.parse_source_csv(csv_text([row(version="2", type="0"),
+                                         row(version="2", type="2")]),
+                                 schema.SP_SOURCE, START, START)
+    nrt = schema.parse_source_csv(csv_text([row()]), schema.NRT_SOURCE, START, START)
+    combined = pd.concat([sp, nrt, sp.iloc[[0]]], ignore_index=True)
+    retained = reconcile_source_observations(combined)
+    assert sorted(retained["type"].tolist()) == ["0", "2"]
+    data, added = fr.build_version_bytes(paths.baseline_csv.read_bytes(), combined,
+                                        START - timedelta(days=1), START)
+    assert added == 2
+    assert len(schema.validate_operational(data)) == 3

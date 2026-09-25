@@ -479,7 +479,7 @@ def test_appending_later_days_leaves_features_before_coverage_end_identical(tmp_
     data, added = fr.build_version_bytes(
         base, new_rows, BASE_END, BASE_END + timedelta(days=5)
     )
-    assert added == 3 and data.startswith(project_base(base))
+    assert added == 2 and data.startswith(project_base(base))  # exact duplicate consolidated
 
     def _arrivals(raw: bytes) -> dict:
         arrivals = first_arrival_by_cell(assign_episodes(pd.read_csv(io.BytesIO(raw))))

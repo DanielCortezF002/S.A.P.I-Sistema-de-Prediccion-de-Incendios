@@ -77,9 +77,9 @@ def validate_publication(paths: FirmsPaths) -> dict:
                      for i in range((source.coverage_end - previous_end).days)}
     if covered != expected_days:
         raise ValueError("Cobertura raw incompleta")
-    # Match publication's exact full-record dedupe, including source values
-    # and provenance. Distinct sensor/time/position ties must all survive.
-    rows = pd.concat(frames, ignore_index=True).drop_duplicates().reset_index(drop=True)
+    # build_version_bytes validates and reconciles all source observations using
+    # the same explicit precedence as the writer, before operational projection.
+    rows = pd.concat(frames, ignore_index=True)
     rebuilt, added = build_version_bytes(base, rows, previous_end, source.coverage_end)
     if rebuilt != source.path.read_bytes() or added != pointer["new_rows"]:
         raise ValueError("Publicación no coincide con base y raw verificados")

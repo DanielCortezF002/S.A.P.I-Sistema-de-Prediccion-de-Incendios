@@ -159,6 +159,33 @@ def select_boundary_sample(windows: Iterable[DateWindow], limit: int = 4) -> lis
     )
 
 
+def normalized_detection_keys(data: pd.DataFrame) -> pd.DataFrame:
+    """Established legacy identity, without changing source values."""
+    return pd.DataFrame({
+        "_latitude_key": pd.to_numeric(data["latitude"], errors="coerce").round(5),
+        "_longitude_key": pd.to_numeric(data["longitude"], errors="coerce").round(5),
+        "acq_date": data["acq_date"],
+        "_time_key": data["acq_time"].astype(str).str.replace(
+            r"\.0$", "", regex=True).str.zfill(4),
+        "satellite": data["satellite"],
+        "instrument": data["instrument"],
+    })
+
+
+def reconcile_source_observations(data: pd.DataFrame) -> pd.DataFrame:
+    """Explicit SP>NRT precedence, then exact full-source-record consolidation.
+
+    Input must already have passed source validation. Same-source distinct rows,
+    including SP type differences, survive. No preference depends on row order.
+    """
+    if data.empty:
+        return data.copy()
+    keys = pd.MultiIndex.from_frame(normalized_detection_keys(data))
+    sp_keys = keys[data["firms_source"].eq(SP_SOURCE)]
+    dominated = data["firms_source"].eq(NRT_SOURCE) & keys.isin(sp_keys)
+    return data.loc[~dominated].drop_duplicates().reset_index(drop=True)
+
+
 def deduplicate_detections(data: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     """Elimina detecciones repetidas entre ventanas y entre SP/NRT.
 
@@ -177,24 +204,10 @@ def deduplicate_detections(data: pd.DataFrame) -> tuple[pd.DataFrame, int]:
     normalized["_source_priority"] = (
         normalized["firms_source"].map({SP_SOURCE: 0, NRT_SOURCE: 1}).fillna(2)
     )
-    normalized["_latitude_key"] = pd.to_numeric(
-        normalized["latitude"], errors="coerce"
-    ).round(5)
-    normalized["_longitude_key"] = pd.to_numeric(
-        normalized["longitude"], errors="coerce"
-    ).round(5)
-    normalized["_time_key"] = (
-        normalized["acq_time"].astype(str).str.replace(r"\.0$", "", regex=True).str.zfill(4)
-    )
-
-    dedupe_keys = [
-        "_latitude_key",
-        "_longitude_key",
-        "acq_date",
-        "_time_key",
-        "satellite",
-        "instrument",
-    ]
+    keys = normalized_detection_keys(data)
+    for column in ("_latitude_key", "_longitude_key", "_time_key"):
+        normalized[column] = keys[column]
+    dedupe_keys = list(keys.columns)
     normalized = normalized.sort_values("_source_priority", kind="stable")
     before = len(normalized)
     normalized = normalized.drop_duplicates(subset=dedupe_keys, keep="first")
