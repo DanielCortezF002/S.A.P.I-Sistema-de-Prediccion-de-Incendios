@@ -40,10 +40,14 @@ BASELINE_WINDOWS = [
     DateWindow(SP_SOURCE, date(2021, 8, 30), date(2021, 9, 3)),
     DateWindow(SP_SOURCE, date(2026, 8, 26), date(2026, 8, 30)),
 ]
-_SAMPLE_CSV = (
-    "latitude,longitude,acq_date,acq_time,satellite,instrument\n"
-    "-33.10000,-71.20000,2026-06-03,945,N,VIIRS\n"
+# Synthetic observations with the actual per-product headers.
+_NRT_CSV = (
+    "latitude,longitude,bright_ti4,scan,track,acq_date,acq_time,satellite,"
+    "instrument,confidence,version,bright_ti5,frp,daynight\n"
+    "-33.10000,-71.20000,330.0,0.4,0.4,2026-06-03,945,N,VIIRS,n,2.0NRT,290.0,3.0,D\n"
 )
+_SAMPLE_CSV = _NRT_CSV.replace("daynight\n", "daynight,type\n").replace("2.0NRT", "2").replace(",D\n", ",D,2\n")
+
 
 
 def _sha256(path: Path) -> str | None:

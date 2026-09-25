@@ -1,0 +1,74 @@
+{
+  "approval": "PENDING; manifest is evidence only",
+  "attempt1": {
+    "data/raw/firms_refresh/20260924T180743Z/VIIRS_SNPP_NRT/2026-08-31_2026-09-04.csv": "daf9da3e13f7557910028637e3b2c7f7a85df5efdfd9bff7f1445f7193b3c5ad",
+    "data/raw/firms_refresh/20260924T180743Z/VIIRS_SNPP_NRT/2026-09-05_2026-09-09.csv": "665f2d0a363527c3ef794818f4c56ef047a45cd4816090f4e6fa4f8ac37742fb",
+    "data/raw/firms_refresh/20260924T180743Z/VIIRS_SNPP_NRT/2026-09-10_2026-09-14.csv": "a5e1e7486357fa465dff080cb3eedff7b065574c11a3daa8a1a4309f8fcfaa34",
+    "data/raw/firms_refresh/20260924T180743Z/VIIRS_SNPP_NRT/2026-09-15_2026-09-19.csv": "dd2b15a79ce155a687486700aeb014bdd3c93a976c83b634b817a80ac78f3b04",
+    "data/raw/firms_refresh/20260924T180743Z/VIIRS_SNPP_NRT/2026-09-20_2026-09-23.csv": "8b1d84d2b4a24e2a10bb1d0f526cdcea4a8432969b1b2ed634bf0648568d9534"
+  },
+  "baseline": {
+    "path": "data/processed/nasa_firms_2021-08-30_2026-08-30.csv",
+    "sha256": "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271"
+  },
+  "components": {
+    "dmc": {
+      "files": [
+        "src/ops/dmc_live_probe.py",
+        "src/refresh/dmc_refresh.py",
+        "src/procesamiento/raw_parser.py"
+      ],
+      "sha": "a4bab186493ea9fe747d5904706a803d267d4ed4"
+    },
+    "firms": {
+      "files": [
+        "src/ingesta/nasa_firms_backfill.py",
+        "src/ingesta/firms_schema.py",
+        "src/refresh/firms_refresh.py",
+        "src/refresh/firms_validation.py",
+        "src/procesamiento/firms_source.py"
+      ],
+      "sha": "5a92419c7b1a2463d7870556658abd11087676f4"
+    },
+    "scoring_inputs": {
+      "files": [
+        "src/inference/scoring_inputs.py"
+      ],
+      "sha": "616841a947c3061a9263c7f42c04cec76d56c12a"
+    }
+  },
+  "dmc_evidence": {
+    "sha256": "29be12e375722cee3a884c6ac829e3aa9c15dd16b7131a646348068894f19cb6"
+  },
+  "expected_current": {
+    "dmc": "ABSENT",
+    "firms": "ABSENT"
+  },
+  "inventory_roots": [
+    "data/raw",
+    "data/processed"
+  ],
+  "model": {
+    "path": "models/prototype_model_d.pkl",
+    "sha256": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
+  },
+  "schema_version": 1,
+  "station": "330007",
+  "stores": {
+    "dmc": "data/processed/dmc",
+    "firms": "data/processed/firms",
+    "firms_raw": "data/raw/firms_refresh",
+    "legacy_dmc": "data/raw"
+  },
+  "topography": {
+    "directory": "data/processed/dem_terrain",
+    "files": {
+      "data/processed/dem_terrain/COP30_-33.1100_-71.5900_-32.9600_-71.3400_aspect.tif": "f00e7c9c078760b484a157f8a325b4772a7bc4a4075be2dcd3960bdd9a1e5738",
+      "data/processed/dem_terrain/COP30_-33.1100_-71.5900_-32.9600_-71.3400_slope.tif": "c54017c6ed7f23faefca4657851af88b186828db724b9479b8ec5e85610fd36a",
+      "data/processed/dem_terrain/COP30_-33.1100_-71.5900_-32.9600_-71.3400_utm19s.tif": "859f1d54141ce8eba1a224f55c9afe4d9ba00a01e9e15d6b60945dd53832a84a"
+    },
+    "grid_sha256": "e151258f4bcfd055624225a36967c5b7a10978116d59db44f5a3a8f4ed972e29",
+    "mode": "dem",
+    "table_sha256": "ad4e3374a97511404f2bc96e7a2890d3cbed6f7a321c340f3a1c03abaf20324c"
+  }
+}

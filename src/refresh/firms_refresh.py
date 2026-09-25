@@ -5,10 +5,10 @@
     python -m src.refresh.firms_refresh rollback --to <archivo.csv | baseline>
     python -m src.refresh.firms_refresh cleanup [--keep N] [--grace-hours H] [--apply]
 
-Cada versión nueva = bytes EXACTOS de la versión vigente (la línea base
-congelada la primera vez, verificada por sha256) + detecciones con
-`acq_date` estrictamente posterior a su `coverage_end`. Nunca reescribe
-filas previas: `assign_episodes` recorre las detecciones en orden temporal,
+Cada versión v3 = proyección canónica de la base verificada por sha256
+(sin type, exclusivo de SP, preservado en baseline/raw) + detecciones con
+`acq_date` estrictamente posterior a su `coverage_end`. Conserva valores
+y orden de los campos comunes de filas previas: `assign_episodes` recorre las detecciones en orden temporal,
 así que agregar solo días posteriores deja idénticos los arribos (y las
 features) de cualquier T ya cubierto. La reconciliación SP/NRT de días ya
 publicados queda fuera: sería un "rebase" explícito, no un refresco.
@@ -36,17 +36,18 @@ from typing import Callable, Optional, Sequence
 import pandas as pd
 
 from src.config import DATA_RAW_DIR, NASA_FIRMS_API_KEY
+from src.ingesta.firms_schema import CONTRACT, project_base, project_frame, serialize
 from src.ingesta.nasa_firms_backfill import (
     NasaFirmsBackfill,
     build_windows,
-    deduplicate_detections,
+    reconcile_source_observations,
 )
 from src.procesamiento.firms_source import (
     FIRMS_BASELINE_CSV,
     FIRMS_BASELINE_SHA256,
     FIRMS_CURRENT_POINTER,
     FIRMS_VERSIONS_DIR,
-    POINTER_SCHEMA_VERSION,
+    PROJECTED_POINTER_SCHEMA_VERSION,
     FirmsSourceError,
     FrozenFirmsWriteError,
     ensure_writable_firms_path,
@@ -165,32 +166,22 @@ def _load_base(paths: FirmsPaths) -> _Base:
 # --- Construcción de la versión ---------------------------------------------
 
 
-def _header_and_terminator(data: bytes) -> tuple[list[str], str]:
-    first, sep, _ = data.partition(b"\n")
-    if not sep:
-        raise FirmsRefreshError("La base FIRMS no tiene cabecera CSV.", EXIT_DATA)
-    terminator = "\r\n" if first.endswith(b"\r") else "\n"
-    header = first.rstrip(b"\r").decode("utf-8").split(",")
-    if not data.endswith(terminator.encode()):
-        raise FirmsRefreshError(
-            "La base FIRMS no termina en salto de línea.", EXIT_DATA
-        )
-    return header, terminator
-
-
 def build_version_bytes(
     base: bytes, new_rows: pd.DataFrame, previous_end: date, new_end: date
 ) -> tuple[bytes, int]:
-    """Base intacta + filas nuevas con `previous_end < acq_date <= new_end`,
-    serializadas con las columnas y el fin de línea de la base."""
-    header, terminator = _header_and_terminator(base)
+    """Versioned common-schema projection + strictly later detections.
+
+    Original SP type remains in baseline/raw, never imputed onto NRT.
+    """
+    try:
+        projected_base = project_base(base)
+        # Validate every source row before precedence can remove a counterpart.
+        project_frame(new_rows, require_sp_type=True)
+        new_rows = project_frame(reconcile_source_observations(new_rows), require_sp_type=True)
+    except ValueError as exc:
+        raise FirmsRefreshError(str(exc), EXIT_DATA) from exc
     if new_rows.empty:
-        return base, 0
-    missing = [col for col in header if col not in new_rows.columns]
-    if missing:
-        raise FirmsRefreshError(
-            f"Respuesta FIRMS sin columnas de la base: {missing}", EXIT_DATA
-        )
+        return projected_base, 0
     acq = pd.to_datetime(new_rows["acq_date"], errors="coerce").dt.date
     outside = new_rows[acq.isna() | (acq <= previous_end) | (acq > new_end)]
     if not outside.empty:
@@ -199,16 +190,20 @@ def build_version_bytes(
             "no se reescriben días ya publicados.",
             EXIT_DATA,
         )
-    ordered = new_rows.sort_values(
-        ["acq_date", "acq_time", "latitude", "longitude"], kind="stable"
+    # Keep the existing temporal/numeric order, then compare the full persisted
+    # token tuple (OPERATIONAL_COLUMNS order from project_frame). This is only
+    # serialization order: no observation wins, no token or provenance changes.
+    canonical = new_rows.assign(
+        _canonical_tie=list(new_rows.itertuples(index=False, name=None))
     )
-    body = ordered.to_csv(
-        index=False, header=False, columns=header, lineterminator=terminator
-    ).encode("utf-8")
-    data = base + body
+    ordered = canonical.sort_values(
+        ["acq_date", "acq_time", "latitude", "longitude", "_canonical_tie"], kind="stable",
+        key=lambda col: pd.to_numeric(col) if col.name in ("acq_time", "latitude", "longitude") else col,
+    ).drop(columns="_canonical_tie")
+    data = projected_base + serialize(ordered, header=False)
     parsed = pd.read_csv(io.BytesIO(data))
     base_rows = len(pd.read_csv(io.BytesIO(base)))
-    if list(parsed.columns) != header or len(parsed) != base_rows + len(ordered):
+    if list(parsed.columns) != list(new_rows.columns) or len(parsed) != base_rows + len(ordered):
         raise FirmsRefreshError("La versión construida no se relee íntegra.", EXIT_DATA)
     return data, len(ordered)
 
@@ -217,7 +212,7 @@ def _download_new_rows(
     client: NasaFirmsBackfill, start: date, end: date
 ) -> tuple[pd.DataFrame, date, list[str]]:
     """Descarga (start..end] recortado a la disponibilidad publicada.
-    Devuelve filas deduplicadas, el último día efectivamente consultado y
+    Devuelve registros validados distintos, el último día efectivamente consultado y
     los CSV crudos guardados como evidencia."""
     availability = client.fetch_availability()
     available_end = max(item.max_date for item in availability.values())
@@ -249,8 +244,8 @@ def _download_new_rows(
         if index < len(windows) - 1 and client.request_delay_seconds:
             client.sleep_fn(client.request_delay_seconds)
     combined = pd.concat(frames, ignore_index=True)
-    deduplicated, _ = deduplicate_detections(combined)
-    return deduplicated, end, raw_files
+    # Source windows have all validated before reconciliation or publication.
+    return reconcile_source_observations(combined), end, raw_files
 
 
 # --- Publicación -------------------------------------------------------------
@@ -308,6 +303,8 @@ def refresh(
                 new_rows, new_end, raw_files = _download_new_rows(
                     client, start, target_end
                 )
+            except ImmutableVersionError as exc:
+                raise FirmsRefreshError(str(exc), EXIT_DATA) from exc
             except RuntimeError as exc:  # _get_with_retry agotado
                 raise FirmsRefreshError(
                     f"NASA FIRMS no disponible: {redact(exc, [map_key])}", EXIT_NETWORK
@@ -335,7 +332,14 @@ def refresh(
             except (FrozenFirmsWriteError, ImmutableVersionError) as exc:
                 raise FirmsRefreshError(str(exc), EXIT_DATA) from None
             pointer = {
-                "schema_version": POINTER_SCHEMA_VERSION,
+                "schema_version": PROJECTED_POINTER_SCHEMA_VERSION,
+                "data_contract": CONTRACT,
+                "base_relative_path": base.relative_path,
+                "projected_base_sha256": sha256_bytes(project_base(base.data)),
+                "raw_artifacts": [
+                    {"path": name, "sha256": sha256_bytes(Path(name).read_bytes())}
+                    for name in raw_files
+                ],
                 "source": "firms",
                 "relative_path": name,
                 "sha256": sha,
