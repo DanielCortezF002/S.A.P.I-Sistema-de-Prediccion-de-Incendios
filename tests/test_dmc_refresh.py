@@ -1042,8 +1042,8 @@ def test_version_is_rejected_if_parser_drops_uncounted_rows(paths, monkeypatch):
     """Invariante de relectura: parse_dmc_json conserva exactamente las
     filas no nulas. Si descartara otra (p. ej. por un cambio del parser),
     la versión no se publica."""
-    real_parse = dmc.parse_dmc_json
-    monkeypatch.setattr(dmc, "parse_dmc_json", lambda p: real_parse(p).iloc[1:])
+    real_parse = dmc.parse_dmc_bytes
+    monkeypatch.setattr(dmc, "parse_dmc_bytes", lambda raw, name: real_parse(raw, name).iloc[1:])
 
     with pytest.raises(dmc.DmcRefreshError, match="parse_dmc_json conserva") as err:
         _run(paths, FakeDmc({"2026-08": _payload(AUG), "2026-09": _payload(SEP)}))
