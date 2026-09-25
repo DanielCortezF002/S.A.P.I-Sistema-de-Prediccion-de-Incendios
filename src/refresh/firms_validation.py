@@ -12,7 +12,6 @@ from pathlib import Path
 import pandas as pd
 
 from src.ingesta.firms_schema import parse_source_csv, project_base
-from src.ingesta.nasa_firms_backfill import deduplicate_detections
 from src.procesamiento.firms_source import resolve_firms_source, PROJECTED_POINTER_SCHEMA_VERSION
 from src.refresh.atomic import sha256_bytes
 from src.refresh.firms_refresh import FirmsPaths, build_version_bytes
@@ -78,7 +77,9 @@ def validate_publication(paths: FirmsPaths) -> dict:
                      for i in range((source.coverage_end - previous_end).days)}
     if covered != expected_days:
         raise ValueError("Cobertura raw incompleta")
-    rows, _ = deduplicate_detections(pd.concat(frames, ignore_index=True))
+    # Match publication's exact full-record dedupe, including source values
+    # and provenance. Distinct sensor/time/position ties must all survive.
+    rows = pd.concat(frames, ignore_index=True).drop_duplicates().reset_index(drop=True)
     rebuilt, added = build_version_bytes(base, rows, previous_end, source.coverage_end)
     if rebuilt != source.path.read_bytes() or added != pointer["new_rows"]:
         raise ValueError("Publicación no coincide con base y raw verificados")

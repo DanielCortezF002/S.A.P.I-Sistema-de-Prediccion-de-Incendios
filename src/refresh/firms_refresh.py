@@ -40,7 +40,6 @@ from src.ingesta.firms_schema import CONTRACT, project_base, project_frame, seri
 from src.ingesta.nasa_firms_backfill import (
     NasaFirmsBackfill,
     build_windows,
-    deduplicate_detections,
 )
 from src.procesamiento.firms_source import (
     FIRMS_BASELINE_CSV,
@@ -188,10 +187,16 @@ def build_version_bytes(
             "no se reescriben días ya publicados.",
             EXIT_DATA,
         )
-    ordered = new_rows.sort_values(
-        ["acq_date", "acq_time", "latitude", "longitude"], kind="stable",
-        key=lambda col: pd.to_numeric(col) if col.name in ("acq_time", "latitude", "longitude") else col,
+    # Keep the existing temporal/numeric order, then compare the full persisted
+    # token tuple (OPERATIONAL_COLUMNS order from project_frame). This is only
+    # serialization order: no observation wins, no token or provenance changes.
+    canonical = new_rows.assign(
+        _canonical_tie=list(new_rows.itertuples(index=False, name=None))
     )
+    ordered = canonical.sort_values(
+        ["acq_date", "acq_time", "latitude", "longitude", "_canonical_tie"], kind="stable",
+        key=lambda col: pd.to_numeric(col) if col.name in ("acq_time", "latitude", "longitude") else col,
+    ).drop(columns="_canonical_tie")
     data = projected_base + serialize(ordered, header=False)
     parsed = pd.read_csv(io.BytesIO(data))
     base_rows = len(pd.read_csv(io.BytesIO(base)))
@@ -204,7 +209,7 @@ def _download_new_rows(
     client: NasaFirmsBackfill, start: date, end: date
 ) -> tuple[pd.DataFrame, date, list[str]]:
     """Descarga (start..end] recortado a la disponibilidad publicada.
-    Devuelve filas deduplicadas, el último día efectivamente consultado y
+    Devuelve registros validados distintos, el último día efectivamente consultado y
     los CSV crudos guardados como evidencia."""
     availability = client.fetch_availability()
     available_end = max(item.max_date for item in availability.values())
@@ -236,8 +241,11 @@ def _download_new_rows(
         if index < len(windows) - 1 and client.request_delay_seconds:
             client.sleep_fn(client.request_delay_seconds)
     combined = pd.concat(frames, ignore_index=True)
-    deduplicated, _ = deduplicate_detections(combined)
-    return deduplicated, end, raw_files
+    # Legacy backfill's keep-first sensor/time/position dedupe loses distinct
+    # tied observations. Only exact full-record repetitions are redundant:
+    # all source values (including SP type) and provenance participate here.
+    # build_version_bytes orders the retained records without choosing a winner.
+    return combined.drop_duplicates().reset_index(drop=True), end, raw_files
 
 
 # --- Publicación -------------------------------------------------------------
