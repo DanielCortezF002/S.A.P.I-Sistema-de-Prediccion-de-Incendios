@@ -26,7 +26,7 @@ from src.ops.attempt2_operator.collectors.runtime import (
     collect_service_status,
 )
 from src.ops.attempt2_operator.operator import Attempt2Operator
-from src.ops.attempt2_operator.paths import StoreRoots
+from src.ops.attempt2_operator.paths import FIRMS_BASELINE_REL, StoreRoots
 from src.ops.attempt2_operator.states import Attempt2State
 from src.ops.attempt2_operator.workspace_safety import check_workspace_safety
 
@@ -37,7 +37,7 @@ SHA = "dddddddddddddddddddddddddddddddddddddddd"
 def test_baseline_explicit_path_discovery(tmp_path: Path):
     data = tmp_path / "data" / "processed"
     data.mkdir(parents=True)
-    baseline = data / "nasa_firms_2021-08-30_2026-08-30.csv"
+    baseline = data / FIRMS_BASELINE_REL.name
     # write content whose hash we control via override expected in check —
     # use empty file → FAIL match, but discovery finds it
     baseline.write_bytes(b"x")
@@ -288,7 +288,7 @@ def test_data_root_override_finds_baseline(tmp_path: Path):
     data = tmp_path / "operational_data"
     processed = data / "processed"
     processed.mkdir(parents=True)
-    bl = processed / "nasa_firms_2021-08-30_2026-08-30.csv"
+    bl = processed / FIRMS_BASELINE_REL.name
     bl.write_bytes(b"baseline")
     art = collect_artifact_identities(code, data_root=data)
     assert art["firms_baseline"]["exists"] is True

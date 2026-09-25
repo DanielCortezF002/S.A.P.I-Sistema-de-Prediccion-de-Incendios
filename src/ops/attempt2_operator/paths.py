@@ -14,14 +14,16 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 
-FIRMS_BASELINE_REL = Path("data") / "processed" / "nasa_firms_2021-08-30_2026-08-30.csv"
-FIRMS_BASELINE_REPRO_REL = (
-    Path("artifacts")
-    / "hito1"
-    / "reproducibility"
-    / "firms"
-    / "nasa_firms_2021-08-30_2026-08-30.csv"
+from src.procesamiento.firms_source import (
+    FIRMS_BASELINE_CSV,
+    FIRMS_REPRODUCIBILITY_CSV,
+    REPO_ROOT as _FIRMS_REPO_ROOT,
 )
+
+# The FIRMS baseline path lives ONLY in src/procesamiento/firms_source.py
+# (tests/test_firms_source.py guard); derive the repo-relative forms from it.
+FIRMS_BASELINE_REL = FIRMS_BASELINE_CSV.relative_to(_FIRMS_REPO_ROOT)
+FIRMS_BASELINE_REPRO_REL = FIRMS_REPRODUCIBILITY_CSV.relative_to(_FIRMS_REPO_ROOT)
 MODEL_REL = Path("models") / "prototype_model_d.pkl"
 FIRMS_STORE_REL = Path("data") / "processed" / "firms"
 DMC_STORE_REL = Path("data") / "processed" / "dmc"
