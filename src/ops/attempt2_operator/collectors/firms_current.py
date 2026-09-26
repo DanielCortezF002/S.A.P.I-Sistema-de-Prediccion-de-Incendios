@@ -23,6 +23,7 @@ def collect_firms_current(
         from src.procesamiento.firms_source import (
             FIRMS_CURRENT_POINTER,
             POINTER_SCHEMA_VERSION,
+            PROJECTED_POINTER_SCHEMA_VERSION,
         )
     except Exception as exc:  # noqa: BLE001
         return {
@@ -86,8 +87,9 @@ def collect_firms_current(
         "present": True,
         "path": str(path),
         "pointer_schema": schema,
-        "pointer_schema_expected": POINTER_SCHEMA_VERSION,
-        "schema_ok": schema == POINTER_SCHEMA_VERSION,
+        # firms_source resolves both v2 (legacy) and v3 (projected, current publisher).
+        "pointer_schema_expected": [POINTER_SCHEMA_VERSION, PROJECTED_POINTER_SCHEMA_VERSION],
+        "schema_ok": schema in (POINTER_SCHEMA_VERSION, PROJECTED_POINTER_SCHEMA_VERSION),
         "selected_version": pointer.get("relative_path"),
         "manifest_identity": pointer.get("sha256"),
         "coverage_start": pointer.get("coverage_start"),

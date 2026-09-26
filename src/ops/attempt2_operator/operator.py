@@ -115,7 +115,11 @@ class Attempt2Operator:
         op_fp: str | None = None
         if output_manifest:
             op_ver = verify_output_plane_manifest(output_manifest)
-            op_fp = op_ver.get("manifest_fingerprint")
+            if op_ver.get("status") != "PASS" and not dry_run:
+                findings_msg = "; ".join(f.get("message", "") for f in op_ver.get("findings", []))
+                raise ValueError(f"Output plane manifest verification failed: {findings_msg}")
+            # Never bind an unverified fingerprint into the RC1 execution context.
+            op_fp = op_ver.get("manifest_fingerprint") if op_ver.get("status") == "PASS" else None
 
         run = Attempt2Run.create(
             root,
