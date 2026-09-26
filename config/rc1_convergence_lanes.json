@@ -21,10 +21,14 @@
   "operations": {
     "branch": "antigravity/operations-rc1",
     "base_sha": "848272f704dc06c1147dd2499d4ac1a8a0df08c3",
-    "adapter_sha": null
+    "adapter_sha": "13c945025f82923bfc4891bd62e56cc7aea13971"
   },
   "blockers": {
-    "resolved": ["B2", "B3"],
-    "open": ["B1"]
+    "resolved": [
+      "B1",
+      "B2",
+      "B3"
+    ],
+    "open": []
   }
 }
