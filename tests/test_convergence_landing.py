@@ -213,6 +213,21 @@ def test_status_before_and_after_adapter_exists(world, monkeypatch):
     )
 
 
+def test_status_stops_when_landed_adapter_fails_the_handshake(world, monkeypatch):
+    repo, lanes = world
+    sha = adapter(repo, lanes["ops"], {"src/ops/consumer.py": "V = 10\n"})
+    ld.land_operations_adapter(repo, sha, execute=True)
+    rejected = {"data": {"classification": "UNEXPECTED_REJECT"}, "output": "PASS"}
+    monkeypatch.setattr(ld, "handshakes", lambda *a: rejected)
+    st = ld.status(repo, repo / "d.json", repo / "o.json")
+    assert st["adapter_landed"] and st["next_action"].startswith("STOP: adapter landed")
+    accepted = {"data": {"classification": "ACCEPTED"}, "output": "PASS"}
+    monkeypatch.setattr(ld, "handshakes", lambda *a: accepted)
+    assert ld.status(repo, repo / "d.json", repo / "o.json")["next_action"].startswith(
+        "run-tests"
+    )
+
+
 # --- normalization, delta and fingerprint v3 --------------------------------------------------
 
 

@@ -510,6 +510,11 @@ def status(repo: Path, data_manifest: Path, output_manifest: Path) -> dict:
         next_action = (
             "check-adapter --sha <full SHA from Antigravity>, then land with --execute"
         )
+    elif hs["data"].get("classification") != "ACCEPTED" or hs["output"] != "PASS":
+        next_action = (
+            f"STOP: adapter landed but Data handshake is "
+            f"{hs['data'].get('classification')} / Output {hs['output']}: report to owner"
+        )
     else:
         next_action = "run-tests --all, then fingerprint, then hand off to Astra"
     return {
@@ -534,6 +539,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument(
         "--repo", type=Path, default=Path(__file__).resolve().parents[2]
     )
+    parser.add_argument("--data-manifest", type=Path, default=None)
+    parser.add_argument("--output-manifest", type=Path, default=None)
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("status")
     for name in ("check-adapter", "land-operations-adapter"):
@@ -555,6 +562,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     args = parser.parse_args(argv)
     repo = args.repo.resolve()
     manifests = default_manifests(repo)
+    manifests["data"] = args.data_manifest or manifests["data"]
+    manifests["output"] = args.output_manifest or manifests["output"]
 
     def emit(obj: Any) -> None:
         print(json.dumps(obj, ensure_ascii=True, indent=2, sort_keys=True))
