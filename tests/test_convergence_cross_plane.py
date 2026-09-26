@@ -407,10 +407,11 @@ def test_post_adapter_authoritative_data_manifest_reaches_accepted(scored, tmp_p
     path = tmp_path / "DATA_PLANE_MANIFEST.json"
     path.write_text(json.dumps(doc, ensure_ascii=True), encoding="utf-8")
     verdict = verify_data_plane_manifest(path)
-    assert verdict["status"] == "PASS" and verdict["ready"] is True
+    assert verdict["status"] == "PREPARED" and verdict["ready"] is False
     assert verdict["manifest_fingerprint"] == doc["fingerprint"]
-    assert verdict["readiness_status"] == "PREPARED"
-    assert verdict["authorizations"] == {k: False for k in dh.AUTHORIZATION_NAMES}
+    assert verdict["fingerprint_match"] is True
+    assert verdict["data_readiness_status"] == "PREPARED"
+    assert not any(verdict[f"{k}_authorized"] for k in dh.AUTHORIZATION_NAMES)
     op = _drive_attempt2(scored, tmp_path, path, verdict)
     assert op.status()["data_plane_manifest_fingerprint"] == doc["fingerprint"]
     ctx = json.loads(

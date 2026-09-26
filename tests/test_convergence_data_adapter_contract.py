@@ -86,18 +86,19 @@ def _landed(sha: str = "a" * 40) -> dict:
 
 
 def _contract_verdict(doc: dict, **overrides) -> dict:
-    """What a conforming adapter reports for `doc` (ADAPTER_CONTRACT.json)."""
+    """What the landed adapter (13c9450) reports for a PREPARED `doc`."""
     ident = doc["identity"]
     out = {
-        "status": "PASS", "ready": True,
-        "manifest_fingerprint": dh.producer_fingerprint(doc),
-        "readiness_status": ident["data_readiness_status"],
-        "data_code_sha": ident["code_identity"]["sha"],
+        "status": "PREPARED", "ready": False, "prepared": True,
+        "manifest_fingerprint": dh.producer_fingerprint(doc), "fingerprint_match": True,
+        "data_readiness_status": ident["data_readiness_status"],
+        "code_sha": ident["code_identity"]["sha"],
         "firms_component_sha": ident["components"]["firms"]["sha"],
         "dmc_component_sha": ident["components"]["dmc"]["sha"],
         "model_sha": ident["model"]["sha256"],
         "baseline_identity": ident["baseline"]["sha256"],
-        "authorizations": dict(ident["authorizations"]), "findings": [],
+        **{f"{k}_authorized": v for k, v in ident["authorizations"].items()},
+        "findings": [],
     }  # fmt: skip
     out.update(overrides)
     return out
@@ -189,6 +190,16 @@ def test_data_handshake_matches_landing_state():
             result["classification"] == dh.ACCEPTED
             and result["contract_violations"] == []
         )
+        # POST-ADAPTER positive control, spelled out against the integrated verifier.
+        verdict = dh.verify_data_plane_manifest(REAL_DATA_MANIFEST)
+        assert verdict["status"] == "PREPARED" and verdict["prepared"] is True
+        assert verdict["ready"] is False  # PREPARED is not ready for scoring
+        assert verdict["fingerprint_match"] is True
+        assert verdict["manifest_fingerprint"] == LANES["data"]["manifest_fingerprint"]
+        assert verdict["code_sha"] == LANES["data"]["sha"]
+        assert verdict["data_readiness_status"] == "PREPARED"
+        assert verdict["writers_authorized"] is False
+        assert verdict["attempt2_authorized"] is False
         assert (
             result["consumer"]["manifest_fingerprint_reported"]
             == LANES["data"]["manifest_fingerprint"]
@@ -260,13 +271,20 @@ def test_rejecting_adapter_after_landing_is_flagged(monkeypatch):
 @pytest.mark.parametrize(
     "override,violation",
     [
-        ({"readiness_status": "READY"}, "contract:readiness_status"),
+        ({"status": "PASS"}, "contract:status"),  # PREPARED never becomes PASS
+        ({"ready": True}, "contract:ready"),  # PREPARED is not ready for scoring
+        ({"data_readiness_status": "READY"}, "contract:data_readiness_status"),
         ({"manifest_fingerprint": "9" * 64}, "contract:manifest_fingerprint"),
-        ({"data_code_sha": "c" * 40}, "contract:data_code_sha"),
+        ({"fingerprint_match": False}, "contract:fingerprint_match"),
+        ({"code_sha": "c" * 40}, "contract:code_sha"),
         ({"model_sha": "0" * 64}, "contract:model_sha"),
-        ({"ready": False}, "contract:ready"),
-        ({"authorizations": {**NO_AUTH, "writers": True}}, "contract:authorizations"),
-        ({"authorizations": {**NO_AUTH, "attempt2": True}}, "contract:authorizations"),
+        ({"findings": [{"id": "X", "severity": "FAIL"}]}, "contract:findings"),
+        ({"writers_authorized": True}, "contract:writers_authorized"),
+        ({"attempt2_authorized": True}, "contract:attempt2_authorized"),
+        (
+            {"writers_authorized": True},
+            "contract:authorization_promoted:writers_authorized",
+        ),
         (
             {"writer_authorized": True},
             "contract:authorization_promoted:writer_authorized",
@@ -306,6 +324,20 @@ TAMPER = {
 }  # fmt: skip
 
 
+# Re-signed identity changes the producer itself accepts: the consumer has no anchor for
+# them by design; the lanes-lock pins (and the recorded fingerprint) reject them.
+ANCHOR_ONLY = {
+    "components.firms.sha", "components.dmc.sha", "code_identity.sha",
+    "model.sha256", "baseline.sha256", "topography.grid_sha256",
+}  # fmt: skip
+# Re-signed manifests the PRODUCER rejects but the adapter at 13c9450 still accepts
+# (open finding ADAPTER-GAP-1, owner Antigravity/Astra). Remove entries as they close.
+KNOWN_CONSUMER_GAPS = {
+    "readiness.READY", "current_state.firms", "data_ready_for_scoring",
+    "identity.schema_version",
+}  # fmt: skip
+
+
 @pytest.mark.parametrize("resign", [False, True], ids=["naive", "resigned"])
 @pytest.mark.parametrize("name", sorted(TAMPER))
 def test_data_tamper_rejected(tmp_path, monkeypatch, name, resign):
@@ -314,11 +346,17 @@ def test_data_tamper_rejected(tmp_path, monkeypatch, name, resign):
     if resign:
         doc["fingerprint"] = dh.producer_fingerprint(doc)
     path = _write(tmp_path, doc)
-    # Real consumer (pre- or post-adapter) must never PASS a tampered manifest.
-    assert dh.classify(path)["classification"] not in (
-        dh.ACCEPTED,
-        dh.UNEXPECTED_ACCEPT,
-    )
+    result = dh.classify(path)
+    # The convergence handshake never accepts a tampered manifest.
+    assert result["classification"] != dh.ACCEPTED and result["match"] is False
+    consumer_accepts = result["consumer"]["status"] in dh.ACCEPTED_STATUSES
+    if not resign or not dh.adapter_landed(LANES):
+        assert not consumer_accepts  # fingerprint mismatch / pre-adapter consumer
+    elif name in ANCHOR_ONLY | KNOWN_CONSUMER_GAPS:
+        assert consumer_accepts, f"{name}: gap closed upstream, update the known sets"
+        assert result["classification"] == dh.UNEXPECTED_ACCEPT
+    else:
+        assert not consumer_accepts  # e.g. claimed authorization, NOT_PREPARED
     # Even a worst-case adapter that PASSes everything is caught by producer + pins.
     _stub(monkeypatch, lambda p: _contract_verdict(doc))
     worst = dh.classify(path, lanes=_landed())
@@ -366,3 +404,47 @@ def test_real_manifest_bytes_unchanged_by_this_module():
     dh.classify(REAL_DATA_MANIFEST)
     assert hashlib.sha256(REAL_DATA_MANIFEST.read_bytes()).hexdigest() == before
     assert raw["fingerprint"] == LANES["data"]["manifest_fingerprint"]
+
+
+# --- Post-adapter semantics: PREPARED is accepted, never authorized, never init-ready ----------
+
+
+@pytest.mark.parametrize("flag", dh.AUTHORIZATION_NAMES)
+def test_consumer_rejects_a_resigned_authorization_claim(tmp_path, flag):
+    """Convergence fix on 13c9450: a true authorization flag is FAIL, not PREPARED."""
+    doc = copy.deepcopy(_real())
+    doc["identity"]["authorizations"][flag] = True
+    doc["fingerprint"] = dh.producer_fingerprint(doc)
+    verdict = dh.verify_data_plane_manifest(_write(tmp_path, doc))
+    if not dh.adapter_landed(LANES):
+        assert verdict["status"] == "FAIL"
+        return
+    assert verdict["status"] == "FAIL" and verdict["ready"] is False
+    assert "AUTHORIZATION_CLAIMED" in {f["code"] for f in verdict["findings"]}
+
+
+def test_prepared_does_not_open_a_real_operator_init(tmp_path):
+    """Operator init (non dry-run) stays stricter than rc-status: it requires PASS."""
+    _real()
+    if not dh.adapter_landed(LANES):
+        pytest.skip("asserted post-landing only")
+    from src.ops.attempt2_operator.operator import Attempt2Operator
+
+    with pytest.raises(ValueError, match="Data plane manifest verification failed"):
+        Attempt2Operator.init_run(
+            evidence_root=tmp_path / "ev",
+            expected_code_sha="c" * 40,
+            data_plane_manifest=REAL_DATA_MANIFEST,
+        )
+    op = Attempt2Operator.init_run(
+        evidence_root=tmp_path / "dry",
+        dry_run=True,
+        synthetic_identity={"code_sha": "c" * 40, "tree_sha": "d" * 40},
+        expected_code_sha="c" * 40,
+        data_plane_manifest=REAL_DATA_MANIFEST,
+    )
+    assert (
+        op.status()["data_plane_manifest_fingerprint"]
+        == LANES["data"]["manifest_fingerprint"]
+    )
+    assert not any(op.run.read_authorizations()["gates"].values())

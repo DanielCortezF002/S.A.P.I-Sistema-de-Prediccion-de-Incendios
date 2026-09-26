@@ -46,6 +46,10 @@ UNEXPECTED_REJECT = "UNEXPECTED_REJECT"
 CONTRACT_VIOLATION = "CONTRACT_VIOLATION"
 PRODUCER_REJECT = "PRODUCER_REJECT"
 _OK = {False: EXPECTED_REJECT, True: ACCEPTED}
+ACCEPTED_STATUSES = (
+    "PASS",
+    "PREPARED",
+)  # consumer accepted the manifest (not authorized)
 
 
 def load_lanes(path: Path | str = LANES_PATH) -> dict:
@@ -98,27 +102,39 @@ def pin_mismatches(manifest: Mapping, lanes: Mapping) -> list[str]:
 def adapter_contract_violations(
     verdict: Mapping, manifest: Mapping, lanes: Mapping
 ) -> list[str]:
-    """What the landed adapter must report for the real manifest (ADAPTER_CONTRACT.json)."""
+    """What the landed adapter (13c9450) reports for the real PREPARED manifest.
+
+    The adapter's own status vocabulary is authoritative: PREPARED is accepted but is
+    neither PASS nor `ready` (ready for scoring), and every authorization stays false.
+    """
     ident = manifest["identity"]
     data = lanes["data"]
     expected = {
-        "status": "PASS",
-        "ready": True,
+        "status": "PREPARED",
+        "ready": False,
+        "prepared": True,
         "manifest_fingerprint": producer_fingerprint(manifest),
-        "readiness_status": "PREPARED",
-        "data_code_sha": data["sha"],
+        "fingerprint_match": True,
+        "data_readiness_status": "PREPARED",
+        "code_sha": data["sha"],
         "firms_component_sha": data["firms_component_sha"],
         "dmc_component_sha": data["dmc_component_sha"],
         "model_sha": data["model_sha256"],
         "baseline_identity": data["baseline_sha256"],
-        "authorizations": {name: False for name in AUTHORIZATION_NAMES},
+        **{f"{name}_authorized": False for name in AUTHORIZATION_NAMES},
     }
     out = [f"contract:{k}" for k, v in expected.items() if verdict.get(k) != v]
+    # WARN findings (e.g. DM-010: RC1 code SHA != Data SHA) are informational only.
+    if any(
+        not isinstance(f, Mapping) or f.get("severity") in ("FAIL", "INCOMPLETE")
+        for f in verdict.get("findings") or []
+    ):
+        out.append("contract:findings")
     if ident["data_readiness_status"] != "PREPARED":
         out.append("contract:real_manifest_not_prepared")
     # PREPARED is data readiness, never a human or writer authorization.
     for key, value in verdict.items():
-        if "authoriz" in key.lower() and key != "authorizations" and value:
+        if "authoriz" in key.lower() and value:
             out.append(f"contract:authorization_promoted:{key}")
     return sorted(out)
 
@@ -149,7 +165,7 @@ def classify(
             "ready": False,
             "findings": [{"id": "CONSUMER_EXCEPTION", "code": type(exc).__name__}],
         }
-    accepted = verdict.get("status") == "PASS"
+    accepted = verdict.get("status") in ACCEPTED_STATUSES
     violations: list[str] = []
     if not producer_ok or pins:
         # Producer-invalid or unpinned content must never reach the consumer as PASS.
@@ -180,7 +196,9 @@ def classify(
                 f"{f.get('id')}:{f.get('code')}" for f in verdict.get("findings", [])
             ],
             "manifest_fingerprint_reported": verdict.get("manifest_fingerprint"),
-            "readiness_status_reported": verdict.get("readiness_status"),
+            "readiness_status_reported": verdict.get(
+                "data_readiness_status", verdict.get("readiness_status")
+            ),
         },
         "contract_violations": violations,
         "classification": classification,
