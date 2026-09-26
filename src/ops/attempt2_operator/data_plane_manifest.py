@@ -7,23 +7,30 @@ Authoritative schema (version 1, nested):
   Top-level envelope keys: schema_version, created_at, fingerprint, identity,
                            observation, operational_roots
   Fingerprint recipe: SHA-256(canonical_json(identity))
-    where canonical_json = json.dumps(value, sort_keys=True, separators=(',', ':'))
+    where canonical_json = json.dumps(value, sort_keys=True, separators=(',', ':'),
+                                       ensure_ascii=True, allow_nan=False)
   All readiness / component / authorization state lives under identity.*
 
-Status semantics:
-  PASS        — valid schema, fingerprint OK, readiness_status == READY
-  PREPARED    — valid schema, fingerprint OK, readiness_status == PREPARED
-                (data staged / preparation evidence available, NOT writer-authorized)
-  INCOMPLETE  — valid schema, fingerprint OK, readiness_status == INCOMPLETE
-  FAIL        — invalid schema, missing fields, tampered fingerprint,
-                readiness_status == FAIL, or unknown readiness value
+Status semantics (Operations):
+  PREPARED    — producer-valid schema, fingerprint OK, data_readiness_status in
+                {"PREPARED"} with all PREPARED-specific checks satisfied.
+                data_readiness_status == "PREPARED" is the highest valid producer state.
+  NOT_PREPARED — producer-valid schema, data_readiness_status == "NOT_PREPARED"
+  INCOMPLETE  — producer-valid schema, data_readiness_status == "INCOMPLETE"
+  FAIL        — invalid schema, missing fields, tampered fingerprint, OR
+                producer-semantic validation failure (re-signed attack rejected)
   NOT_AVAILABLE — manifest path is None or file not found
 
-CRITICAL: PREPARED != READY. A PREPARED manifest does NOT authorize:
-  - any writer
-  - Attempt 2 execution
-  - scheduling
-Never translate PREPARED into unrestricted PASS.
+CRITICAL:
+  "READY" is NOT a valid data_readiness_status in the producer contract.
+  Any manifest with data_readiness_status="READY" FAILS producer validation.
+  A correctly re-signed manifest is STILL REJECTED if producer semantics fail.
+  PREPARED != writer-authorized, Attempt2-authorized, or ready-for-scoring.
+
+Producer semantic validator ported from:
+  src/ops/data_readiness.verify_manifest
+  Data Plane SHA: cd9c01408059961fb30e4b6321429a018e4a0df5
+  Keep in sync with producer contract when Data Plane SHA advances.
 """
 
 from __future__ import annotations
@@ -41,7 +48,13 @@ from typing import Any, Mapping
 SCHEMA_VERSION = 1
 DATA_PLANE_MANIFEST_FILENAME = "DATA_PLANE_MANIFEST.json"
 
-# Required identity-block fields (all live under manifest["identity"])
+# Authorization flags that must all be explicitly present and False
+_AUTH_FLAGS = ("attempt2", "writers", "telegram", "schedule")
+
+# Asset blocks checked for status==PASS when readiness==PREPARED
+_PREPARED_ASSET_BLOCKS = ("model", "topography", "baseline", "source_evidence", "code_identity")
+
+# Required identity-block fields
 _REQUIRED_IDENTITY_FIELDS = (
     "schema_version",
     "kind",
@@ -58,17 +71,25 @@ _REQUIRED_IDENTITY_FIELDS = (
     "current_state",
 )
 
-# Every authorization flag that must exist and be False in a safe manifest
-_AUTH_FLAGS = ("attempt2", "writers", "telegram", "schedule")
-
 
 # ---------------------------------------------------------------------------
-# Fingerprint helpers  (producer contract: digest of identity block only)
+# Fingerprint helpers (exact producer recipe at cd9c01408059961fb30e4b6321429a018e4a0df5)
 # ---------------------------------------------------------------------------
 
 def _canonical_json(value: Any) -> bytes:
-    """Canonical deterministic JSON bytes — same recipe as the Astra producer."""
-    return json.dumps(value, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    """Canonical deterministic JSON bytes — exact producer recipe.
+
+    Matches data_readiness.canonical():
+      json.dumps(value, sort_keys=True, separators=(',',':'),
+                  ensure_ascii=True, allow_nan=False).encode()
+    """
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode()
 
 
 def compute_data_manifest_fingerprint(identity_block: Mapping[str, Any]) -> str:
@@ -76,10 +97,132 @@ def compute_data_manifest_fingerprint(identity_block: Mapping[str, Any]) -> str:
 
     Args:
         identity_block: The ``manifest["identity"]`` dict produced by Astra's
-                        data_readiness.build_manifest().  Do NOT pass the whole
+                        data_readiness.build_manifest(). Do NOT pass the whole
                         envelope — the fingerprint covers only this block.
     """
     return hashlib.sha256(_canonical_json(identity_block)).hexdigest()
+
+
+# ---------------------------------------------------------------------------
+# Producer semantic validator (ported inline — attributed to exact SHA)
+# ---------------------------------------------------------------------------
+
+def _producer_semantic_validate(
+    raw: dict[str, Any],
+    identity: dict[str, Any],
+) -> tuple[bool, list[str]]:
+    """Port of authoritative producer semantic validation.
+
+    Source: src/ops/data_readiness.verify_manifest()
+    Data Plane SHA: cd9c01408059961fb30e4b6321429a018e4a0df5
+
+    This function intentionally does NOT re-check the fingerprint — that is
+    done separately in verify_data_plane_manifest() before this is called.
+    All other producer conditions are enforced here.
+
+    Returns:
+        (is_valid, reasons)  — reasons is non-empty when is_valid is False
+    """
+    reasons: list[str] = []
+    try:
+        readiness = str(identity.get("data_readiness_status", "")).upper()
+
+        # PREPARED-specific semantic checks (from producer)
+        if readiness == "PREPARED":
+            findings = identity.get("findings") or []
+            current_state = identity.get("current_state") or {}
+            expected_current = identity.get("expected_current") or {}
+
+            if findings:
+                reasons.append(
+                    f"PREPARED manifest must have no findings, got {len(findings)}"
+                )
+                return False, reasons
+
+            if current_state != expected_current:
+                reasons.append(
+                    f"current_state {current_state!r} must equal "
+                    f"expected_current {expected_current!r}"
+                )
+                return False, reasons
+
+            if set(current_state) != {"firms", "dmc"}:
+                reasons.append(
+                    f"current_state must have exactly 'firms' and 'dmc' keys, "
+                    f"got {set(current_state)!r}"
+                )
+                return False, reasons
+
+            for key, state in current_state.items():
+                if state not in ("ABSENT", "PRESENT"):
+                    reasons.append(
+                        f"current_state.{key}={state!r} must be ABSENT or PRESENT"
+                    )
+                    return False, reasons
+
+            for block_name in _PREPARED_ASSET_BLOCKS:
+                block = identity.get(block_name)
+                if not isinstance(block, dict) or block.get("status") != "PASS":
+                    reasons.append(
+                        f"identity.{block_name}.status must be PASS for PREPARED state"
+                    )
+                    return False, reasons
+
+        # Envelope/identity schema version must both be 1
+        if raw.get("schema_version") != 1 or identity.get("schema_version") != 1:
+            reasons.append(
+                f"schema_version mismatch: envelope={raw.get('schema_version')!r}, "
+                f"identity={identity.get('schema_version')!r}, both must be 1"
+            )
+            return False, reasons
+
+        # Kind
+        if identity.get("kind") != "DATA_PLANE_MANIFEST":
+            reasons.append(
+                f"identity.kind must be DATA_PLANE_MANIFEST, "
+                f"got {identity.get('kind')!r}"
+            )
+            return False, reasons
+
+        # Valid producer readiness values (READY is NOT valid)
+        if readiness not in ("PREPARED", "NOT_PREPARED", "INCOMPLETE"):
+            reasons.append(
+                f"data_readiness_status={readiness!r} is not a valid producer "
+                f"value. Must be PREPARED, NOT_PREPARED, or INCOMPLETE. "
+                f"'READY' is not produced by the data plane contract."
+            )
+            return False, reasons
+
+        # data_ready_for_scoring
+        if str(identity.get("data_ready_for_scoring", "")).upper() != "NOT_EVALUATED":
+            reasons.append(
+                f"data_ready_for_scoring must be NOT_EVALUATED, "
+                f"got {identity.get('data_ready_for_scoring')!r}"
+            )
+            return False, reasons
+
+        # independent_approval
+        if str(identity.get("independent_approval", "")).upper() != "PENDING":
+            reasons.append(
+                f"independent_approval must be PENDING, "
+                f"got {identity.get('independent_approval')!r}"
+            )
+            return False, reasons
+
+        # Exact authorizations dict
+        expected_auth = {name: False for name in _AUTH_FLAGS}
+        if identity.get("authorizations") != expected_auth:
+            reasons.append(
+                f"authorizations must be exactly {expected_auth!r}, "
+                f"got {identity.get('authorizations')!r}"
+            )
+            return False, reasons
+
+        return True, []
+
+    except (AttributeError, KeyError, TypeError, ValueError) as exc:
+        reasons.append(f"producer_validate_exception: {exc!r}")
+        return False, reasons
 
 
 # ---------------------------------------------------------------------------
@@ -94,10 +237,10 @@ class DataPlaneManifestView:
     """
 
     def __init__(self, raw: dict[str, Any]) -> None:
-        identity = raw.get("identity", {})
-        code_id = identity.get("code_identity", {})
-        components = identity.get("components", {})
-        auth = identity.get("authorizations", {}) or {}
+        identity = raw.get("identity") or {}
+        code_id = identity.get("code_identity") or {}
+        components = identity.get("components") or {}
+        auth = identity.get("authorizations") or {}
 
         self.schema_version: int = raw.get("schema_version", 0)
         self.kind: str = identity.get("kind", "")
@@ -131,15 +274,15 @@ class DataPlaneManifestView:
         )
 
         # Asset identities
-        model = identity.get("model", {})
+        model = identity.get("model") or {}
         self.model_sha: str | None = model.get("sha256") or model.get("sha")
 
-        topography = identity.get("topography", {})
+        topography = identity.get("topography") or {}
         self.topography_identity: str | None = (
             topography.get("table_sha256") or topography.get("grid_sha256")
         )
 
-        baseline = identity.get("baseline", {})
+        baseline = identity.get("baseline") or {}
         self.baseline_identity: str | None = (
             baseline.get("sha256") or baseline.get("sha")
         )
@@ -154,7 +297,6 @@ class DataPlaneManifestView:
         self.telegram_authorized: bool = bool(auth.get("telegram", False))
         self.schedule_authorized: bool = bool(auth.get("schedule", False))
 
-        # Keep the raw identity block for fingerprint recomputation
         self._identity_block: dict[str, Any] = identity  # type: ignore[assignment]
         self._raw = raw
 
@@ -170,13 +312,26 @@ def verify_data_plane_manifest(
 ) -> dict[str, Any]:
     """Verify the Astra Data Plane readiness manifest (authoritative nested schema v1).
 
+    Validation order:
+      1. Path / file availability
+      2. JSON parse
+      3. Non-object root guard (NEW-5)
+      4. Envelope schema version
+      5. Identity block presence
+      6. Required identity fields
+      7. Cryptographic fingerprint (covers identity block only)
+      8. Producer semantic validation (prevents re-signed attack — ADAPTER-GAP-1)
+      9. Code SHA cross-check (informational)
+
     Returns a result dict with keys:
-      status          — PASS | PREPARED | INCOMPLETE | FAIL | NOT_AVAILABLE
+      status          — PREPARED | NOT_PREPARED | INCOMPLETE | FAIL | NOT_AVAILABLE
       overall_status  — same as status
-      ready           — True only when status == PASS
-      prepared        — True when status in (PASS, PREPARED)
+      ready           — always False (no producer "READY" state exists)
+      prepared        — True when status == PREPARED
       manifest_path   — str path
       manifest_fingerprint — recomputed SHA-256 (of identity block)
+      declared_fingerprint — declared value from manifest["fingerprint"]
+      fingerprint_match    — bool
       data_readiness_status  — value from identity block
       writers_authorized     — bool (fail-closed)
       attempt2_authorized    — bool (fail-closed)
@@ -187,13 +342,14 @@ def verify_data_plane_manifest(
       baseline_identity      — str | None
       expected_current_state — dict | None
       code_sha               — str | None
+      producer_valid         — bool (True when producer semantics pass)
       observed_at            — ISO timestamp
       findings               — list[{id, code, severity, message}]
     """
     observed_at = datetime.now(timezone.utc).isoformat()
 
     # ------------------------------------------------------------------ #
-    # 0. Path / file availability                                          #
+    # 1. Path / file availability                                          #
     # ------------------------------------------------------------------ #
     if manifest_path is None:
         return _not_available(
@@ -214,31 +370,50 @@ def verify_data_plane_manifest(
         )
 
     # ------------------------------------------------------------------ #
-    # 1. Parse JSON                                                        #
+    # 2. Parse JSON                                                        #
     # ------------------------------------------------------------------ #
     try:
         raw_text = path.read_text(encoding="utf-8")
         raw = json.loads(raw_text)
-    except Exception as exc:
+    except json.JSONDecodeError as exc:
         return _fail_result(
             str(path), observed_at, None,
             [_finding("DM-003", "DATA_MANIFEST_CORRUPT", "FAIL",
-                       f"Malformed data manifest JSON: {exc}")],
+                       f"Malformed JSON: {exc}")],
+        )
+    except Exception as exc:
+        return _fail_result(
+            str(path), observed_at, None,
+            [_finding("DM-003", "DATA_MANIFEST_READ_ERROR", "FAIL",
+                       f"Cannot read manifest: {exc}")],
+        )
+
+    # ------------------------------------------------------------------ #
+    # 3. Non-object root guard (NEW-5)                                    #
+    # ------------------------------------------------------------------ #
+    if not isinstance(raw, dict):
+        return _fail_result(
+            str(path), observed_at, None,
+            [_finding("DM-011", "DATA_MANIFEST_NOT_OBJECT", "FAIL",
+                       f"Manifest JSON root must be a dict/object, "
+                       f"got {type(raw).__name__!r} — value: "
+                       f"{json.dumps(raw)[:80]!r}")],
         )
 
     findings: list[dict[str, Any]] = []
 
     # ------------------------------------------------------------------ #
-    # 2. Envelope schema version                                           #
+    # 4. Envelope schema version                                           #
     # ------------------------------------------------------------------ #
     if raw.get("schema_version") != SCHEMA_VERSION:
         findings.append(_finding(
             "DM-004", "UNSUPPORTED_DATA_MANIFEST_SCHEMA", "FAIL",
-            f"Unsupported schema version: {raw.get('schema_version')}, expected {SCHEMA_VERSION}",
+            f"Unsupported schema version: {raw.get('schema_version')!r}, "
+            f"expected {SCHEMA_VERSION}",
         ))
 
     # ------------------------------------------------------------------ #
-    # 3. Identity block presence                                           #
+    # 5. Identity block presence                                           #
     # ------------------------------------------------------------------ #
     identity = raw.get("identity")
     if not isinstance(identity, dict):
@@ -249,7 +424,7 @@ def verify_data_plane_manifest(
         return _fail_result(str(path), observed_at, None, findings)
 
     # ------------------------------------------------------------------ #
-    # 4. Required identity fields                                          #
+    # 6. Required identity fields                                          #
     # ------------------------------------------------------------------ #
     for field in _REQUIRED_IDENTITY_FIELDS:
         if field not in identity or identity[field] is None:
@@ -259,121 +434,118 @@ def verify_data_plane_manifest(
             ))
 
     # ------------------------------------------------------------------ #
-    # 5. Kind check                                                        #
-    # ------------------------------------------------------------------ #
-    if identity.get("kind") != "DATA_PLANE_MANIFEST":
-        findings.append(_finding(
-            "DM-008", "WRONG_KIND", "FAIL",
-            f"Expected kind=DATA_PLANE_MANIFEST, got: {identity.get('kind')!r}",
-        ))
-
-    # ------------------------------------------------------------------ #
-    # 6. Fingerprint verification (covers identity block only)             #
+    # 7. Cryptographic fingerprint (covers identity block only)            #
     # ------------------------------------------------------------------ #
     declared_fp = raw.get("fingerprint")
-    computed_fp = compute_data_manifest_fingerprint(identity)
+    computed_fp: str | None
 
-    if declared_fp is None:
+    try:
+        computed_fp = compute_data_manifest_fingerprint(identity)
+    except (TypeError, ValueError) as exc:
+        computed_fp = None
         findings.append(_finding(
-            "DM-006", "DATA_MANIFEST_NO_FINGERPRINT", "FAIL",
-            "Manifest has no 'fingerprint' field",
-        ))
-    elif declared_fp != computed_fp:
-        findings.append(_finding(
-            "DM-006", "DATA_MANIFEST_TAMPERED", "FAIL",
-            f"Manifest fingerprint mismatch: declared {declared_fp} != computed {computed_fp}",
+            "DM-006", "DATA_MANIFEST_FINGERPRINT_ERROR", "FAIL",
+            f"Cannot compute fingerprint: {exc}",
         ))
 
+    if computed_fp is not None:
+        if declared_fp is None:
+            findings.append(_finding(
+                "DM-006", "DATA_MANIFEST_NO_FINGERPRINT", "FAIL",
+                "Manifest has no 'fingerprint' field",
+            ))
+        elif declared_fp != computed_fp:
+            findings.append(_finding(
+                "DM-006", "DATA_MANIFEST_TAMPERED", "FAIL",
+                f"Manifest fingerprint mismatch: "
+                f"declared {declared_fp} != computed {computed_fp}",
+            ))
+
+    fingerprint_ok = (
+        computed_fp is not None
+        and declared_fp is not None
+        and declared_fp == computed_fp
+    )
+
     # ------------------------------------------------------------------ #
-    # 7. Authorization flags (fail-closed)                                 #
+    # 8. Producer semantic validation (ADAPTER-GAP-1 fix)                  #
+    # Only run if fingerprint passed — re-signed attacks caught here.      #
     # ------------------------------------------------------------------ #
-    auth = identity.get("authorizations") or {}
-    if not isinstance(auth, dict):
-        findings.append(_finding(
-            "DM-009", "INVALID_AUTHORIZATIONS", "FAIL",
-            "identity.authorizations must be a dict",
-        ))
-    else:
-        for flag in _AUTH_FLAGS:
-            if flag not in auth:
+    producer_valid = False
+    if fingerprint_ok and not any(f["severity"] == "FAIL" for f in findings):
+        ok, reasons = _producer_semantic_validate(raw, identity)
+        producer_valid = ok
+        if not ok:
+            for reason in reasons:
                 findings.append(_finding(
-                    "DM-009", "MISSING_AUTH_FLAG", "FAIL",
-                    f"identity.authorizations.{flag} is missing (fail-closed)",
+                    "DM-012", "PRODUCER_SEMANTIC_VIOLATION", "FAIL",
+                    f"Producer semantic validation failed: {reason}",
                 ))
-            elif auth[flag] is not False:
-                findings.append(_finding(
-                    "DM-009", "AUTHORIZATION_CLAIMED", "FAIL",
-                    f"identity.authorizations.{flag} must be false: a data manifest "
-                    "never authorizes (fail-closed)",
-                ))
+    elif not any(f["severity"] == "FAIL" for f in findings):
+        # fingerprint failed — producer check skipped
+        # V4 note: V3 DM-009 AUTHORIZATION_CLAIMED is fully subsumed by
+        # _producer_semantic_validate() which requires authorizations == {all False}
+        # exactly (line ~213). Any claimed authorization fails at PRODUCER_SEMANTIC_VIOLATION.
+        pass
 
     # ------------------------------------------------------------------ #
-    # 8. Readiness status                                                  #
+    # 9. Code SHA cross-check (informational WARN)                         #
     # ------------------------------------------------------------------ #
-    readiness = str(identity.get("data_readiness_status", "INCOMPLETE")).upper()
-    readiness_finding_severity: str | None = None
-
-    if readiness == "FAIL":
-        readiness_finding_severity = "FAIL"
-        findings.append(_finding(
-            "DM-007", "DATA_PLANE_NOT_READY", "FAIL",
-            "Data plane data_readiness_status is FAIL",
-        ))
-    elif readiness == "INCOMPLETE":
-        readiness_finding_severity = "INCOMPLETE"
-        findings.append(_finding(
-            "DM-007", "DATA_PLANE_INCOMPLETE", "INCOMPLETE",
-            "Data plane data_readiness_status is INCOMPLETE",
-        ))
-    elif readiness not in ("READY", "PREPARED", "NOT_PREPARED"):
-        readiness_finding_severity = "FAIL"
-        findings.append(_finding(
-            "DM-007", "DATA_PLANE_UNKNOWN_STATUS", "FAIL",
-            f"Unknown data plane readiness status: {readiness}",
-        ))
+    if isinstance(identity.get("code_identity"), dict):
+        actual_code_sha = identity["code_identity"].get("sha")
+        if (
+            expected_code_sha
+            and actual_code_sha
+            and actual_code_sha != expected_code_sha
+        ):
+            findings.append(_finding(
+                "DM-010", "CODE_SHA_MISMATCH", "WARN",
+                f"Data plane code SHA {actual_code_sha} != "
+                f"expected {expected_code_sha}",
+            ))
 
     # ------------------------------------------------------------------ #
-    # 9. Code SHA cross-check (informational WARN, not FAIL)               #
+    # 10. Build canonical view                                              #
     # ------------------------------------------------------------------ #
-    code_id = identity.get("code_identity", {})
-    actual_code_sha = code_id.get("sha") if isinstance(code_id, dict) else None
-    if expected_code_sha and actual_code_sha and actual_code_sha != expected_code_sha:
-        findings.append(_finding(
-            "DM-010", "CODE_SHA_MISMATCH", "WARN",
-            f"Data plane code SHA {actual_code_sha} != expected {expected_code_sha}",
-        ))
+    try:
+        view = DataPlaneManifestView(raw)
+    except Exception as exc:  # pragma: no cover — defensive
+        return _fail_result(
+            str(path), observed_at, computed_fp,
+            findings + [_finding("DM-013", "DATA_MANIFEST_VIEW_ERROR", "FAIL",
+                                  f"Cannot build manifest view: {exc}")],
+        )
 
     # ------------------------------------------------------------------ #
-    # 10. Build canonical view                                             #
-    # ------------------------------------------------------------------ #
-    view = DataPlaneManifestView(raw)
-
-    # ------------------------------------------------------------------ #
-    # 11. Determine overall status                                         #
+    # 11. Determine overall status                                          #
     # ------------------------------------------------------------------ #
     has_failures = any(f["severity"] == "FAIL" for f in findings)
-    has_incomplete = any(f["severity"] == "INCOMPLETE" for f in findings)
 
     if has_failures:
         overall = "FAIL"
-    elif has_incomplete:
-        overall = "INCOMPLETE"
-    elif readiness == "READY":
-        overall = "PASS"
-    elif readiness == "PREPARED":
-        overall = "PREPARED"  # valid schema, data staged, not yet ready for scoring
+    elif not producer_valid:
+        # Producer validation was skipped (e.g. fingerprint failed) — already FAIL above
+        # This branch only reached if fingerprint had non-FAIL issues; treat as FAIL
+        overall = "FAIL"
     else:
-        overall = "INCOMPLETE"
+        readiness = str(identity.get("data_readiness_status", "INCOMPLETE")).upper()
+        if readiness == "PREPARED":
+            overall = "PREPARED"
+        elif readiness == "NOT_PREPARED":
+            overall = "NOT_PREPARED"
+        else:
+            overall = "INCOMPLETE"
 
     return {
         "status": overall,
         "overall_status": overall,
-        "ready": overall == "PASS",
-        "prepared": overall in ("PASS", "PREPARED"),
+        "ready": False,  # No producer "READY" state exists — never True
+        "prepared": overall == "PREPARED",
         "manifest_path": str(path),
         "manifest_fingerprint": computed_fp,
         "declared_fingerprint": declared_fp,
-        "fingerprint_match": declared_fp == computed_fp if declared_fp else False,
+        "fingerprint_match": fingerprint_ok,
+        "producer_valid": producer_valid,
         # Readiness / authorization (fail-closed)
         "data_readiness_status": view.data_readiness_status,
         "writers_authorized": view.writers_authorized,
@@ -416,6 +588,7 @@ def _not_available(
         "manifest_fingerprint": None,
         "declared_fingerprint": None,
         "fingerprint_match": False,
+        "producer_valid": False,
         "data_readiness_status": None,
         "writers_authorized": False,
         "attempt2_authorized": False,
@@ -434,7 +607,8 @@ def _not_available(
 
 
 def _fail_result(
-    path: str, observed_at: str,
+    path: str | None,
+    observed_at: str,
     computed_fp: str | None,
     findings: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -447,6 +621,7 @@ def _fail_result(
         "manifest_fingerprint": computed_fp,
         "declared_fingerprint": None,
         "fingerprint_match": False,
+        "producer_valid": False,
         "data_readiness_status": None,
         "writers_authorized": False,
         "attempt2_authorized": False,

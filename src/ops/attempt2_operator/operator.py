@@ -107,10 +107,15 @@ class Attempt2Operator:
         dm_fp: str | None = None
         if data_plane_manifest:
             dm_ver = verify_data_plane_manifest(data_plane_manifest, expected_code_sha=expected_code_sha)
-            if dm_ver.get("status") != "PASS" and not dry_run:
+            # PREPARED is the highest valid producer state (producer never emits READY).
+            # Accept PREPARED for fingerprint recording; execution gates remain at
+            # preflight + explicit human authorization (not here).
+            # Producer-invalid manifests (FAIL / INCOMPLETE / NOT_AVAILABLE) are blocked.
+            if dm_ver.get("prepared") is not True and not dry_run:
                 findings_msg = "; ".join(f.get("message", "") for f in dm_ver.get("findings", []))
                 raise ValueError(f"Data plane manifest verification failed: {findings_msg}")
             dm_fp = dm_ver.get("manifest_fingerprint")
+
 
         op_fp: str | None = None
         if output_manifest:

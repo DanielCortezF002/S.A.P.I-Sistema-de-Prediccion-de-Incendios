@@ -70,10 +70,12 @@ def collect_rc_status(
         expected_code_sha=expected_code_sha,
     )
     dm_status = dm_res.get("status", "NOT_AVAILABLE")
-    dm_ready = dm_status == "PASS"
-    # PREPARED = valid schema, data staged, not yet READY for scoring.
-    # Accepted for informational purposes; does not satisfy all_prerequisites_ready.
-    dm_accepted = dm_status in ("PASS", "PREPARED")
+    # PREPARED is the highest achievable producer status (no "READY" in producer contract).
+    # dm_ready remains False — PREPARED doesn't satisfy all_prerequisites_ready without
+    # additional workspace + quiescence + human authorization gates.
+    dm_ready = False  # No producer "READY" state exists; execution requires human gates
+    # dm_accepted = schema-valid manifest was provided (PREPARED or better future state)
+    dm_accepted = dm_res.get("prepared", False)
 
     # 4. Quiescence
     runtime = collect_runtime()
@@ -192,6 +194,7 @@ def collect_rc_status(
                 "status": dm_status,
                 "manifest_path": str(data_plane_manifest_path) if data_plane_manifest_path else None,
                 "data_readiness_status": dm_res.get("data_readiness_status"),
+                "producer_valid": dm_res.get("producer_valid", False),
                 "writers_authorized": dm_res.get("writers_authorized", False),
                 "attempt2_authorized": dm_res.get("attempt2_authorized", False),
                 "fingerprint_match": dm_res.get("fingerprint_match", False),

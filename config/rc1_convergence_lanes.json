@@ -21,7 +21,7 @@
   "operations": {
     "branch": "antigravity/operations-rc1",
     "base_sha": "848272f704dc06c1147dd2499d4ac1a8a0df08c3",
-    "adapter_sha": "13c945025f82923bfc4891bd62e56cc7aea13971"
+    "adapter_sha": "41d98ef9bbca9f515a5a53bdfe9840c3d4845978"
   },
   "blockers": {
     "resolved": [
@@ -35,14 +35,14 @@
     "resolved": [
       "ADAPTER-AUTH-1",
       "NEW-1",
-      "SEM-4"
+      "SEM-4",
+      "ADAPTER-GAP-1",
+      "NEW-5"
     ],
     "open": [
       "ADAPTER-ANCHOR-1",
-      "ADAPTER-GAP-1",
       "NEW-2",
       "NEW-3",
-      "NEW-5",
       "PORT-1"
     ]
   }
