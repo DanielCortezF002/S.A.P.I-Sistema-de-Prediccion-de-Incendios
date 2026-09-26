@@ -5,11 +5,12 @@ import subprocess
 import tarfile
 import time
 import uuid
+import shutil
 
 from ci_local import sha, step, pytest_metrics
 
 
-def run_docker(runner, identity, required):
+def run_docker(runner, identity, required, *, source_context=None, host_callback=None):
     probe = runner.run(
         "docker_probe",
         ["docker", "info", "--format", "{{.ServerVersion}}"],
@@ -19,7 +20,7 @@ def run_docker(runner, identity, required):
     if probe["status"] != "PASS":
         probe["status"] = "BLOCKED"
         return "BLOCKED"
-    if identity["dirty_state"]:
+    if identity["dirty_state"] and source_context is None:
         runner.steps.append(
             step(
                 "docker_source",
@@ -38,32 +39,39 @@ def run_docker(runner, identity, required):
     context = runner.output / "docker-context"
     context.mkdir()
     archive = runner.output / "source.tar"
-    archive_step = runner.run(
-        "docker_archive",
-        [
-            "git",
-            "archive",
-            "--format=tar",
-            "--output=" + str(archive),
-            identity["code_sha"],
-        ],
-        required,
-    )
+    if source_context is not None:
+        shutil.copytree(source_context, context, dirs_exist_ok=True)
+        archive_step = step(
+            "docker_archive", "PASS", {"method": "verified committed export"}
+        )
+    else:
+        archive_step = runner.run(
+            "docker_archive",
+            [
+                "git",
+                "archive",
+                "--format=tar",
+                "--output=" + str(archive),
+                identity["code_sha"],
+            ],
+            required,
+        )
     if archive_step["status"] != "PASS":
         return "BLOCKED"
-    with tarfile.open(archive) as bundle:
-        if any(not (m.isfile() or m.isdir()) for m in bundle.getmembers()):
-            runner.steps.append(
-                step(
-                    "docker_source",
-                    "BLOCKED",
-                    {"reason": "Archive contains links or special files"},
-                    required,
+    if source_context is None:
+        with tarfile.open(archive) as bundle:
+            if any(not (m.isfile() or m.isdir()) for m in bundle.getmembers()):
+                runner.steps.append(
+                    step(
+                        "docker_source",
+                        "BLOCKED",
+                        {"reason": "Archive contains links or special files"},
+                        required,
+                    )
                 )
-            )
-            return "BLOCKED"
-        bundle.extractall(context, filter="data")
-    archive_step["evidence"]["archive_sha256"] = sha(archive)
+                return "BLOCKED"
+            bundle.extractall(context, filter="data")
+        archive_step["evidence"]["archive_sha256"] = sha(archive)
     # CI image uses the repository analytics dependency build, never its daily-loop CMD.
     dockerfile = (context / "Dockerfile.analytics").read_text(encoding="utf-8")
     dockerfile += (
@@ -108,6 +116,7 @@ def run_docker(runner, identity, required):
                     network,
                     "--network-alias",
                     "db",
+                    *(["-p", "127.0.0.1::5432"] if host_callback else []),
                     "--tmpfs",
                     "/var/lib/postgresql/data",
                     "-e",
@@ -182,6 +191,16 @@ def run_docker(runner, identity, required):
             ],
             required,
         )
+        if host_callback:
+            port = (
+                subprocess.check_output(
+                    ["docker", "port", database, "5432/tcp"], timeout=15, env=runner.env
+                )
+                .decode()
+                .strip()
+                .rsplit(":", 1)[1]
+            )
+            host_callback(int(port))
         resources.append(("container", application))
         command = [
             "docker",
@@ -264,11 +283,11 @@ def run_docker(runner, identity, required):
     finally:
         for kind, name in reversed(resources):
             command = (
-                ["docker", "rm", "-f", "-v", name]
+                ["docker", "rm", "-f", name]
                 if kind == "container"
                 else ["docker", "network", "rm", name]
             )
-            # -v only removes anonymous volumes of this uniquely owned test container.
+            # Only owned containers; DB data uses tmpfs. Never delete volumes.
             runner.run("cleanup_" + name, command, required=True, timeout=30)
     statuses = [s["status"] for s in runner.steps[start_index:]]
     return (

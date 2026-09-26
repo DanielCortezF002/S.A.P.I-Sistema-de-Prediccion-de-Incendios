@@ -130,6 +130,7 @@ def git(root, *args):
         text=True,
         encoding="utf-8",
         stderr=subprocess.DEVNULL,
+        timeout=30,
     ).rstrip("\r\n")
 
 
@@ -831,6 +832,10 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    if sys.argv[1:2] in (["gate"], ["compare"]):
+        from ci_release import main as release_main
+
+        raise SystemExit(release_main(sys.argv[1:]))
     raise SystemExit(
         frozen_fingerprint() if sys.argv[1:] == ["_fingerprint"] else main()
     )
