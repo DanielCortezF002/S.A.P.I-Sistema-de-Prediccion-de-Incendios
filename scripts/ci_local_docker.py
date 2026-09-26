@@ -1,4 +1,4 @@
-"""Disposable CI containers only: no Compose, host ports or real-store mounts."""
+"""Disposable CI containers only: no Compose, volume deletion or real-store mounts."""
 
 import json
 import subprocess
@@ -35,6 +35,7 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
     network, database, application = [
         "sapi-ci-" + label + "-" + suffix for label in ("net", "db", "test")
     ]
+    host_network = "sapi-ci-host-" + suffix
     image = "sapi-ci-local:" + identity["tree_sha"][:12]
     context = runner.output / "docker-context"
     context.mkdir()
@@ -75,7 +76,7 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
     # CI image uses the repository analytics dependency build, never its daily-loop CMD.
     dockerfile = (context / "Dockerfile.analytics").read_text(encoding="utf-8")
     dockerfile += (
-        "\nRUN apt-get update && apt-get install -y --no-install-recommends git "
+        "\nRUN apt-get update && apt-get install -y --no-install-recommends git nodejs "
         "&& rm -rf /var/lib/apt/lists/*\n"
         'ENTRYPOINT ["python"]\nCMD ["-c", "import time; time.sleep(1800)"]\n'
     )
@@ -96,6 +97,12 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
     )
     if build["status"] != "PASS":
         return "FAIL" if build["status"] == "FAIL" else "BLOCKED"
+    runner.run(
+        "docker_image_identity",
+        ["docker", "image", "inspect", "--format", "{{.Id}}", image],
+        required,
+        timeout=15,
+    )
     resources = []
     try:
         for name, command, resource in (
@@ -103,6 +110,19 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
                 "docker_network",
                 ["docker", "network", "create", "--internal", network],
                 ("network", network),
+            ),
+            *(
+                (
+                    [
+                        (
+                            "docker_host_network",
+                            ["docker", "network", "create", host_network],
+                            ("network", host_network),
+                        )
+                    ]
+                )
+                if host_callback
+                else []
             ),
             (
                 "docker_database",
@@ -113,7 +133,7 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
                     "--name",
                     database,
                     "--network",
-                    network,
+                    host_network if host_callback else network,
                     "--network-alias",
                     "db",
                     *(["-p", "127.0.0.1::5432"] if host_callback else []),
@@ -133,6 +153,14 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
             # Record name before launch so a timeout cannot leak an owned container.
             resources.append(resource)
             if runner.run(name, command, required)["status"] != "PASS":
+                return "BLOCKED"
+        if host_callback:
+            connected = runner.run(
+                "docker_database_internal",
+                ["docker", "network", "connect", "--alias", "db", network, database],
+                required,
+            )
+            if connected["status"] != "PASS":
                 return "BLOCKED"
         ready = False
         for _ in range(30):
@@ -164,6 +192,12 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
         )
         if not ready:
             return "BLOCKED"
+        runner.run(
+            "docker_database_identity",
+            ["docker", "inspect", "--format", "{{.Image}}", database],
+            required,
+            timeout=15,
+        )
         if (
             runner.run(
                 "docker_copy_schema",
@@ -192,15 +226,26 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
             required,
         )
         if host_callback:
-            port = (
-                subprocess.check_output(
-                    ["docker", "port", database, "5432/tcp"], timeout=15, env=runner.env
-                )
-                .decode()
-                .strip()
-                .rsplit(":", 1)[1]
+            published = runner.run(
+                "docker_host_port",
+                ["docker", "port", database, "5432/tcp"],
+                required,
+                timeout=15,
             )
-            host_callback(int(port))
+            if published["status"] == "PASS":
+                text = (
+                    (runner.output / published["evidence"]["log"])
+                    .read_text(encoding="utf-8")
+                    .strip()
+                )
+                if text.startswith("127.0.0.1:") and text.rsplit(":", 1)[1].isdigit():
+                    host_callback(int(text.rsplit(":", 1)[1]))
+                else:
+                    runner.steps.append(
+                        step(
+                            "docker_host_port_validation", "BLOCKED", required=required
+                        )
+                    )
         resources.append(("container", application))
         command = [
             "docker",
@@ -226,6 +271,22 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
         ]
         if runner.run("docker_test_container", command, required)["status"] != "PASS":
             return "BLOCKED"
+        if (
+            source_context is not None
+            and (source_context.parent / "SAPI-71-evidence").is_dir()
+        ):
+            copied = runner.run(
+                "docker_plane_evidence",
+                [
+                    "docker",
+                    "cp",
+                    str(source_context.parent / "SAPI-71-evidence"),
+                    application + ":/",
+                ],
+                required,
+            )
+            if copied["status"] != "PASS":
+                return "BLOCKED"
         prefix = ["docker", "exec", application]
         runner.run(
             "docker_format",

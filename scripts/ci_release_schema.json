@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SAPI RC1 local release result v1",
+  "type": "object",
+  "required": ["schema_version", "kind", "candidate", "baseline", "gate_identity", "environment_identity", "status", "checks", "findings", "tests", "coverage", "sentinels", "component_manifests", "stable_result_fingerprint", "authorization", "remote_github_ci"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "kind": {"const": "RC_GATE_RESULT"},
+    "status": {"enum": ["PASS", "FAIL", "INCOMPLETE"]},
+    "candidate": {"$ref": "#/$defs/codeIdentity"},
+    "baseline": {"$ref": "#/$defs/codeIdentity"},
+    "gate_identity": {"type": "object"},
+    "environment_identity": {"type": "object"},
+    "checks": {"type": "array", "items": {"type": "object", "required": ["id", "status", "required"], "properties": {"id": {"type": "string"}, "status": {"enum": ["PASS", "FAIL", "INCOMPLETE"]}, "required": {"type": "boolean"}, "detail": {}}}},
+    "findings": {"type": "array", "items": {"type": "object", "required": ["id", "status", "reason"]}},
+    "tests": {"type": "object"},
+    "coverage": {"type": "object"},
+    "sentinels": {"type": "object"},
+    "component_manifests": {"type": "object"},
+    "stable_result_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "authorization": {"const": false},
+    "remote_github_ci": {"const": "NOT VERIFIED"}
+  },
+  "$defs": {
+    "codeIdentity": {"type": "object", "properties": {"sha": {"type": "string", "pattern": "^[0-9a-f]{40}$"}, "tree": {"type": "string", "pattern": "^[0-9a-f]{40}$"}}, "additionalProperties": false}
+  }
+}

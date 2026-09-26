@@ -17,10 +17,14 @@ $python = 'D:\portafolio y seminario\SAPI-71-evidence\release-gates\tooling-venv
 ```
 
 Data and Output ancestry also follows their verified producer manifests.
+The frozen Data/Output paths and expected fingerprints above are CLI defaults;
+`python scripts/ci_local.py gate --candidate-sha <SHA>` runs the complete gate.
 Operations has no required symmetric manifest; its updated SHA is an explicit
 input. Never assume the current pre-adapter Operations SHA is the final one.
-Omitted plane evidence is NOT_AVAILABLE, not verified. Supply both manifests
-for a combined release evaluation.
+Missing required plane evidence is never verified: a supplied missing path fails
+validation; an omitted input is incomplete. Both manifests are required for a
+combined release evaluation. A Data-only candidate can therefore be tested but
+is not expected to satisfy a complete combined release gate.
 
 Exit 0 = PASS; 1 = FAIL; 2 = INCOMPLETE. Required failures take precedence over
 incomplete checks. Historical absolute Black/flake8 debt is visible; new
@@ -48,9 +52,13 @@ not inherited; dotenv is disabled. Dependency installation/image builds need
 package network access. Docker test runtime uses an internal network.
 
 PostGIS uses unique gate-owned names and tmpfs, with a random loopback-only
-port for host tests. No real-store mounts, Compose commands or volume deletion.
+port for host tests. The database alone joins a separate disposable bridge so
+its loopback publication works; the application remains on the internal network.
+No real-store mounts, Compose commands or volume deletion.
 Cleanup targets only names created by that run. The candidate analytics image
-is used with its operational entrypoint overridden. SQL runs in CI order with
+is used with its operational entrypoint overridden; the test image adds git and
+Node. Exact manifest copies are placed in the run's sibling evidence directory
+and copied into the disposable test container for convergence tests. SQL runs in CI order with
 CI options, including its existing lack of `ON_ERROR_STOP`.
 
 `result.json` schema 1 (`kind: RC_GATE_RESULT`) contains candidate SHA/tree,
@@ -90,3 +98,7 @@ The pre-adapter Data consumer mismatch must remain observable. The independent
 Data producer verifier uses canonical `identity`; the Operations handshake
 executes the candidate's read-only consumer with the real manifest. A consumer
 failure is a compatibility blocker, not permission to rewrite the candidate.
+JSON receipts are written atomically; a RUNNING receipt is incomplete until
+replaced by its final command result. Bounded command timeouts terminate only
+the process tree owned by that command. Test outcome fingerprints bind each
+test's class/name/status, excluding durations and temporary paths.

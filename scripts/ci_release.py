@@ -10,6 +10,8 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import shutil
+import traceback
 import sys
 import uuid
 
@@ -28,6 +30,11 @@ from ci_release_core import (
     utc,
     validate_result,
     write_json,
+    redact,
+    match_status,
+    seal_reports,
+    test_identity,
+    environment_reusable,
 )
 from ci_release_manifests import ancestry, verify
 
@@ -36,6 +43,10 @@ EVIDENCE = Path(r"D:\portafolio y seminario\SAPI-71-evidence\release-gates")
 WORKER = Path(__file__).with_name("ci_release_worker.py")
 MODEL = "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
 FIRMS = "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271"
+PLANE_FINGERPRINTS = {
+    "data": "5a6484fc4b047751fa6cec8e29a377c0ed96a19e1873ec25539745bca32a1ae0",
+    "output": "9441f7178805f48ab6d7f563b8bd5c70e555ba621bfb6779ba2360cec61b01a3",
+}
 
 
 def read(path):
@@ -44,6 +55,7 @@ def read(path):
 
 def code_identity():
     names = sorted(Path(__file__).parent.glob("ci_*.py"))
+    names.append(Path(__file__).with_name("ci_release_schema.json"))
     return {
         "commit": git(ROOT, "rev-parse", "HEAD"),
         "files": {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in names},
@@ -152,6 +164,10 @@ def run_gate(args):
     )
     out.mkdir(parents=True)
     runner = ReleaseRunner(ROOT, out)
+    write_json(
+        out / "result.schema.json",
+        read(Path(__file__).with_name("ci_release_schema.json")),
+    )
     result = {
         "schema_version": 1,
         "kind": "RC_GATE_RESULT",
@@ -184,6 +200,11 @@ def run_gate(args):
             )
 
     def worker(mode, location, python, extra=()):
+        if (
+            hashlib.sha256(WORKER.read_bytes()).hexdigest()
+            != result["gate_identity"]["files"][WORKER.name]
+        ):
+            raise ValueError("Release worker changed during gate execution")
         target = out / (mode + "-" + location.name + ".json")
         item = runner.run(
             mode + "-" + location.name,
@@ -203,8 +224,16 @@ def run_gate(args):
         )
 
     try:
-        result["candidate"] = resolve(ROOT, args.candidate_sha)
-        result["baseline"] = resolve(ROOT, args.baseline_sha)
+        try:
+            result["candidate"] = resolve(ROOT, args.candidate_sha)
+            result["baseline"] = resolve(ROOT, args.baseline_sha)
+        except (ValueError, subprocess.CalledProcessError):
+            check(
+                "RC-CODE-IDENTITY",
+                "FAIL",
+                "Candidate or baseline is not a resolvable full commit SHA",
+            )
+            raise ValueError("Invalid immutable code identity") from None
         origin = {
             "branch": git(ROOT, "branch", "--show-current"),
             "dirty": bool(git(ROOT, "status", "--porcelain")),
@@ -235,7 +264,17 @@ def run_gate(args):
         source, base = out / "candidate", out / "baseline"
         result["source"] = export(ROOT, args.candidate_sha, source)
         export(ROOT, args.baseline_sha, base)
+        docker_source = out / "docker-source"
+        shutil.copytree(source, docker_source)
         check("RC-CODE-EXPORT", "PASS")
+        # Existing convergence tests discover immutable plane evidence beside REPO.
+        # Give them verified-input copies under this run, never the originals.
+        for kind in ("data", "output"):
+            path = getattr(args, kind + "_manifest")
+            if path and path.is_file():
+                folder = out / "SAPI-71-evidence" / (kind + "-plane-rc1-2026-09-25")
+                folder.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(path, folder / (kind.upper() + "_PLANE_MANIFEST.json"))
         result["ci_steps"] = workflow(source)
         check("RC-CODE-CI-CONTRACT", result["ci_steps"]["status"])
         write_json(out / "ci-step-map.json", result["ci_steps"])
@@ -250,7 +289,10 @@ def run_gate(args):
             if not receipt_path.is_relative_to(EVIDENCE.resolve()):
                 raise ValueError("Resume path outside evidence root")
             if receipt_path.is_file():
-                receipt = read(receipt_path)
+                try:
+                    receipt = read(receipt_path)
+                except (OSError, ValueError):
+                    receipt = {}
                 if receipt.get("cache_identity") == result["cache_identity"]:
                     old_environment = args.resume.resolve() / "fresh-venv"
                     old_python = old_environment / (
@@ -260,9 +302,7 @@ def run_gate(args):
                         "resume_environment_probe",
                         [str(old_python), "-m", "pip", "freeze", "--all"],
                     )
-                    if probe["status"] == "PASS" and probe["evidence"][
-                        "sha256"
-                    ] == receipt.get("packages_sha256"):
+                    if environment_reusable(receipt, result["cache_identity"], probe):
                         environment, resumed = old_environment, True
         created = (
             {"status": "PASS"}
@@ -289,6 +329,8 @@ def run_gate(args):
             check(
                 "RC-DEPS-PIP", "PASS" if upgraded["status"] == "PASS" else "INCOMPLETE"
             )
+        else:
+            check("RC-DEPS-PIP", "PASS")
         installed = (
             {"status": "PASS", "reason": "Verified isolated environment reused"}
             if resumed
@@ -372,7 +414,7 @@ def run_gate(args):
             result["sentinels"][label] = {"expected": expected, "actual": actual}
             check(
                 "RC-SCI-" + label.upper(),
-                "PASS" if actual == expected else "FAIL" if actual else "INCOMPLETE",
+                match_status(actual, expected),
             )
         hito = {
             p.relative_to(source).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()
@@ -397,11 +439,7 @@ def run_gate(args):
         result["sentinels"]["ranking"] = ranked
         check(
             "RC-SCI-RANKING",
-            (
-                "PASS"
-                if ranked.get("ranking") == RANKING
-                else "FAIL" if "ranking" in ranked else "INCOMPLETE"
-            ),
+            match_status(ranked.get("ranking"), RANKING),
         )
         for kind in ("data", "output", "operations"):
             path = getattr(args, kind + "_manifest")
@@ -420,7 +458,11 @@ def run_gate(args):
                     verified.get("reason"),
                 )
             elif kind != "operations":
-                check("RC-MANIFEST-" + kind.upper(), "INCOMPLETE", "Required plane evidence not supplied")
+                check(
+                    "RC-MANIFEST-" + kind.upper(),
+                    "INCOMPLETE",
+                    "Required plane evidence not supplied",
+                )
         required = dict(pair.split("=", 1) for pair in args.require_lane)
         result["ancestry"] = ancestry(ROOT, args.candidate_sha, required)
         for name, proof in result["ancestry"].items():
@@ -470,6 +512,9 @@ def run_gate(args):
                 result["tests"]["host"] = {
                     k: v for k, v in metrics.items() if k != "coverage"
                 }
+                result["tests"]["host"]["outcomes_fingerprint"] = test_identity(
+                    out / "host-junit.xml"
+                )
                 result["coverage"]["host"] = {
                     **metrics["coverage"],
                     "required": threshold,
@@ -494,7 +539,7 @@ def run_gate(args):
                 "dirty_state": False,
             },
             True,
-            source_context=source,
+            source_context=docker_source,
             host_callback=host_tests,
         )
         # Absolute Docker lint debt is reported, not confused with test/environment failure.
@@ -527,6 +572,16 @@ def run_gate(args):
             "status": aggregate(normalized),
             "legacy_absolute_status": docker_state,
         }
+        for label in ("docker_image_identity", "docker_database_identity"):
+            items = [
+                s for s in runner.steps if s["name"] == label and s["status"] == "PASS"
+            ]
+            if items:
+                result["environment_identity"][label] = (
+                    (out / items[0]["evidence"]["log"])
+                    .read_text(encoding="utf-8")
+                    .strip()
+                )
         check("RC-DOCKER-RUNTIME", result["docker"]["status"])
         db_steps = [
             s
@@ -547,6 +602,9 @@ def run_gate(args):
             result["tests"]["docker"] = {
                 k: v for k, v in metrics.items() if k != "coverage"
             }
+            result["tests"]["docker"]["outcomes_fingerprint"] = test_identity(
+                out / "docker-junit.xml"
+            )
             result["coverage"]["docker"] = {
                 **metrics["coverage"],
                 "required": threshold,
@@ -560,17 +618,67 @@ def run_gate(args):
                 ),
             )
     except (Exception, KeyboardInterrupt) as error:
+        (out / "execution-error.txt").write_text(
+            redact(traceback.format_exc()), encoding="utf-8"
+        )
         check(
             "RC-ENV-EXECUTION",
             "FAIL" if isinstance(error, ValueError) else "INCOMPLETE",
             type(error).__name__,
         )
+    mandatory = (
+        "RC-CODE-EXPORT",
+        "RC-CODE-CI-CONTRACT",
+        "RC-DEPS-ENVIRONMENT",
+        "RC-DEPS-INSTALL",
+        "RC-DEPS-IMPORTS",
+        "RC-LINT-DELTA",
+        "RC-SCI-MODEL",
+        "RC-SCI-FIRMS",
+        "RC-SCI-HITO1",
+        "RC-SCI-RANKING",
+        "RC-MANIFEST-DATA",
+        "RC-MANIFEST-OUTPUT",
+        "RC-TEST-HOST",
+        "RC-COV-HOST",
+        "RC-DOCKER-RUNTIME",
+        "RC-ENV-POSTGIS",
+        "RC-COV-DOCKER",
+    )
+    for identifier in mandatory:
+        if not any(c["id"] == identifier for c in result["checks"]):
+            check(identifier, "INCOMPLETE", "Required check not completed")
+    if "cache_identity" in result:
+        for kind in ("data", "output"):
+            path = getattr(args, kind + "_manifest")
+            expected = request["manifests"][kind]["sha256"]
+            if expected:
+                copied = (
+                    out
+                    / "SAPI-71-evidence"
+                    / (kind + "-plane-rc1-2026-09-25")
+                    / (kind.upper() + "_PLANE_MANIFEST.json")
+                )
+                try:
+                    unchanged = all(
+                        hashlib.sha256(p.read_bytes()).hexdigest() == expected
+                        for p in (path, copied)
+                    )
+                    check(
+                        "RC-MANIFEST-" + kind.upper() + "-UNCHANGED",
+                        "PASS" if unchanged else "FAIL",
+                    )
+                except OSError:
+                    check("RC-MANIFEST-" + kind.upper() + "-UNCHANGED", "INCOMPLETE")
+    hygiene = seal_reports(out)
+    check("RC-ENV-SECRET-HYGIENE", hygiene["status"], hygiene["finding_rules"])
     result["findings"] = sorted(result["findings"], key=lambda f: f["id"])
     result["status"] = aggregate(result["checks"])
     result["stable_result_fingerprint"] = fingerprint(stable_result(result))
     result["finished_at"] = utc()
     validate_result(result)
     write_json(out / "result.json", result)
+    validate_result(read(out / "result.json"))
     write_json(
         out / "RC_MANIFEST.json",
         {
@@ -588,6 +696,7 @@ def run_gate(args):
         f"Evidence: {out}\nFingerprint: {result['stable_result_fingerprint']}\n"
         "Remote GitHub CI: NOT VERIFIED\nAuthorization: NONE\n"
     )
+    summary = redact(summary)
     (out / "summary.txt").write_text(summary, encoding="utf-8")
     print(summary)
     return {"PASS": 0, "FAIL": 1, "INCOMPLETE": 2}[result["status"]]
@@ -610,8 +719,19 @@ def main(argv=None):
         ),
     )
     for kind in ("data", "output", "operations"):
-        gate.add_argument("--" + kind + "-manifest", type=Path)
-        gate.add_argument("--expected-" + kind + "-fingerprint")
+        default = (
+            (
+                EVIDENCE.parent
+                / (kind + "-plane-rc1-2026-09-25")
+                / (kind.upper() + "_PLANE_MANIFEST.json")
+            )
+            if kind != "operations"
+            else None
+        )
+        gate.add_argument("--" + kind + "-manifest", type=Path, default=default)
+        gate.add_argument(
+            "--expected-" + kind + "-fingerprint", default=PLANE_FINGERPRINTS.get(kind)
+        )
     comparison = sub.add_parser("compare")
     comparison.add_argument("left", type=Path)
     comparison.add_argument("right", type=Path)

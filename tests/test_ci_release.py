@@ -1,6 +1,7 @@
 """Offline release failure matrix. Fixtures never touch operational resources."""
 
 import json
+import copy
 from pathlib import Path
 import subprocess
 import sys
@@ -33,6 +34,21 @@ def sample():
         "status": "PASS",
         "cache_identity": "fixture",
     }
+    result.update(
+        {
+            k: {}
+            for k in (
+                "baseline",
+                "gate_identity",
+                "environment_identity",
+                "tests",
+                "coverage",
+                "sentinels",
+                "component_manifests",
+            )
+        }
+    )
+    result.update(findings=[], authorization=False, remote_github_ci="NOT VERIFIED")
     result["stable_result_fingerprint"] = core.fingerprint(core.stable_result(result))
     return result
 
@@ -208,3 +224,222 @@ def test_output_wrong_fingerprint():
     }
     with pytest.raises(ValueError):
         manifests.verify_output(doc, Path.cwd(), "a" * 40)
+
+
+@pytest.fixture
+def data_document(monkeypatch):
+    policy = {
+        "components": {"firms": {"sha": "a" * 40}},
+        "expected_current": {"present": False},
+        "model": {"sha256": "1" * 64},
+        "baseline": {"sha256": "2" * 64},
+        "topography": {
+            "table_sha256": "3" * 64,
+            "grid_sha256": "4" * 64,
+            "files": {"dem.tif": "5" * 64},
+        },
+    }
+    body = {
+        "schema_version": 1,
+        "kind": "DATA_PLANE_MANIFEST",
+        "code_identity": {"sha": "a" * 40, "tree": "b" * 40, "clean": True},
+        "policy_sha256": core.fingerprint(policy),
+        "components": policy["components"],
+        "data_readiness_status": "PREPARED",
+        "findings": [],
+        "current_state": policy["expected_current"],
+        "data_ready_for_scoring": "NOT_EVALUATED",
+        "authorizations": {
+            k: False for k in ("attempt2", "writers", "telegram", "schedule")
+        },
+        "model": {"status": "PASS", "sha256": "1" * 64},
+        "baseline": {"status": "PASS", "sha256": "2" * 64},
+        "topography": {
+            "status": "PASS",
+            "table_sha256": "3" * 64,
+            "grid_sha256": "4" * 64,
+            "files": {"dem.tif": {"sha256": "5" * 64}},
+        },
+    }
+    monkeypatch.setattr(manifests, "blob", lambda *a: json.dumps(policy).encode())
+    monkeypatch.setattr(
+        manifests, "resolve", lambda *a: {"sha": "a" * 40, "tree": "b" * 40}
+    )
+    monkeypatch.setattr(manifests, "ancestry", lambda *a: {"data": {"status": "PASS"}})
+    return {
+        "schema_version": 1,
+        "identity": body,
+        "fingerprint": core.fingerprint(body),
+    }
+
+
+def test_data_producer_identity_recipe(data_document):
+    result = manifests.verify_data(data_document, Path.cwd(), "a" * 40)
+    assert result["status"] == "PASS"
+    assert result["readiness"] == "PREPARED" and result["authorization"] is False
+
+
+@pytest.mark.parametrize(
+    "mutation", ["model", "baseline", "tree", "authorization", "readiness"]
+)
+def test_rehashed_wrong_identity_still_rejected(data_document, mutation):
+    doc = copy.deepcopy(data_document)
+    body = doc["identity"]
+    if mutation in ("model", "baseline"):
+        body[mutation]["sha256"] = "f" * 64
+    elif mutation == "tree":
+        body["code_identity"]["tree"] = "f" * 40
+    elif mutation == "authorization":
+        body["authorizations"]["writers"] = True
+    else:
+        body["data_readiness_status"] = "READY"
+    doc["fingerprint"] = core.fingerprint(body)
+    with pytest.raises(ValueError):
+        manifests.verify_data(doc, Path.cwd(), "a" * 40)
+
+
+def test_manifest_expected_fingerprint_enforced(data_document):
+    with pytest.raises(ValueError):
+        manifests.verify_data(data_document, Path.cwd(), "a" * 40, expected="f" * 64)
+
+
+def test_candidate_missing_data_history(data_document, monkeypatch):
+    monkeypatch.setattr(manifests, "ancestry", lambda *a: {"data": {"status": "FAIL"}})
+    with pytest.raises(ValueError, match="history"):
+        manifests.verify_data(data_document, Path.cwd(), "c" * 40)
+
+
+def test_blob_tampering_detected(repository, tmp_path, monkeypatch):
+    original = core.tarfile.TarFile.extractall
+
+    def corrupt(self, target, **kwargs):
+        original(self, target, **kwargs)
+        (target / "source.py").write_bytes(b"substituted")
+
+    monkeypatch.setattr(core.tarfile.TarFile, "extractall", corrupt)
+    with pytest.raises(ValueError, match="exported bytes"):
+        core.export(*repository, tmp_path / "tampered-export")
+
+
+@pytest.mark.parametrize(
+    "actual,expected,status",
+    [
+        ("wrong", "frozen", "FAIL"),
+        ("frozen", "frozen", "PASS"),
+        (None, "frozen", "INCOMPLETE"),
+    ],
+)
+def test_frozen_identity_outcome(actual, expected, status):
+    assert core.match_status(actual, expected) == status
+
+
+def test_generated_report_sealing_leaves_sources_untouched(tmp_path):
+    source = tmp_path / "candidate"
+    source.mkdir()
+    raw = "Authorization: Bearer private_fixture_123456789\n"
+    (source / "test_fixture.txt").write_text(raw, encoding="utf-8")
+    (tmp_path / "report.txt").write_text(raw, encoding="utf-8")
+    assert core.seal_reports(tmp_path)["status"] == "PASS"
+    assert "private_fixture" not in (tmp_path / "report.txt").read_text()
+    assert (source / "test_fixture.txt").read_text() == raw
+
+
+@pytest.fixture
+def release(monkeypatch):
+    import importlib
+
+    monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "scripts"))
+    return importlib.import_module("ci_release")
+
+
+@pytest.mark.parametrize(
+    "host,port",
+    [
+        ("example.invalid", 443),
+        ("127.0.0.1", 5678),
+        ("127.0.0.1", 8600),
+        ("1.1.1.1", 443),
+    ],
+)
+def test_network_guard_denies_external_and_operational(release, tmp_path, host, port):
+    runner = core.ReleaseRunner(tmp_path, tmp_path / "evidence")
+    runner.env["PYTHONPATH"] = str(release.network_guard(tmp_path, 1))
+    code = (
+        "import socket\ntry:\n socket.create_connection("
+        + repr((host, port))
+        + ",timeout=1)\nexcept PermissionError:\n pass\nelse:\n raise SystemExit(8)"
+    )
+    assert runner.run("network_guard", [sys.executable, "-c", code])["status"] == "PASS"
+
+
+@pytest.mark.parametrize("host", [False, True])
+def test_docker_partial_creation_cleans_only_owned_resources(release, tmp_path, host):
+    import ci_local_docker
+
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "Dockerfile.analytics").write_text("FROM fixture\n", encoding="utf-8")
+
+    class FakeRunner(core.ReleaseRunner):
+        def run(self, name, command, required=True, **kwargs):
+            result = {
+                "name": name,
+                "status": "FAIL" if name == "docker_database" else "PASS",
+                "required": required,
+                "command": command,
+                "evidence": {},
+            }
+            self.steps.append(result)
+            return result
+
+    runner = FakeRunner(source, tmp_path / "evidence")
+    result = ci_local_docker.run_docker(
+        runner,
+        {"tree_sha": "a" * 40, "dirty_state": False},
+        True,
+        source_context=source,
+        host_callback=(lambda port: None) if host else None,
+    )
+    assert result == "BLOCKED"
+    cleanup = [step for step in runner.steps if step["name"].startswith("cleanup_")]
+    assert len(cleanup) == (3 if host else 2)
+    for step in cleanup:
+        assert "sapi-ci-" in step["command"][-1]
+        assert "-v" not in step["command"] and "volume" not in step["command"]
+
+
+def test_test_identity_binds_cases_not_duration(tmp_path):
+    report = tmp_path / "junit.xml"
+    report.write_text(
+        '<testsuite><testcase name="first" time="1"/></testsuite>', encoding="utf-8"
+    )
+    first = core.test_identity(report)
+    report.write_text(
+        '<testsuite><testcase name="first" time="2"/></testsuite>', encoding="utf-8"
+    )
+    assert core.test_identity(report) == first
+    report.write_text(
+        '<testsuite><testcase name="second" time="2"/></testsuite>', encoding="utf-8"
+    )
+    assert core.test_identity(report) != first
+
+
+@pytest.mark.parametrize(
+    "change", ["same", "candidate", "packages", "probe_failure", "empty"]
+)
+def test_environment_resume_contract(change):
+    receipt = {
+        "cache_identity": "candidate-tree-tooling-config",
+        "packages_sha256": "packages",
+    }
+    probe = {"status": "PASS", "evidence": {"sha256": "packages"}}
+    identity = receipt["cache_identity"]
+    if change == "candidate":
+        identity = "another-candidate"
+    elif change == "packages":
+        probe["evidence"]["sha256"] = "different"
+    elif change == "probe_failure":
+        probe["status"] = "FAIL"
+    elif change == "empty":
+        receipt = {}
+    assert core.environment_reusable(receipt, identity, probe) is (change == "same")

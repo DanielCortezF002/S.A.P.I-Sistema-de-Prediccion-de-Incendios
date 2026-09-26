@@ -11,12 +11,14 @@ from pathlib import Path
 import re
 import subprocess
 import tarfile
+import signal
+import xml.etree.ElementTree as ET
 from urllib.parse import quote, quote_plus
 
 try:
-    from .ci_local import clean_env, sanitize
+    from .ci_local import clean_env, sanitize, findings
 except ImportError:
-    from ci_local import clean_env, sanitize
+    from ci_local import clean_env, sanitize, findings
 
 STATUSES = {"PASS", "FAIL", "INCOMPLETE"}
 
@@ -70,10 +72,12 @@ def safe(value):
 def write_json(path, value):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    temporary = path.with_name(path.name + ".tmp")
+    temporary.write_text(
         json.dumps(safe(value), sort_keys=True, indent=2, allow_nan=False) + "\n",
         encoding="utf-8",
     )
+    os.replace(temporary, path)
 
 
 def git(root, *args):
@@ -159,11 +163,21 @@ class ReleaseRunner:
         self.env = clean_env()
         home = self.output / "isolated-home"
         home.mkdir(exist_ok=True)
+        temporary = self.output / "temporary"
+        temporary.mkdir(exist_ok=True)
         self.env.update(
             HOME=str(home),
             USERPROFILE=str(home),
             BLACK_CACHE_DIR=str(home / "black"),
             PIP_CONFIG_FILE=os.devnull,
+            PIP_CACHE_DIR=str(self.output.parent / "dependency-cache"),
+            TEMP=str(temporary),
+            TMP=str(temporary),
+            TMPDIR=str(temporary),
+            APPDATA=str(home / "appdata"),
+            LOCALAPPDATA=str(home / "localappdata"),
+            XDG_CACHE_HOME=str(home / "cache"),
+            XDG_CONFIG_HOME=str(home / "config"),
         )
         self.steps = []
 
@@ -172,20 +186,51 @@ class ReleaseRunner:
         import time
 
         elapsed = time.monotonic()
+        write_json(
+            self.output / "steps" / (name + ".json"),
+            {
+                "name": name,
+                "status": "INCOMPLETE",
+                "reason": "RUNNING",
+                "start": start,
+                "command": safe(command),
+                "required": required,
+            },
+        )
+        print(f"[{name}] START", flush=True)
         try:
-            process = subprocess.run(
+            process = subprocess.Popen(
                 command,
                 cwd=self.root,
                 env=env or self.env,
-                capture_output=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
                 text=True,
                 encoding="utf-8",
                 errors="replace",
-                timeout=timeout,
+                creationflags=(
+                    subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0
+                ),
+                start_new_session=os.name != "nt",
             )
+            try:
+                stdout, stderr = process.communicate(timeout=timeout)
+            except (subprocess.TimeoutExpired, KeyboardInterrupt):
+                # Kill only the process tree started by this exact Popen handle.
+                if process.poll() is None:
+                    if os.name == "nt":
+                        subprocess.run(
+                            ["taskkill", "/PID", str(process.pid), "/T", "/F"],
+                            capture_output=True,
+                            timeout=15,
+                        )
+                    else:
+                        os.killpg(process.pid, signal.SIGKILL)
+                process.communicate(timeout=15)
+                raise
             code, reason = process.returncode, "EXIT"
             status = "PASS" if code == 0 else "FAIL"
-            text = process.stdout + process.stderr
+            text = stdout + stderr
         except subprocess.TimeoutExpired:
             code, status, reason, text = (
                 None,
@@ -233,6 +278,61 @@ def aggregate(checks):
     ):
         return "INCOMPLETE"
     return "PASS"
+
+
+def match_status(actual, expected):
+    if actual is None:
+        return "INCOMPLETE"
+    return "PASS" if actual == expected else "FAIL"
+
+
+def test_identity(junit):
+    cases = []
+    for case in ET.parse(junit).getroot().iter("testcase"):
+        status = "PASS"
+        for tag, state in (
+            ("skipped", "SKIP"),
+            ("failure", "FAIL"),
+            ("error", "ERROR"),
+        ):
+            if case.find(tag) is not None:
+                status = state
+        cases.append((case.get("classname", ""), case.get("name", ""), status))
+    if not cases:
+        raise ValueError("No test identities in report")
+    return fingerprint(sorted(cases))
+
+
+def environment_reusable(receipt, cache_identity, probe):
+    return (
+        receipt.get("cache_identity") == cache_identity
+        and probe.get("status") == "PASS"
+        and probe.get("evidence", {}).get("sha256") is not None
+        and probe["evidence"]["sha256"] == receipt.get("packages_sha256")
+    )
+
+
+def seal_reports(output):
+    """Redact generated reports only, never candidate sources or environments."""
+    paths = [
+        p
+        for p in output.iterdir()
+        if p.is_file() and p.suffix in (".json", ".xml", ".txt")
+    ]
+    for directory, pattern in (("logs", "*.log"), ("steps", "*.json")):
+        paths.extend((output / directory).glob(pattern))
+    unresolved = []
+    for path in paths:
+        original = path.read_text(encoding="utf-8")
+        cleaned = redact(original)
+        if original != cleaned:
+            path.write_text(cleaned, encoding="utf-8")
+        unresolved.extend(findings(path.relative_to(output), cleaned))
+    return {
+        "status": "FAIL" if unresolved else "PASS",
+        "reports": len(paths),
+        "finding_rules": sorted({f["rule"] for f in unresolved}),
+    }
 
 
 def quality_delta(baseline, candidate, changed):
@@ -286,6 +386,39 @@ def stable_result(result):
 
 
 def validate_result(result):
+    required = (
+        "candidate",
+        "baseline",
+        "gate_identity",
+        "environment_identity",
+        "findings",
+        "tests",
+        "coverage",
+        "sentinels",
+        "component_manifests",
+        "authorization",
+        "remote_github_ci",
+    )
+    if any(key not in result for key in required):
+        raise ValueError("RC-ENV-RESULT: missing required result fields")
+    if (
+        result["authorization"] is not False
+        or result["remote_github_ci"] != "NOT VERIFIED"
+    ):
+        raise ValueError("RC-ENV-RESULT: unsupported authorization or remote claim")
+    for key in ("candidate", "baseline"):
+        value = result[key]
+        if not isinstance(value, dict) or (
+            value
+            and (
+                set(value) != {"sha", "tree"}
+                or any(
+                    not re.fullmatch(r"[0-9a-f]{40}", str(value[k]))
+                    for k in ("sha", "tree")
+                )
+            )
+        ):
+            raise ValueError("RC-ENV-RESULT: malformed code identity")
     if result.get("schema_version") != 1 or result.get("kind") != "RC_GATE_RESULT":
         raise ValueError("RC-ENV-RESULT: unsupported schema")
     if result.get("status") not in STATUSES or not isinstance(
@@ -294,6 +427,13 @@ def validate_result(result):
         raise ValueError("RC-ENV-RESULT: missing status/checks")
     if aggregate(result["checks"]) != result["status"]:
         raise ValueError("RC-ENV-RESULT: inconsistent aggregation")
+    if any(
+        not isinstance(c.get("id"), str)
+        or c.get("status") not in STATUSES
+        or not isinstance(c.get("required"), bool)
+        for c in result["checks"]
+    ):
+        raise ValueError("RC-ENV-RESULT: invalid check schema")
     if result.get("stable_result_fingerprint") != fingerprint(stable_result(result)):
         raise ValueError("RC-ENV-RESULT: fingerprint mismatch")
     return result
