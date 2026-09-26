@@ -175,6 +175,9 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
 
     # -------------------------------------------------------------------------
     # Step 8: Create synthetic DATA_PLANE_MANIFEST (authoritative nested schema v1)
+    # Readiness: PREPARED (the highest valid producer state — READY is not valid per
+    # producer contract at cd9c01408059961fb30e4b6321429a018e4a0df5).
+    # OLD ASSUMPTION CORRECTED: READY->PASS was incorrect; PREPARED->PREPARED is right.
     # -------------------------------------------------------------------------
     data_manifest_file = tmp_path / "DATA_PLANE_MANIFEST.json"
     _firms_sha = "a" * 40
@@ -183,7 +186,7 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     dm_identity = {
         "schema_version": 1,
         "kind": "DATA_PLANE_MANIFEST",
-        "data_readiness_status": "READY",
+        "data_readiness_status": "PREPARED",   # highest valid producer state
         "data_ready_for_scoring": "NOT_EVALUATED",
         "independent_approval": "PENDING",
         "authorizations": {
@@ -211,8 +214,10 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
             "cells": 50,
         },
         "baseline": {"sha256": "g" * 64, "status": "PASS"},
+        "source_evidence": {"sha256": "h" * 64, "status": "PASS"},  # required for PREPARED
         "expected_current": {"firms": "ABSENT", "dmc": "ABSENT"},
-        "current_state": {"firms": "ABSENT", "dmc": "ABSENT"},
+        "current_state": {"firms": "ABSENT", "dmc": "ABSENT"},   # must match expected_current
+        "findings": [],                                            # must be empty for PREPARED
     }
     dm_fp = compute_data_manifest_fingerprint(dm_identity)
     dm_data = {
@@ -226,8 +231,9 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     data_manifest_file.write_text(json.dumps(dm_data, indent=2), encoding="utf-8")
 
     dm_ver = verify_data_plane_manifest(data_manifest_file, expected_code_sha=code_sha)
-    assert dm_ver["status"] == "PASS", f"Data manifest verification failed: {dm_ver['findings']}"
-    assert dm_ver["ready"] is True
+    assert dm_ver["status"] == "PREPARED", f"Data manifest verification failed: {dm_ver['findings']}"
+    assert dm_ver["prepared"] is True   # PREPARED = producer-valid, data staged
+    assert dm_ver["ready"] is False     # ready is always False — no producer READY state
 
     # -------------------------------------------------------------------------
     # Step 9: Attempt2 Operator init
@@ -279,7 +285,12 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
         "credentials": {"credentials": []},
         "workspace_safety": {"status": "PASS", "overall_status": "PASS"},
         "workspace_manifest": {"status": "PASS", "fingerprint": ws_ver["manifest_fingerprint"]},
-        "data_plane": {"status": "PASS", "ready": True, "manifest_fingerprint": dm_fp},
+        "data_plane": {
+            "status": "PREPARED",
+            "ready": False,   # always False — no producer READY state
+            "prepared": True,
+            "manifest_fingerprint": dm_fp,
+        },
         "quiescence": {
             "status": "QUIESCENT",
             "n8n": {"status": "STOPPED"},

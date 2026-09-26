@@ -222,7 +222,7 @@ def test_data_manifest_tampered_blocked(tmp_path: Path):
     identity = {
         "schema_version": 1,
         "kind": "DATA_PLANE_MANIFEST",
-        "data_readiness_status": "READY",
+        "data_readiness_status": "PREPARED",   # READY is not a valid producer value
         "data_ready_for_scoring": "NOT_EVALUATED",
         "independent_approval": "PENDING",
         "authorizations": {"attempt2": False, "writers": False, "telegram": False, "schedule": False},
@@ -235,8 +235,10 @@ def test_data_manifest_tampered_blocked(tmp_path: Path):
         "model": {"sha256": "f" * 64, "status": "PASS"},
         "topography": {"table_sha256": "g" * 64, "grid_sha256": "h" * 64, "status": "PASS", "cells": 50},
         "baseline": {"sha256": "i" * 64, "status": "PASS"},
+        "source_evidence": {"sha256": "j" * 64, "status": "PASS"},
         "expected_current": {"firms": "ABSENT", "dmc": "ABSENT"},
         "current_state": {"firms": "ABSENT", "dmc": "ABSENT"},
+        "findings": [],
     }
     data = {
         "schema_version": 1,
