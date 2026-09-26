@@ -30,5 +30,20 @@
       "B3"
     ],
     "open": []
+  },
+  "findings": {
+    "resolved": [
+      "ADAPTER-AUTH-1",
+      "NEW-1",
+      "SEM-4"
+    ],
+    "open": [
+      "ADAPTER-ANCHOR-1",
+      "ADAPTER-GAP-1",
+      "NEW-2",
+      "NEW-3",
+      "NEW-5",
+      "PORT-1"
+    ]
   }
 }

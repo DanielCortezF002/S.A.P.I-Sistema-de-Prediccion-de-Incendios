@@ -45,6 +45,7 @@ FROZEN_PREFIXES = (
 SUITES: dict[str, list[str]] = {
     "A_adapter": [
         "tests/test_convergence_data_adapter_contract.py",
+        "tests/test_data_plane_manifest_adapter.py",
         "tests/test_operations_plane_failure_matrix.py",
         "tests/test_operations_plane_rc1_e2e.py",
     ],
@@ -66,6 +67,7 @@ SUITES: dict[str, list[str]] = {
         "tests/test_attempt2_operator_phase3.py",
         "tests/test_attempt2_operator_phase4.py",
         "tests/test_attempt2_operator_unit.py",
+        "tests/test_convergence_ops_fixes.py",
         "tests/test_operational_workspace.py",
         "tests/test_workspace_safety.py",
     ],
@@ -438,6 +440,8 @@ def fingerprint_v3(
         "output_manifest_fingerprint": lanes["output"]["manifest_fingerprint"],
         "resolved_blockers": sorted(lanes["blockers"]["resolved"]),
         "open_blockers": sorted(lanes["blockers"]["open"]),
+        "resolved_findings": sorted(lanes.get("findings", {}).get("resolved", [])),
+        "open_findings": sorted(lanes.get("findings", {}).get("open", [])),
         "test_summaries": sorted(
             (summary_identity(r) for r in test_results), key=lambda r: r["suite"]
         ),
