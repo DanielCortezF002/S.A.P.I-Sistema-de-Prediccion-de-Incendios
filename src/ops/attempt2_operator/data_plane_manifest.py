@@ -300,6 +300,12 @@ def verify_data_plane_manifest(
                     "DM-009", "MISSING_AUTH_FLAG", "FAIL",
                     f"identity.authorizations.{flag} is missing (fail-closed)",
                 ))
+            elif auth[flag] is not False:
+                findings.append(_finding(
+                    "DM-009", "AUTHORIZATION_CLAIMED", "FAIL",
+                    f"identity.authorizations.{flag} must be false: a data manifest "
+                    "never authorizes (fail-closed)",
+                ))
 
     # ------------------------------------------------------------------ #
     # 8. Readiness status                                                  #
