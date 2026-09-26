@@ -3,7 +3,7 @@
 SYNTHETIC only: temp stores (tests/test_scoring_inputs.env), real Model D, no network,
 no real workspace/CURRENT/writers. The Data manifest step uses the Operations consumer's
 existing synthetic flat contract because the reserved Data->Operations adapter has not
-landed; the real Data manifest is exercised only as the PRE-ADAPTER negative control.
+landed; the real Data manifest handshake is test_convergence_data_adapter_contract.py.
 """
 
 from __future__ import annotations
@@ -30,26 +30,18 @@ from src.ops.attempt2_operator.output_plane_manifest import (
 )
 from src.ops.attempt2_operator.data_plane_manifest import (
     compute_data_manifest_fingerprint,
-    verify_data_plane_manifest,
 )
 from src.ops.attempt2_operator.operator import Attempt2Operator
 from src.ops.attempt2_operator.states import Attempt2State
-from src.ops.data_readiness import verify_manifest as data_producer_verify
 from src.output import accepted_run as ar
 from src.output import readiness as rd
 from test_convergence_output_acceptance import REAL_OUTPUT_FP, REAL_OUTPUT_MANIFEST
 from test_scoring_inputs import env, publish_firms  # noqa: F401 (fixture reuse)
 
 REPO = Path(__file__).resolve().parents[1]
-REAL_DATA_MANIFEST = (
-    REPO.parent
-    / "SAPI-71-evidence"
-    / "data-plane-rc1-2026-09-25"
-    / "DATA_PLANE_MANIFEST.json"
-)
-REAL_DATA_FP = "5a6484fc4b047751fa6cec8e29a377c0ed96a19e1873ec25539745bca32a1ae0"
 MODEL_SHA = "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
 EXPECTED_IDS = {c["cell_id"] for c in all_cells()}
+RUN_ID = "SAPI-ATTEMPT2-CONVERGENCE-SYNTHETIC"
 
 
 @pytest.fixture
@@ -208,11 +200,11 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
     plane_path, plane_fp = _plane(tmp_path)
     run_path, _ = ar.write_artifact(_artifact(body), tmp_path / "runs")
     record = oa.build_acceptance_record(
-        plane_path, run_path, expected_output_fingerprint=plane_fp
+        plane_path, run_path, expected_output_fingerprint=plane_fp, run_id=RUN_ID
     )
     record_path, _ = oa.write_record(record, tmp_path / "acceptance")
 
-    run_id = "SAPI-ATTEMPT2-CONVERGENCE-SYNTHETIC"
+    run_id = RUN_ID
     op = Attempt2Operator.init_run(
         evidence_root=tmp_path / "evidence",
         dry_run=True,
@@ -344,7 +336,9 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
         )["result"]
         == "PASS"
     )
+    assert oa.verify_run_binding(record_path, op.run.root) == []
     assert op.accept_output_manifest(record_path)["status"] == "PASS"
+    assert oa.verify_run_binding(record_path, op.run.root) == []
     states.append(op.run.current_state())
     step(op.advance)
     assert (
@@ -387,16 +381,7 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
 # --- Phase 18: convergence failure matrix --------------------------------------------------------
 
 
-def test_data_manifest_pre_adapter_negative_control():
-    if not REAL_DATA_MANIFEST.is_file():
-        pytest.skip("real Data manifest absent")
-    raw = json.loads(REAL_DATA_MANIFEST.read_bytes())
-    assert data_producer_verify(raw) is True and raw["fingerprint"] == REAL_DATA_FP
-    verdict = verify_data_plane_manifest(REAL_DATA_MANIFEST)
-    assert (
-        verdict["status"] == "FAIL" and verdict["ready"] is False
-    )  # adapter not landed
-    assert {f["id"] for f in verdict["findings"]} >= {"DM-005"}
+# The real Data manifest handshake lives in test_convergence_data_adapter_contract.py.
 
 
 @pytest.mark.parametrize(
@@ -425,7 +410,7 @@ def test_bridge_output_disagreement_rejected(scored, tmp_path):
     plane_path, plane_fp = _plane(tmp_path)
     run_path, _ = ar.write_artifact(_artifact(body), tmp_path / "runs")
     record = oa.build_acceptance_record(
-        plane_path, run_path, expected_output_fingerprint=plane_fp
+        plane_path, run_path, expected_output_fingerprint=plane_fp, run_id=RUN_ID
     )
     bad = dict(
         record, notification_identity="f" * 64

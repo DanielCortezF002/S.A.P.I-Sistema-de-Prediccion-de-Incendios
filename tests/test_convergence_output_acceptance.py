@@ -34,6 +34,7 @@ REAL_OUTPUT_MANIFEST = (
     / "OUTPUT_PLANE_MANIFEST.json"
 )
 REAL_OUTPUT_FP = "9441f7178805f48ab6d7f563b8bd5c70e555ba621bfb6779ba2360cec61b01a3"
+RUN_ID = "SAPI-ATTEMPT2-CONVERGENCE-TEST"
 needs_real = pytest.mark.skipif(
     not REAL_OUTPUT_MANIFEST.is_file(), reason="real Output manifest absent"
 )
@@ -98,6 +99,7 @@ def record(plane, accepted, tmp_path):
         plane_path,
         run_path,
         expected_output_fingerprint=plane_fp,
+        run_id=RUN_ID,
         expected_artifact_fingerprint=doc["artifact_fingerprint"],
     )
     path, _ = oa.write_record(rec, tmp_path / "acceptance")
@@ -198,7 +200,18 @@ def test_cli_build_and_verify(plane, accepted, tmp_path, capsys):
         plane_fp,
     ]
     assert (
-        oa.main(["build", *common, "--accepted-run", str(run_path), "--out", str(out)])
+        oa.main(
+            [
+                "build",
+                *common,
+                "--run-id",
+                RUN_ID,
+                "--accepted-run",
+                str(run_path),
+                "--out",
+                str(out),
+            ]
+        )
         == 0
     )
     built = json.loads(capsys.readouterr().out)
@@ -208,6 +221,8 @@ def test_cli_build_and_verify(plane, accepted, tmp_path, capsys):
             [
                 "build",
                 *common,
+                "--run-id",
+                RUN_ID,
                 "--accepted-run",
                 str(run_path),
                 "--out",
@@ -260,7 +275,7 @@ def test_plane_manifest_tampering_rejected(plane, accepted, tmp_path, name):
     path = _mutated_plane(plane, tmp_path, mutate, refp)
     with pytest.raises(ar.ArtifactError):
         oa.build_acceptance_record(
-            path, accepted[0], expected_output_fingerprint=plane[1]
+            path, accepted[0], expected_output_fingerprint=plane[1], run_id=RUN_ID
         )
 
 
@@ -343,6 +358,7 @@ def test_replay_live_mismatch_rejected_with_anchor(plane, accepted, record, tmp_
             plane[0],
             alt,
             expected_output_fingerprint=plane[1],
+            run_id=RUN_ID,
             expected_artifact_fingerprint=doc["artifact_fingerprint"],
         )
 

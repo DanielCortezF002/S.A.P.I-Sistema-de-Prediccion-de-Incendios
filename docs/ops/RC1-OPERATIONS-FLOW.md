@@ -182,7 +182,7 @@ State transitions: `PREFLIGHT_READY` -> `ATTEMPT2_AUTHORIZATION_REQUIRED` -> `AT
 3. Build the per-run acceptance record in the Operations consumer contract. It is built
    from the persistent Output plane manifest (anchored fingerprint) and that artifact:
    ```bash
-   python -m src.convergence.output_acceptance build \
+   python -m src.convergence.output_acceptance build --run-id <RUN> \
        --output-manifest <OUTPUT_PLANE_MANIFEST.json> --expect-output-fingerprint <fp> \
        --accepted-run <accepted-run.json> --expect-artifact-fingerprint <fp> --out <run dir>
    ```
@@ -190,13 +190,20 @@ State transitions: `PREFLIGHT_READY` -> `ATTEMPT2_AUTHORIZATION_REQUIRED` -> `AT
    per-run record. The Operations consumer rejects it if it is passed directly. For the same
    reason, do not pass it to `init --output-manifest`: `init` records the fingerprint without
    enforcing verification.
-4. Bind the record while importing the bridge result (there is no separate `accept-output`
+4. Check that the record belongs to this run and to the bridge result being imported
+   (another run, another score or an older score is rejected):
+   ```bash
+   python -m src.convergence.output_acceptance verify <run dir>/OUTPUT-PLANE-MANIFEST.json \
+       --output-manifest <OUTPUT_PLANE_MANIFEST.json> --expect-output-fingerprint <fp> \
+       --run <RUN_DIR> --bridge bridge.json
+   ```
+5. Bind the record while importing the bridge result (there is no separate `accept-output`
    command):
    ```bash
    python -m src.ops.attempt2_operator import-result --run <RUN> --phase bridge \
        --from bridge.json --output-manifest <run dir>/OUTPUT-PLANE-MANIFEST.json
    ```
-5. Step through manual review of downstream orchestrations (`N8N_MANUAL_READY`).
+6. Step through manual review of downstream orchestrations (`N8N_MANUAL_READY`).
 
 ### Step 12: Final Operational Acceptance
 1. Operator advances to `ACCEPTANCE_READY`.
