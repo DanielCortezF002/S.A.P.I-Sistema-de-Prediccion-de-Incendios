@@ -218,17 +218,33 @@ def test_data_manifest_missing_when_required_incomplete():
 
 
 def test_data_manifest_tampered_blocked(tmp_path: Path):
-    manifest_file = tmp_path / "DATA-PLANE-MANIFEST.json"
+    manifest_file = tmp_path / "DATA_PLANE_MANIFEST.json"
+    identity = {
+        "schema_version": 1,
+        "kind": "DATA_PLANE_MANIFEST",
+        "data_readiness_status": "READY",
+        "data_ready_for_scoring": "NOT_EVALUATED",
+        "independent_approval": "PENDING",
+        "authorizations": {"attempt2": False, "writers": False, "telegram": False, "schedule": False},
+        "code_identity": {"sha": "a" * 40, "tree": "b" * 40, "clean": True, "status": "PASS"},
+        "components": {
+            "firms": {"sha": "c" * 40, "files": [], "status": "PASS"},
+            "dmc": {"sha": "d" * 40, "files": [], "status": "PASS"},
+            "scoring_inputs": {"sha": "e" * 40, "files": [], "status": "PASS"},
+        },
+        "model": {"sha256": "f" * 64, "status": "PASS"},
+        "topography": {"table_sha256": "g" * 64, "grid_sha256": "h" * 64, "status": "PASS", "cells": 50},
+        "baseline": {"sha256": "i" * 64, "status": "PASS"},
+        "expected_current": {"firms": "ABSENT", "dmc": "ABSENT"},
+        "current_state": {"firms": "ABSENT", "dmc": "ABSENT"},
+    }
     data = {
         "schema_version": 1,
-        "readiness_status": "READY",
-        "firms_component_sha": "a" * 40,
-        "dmc_component_sha": "b" * 40,
-        "model_sha": "c" * 40,
-        "topography_identity": "dem",
-        "baseline_identity": "base",
-        "expected_current_state": {"firms": "ABSENT", "dmc": "ABSENT"},
-        "manifest_fingerprint": "TAMPERED_FINGERPRINT_HASH",
+        "created_at": "2026-09-25T19:00:00+00:00",
+        "identity": identity,
+        "fingerprint": "TAMPERED_FINGERPRINT_HASH_THAT_IS_WRONG",  # intentionally wrong
+        "operational_roots": {"workspace": "/fake", "code": "/fake"},
+        "observation": {"start": "2026-09-25T19:00:00+00:00", "end": "2026-09-25T19:00:01+00:00"},
     }
     manifest_file.write_text(json.dumps(data), encoding="utf-8")
     res = verify_data_plane_manifest(manifest_file)
