@@ -22,6 +22,7 @@ from fastapi.testclient import TestClient
 
 import tools.n8n_bridge.app as bridge_app
 from app.utils import score_contract as sc
+from src.convergence import data_handshake as dh
 from src.convergence import output_acceptance as oa
 from src.geo.grid import all_cells
 from src.inference import prototype_service as svc
@@ -30,11 +31,15 @@ from src.ops.attempt2_operator.output_plane_manifest import (
 )
 from src.ops.attempt2_operator.data_plane_manifest import (
     compute_data_manifest_fingerprint,
+    verify_data_plane_manifest,
 )
 from src.ops.attempt2_operator.operator import Attempt2Operator
 from src.ops.attempt2_operator.states import Attempt2State
 from src.output import accepted_run as ar
 from src.output import readiness as rd
+from test_convergence_data_adapter_contract import (
+    _synthetic_manifest as authoritative_data_manifest,
+)
 from test_convergence_output_acceptance import REAL_OUTPUT_FP, REAL_OUTPUT_MANIFEST
 from test_scoring_inputs import env, publish_firms  # noqa: F401 (fixture reuse)
 
@@ -192,9 +197,8 @@ def _flat_synthetic_data_manifest(tmp_path: Path) -> Path:
     return path
 
 
-def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
-    scored, tmp_path
-):
+def _drive_attempt2(scored, tmp_path, data_manifest: Path, data_plane: dict):
+    """NEW → ACCEPTED over synthetic imports; the Data manifest and verdict are injected."""
     result, inputs, pointer, body = scored
     code_sha, tree_sha = "c" * 40, "d" * 40
     plane_path, plane_fp = _plane(tmp_path)
@@ -211,7 +215,7 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
         run_id=run_id,
         synthetic_identity={"code_sha": code_sha, "tree_sha": tree_sha},
         expected_code_sha=code_sha,
-        data_plane_manifest=_flat_synthetic_data_manifest(tmp_path),
+        data_plane_manifest=data_manifest,
     )
     states = [op.run.current_state()]
 
@@ -241,7 +245,7 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
         "credentials": {"credentials": []},
         "workspace_safety": {"status": "PASS", "overall_status": "PASS"},
         "workspace_manifest": {"status": "PASS", "fingerprint": "w" * 64},
-        "data_plane": {"status": "PASS", "ready": True},
+        "data_plane": data_plane,
         "quiescence": {
             "status": "QUIESCENT",
             "n8n": {"status": "STOPPED"},
@@ -259,6 +263,8 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
     assert step(op.preflight, snapshot=snapshot)["ready_for_authorization"] is True
     step(op.advance)
     assert op.next_action()["gate"] == "ATTEMPT2_AUTHORIZATION"
+    # Data readiness never grants a human gate.
+    assert not any(op.run.read_authorizations()["gates"].values())
     step(op.authorize, "ATTEMPT2_AUTHORIZATION", actor="convergence-synthetic")
     step(op.advance)
     step(op.authorize, "FIRMS_WRITER_AUTHORIZATION", actor="convergence-synthetic")
@@ -376,6 +382,41 @@ def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
     assert ctx["output_plane_manifest_fingerprint"] == record["manifest_fingerprint"]
     (tmp_path / "transitions.json").write_text(json.dumps(names), encoding="utf-8")
     print("TRANSITIONS", json.dumps(names))
+    return op
+
+
+def test_attempt2_state_machine_reaches_accepted_with_real_output_acceptance(
+    scored, tmp_path
+):
+    """PRE-ADAPTER: the Operations consumer's existing flat synthetic Data contract."""
+    _drive_attempt2(
+        scored,
+        tmp_path,
+        _flat_synthetic_data_manifest(tmp_path),
+        {"status": "PASS", "ready": True},
+    )
+
+
+@pytest.mark.skipif(
+    not dh.adapter_landed(dh.load_lanes()),
+    reason="POST-ADAPTER: runs once the lanes lock records the Operations adapter SHA",
+)
+def test_post_adapter_authoritative_data_manifest_reaches_accepted(scored, tmp_path):
+    """Authoritative nested Data manifest → Operations → preflight → gates → ACCEPTED."""
+    doc = authoritative_data_manifest()
+    path = tmp_path / "DATA_PLANE_MANIFEST.json"
+    path.write_text(json.dumps(doc, ensure_ascii=True), encoding="utf-8")
+    verdict = verify_data_plane_manifest(path)
+    assert verdict["status"] == "PASS" and verdict["ready"] is True
+    assert verdict["manifest_fingerprint"] == doc["fingerprint"]
+    assert verdict["readiness_status"] == "PREPARED"
+    assert verdict["authorizations"] == {k: False for k in dh.AUTHORIZATION_NAMES}
+    op = _drive_attempt2(scored, tmp_path, path, verdict)
+    assert op.status()["data_plane_manifest_fingerprint"] == doc["fingerprint"]
+    ctx = json.loads(
+        (op.run.root / "identity" / "rc1_execution_context.json").read_text("utf-8")
+    )
+    assert ctx["data_plane_manifest_fingerprint"] == doc["fingerprint"]
 
 
 # --- Phase 18: convergence failure matrix --------------------------------------------------------
