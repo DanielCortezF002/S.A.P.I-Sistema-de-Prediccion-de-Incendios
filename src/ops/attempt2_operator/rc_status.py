@@ -71,6 +71,9 @@ def collect_rc_status(
     )
     dm_status = dm_res.get("status", "NOT_AVAILABLE")
     dm_ready = dm_status == "PASS"
+    # PREPARED = valid schema, data staged, not yet READY for scoring.
+    # Accepted for informational purposes; does not satisfy all_prerequisites_ready.
+    dm_accepted = dm_status in ("PASS", "PREPARED")
 
     # 4. Quiescence
     runtime = collect_runtime()
@@ -136,11 +139,17 @@ def collect_rc_status(
                 "code": finding_id,
                 "next": "Achieve quiescence: ensure n8n container is STOPPED, no active refresh writers, no stale locks.",
             }
-    elif not dm_ready:
+    elif not dm_ready and not dm_accepted:
         one_action = {
             "priority": 4,
             "code": "AWAIT_DATA_PLANE_MANIFEST",
             "next": "Provide verified DATA_PLANE_MANIFEST from Astra: --data-readiness-manifest <path>.",
+        }
+    elif not dm_ready and dm_accepted:
+        one_action = {
+            "priority": 4,
+            "code": "AWAIT_DATA_PLANE_READY",
+            "next": f"Data plane manifest accepted (status={dm_status}). Await data_readiness_status=READY before initializing Attempt 2.",
         }
     else:
         one_action = {
@@ -179,8 +188,13 @@ def collect_rc_status(
             },
             "data_manifest": {
                 "ready": dm_ready,
+                "accepted": dm_accepted,
                 "status": dm_status,
                 "manifest_path": str(data_plane_manifest_path) if data_plane_manifest_path else None,
+                "data_readiness_status": dm_res.get("data_readiness_status"),
+                "writers_authorized": dm_res.get("writers_authorized", False),
+                "attempt2_authorized": dm_res.get("attempt2_authorized", False),
+                "fingerprint_match": dm_res.get("fingerprint_match", False),
             },
             "quiescence": {
                 "ready": q_ready,

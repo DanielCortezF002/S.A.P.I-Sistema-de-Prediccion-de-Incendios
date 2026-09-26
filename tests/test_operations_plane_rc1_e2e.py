@@ -174,25 +174,59 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     assert guard_res["overall_status"] == "PASS", f"Guard failed: {guard_res.get('failures')}"
 
     # -------------------------------------------------------------------------
-    # Step 8: Create synthetic DATA_PLANE_MANIFEST PASS
+    # Step 8: Create synthetic DATA_PLANE_MANIFEST (authoritative nested schema v1)
     # -------------------------------------------------------------------------
-    data_manifest_file = tmp_path / "DATA-PLANE-MANIFEST.json"
+    data_manifest_file = tmp_path / "DATA_PLANE_MANIFEST.json"
+    _firms_sha = "a" * 40
+    _dmc_sha = "b" * 40
+    _model_sha = "c" * 40
+    dm_identity = {
+        "schema_version": 1,
+        "kind": "DATA_PLANE_MANIFEST",
+        "data_readiness_status": "READY",
+        "data_ready_for_scoring": "NOT_EVALUATED",
+        "independent_approval": "PENDING",
+        "authorizations": {
+            "attempt2": False,
+            "writers": False,
+            "telegram": False,
+            "schedule": False,
+        },
+        "code_identity": {
+            "sha": code_sha,
+            "tree": tree_sha,
+            "clean": True,
+            "status": "PASS",
+        },
+        "components": {
+            "firms": {"sha": _firms_sha, "files": [], "status": "PASS"},
+            "dmc": {"sha": _dmc_sha, "files": [], "status": "PASS"},
+            "scoring_inputs": {"sha": "d" * 40, "files": [], "status": "PASS"},
+        },
+        "model": {"sha256": _model_sha, "status": "PASS"},
+        "topography": {
+            "table_sha256": "e" * 64,
+            "grid_sha256": "f" * 64,
+            "status": "PASS",
+            "cells": 50,
+        },
+        "baseline": {"sha256": "g" * 64, "status": "PASS"},
+        "expected_current": {"firms": "ABSENT", "dmc": "ABSENT"},
+        "current_state": {"firms": "ABSENT", "dmc": "ABSENT"},
+    }
+    dm_fp = compute_data_manifest_fingerprint(dm_identity)
     dm_data = {
         "schema_version": 1,
-        "readiness_status": "READY",
-        "firms_component_sha": "a" * 40,
-        "dmc_component_sha": "b" * 40,
-        "model_sha": "c" * 40,
-        "topography_identity": "synthetic-dem-v1",
-        "baseline_identity": "synthetic-baseline-v1",
-        "expected_current_state": {"firms": "ABSENT", "dmc": "ABSENT"},
+        "created_at": "2026-09-25T19:00:00+00:00",
+        "identity": dm_identity,
+        "fingerprint": dm_fp,
+        "operational_roots": {"workspace": str(dest_workspace), "code": str(dest_workspace)},
+        "observation": {"start": "2026-09-25T19:00:00+00:00", "end": "2026-09-25T19:00:01+00:00"},
     }
-    dm_fp = compute_data_manifest_fingerprint(dm_data)
-    dm_data["manifest_fingerprint"] = dm_fp
     data_manifest_file.write_text(json.dumps(dm_data, indent=2), encoding="utf-8")
 
     dm_ver = verify_data_plane_manifest(data_manifest_file, expected_code_sha=code_sha)
-    assert dm_ver["status"] == "PASS"
+    assert dm_ver["status"] == "PASS", f"Data manifest verification failed: {dm_ver['findings']}"
     assert dm_ver["ready"] is True
 
     # -------------------------------------------------------------------------
