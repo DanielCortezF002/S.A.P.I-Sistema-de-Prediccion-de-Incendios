@@ -1,0 +1,30 @@
+{
+  "schema": "sapi-rc1-convergence-lanes-v1",
+  "candidate_branch": "claude/rc1-convergence-prep",
+  "base": {
+    "sha": "7ef8d3c9f7ecb4758718255b8e48d6468f8613ea",
+    "tree": "9825a302591fc5a83bef523497abc9034e2f811b"
+  },
+  "data": {
+    "sha": "cd9c01408059961fb30e4b6321429a018e4a0df5",
+    "manifest_fingerprint": "5a6484fc4b047751fa6cec8e29a377c0ed96a19e1873ec25539745bca32a1ae0",
+    "firms_component_sha": "5a92419c7b1a2463d7870556658abd11087676f4",
+    "dmc_component_sha": "a4bab186493ea9fe747d5904706a803d267d4ed4",
+    "model_sha256": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f",
+    "baseline_sha256": "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271"
+  },
+  "output": {
+    "sha": "dd96a39372146cbbec2f621773582a06de815a07",
+    "tree": "3fa873a4c1aa4dc9391590abebc7892d0f23db3e",
+    "manifest_fingerprint": "9441f7178805f48ab6d7f563b8bd5c70e555ba621bfb6779ba2360cec61b01a3"
+  },
+  "operations": {
+    "branch": "antigravity/operations-rc1",
+    "base_sha": "848272f704dc06c1147dd2499d4ac1a8a0df08c3",
+    "adapter_sha": null
+  },
+  "blockers": {
+    "resolved": ["B2", "B3"],
+    "open": ["B1"]
+  }
+}
