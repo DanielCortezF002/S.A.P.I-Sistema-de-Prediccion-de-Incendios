@@ -35,6 +35,8 @@ from ci_release_core import (
     seal_reports,
     test_identity,
     environment_reusable,
+    handshake_status,
+    attach_git_metadata,
 )
 from ci_release_manifests import ancestry, verify
 
@@ -263,6 +265,9 @@ def run_gate(args):
         )
         source, base = out / "candidate", out / "baseline"
         result["source"] = export(ROOT, args.candidate_sha, source)
+        result["source"]["git_metadata"] = attach_git_metadata(
+            ROOT, args.candidate_sha, source
+        )
         export(ROOT, args.baseline_sha, base)
         docker_source = out / "docker-source"
         shutil.copytree(source, docker_source)
@@ -471,10 +476,9 @@ def run_gate(args):
             result["handshake"] = worker(
                 "handshake", source, python, (args.data_manifest,)
             )
-            status = result["handshake"].get("status")
             check(
                 "RC-MANIFEST-DATA-CONSUMER",
-                "PASS" if status in ("PASS", "NOT_APPLICABLE") else "INCOMPLETE",
+                handshake_status(result["handshake"]),
                 "Real Data producer manifest acceptance by candidate Operations consumer",
             )
         parser = configparser.ConfigParser()
@@ -639,6 +643,7 @@ def run_gate(args):
         "RC-SCI-RANKING",
         "RC-MANIFEST-DATA",
         "RC-MANIFEST-OUTPUT",
+        "RC-CODE-ANCESTRY-OPERATIONS",
         "RC-TEST-HOST",
         "RC-COV-HOST",
         "RC-DOCKER-RUNTIME",
@@ -689,12 +694,18 @@ def run_gate(args):
             "authorization": False,
         },
     )
+    counts = ", ".join(
+        f"{state}={sum(c['status'] == state for c in result['checks'])}"
+        for state in ("PASS", "FAIL", "INCOMPLETE")
+    )
     summary = (
         f"SAPI RC1 LOCAL RELEASE GATE\nCandidate: {args.candidate_sha}\n"
+        f"Tree: {result['candidate'].get('tree', 'NOT_AVAILABLE')}\n"
         f"Status: {result['status']}\n"
+        f"Checks: {counts}\n"
         f"Findings: {', '.join(f['id'] for f in result['findings']) or 'none'}\n"
         f"Evidence: {out}\nFingerprint: {result['stable_result_fingerprint']}\n"
-        "Remote GitHub CI: NOT VERIFIED\nAuthorization: NONE\n"
+        "Remote GitHub CI: NOT VERIFIED\nOperational authorization: NONE\n"
     )
     summary = redact(summary)
     (out / "summary.txt").write_text(summary, encoding="utf-8")

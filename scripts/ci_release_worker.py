@@ -3,6 +3,7 @@
 import hashlib
 import importlib
 import importlib.metadata
+import inspect
 import json
 from pathlib import Path
 import subprocess
@@ -144,9 +145,19 @@ def handshake(root, manifest):
         return {"status": "NOT_APPLICABLE"}
     from src.ops.attempt2_operator.data_plane_manifest import verify_data_plane_manifest
 
-    result = verify_data_plane_manifest(manifest)
+    document = json.loads(manifest.read_bytes())
+    kwargs = {}
+    if "expected_code_sha" in inspect.signature(verify_data_plane_manifest).parameters:
+        kwargs["expected_code_sha"] = (
+            document.get("identity", {}).get("code_identity", {}).get("sha")
+        )
+    result = verify_data_plane_manifest(manifest, **kwargs)
     return {
         "status": result.get("status", "UNKNOWN"),
+        "prepared": result.get("prepared"),
+        "ready": result.get("ready"),
+        "writers_authorized": result.get("writers_authorized"),
+        "attempt2_authorized": result.get("attempt2_authorized"),
         "finding_ids": sorted(
             {f.get("id", "UNKNOWN") for f in result.get("findings", [])}
         ),

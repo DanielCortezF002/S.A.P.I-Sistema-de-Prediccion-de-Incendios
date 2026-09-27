@@ -271,6 +271,19 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
         ]
         if runner.run("docker_test_container", command, required)["status"] != "PASS":
             return "BLOCKED"
+        if source_context is not None and (source_context / ".git").is_dir():
+            metadata = runner.run(
+                "docker_git_metadata",
+                [
+                    "docker",
+                    "cp",
+                    str(source_context / ".git"),
+                    application + ":/app/.git",
+                ],
+                required,
+            )
+            if metadata["status"] != "PASS":
+                return "BLOCKED"
         if (
             source_context is not None
             and (source_context.parent / "SAPI-71-evidence").is_dir()

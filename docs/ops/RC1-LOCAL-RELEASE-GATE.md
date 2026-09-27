@@ -21,6 +21,8 @@ The frozen Data/Output paths and expected fingerprints above are CLI defaults;
 `python scripts/ci_local.py gate --candidate-sha <SHA>` runs the complete gate.
 Operations has no required symmetric manifest; its updated SHA is an explicit
 input. Never assume the current pre-adapter Operations SHA is the final one.
+Without an explicit `--require-lane operations=<SHA>`, its required ancestry
+check remains INCOMPLETE; producer-manifest absence is not treated as approval.
 Missing required plane evidence is never verified: a supplied missing path fails
 validation; an omitted input is incomplete. Both manifests are required for a
 combined release evaluation. A Data-only candidate can therefore be tested but
@@ -44,6 +46,13 @@ committed; pip freeze records resolution. No transitive lock is invented.
 
 Sources come from Git archive with line conversion disabled; every exported
 blob is independently checked against Git. Links/submodules are rejected.
+The candidate also receives a self-contained shallow Git object pack and exact
+HEAD/index, without remotes, alternates, links or a checkout operation. This
+supports Git-aware tests without inventing a replacement commit. Ancestry is
+verified independently against the authoritative repository object database.
+Windows subprocesses receive `core.longpaths=true` through process environment,
+without modifying user Git configuration. Docker receives the same isolated
+metadata after image creation, since the committed `.dockerignore` excludes it.
 Candidate and baseline run under a fresh isolated venv. Runtime Python socket
 auditing rejects external DNS/connections and operational local ports, allowing
 the owned PostGIS port and ephemeral loopback fixtures. This is a test guard,
@@ -98,6 +107,9 @@ The pre-adapter Data consumer mismatch must remain observable. The independent
 Data producer verifier uses canonical `identity`; the Operations handshake
 executes the candidate's read-only consumer with the real manifest. A consumer
 failure is a compatibility blocker, not permission to rewrite the candidate.
+The landed consumer's `PREPARED` result is accepted only as contract evidence,
+with `prepared=true`, `ready=false` and both writer/Attempt2 flags false. The
+machine result retains PREPARED; it is never converted into operational READY.
 JSON receipts are written atomically; a RUNNING receipt is incomplete until
 replaced by its final command result. Bounded command timeouts terminate only
 the process tree owned by that command. Test outcome fingerprints bind each

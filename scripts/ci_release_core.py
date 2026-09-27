@@ -156,6 +156,47 @@ def export(root, commit, target):
     }
 
 
+def attach_git_metadata(repo, commit, target):
+    """Self-contained shallow metadata for tests; no remote, alternates or checkout."""
+    objects = git(
+        repo, "rev-list", "--objects", "--no-object-names", "--no-walk", commit
+    )
+    pack = target.parent / (target.name + ".objects.pack")
+    with pack.open("wb") as stream:
+        subprocess.run(
+            ["git", "-C", str(repo), "pack-objects", "--stdout"],
+            input=(objects + "\n").encode(),
+            stdout=stream,
+            stderr=subprocess.PIPE,
+            check=True,
+            timeout=180,
+        )
+    git(target, "init", "-q")
+    git(target, "config", "core.autocrlf", "false")
+    git(target, "config", "core.longpaths", "true")
+    with pack.open("rb") as stream:
+        subprocess.run(
+            ["git", "-C", str(target), "index-pack", "--stdin"],
+            stdin=stream,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            check=True,
+            timeout=180,
+        )
+    (target / ".git/shallow").write_text(commit + "\n", encoding="ascii")
+    (target / ".git/HEAD").write_text(commit + "\n", encoding="ascii")
+    git(target, "read-tree", commit)
+    if resolve(target, commit) != resolve(repo, commit) or git(
+        target, "status", "--porcelain", "--untracked-files=no"
+    ):
+        raise ValueError("Export metadata does not match committed bytes")
+    return {
+        "method": "self-contained shallow object pack",
+        "remotes": [],
+        "alternates": False,
+    }
+
+
 class ReleaseRunner:
     def __init__(self, root, output):
         self.root, self.output = Path(root), Path(output)
@@ -178,6 +219,9 @@ class ReleaseRunner:
             LOCALAPPDATA=str(home / "localappdata"),
             XDG_CACHE_HOME=str(home / "cache"),
             XDG_CONFIG_HOME=str(home / "config"),
+            GIT_CONFIG_COUNT="1",
+            GIT_CONFIG_KEY_0="core.longpaths",
+            GIT_CONFIG_VALUE_0="true",
         )
         self.steps = []
 
@@ -284,6 +328,26 @@ def match_status(actual, expected):
     if actual is None:
         return "INCOMPLETE"
     return "PASS" if actual == expected else "FAIL"
+
+
+def handshake_status(report):
+    """Consumer acceptance is distinct from permission to execute writers."""
+    if (
+        report.get("writers_authorized") is True
+        or report.get("attempt2_authorized") is True
+    ):
+        return "FAIL"
+    if report.get("status") in ("PASS", "NOT_APPLICABLE"):
+        return "PASS"
+    if (
+        report.get("status") == "PREPARED"
+        and report.get("prepared") is True
+        and report.get("ready") is False
+        and report.get("writers_authorized") is False
+        and report.get("attempt2_authorized") is False
+    ):
+        return "PASS"
+    return "INCOMPLETE"
 
 
 def test_identity(junit):

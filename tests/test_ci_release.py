@@ -81,6 +81,18 @@ def test_export_repeatable(repository, tmp_path):
     assert first == second
 
 
+def test_export_git_metadata_is_exact_and_self_contained(repository, tmp_path):
+    root, sha = repository
+    target = tmp_path / "source"
+    core.export(root, sha, target)
+    core.attach_git_metadata(root, sha, target)
+    assert core.resolve(target, sha) == core.resolve(root, sha)
+    assert core.git(target, "status", "--porcelain") == ""
+    assert core.git(target, "remote") == ""
+    assert not (target / ".git/objects/info/alternates").exists()
+    assert core.git(target, "rev-list", "--count", "HEAD") == "1"
+
+
 def test_manifest_missing(tmp_path):
     assert (
         manifests.verify("data", tmp_path / "absent", tmp_path, "a" * 40)["status"]
@@ -443,3 +455,70 @@ def test_environment_resume_contract(change):
     elif change == "empty":
         receipt = {}
     assert core.environment_reusable(receipt, identity, probe) is (change == "same")
+
+
+@pytest.mark.parametrize(
+    "status,prepared,ready,writers,attempt2,expected",
+    [
+        ("PREPARED", True, False, False, False, "PASS"),
+        ("PREPARED", False, False, False, False, "INCOMPLETE"),
+        ("PREPARED", True, True, False, False, "INCOMPLETE"),
+        ("PREPARED", True, False, None, False, "INCOMPLETE"),
+        ("PREPARED", True, False, True, False, "FAIL"),
+        ("PREPARED", True, False, False, True, "FAIL"),
+        ("FAIL", False, False, False, False, "INCOMPLETE"),
+        ("UNKNOWN", False, False, False, False, "INCOMPLETE"),
+        ("PASS", True, True, True, False, "FAIL"),
+    ],
+)
+def test_handshake_preparation_never_implies_authorization(
+    status, prepared, ready, writers, attempt2, expected
+):
+    report = {
+        "status": status,
+        "prepared": prepared,
+        "ready": ready,
+        "writers_authorized": writers,
+        "attempt2_authorized": attempt2,
+    }
+    assert core.handshake_status(report) == expected
+
+
+@pytest.mark.parametrize("modern", [False, True])
+def test_handshake_worker_supports_both_consumer_signatures(
+    tmp_path, monkeypatch, modern
+):
+    from types import SimpleNamespace
+    from scripts import ci_release_worker as worker
+
+    monkeypatch.setattr(sys, "path", list(sys.path))
+    module = tmp_path / "src/ops/attempt2_operator/data_plane_manifest.py"
+    module.parent.mkdir(parents=True)
+    module.write_text("# fixture", encoding="utf-8")
+    manifest = tmp_path / "input.json"
+    manifest.write_text(
+        json.dumps({"identity": {"code_identity": {"sha": "a" * 40}}}), encoding="utf-8"
+    )
+
+    def new_consumer(path, *, expected_code_sha):
+        assert expected_code_sha == "a" * 40
+        return {
+            "status": "PREPARED",
+            "prepared": True,
+            "ready": False,
+            "writers_authorized": False,
+            "attempt2_authorized": False,
+        }
+
+    def old_consumer(path):
+        return {"status": "FAIL", "findings": [{"id": "DM-005"}]}
+
+    monkeypatch.setitem(
+        sys.modules,
+        "src.ops.attempt2_operator.data_plane_manifest",
+        SimpleNamespace(
+            verify_data_plane_manifest=new_consumer if modern else old_consumer
+        ),
+    )
+    result = worker.handshake(tmp_path, manifest)
+    assert core.handshake_status(result) == ("PASS" if modern else "INCOMPLETE")
