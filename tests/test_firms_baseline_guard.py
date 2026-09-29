@@ -46,8 +46,11 @@ _NRT_CSV = (
     "instrument,confidence,version,bright_ti5,frp,daynight\n"
     "-33.10000,-71.20000,330.0,0.4,0.4,2026-06-03,945,N,VIIRS,n,2.0NRT,290.0,3.0,D\n"
 )
-_SAMPLE_CSV = _NRT_CSV.replace("daynight\n", "daynight,type\n").replace("2.0NRT", "2").replace(",D\n", ",D,2\n")
-
+_SAMPLE_CSV = (
+    _NRT_CSV.replace("daynight\n", "daynight,type\n")
+    .replace("2.0NRT", "2")
+    .replace(",D\n", ",D,2\n")
+)
 
 
 def _sha256(path: Path) -> str | None:

@@ -115,8 +115,12 @@ NULL_ROWS_MAX_RATE = Fraction(1, 100)
 
 class DmcRefreshError(RuntimeError):
     def __init__(
-        self, message: str, exit_code: int, *,
-        reason: str = "MALFORMED_RESPONSE", details: Optional[dict] = None,
+        self,
+        message: str,
+        exit_code: int,
+        *,
+        reason: str = "MALFORMED_RESPONSE",
+        details: Optional[dict] = None,
     ) -> None:
         super().__init__(message)
         self.exit_code = exit_code
@@ -349,7 +353,8 @@ def assess_rows(records: list[dict], month: str) -> RowQuality:
                     f"Respuesta DMC {month}: lectura {record['momento']} sin "
                     f"campo {name!r}.",
                     EXIT_DATA,
-                    reason="MISSING_REQUIRED_FIELD", details={"field": name},
+                    reason="MISSING_REQUIRED_FIELD",
+                    details={"field": name},
                 )
             value = record[name]
             if value is None:
@@ -361,7 +366,8 @@ def assess_rows(records: list[dict], month: str) -> RowQuality:
                     f"Respuesta DMC {month}: {name}={str(value)[:40]!r} no es "
                     f"numérico (lectura {record['momento']}).",
                     EXIT_DATA,
-                    reason="NONNUMERIC_REQUIRED_FIELD", details={"field": name},
+                    reason="NONNUMERIC_REQUIRED_FIELD",
+                    details={"field": name},
                 )
         null_rows += has_null
     quality = RowQuality(total_rows=len(records), null_rows=null_rows)
@@ -371,7 +377,8 @@ def assess_rows(records: list[dict], month: str) -> RowQuality:
             f"null (discard_rate={quality.discard_rate:.4f} > "
             f"threshold={float(NULL_ROWS_MAX_RATE)}): no se publica nada.",
             EXIT_DATA,
-            reason="NULLS_EXCEED_LIMIT", details=quality.as_dict(),
+            reason="NULLS_EXCEED_LIMIT",
+            details=quality.as_dict(),
         )
     return quality
 
@@ -451,8 +458,12 @@ class PreparedMonth:
 
 
 def prepare_month_payload(
-    payload: Any, station: str, month: str, *,
-    existing_estacion: Optional[dict] = None, existing: Optional[list[dict]] = None,
+    payload: Any,
+    station: str,
+    month: str,
+    *,
+    existing_estacion: Optional[dict] = None,
+    existing: Optional[list[dict]] = None,
 ) -> PreparedMonth:
     """The writer's complete monthly preparation, stopping before any write.
 
@@ -462,7 +473,8 @@ def prepare_month_payload(
     estacion, incoming = validate_month_payload(payload, month)
     if not incoming:
         raise DmcRefreshError(
-            f"Respuesta DMC vacía para {month}: no se publica nada.", EXIT_DATA,
+            f"Respuesta DMC vacía para {month}: no se publica nada.",
+            EXIT_DATA,
             reason="EMPTY_RESPONSE",
         )
     incoming_quality = assess_rows(incoming, month)
@@ -473,7 +485,8 @@ def prepare_month_payload(
     if len(valid) != quality.total_rows - quality.null_rows:
         raise DmcRefreshError(
             f"Versión {month}: {len(valid)} lecturas válidas, se "
-            f"esperaban {quality.total_rows - quality.null_rows}.", EXIT_DATA,
+            f"esperaban {quality.total_rows - quality.null_rows}.",
+            EXIT_DATA,
         )
     return PreparedMonth(data, valid, incoming_quality, quality, added, conflicts)
 
@@ -636,8 +649,11 @@ def refresh(
                     else ({}, [])
                 )
                 prepared = prepare_month_payload(
-                    payload, paths.station_id, month,
-                    existing_estacion=existing_estacion, existing=existing,
+                    payload,
+                    paths.station_id,
+                    month,
+                    existing_estacion=existing_estacion,
+                    existing=existing,
                 )
                 row_quality[month] = prepared.incoming_quality.as_dict()
                 data, valid = prepared.data, prepared.valid

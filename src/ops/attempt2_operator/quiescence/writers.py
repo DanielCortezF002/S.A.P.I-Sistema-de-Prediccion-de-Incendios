@@ -66,12 +66,19 @@ def detect_writers(
         cmd = item.get("command_identity") or ""
         labels = item.get("labels") or [item.get("name")]
         if _is_writer_command(cmd) or (
-            any(l in ("firms_refresh", "dmc_refresh", "attempt2_writer") for l in labels)
+            any(
+                label in ("firms_refresh", "dmc_refresh", "attempt2_writer")
+                for label in labels
+            )
             and "refresh" in cmd.lower()
             and "status" not in cmd.lower()
         ):
-            kind = "firms" if "firms" in cmd.lower() or "firms" in str(labels) else (
-                "dmc" if "dmc" in cmd.lower() or "dmc" in str(labels) else "unknown"
+            kind = (
+                "firms"
+                if "firms" in cmd.lower() or "firms" in str(labels)
+                else (
+                    "dmc" if "dmc" in cmd.lower() or "dmc" in str(labels) else "unknown"
+                )
             )
             active.append(
                 {

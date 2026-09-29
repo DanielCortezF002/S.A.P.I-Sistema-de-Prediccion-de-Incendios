@@ -32,7 +32,9 @@ class RC1ExecutionContext:
 
     def __post_init__(self) -> None:
         if not self.created_at:
-            object.__setattr__(self, "created_at", datetime.now(timezone.utc).isoformat())
+            object.__setattr__(
+                self, "created_at", datetime.now(timezone.utc).isoformat()
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -59,6 +61,8 @@ class RC1ExecutionContext:
             operator_code_sha=str(data["operator_code_sha"]),
             workspace_manifest_fingerprint=data.get("workspace_manifest_fingerprint"),
             data_plane_manifest_fingerprint=data.get("data_plane_manifest_fingerprint"),
-            output_plane_manifest_fingerprint=data.get("output_plane_manifest_fingerprint"),
+            output_plane_manifest_fingerprint=data.get(
+                "output_plane_manifest_fingerprint"
+            ),
             created_at=data.get("created_at", ""),
         )

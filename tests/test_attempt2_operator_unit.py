@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -13,7 +12,6 @@ from src.ops.attempt2_operator.run_store import InvalidTransitionError
 from src.ops.attempt2_operator.states import Attempt2State, HUMAN_GATES
 from src.ops.attempt2_operator.validators import validate_preflight_snapshot
 
-
 SHA = "7ef8d3c9f7ecb4758718255b8e48d6468f8613ea"
 
 
@@ -23,7 +21,11 @@ def _op(tmp_path: Path, expected: str = SHA) -> Attempt2Operator:
         dry_run=True,
         expected_code_sha=expected,
         run_id="SAPI-ATTEMPT2-TEST-UNIT",
-        synthetic_identity={"code_sha": expected, "tree_sha": "t" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": expected,
+            "tree_sha": "t" * 40,
+            "worktree_clean": True,
+        },
     )
 
 
@@ -117,7 +119,9 @@ def test_stale_test_sha(tmp_path: Path):
         "tests": {"code_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"},
     }
     result = op.preflight(snapshot=snap)
-    assert any(c["rule"] == "PF-TEST-SHA" and c["status"] == "FAIL" for c in result["checks"])
+    assert any(
+        c["rule"] == "PF-TEST-SHA" and c["status"] == "FAIL" for c in result["checks"]
+    )
     assert result["ready_for_authorization"] is False
 
 
@@ -156,7 +160,9 @@ def test_auth_not_inferred(tmp_path: Path):
         },
         expected_code_sha=SHA,
     )
-    assert any(c["rule"] == "PF-AUTH-INFER" and c["status"] == "FAIL" for c in v["checks"])
+    assert any(
+        c["rule"] == "PF-AUTH-INFER" and c["status"] == "FAIL" for c in v["checks"]
+    )
 
 
 def test_crash_recovery(tmp_path: Path):

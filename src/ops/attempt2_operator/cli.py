@@ -8,8 +8,14 @@ import sys
 from pathlib import Path
 
 from src.ops.attempt2_operator.operator import Attempt2Operator
-from src.ops.attempt2_operator.rc_status import collect_rc_status, format_rc_status_human
-from src.ops.attempt2_operator.run_store import InvalidTransitionError, resolve_evidence_root
+from src.ops.attempt2_operator.rc_status import (
+    collect_rc_status,
+    format_rc_status_human,
+)
+from src.ops.attempt2_operator.run_store import (
+    InvalidTransitionError,
+    resolve_evidence_root,
+)
 
 
 def _print(obj: object) -> None:
@@ -40,7 +46,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--evidence-root",
         default=None,
-        help="Root for attempt2 runs (default SAPI_ATTEMPT2_EVIDENCE_ROOT or SAPI-71-evidence/attempt2)",
+        help=(
+            "Root for attempt2 runs (default SAPI_ATTEMPT2_EVIDENCE_ROOT "
+            "or SAPI-71-evidence/attempt2)"
+        ),
     )
     parser.add_argument(
         "--repo",
@@ -58,9 +67,19 @@ def main(argv: list[str] | None = None) -> int:
     p_init = sub.add_parser("init", help="Create a new Attempt 2 run")
     p_init.add_argument("--expected-code-sha", required=True)
     p_init.add_argument("--run-id", default=None)
-    p_init.add_argument("--workspace-manifest", default=None, help="Verified operational workspace manifest")
-    p_init.add_argument("--data-readiness-manifest", default=None, help="Verified Astra data plane manifest")
-    p_init.add_argument("--output-manifest", default=None, help="Claude output plane manifest")
+    p_init.add_argument(
+        "--workspace-manifest",
+        default=None,
+        help="Verified operational workspace manifest",
+    )
+    p_init.add_argument(
+        "--data-readiness-manifest",
+        default=None,
+        help="Verified Astra data plane manifest",
+    )
+    p_init.add_argument(
+        "--output-manifest", default=None, help="Claude output plane manifest"
+    )
 
     p_status = sub.add_parser("status", help="Show run status (idempotent)")
     p_status.add_argument("--run", required=True)
@@ -71,9 +90,19 @@ def main(argv: list[str] | None = None) -> int:
 
     p_pre = sub.add_parser("preflight", help="Collect/validate preflight")
     p_pre.add_argument("--run", required=True)
-    p_pre.add_argument("--snapshot", default=None, help="Optional snapshot JSON (dry-run/synthetic)")
-    p_pre.add_argument("--workspace-manifest", default=None, help="Verified operational workspace manifest")
-    p_pre.add_argument("--data-readiness-manifest", default=None, help="Verified Astra data plane manifest")
+    p_pre.add_argument(
+        "--snapshot", default=None, help="Optional snapshot JSON (dry-run/synthetic)"
+    )
+    p_pre.add_argument(
+        "--workspace-manifest",
+        default=None,
+        help="Verified operational workspace manifest",
+    )
+    p_pre.add_argument(
+        "--data-readiness-manifest",
+        default=None,
+        help="Verified Astra data plane manifest",
+    )
 
     p_auth = sub.add_parser("authorize", help="Explicit human gate authorization")
     p_auth.add_argument("--run", required=True)
@@ -82,9 +111,15 @@ def main(argv: list[str] | None = None) -> int:
 
     p_imp = sub.add_parser("import-result", help="Import manual command evidence")
     p_imp.add_argument("--run", required=True)
-    p_imp.add_argument("--phase", required=True, choices=["firms", "dmc", "scoring", "bridge", "n8n"])
+    p_imp.add_argument(
+        "--phase", required=True, choices=["firms", "dmc", "scoring", "bridge", "n8n"]
+    )
     p_imp.add_argument("--from", dest="from_path", required=True)
-    p_imp.add_argument("--output-manifest", default=None, help="Optional output plane manifest for bridge/scoring")
+    p_imp.add_argument(
+        "--output-manifest",
+        default=None,
+        help="Optional output plane manifest for bridge/scoring",
+    )
 
     p_val = sub.add_parser("validate", help="Re-read validation artifacts (idempotent)")
     p_val.add_argument("--run", required=True)
@@ -93,11 +128,21 @@ def main(argv: list[str] | None = None) -> int:
     p_rep.add_argument("--run", required=True)
 
     p_rc = sub.add_parser("rc-status", help="RC1 preparation readiness status check")
-    p_rc.add_argument("--expected-code-sha", default=None, help="Expected RC1 final code SHA")
-    p_rc.add_argument("--workspace-manifest", default=None, help="Operational workspace manifest")
-    p_rc.add_argument("--data-readiness-manifest", default=None, help="Astra data plane readiness manifest")
+    p_rc.add_argument(
+        "--expected-code-sha", default=None, help="Expected RC1 final code SHA"
+    )
+    p_rc.add_argument(
+        "--workspace-manifest", default=None, help="Operational workspace manifest"
+    )
+    p_rc.add_argument(
+        "--data-readiness-manifest",
+        default=None,
+        help="Astra data plane readiness manifest",
+    )
     p_rc.add_argument("--output-manifest", default=None, help="Output plane manifest")
-    p_rc.add_argument("--json", action="store_true", help="Output machine-readable JSON")
+    p_rc.add_argument(
+        "--json", action="store_true", help="Output machine-readable JSON"
+    )
 
     args = parser.parse_args(argv)
     repo = Path(args.repo) if args.repo else Path.cwd()
@@ -176,7 +221,11 @@ def main(argv: list[str] | None = None) -> int:
             _print(out)
             return 0 if out.get("result") in ("PASS", "DUPLICATE") else 2
         if args.cmd == "validate":
-            vals = sorted((run_dir / "validation").glob("*.json")) if (run_dir / "validation").exists() else []
+            vals = (
+                sorted((run_dir / "validation").glob("*.json"))
+                if (run_dir / "validation").exists()
+                else []
+            )
             _print(
                 {
                     "state": op.status()["state"],

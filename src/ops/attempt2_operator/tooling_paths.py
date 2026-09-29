@@ -22,7 +22,11 @@ def preflight_tools_root() -> Path | None:
 
 def adapter_root() -> Path | None:
     env = os.environ.get("SAPI_ATTEMPT2_ADAPTER")
-    p = Path(env) if env else DEFAULT_PLANNING / "tooling-integration-rehearsal" / "adapter"
+    p = (
+        Path(env)
+        if env
+        else DEFAULT_PLANNING / "tooling-integration-rehearsal" / "adapter"
+    )
     return p if p.is_dir() else None
 
 

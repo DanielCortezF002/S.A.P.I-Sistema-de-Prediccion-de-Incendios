@@ -65,7 +65,10 @@ def build_reasons(
             "OPERATIONAL_QUIESCENCE_INCOMPLETE",
             "INCOMPLETE",
         ),
-        "workspace_safety_not_available": ("WORKSPACE_SAFETY_NOT_AVAILABLE", "INCOMPLETE"),
+        "workspace_safety_not_available": (
+            "WORKSPACE_SAFETY_NOT_AVAILABLE",
+            "INCOMPLETE",
+        ),
         "data_manifest_incomplete": ("DATA_MANIFEST_INCOMPLETE", "INCOMPLETE"),
         "git_state_unknown": ("GIT_STATE_UNKNOWN", "INCOMPLETE"),
     }
@@ -101,7 +104,9 @@ def collect_real_preflight(
     git = collect_git_state(repo, expected_code_sha=expected_code_sha)
     firms_store = collect_store_state(roots.firms_store())
     dmc_store = collect_store_state(roots.dmc_store())
-    firms = collect_firms_current(repo, pointer_path=roots.firms_store() / "CURRENT.json")
+    firms = collect_firms_current(
+        repo, pointer_path=roots.firms_store() / "CURRENT.json"
+    )
     dmc = collect_dmc_current(repo, pointer_path=roots.dmc_store() / "CURRENT.json")
     artifacts = collect_artifact_identities(
         repo,
@@ -235,7 +240,9 @@ def collect_real_preflight(
         and q_status == "QUIESCENT"
     ):
         overall = "PASS"
-    elif expected_code_sha and git.get("sha_match") is True and git.get("dirty") is False:
+    elif (
+        expected_code_sha and git.get("sha_match") is True and git.get("dirty") is False
+    ):
         # Clean SHA alone is not enough — need workspace safety PASS + QUIESCENT
         overall = "INCOMPLETE"
         if workspace.get("status") != "PASS" and not any(
@@ -248,7 +255,9 @@ def collect_real_preflight(
         ):
             warnings.append("operational_quiescence_incomplete")
             reasons = build_reasons(failures=failures, warnings=warnings)
-    elif expected_code_sha is None and git.get("dirty") is False and git.get("head_sha"):
+    elif (
+        expected_code_sha is None and git.get("dirty") is False and git.get("head_sha")
+    ):
         overall = "INCOMPLETE"  # no expected SHA → incomplete by policy
         reasons.append(
             {

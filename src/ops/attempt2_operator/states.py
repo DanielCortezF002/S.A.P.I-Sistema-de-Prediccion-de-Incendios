@@ -36,7 +36,9 @@ class Attempt2State(str, Enum):
 
 # Allowed transitions: from -> frozenset(to)
 ALLOWED_TRANSITIONS: dict[Attempt2State, frozenset[Attempt2State]] = {
-    Attempt2State.NEW: frozenset({Attempt2State.PREFLIGHT_PENDING, Attempt2State.STOPPED}),
+    Attempt2State.NEW: frozenset(
+        {Attempt2State.PREFLIGHT_PENDING, Attempt2State.STOPPED}
+    ),
     Attempt2State.PREFLIGHT_PENDING: frozenset(
         {
             Attempt2State.PREFLIGHT_READY,

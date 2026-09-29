@@ -22,7 +22,11 @@ PROCESS_PATTERNS: dict[str, tuple[str, ...]] = {
     "firms_refresh": ("src.refresh.firms_refresh", "firms_refresh"),
     "dmc_refresh": ("src.refresh.dmc_refresh", "dmc_refresh"),
     "scoring": ("tools.ops.capture_score", "capture_score", "score_current_grid"),
-    "attempt2_writer": ("attempt2_operator", "firms_refresh refresh", "dmc_refresh refresh"),
+    "attempt2_writer": (
+        "attempt2_operator",
+        "firms_refresh refresh",
+        "dmc_refresh refresh",
+    ),
 }
 
 

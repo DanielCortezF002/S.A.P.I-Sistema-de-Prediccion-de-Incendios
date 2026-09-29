@@ -58,15 +58,9 @@ FINDING_REMEDIATION: dict[str, str] = {
     QG_UNKNOWN_WRITER_STATE: (
         "Resolve writer-process visibility before authorization."
     ),
-    QG_UNKNOWN_LOCK_STATE: (
-        "Resolve refresh-lock visibility before authorization."
-    ),
-    QG_TELEGRAM_UNKNOWN: (
-        "Resolve Telegram-path visibility before authorization."
-    ),
-    QG_SCHEDULE_UNKNOWN: (
-        "Resolve n8n schedule visibility before authorization."
-    ),
+    QG_UNKNOWN_LOCK_STATE: ("Resolve refresh-lock visibility before authorization."),
+    QG_TELEGRAM_UNKNOWN: ("Resolve Telegram-path visibility before authorization."),
+    QG_SCHEDULE_UNKNOWN: ("Resolve n8n schedule visibility before authorization."),
     QG_N8N_MUST_BE_STOPPED: (
         "Stop the n8n container (FIRST-CONTROLLED-REFRESH requires it stopped), "
         "then rerun preflight. Operator will not stop it."

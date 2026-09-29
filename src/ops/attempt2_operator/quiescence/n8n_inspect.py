@@ -7,7 +7,6 @@ read-only sqlite copy for executions + node-type scans. Never mutates n8n_data.
 from __future__ import annotations
 
 import json
-import os
 import re
 import shutil
 import sqlite3
@@ -108,9 +107,7 @@ def list_workflows_via_cli(
     observed_at = _utc_now()
     try:
         all_p = exe(container, ["n8n", "list:workflow"], timeout=90)
-        active_p = exe(
-            container, ["n8n", "list:workflow", "--active=true"], timeout=90
-        )
+        active_p = exe(container, ["n8n", "list:workflow", "--active=true"], timeout=90)
         inactive_p = exe(
             container, ["n8n", "list:workflow", "--active=false"], timeout=90
         )
@@ -167,7 +164,12 @@ def _copy_n8n_db(container: str, dest_dir: Path) -> Path | None:
     try:
         for name in ("database.sqlite", "database.sqlite-wal", "database.sqlite-shm"):
             subprocess.run(
-                ["docker", "cp", f"{container}:/home/node/.n8n/{name}", str(dest_dir / name)],
+                [
+                    "docker",
+                    "cp",
+                    f"{container}:/home/node/.n8n/{name}",
+                    str(dest_dir / name),
+                ],
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -202,9 +204,7 @@ def inspect_db_nodes_and_executions(
     try:
         cur = con.cursor()
         workflows = []
-        for row in cur.execute(
-            "SELECT id, name, active, nodes FROM workflow_entity"
-        ):
+        for row in cur.execute("SELECT id, name, active, nodes FROM workflow_entity"):
             wid, name, active, nodes_raw = row
             nodes = []
             try:
@@ -231,7 +231,8 @@ def inspect_db_nodes_and_executions(
         for row in cur.execute(
             "SELECT id, workflowId, status, finished, startedAt FROM execution_entity "
             "WHERE status IN ('running','waiting','new') "
-            "OR (finished = 0 AND status NOT IN ('success','error','crashed','canceled','cancelled'))"
+            "OR (finished = 0 AND "
+            "status NOT IN ('success','error','crashed','canceled','cancelled'))"
         ):
             running.append(
                 {
@@ -420,7 +421,10 @@ def _merge_db(
     relevant = [w for w in wfs if w.get("relevant")] or wfs
 
     # Enrich activation from DB if CLI incomplete
-    if activation.get("status") != "READY" or activation.get("any_relevant_active") is None:
+    if (
+        activation.get("status") != "READY"
+        or activation.get("any_relevant_active") is None
+    ):
         any_active = any(w.get("active") for w in relevant)
         activation = {
             "status": "READY",

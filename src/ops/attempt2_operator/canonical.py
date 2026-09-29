@@ -87,7 +87,9 @@ def authorize_record(
 
 # Hard invariant vocabulary — must never be conflated
 CURRENT_STATES = frozenset({"PRESENT", "ABSENT", "UNKNOWN"})
-RUNTIME_STATES = frozenset({"RUNNING", "STOPPED", "UNKNOWN", "AVAILABLE", "UNAVAILABLE"})
+RUNTIME_STATES = frozenset(
+    {"RUNNING", "STOPPED", "UNKNOWN", "AVAILABLE", "UNAVAILABLE"}
+)
 TECHNICAL_RESULTS = frozenset({"PASS", "FAIL", "INCOMPLETE"})
 
 

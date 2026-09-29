@@ -9,10 +9,12 @@ from typing import Any
 from src.ops.attempt2_operator.canonical import authorize_record
 from src.ops.attempt2_operator.data_plane_manifest import verify_data_plane_manifest
 from src.ops.attempt2_operator.events import content_hash, sha256_file, utc_now_iso
-from src.ops.attempt2_operator.collectors.preflight_collect import collect_real_preflight
+from src.ops.attempt2_operator.collectors.preflight_collect import (
+    collect_real_preflight,
+)
 from src.ops.attempt2_operator.output_plane_manifest import verify_output_plane_manifest
 from src.ops.attempt2_operator.rc_context import RC1ExecutionContext
-from src.ops.attempt2_operator.redaction import credential_presence, redact_text, sha256_text
+from src.ops.attempt2_operator.redaction import redact_text, sha256_text
 from src.ops.attempt2_operator.workspace_manifest import verify_workspace_manifest
 from src.ops.attempt2_operator.run_store import (
     Attempt2Run,
@@ -20,11 +22,7 @@ from src.ops.attempt2_operator.run_store import (
     git_identity,
     resolve_evidence_root,
 )
-from src.ops.attempt2_operator.states import (
-    GATE_FOR_STATE,
-    HUMAN_GATES,
-    Attempt2State,
-)
+from src.ops.attempt2_operator.states import HUMAN_GATES, Attempt2State
 from src.ops.attempt2_operator.validator_hooks import (
     run_dmc_validator_hook,
     run_firms_validator_hook,
@@ -83,13 +81,17 @@ class Attempt2Operator:
                 "observed_at": utc_now_iso(),
             }
         else:
-            ident = git_identity(repo) if repo else {
-                "code_sha": None,
-                "tree_sha": None,
-                "worktree_clean": None,
-                "status_entries": [],
-                "observed_at": utc_now_iso(),
-            }
+            ident = (
+                git_identity(repo)
+                if repo
+                else {
+                    "code_sha": None,
+                    "tree_sha": None,
+                    "worktree_clean": None,
+                    "status_entries": [],
+                    "observed_at": utc_now_iso(),
+                }
+            )
 
         ws_fp: str | None = None
         if workspace_manifest:
@@ -100,31 +102,48 @@ class Attempt2Operator:
                 expected_workspace_root=repo,
             )
             if ws_ver.get("status") != "PASS" and not dry_run:
-                findings_msg = "; ".join(f.get("message", "") for f in ws_ver.get("findings", []))
-                raise ValueError(f"Workspace manifest verification failed: {findings_msg}")
+                findings_msg = "; ".join(
+                    f.get("message", "") for f in ws_ver.get("findings", [])
+                )
+                raise ValueError(
+                    f"Workspace manifest verification failed: {findings_msg}"
+                )
             ws_fp = ws_ver.get("manifest_fingerprint")
 
         dm_fp: str | None = None
         if data_plane_manifest:
-            dm_ver = verify_data_plane_manifest(data_plane_manifest, expected_code_sha=expected_code_sha)
+            dm_ver = verify_data_plane_manifest(
+                data_plane_manifest, expected_code_sha=expected_code_sha
+            )
             # PREPARED is the highest valid producer state (producer never emits READY).
             # Accept PREPARED for fingerprint recording; execution gates remain at
             # preflight + explicit human authorization (not here).
             # Producer-invalid manifests (FAIL / INCOMPLETE / NOT_AVAILABLE) are blocked.
             if dm_ver.get("prepared") is not True and not dry_run:
-                findings_msg = "; ".join(f.get("message", "") for f in dm_ver.get("findings", []))
-                raise ValueError(f"Data plane manifest verification failed: {findings_msg}")
+                findings_msg = "; ".join(
+                    f.get("message", "") for f in dm_ver.get("findings", [])
+                )
+                raise ValueError(
+                    f"Data plane manifest verification failed: {findings_msg}"
+                )
             dm_fp = dm_ver.get("manifest_fingerprint")
-
 
         op_fp: str | None = None
         if output_manifest:
             op_ver = verify_output_plane_manifest(output_manifest)
             if op_ver.get("status") != "PASS" and not dry_run:
-                findings_msg = "; ".join(f.get("message", "") for f in op_ver.get("findings", []))
-                raise ValueError(f"Output plane manifest verification failed: {findings_msg}")
+                findings_msg = "; ".join(
+                    f.get("message", "") for f in op_ver.get("findings", [])
+                )
+                raise ValueError(
+                    f"Output plane manifest verification failed: {findings_msg}"
+                )
             # Never bind an unverified fingerprint into the RC1 execution context.
-            op_fp = op_ver.get("manifest_fingerprint") if op_ver.get("status") == "PASS" else None
+            op_fp = (
+                op_ver.get("manifest_fingerprint")
+                if op_ver.get("status") == "PASS"
+                else None
+            )
 
         run = Attempt2Run.create(
             root,
@@ -138,11 +157,17 @@ class Attempt2Operator:
         run.write_json("snapshots/git_identity.json", ident)
 
         state = run.read_state()
-        state["workspace_manifest_path"] = str(workspace_manifest) if workspace_manifest else None
+        state["workspace_manifest_path"] = (
+            str(workspace_manifest) if workspace_manifest else None
+        )
         state["workspace_manifest_fingerprint"] = ws_fp
-        state["data_plane_manifest_path"] = str(data_plane_manifest) if data_plane_manifest else None
+        state["data_plane_manifest_path"] = (
+            str(data_plane_manifest) if data_plane_manifest else None
+        )
         state["data_plane_manifest_fingerprint"] = dm_fp
-        state["output_manifest_path"] = str(output_manifest) if output_manifest else None
+        state["output_manifest_path"] = (
+            str(output_manifest) if output_manifest else None
+        )
         state["output_manifest_fingerprint"] = op_fp
         run.write_state(state)
 
@@ -166,15 +191,23 @@ class Attempt2Operator:
         state = self.run.read_state()
         auth = self.run.read_authorizations()
         rc_ctx_file = self.run.root / "identity" / "rc1_execution_context.json"
-        rc_ctx = json.loads(rc_ctx_file.read_text(encoding="utf-8")) if rc_ctx_file.is_file() else None
+        rc_ctx = (
+            json.loads(rc_ctx_file.read_text(encoding="utf-8"))
+            if rc_ctx_file.is_file()
+            else None
+        )
         return {
             "run_id": state["run_id"],
             "state": state["state"],
             "code_sha": state.get("code_sha"),
             "expected_code_sha": state.get("expected_code_sha"),
             "dry_run": state.get("dry_run"),
-            "workspace_manifest_fingerprint": state.get("workspace_manifest_fingerprint"),
-            "data_plane_manifest_fingerprint": state.get("data_plane_manifest_fingerprint"),
+            "workspace_manifest_fingerprint": state.get(
+                "workspace_manifest_fingerprint"
+            ),
+            "data_plane_manifest_fingerprint": state.get(
+                "data_plane_manifest_fingerprint"
+            ),
             "rc_execution_context": rc_ctx,
             "gates": auth.get("gates"),
             "acceptance": state.get("acceptance"),
@@ -191,7 +224,11 @@ class Attempt2Operator:
                 "command": "python -m src.ops.attempt2_operator preflight --run <run_dir>",
             }
         if st == Attempt2State.PREFLIGHT_PENDING:
-            return {"state": st.value, "next": "Wait for / re-run preflight", "command": None}
+            return {
+                "state": st.value,
+                "next": "Wait for / re-run preflight",
+                "command": None,
+            }
         if st == Attempt2State.PREFLIGHT_FAILED:
             # ONE next action from highest-priority blocking reason
             pf_path = self.run.root / "preflight" / "preflight.json"
@@ -600,9 +637,15 @@ class Attempt2Operator:
 
         # Update RC1 execution context with any discovered fingerprints
         ws_info = snapshot.get("workspace_manifest") or {}
-        ws_fp = ws_info.get("fingerprint") or ws_info.get("manifest_fingerprint") or state.get("workspace_manifest_fingerprint")
+        ws_fp = (
+            ws_info.get("fingerprint")
+            or ws_info.get("manifest_fingerprint")
+            or state.get("workspace_manifest_fingerprint")
+        )
         dm_info = snapshot.get("data_plane") or {}
-        dm_fp = dm_info.get("manifest_fingerprint") or state.get("data_plane_manifest_fingerprint")
+        dm_fp = dm_info.get("manifest_fingerprint") or state.get(
+            "data_plane_manifest_fingerprint"
+        )
         if ws_fp or dm_fp:
             state = self.run.read_state()
             if ws_fp:
@@ -649,7 +692,10 @@ class Attempt2Operator:
             outcome = result["technical_result"]
         # from PREFLIGHT_READY re-run: go via pending if needed
         cur = self.run.current_state()
-        if cur == Attempt2State.PREFLIGHT_READY and target == Attempt2State.PREFLIGHT_FAILED:
+        if (
+            cur == Attempt2State.PREFLIGHT_READY
+            and target == Attempt2State.PREFLIGHT_FAILED
+        ):
             # not in allowed map directly — stop
             self.run.set_state(
                 Attempt2State.STOPPED,
@@ -657,7 +703,10 @@ class Attempt2Operator:
                 result="REGRESSED",
                 extra={"last_error": "preflight regressed from READY"},
             )
-        elif cur == Attempt2State.PREFLIGHT_FAILED and target == Attempt2State.PREFLIGHT_READY:
+        elif (
+            cur == Attempt2State.PREFLIGHT_FAILED
+            and target == Attempt2State.PREFLIGHT_READY
+        ):
             self.run.set_state(
                 Attempt2State.PREFLIGHT_PENDING,
                 event_type="PREFLIGHT_RETRY",
@@ -753,10 +802,11 @@ class Attempt2Operator:
         state = self.run.read_state()
         run_id = state["run_id"]
         expected_sha = state.get("expected_code_sha")
-        observed_sha = state.get("code_sha")
 
         if payload.get("run_id") and payload["run_id"] != run_id:
-            raise RuntimeError(f"wrong_run: payload.run_id={payload.get('run_id')} != {run_id}")
+            raise RuntimeError(
+                f"wrong_run: payload.run_id={payload.get('run_id')} != {run_id}"
+            )
         step = payload.get("step") or payload.get("phase")
         allowed_steps = {
             phase,
@@ -789,8 +839,12 @@ class Attempt2Operator:
             score_artifact_path=score_artifact_path,
         )
         if ver.get("status") == "FAIL":
-            finding_msg = "; ".join(f.get("message", "") for f in ver.get("findings", []))
-            raise ValueError(f"Output plane manifest verification failed: {finding_msg}")
+            finding_msg = "; ".join(
+                f.get("message", "") for f in ver.get("findings", [])
+            )
+            raise ValueError(
+                f"Output plane manifest verification failed: {finding_msg}"
+            )
 
         fp = ver.get("manifest_fingerprint")
         state = self.run.read_state()
@@ -826,12 +880,18 @@ class Attempt2Operator:
         # Bind identity fields (do not invent secrets)
         payload.setdefault("run_id", state["run_id"])
         payload.setdefault("step", phase)
-        payload.setdefault("code_sha", state.get("expected_code_sha") or state.get("code_sha"))
+        payload.setdefault(
+            "code_sha", state.get("expected_code_sha") or state.get("code_sha")
+        )
         if "expected_command_identity" not in payload:
             if phase == "firms":
-                payload["expected_command_identity"] = "python -m src.refresh.firms_refresh refresh"
+                payload["expected_command_identity"] = (
+                    "python -m src.refresh.firms_refresh refresh"
+                )
             elif phase == "dmc":
-                payload["expected_command_identity"] = "python -m src.refresh.dmc_refresh refresh"
+                payload["expected_command_identity"] = (
+                    "python -m src.refresh.dmc_refresh refresh"
+                )
 
         self._enforce_import_binding(phase, payload)
 
@@ -862,7 +922,9 @@ class Attempt2Operator:
             payload["stderr"] = red
             payload["stderr_sha256"] = sha256_text(red)
             if hit and payload.get("sanitization_status") != "QUARANTINE_REFERENCE":
-                payload["sanitization_status"] = payload.get("sanitization_status") or "PASS"
+                payload["sanitization_status"] = (
+                    payload.get("sanitization_status") or "PASS"
+                )
         if "sanitization_status" not in payload:
             payload["sanitization_status"] = "PASS"
 
@@ -885,19 +947,23 @@ class Attempt2Operator:
 
         # Gate checks for writers
         if phase == "firms":
-            if not self.run.read_authorizations()["gates"].get("FIRMS_WRITER_AUTHORIZATION"):
+            if not self.run.read_authorizations()["gates"].get(
+                "FIRMS_WRITER_AUTHORIZATION"
+            ):
                 raise PermissionError("Unauthorized FIRMS writer import")
         if phase == "dmc":
-            if not self.run.read_authorizations()["gates"].get("DMC_WRITER_AUTHORIZATION"):
+            if not self.run.read_authorizations()["gates"].get(
+                "DMC_WRITER_AUTHORIZATION"
+            ):
                 raise PermissionError("Unauthorized DMC writer import")
         if phase == "n8n":
-            if payload.get("telegram_sent") and not self.run.read_authorizations()["gates"].get(
-                "TELEGRAM_AUTHORIZATION"
-            ):
+            if payload.get("telegram_sent") and not self.run.read_authorizations()[
+                "gates"
+            ].get("TELEGRAM_AUTHORIZATION"):
                 raise PermissionError("Telegram without TELEGRAM_AUTHORIZATION")
-            if payload.get("schedule_enabled") and not self.run.read_authorizations()["gates"].get(
-                "SCHEDULE_AUTHORIZATION"
-            ):
+            if payload.get("schedule_enabled") and not self.run.read_authorizations()[
+                "gates"
+            ].get("SCHEDULE_AUTHORIZATION"):
                 raise PermissionError("Schedule without SCHEDULE_AUTHORIZATION")
 
         validation = validate_fn(payload)
@@ -907,8 +973,7 @@ class Attempt2Operator:
         if phase == "firms":
             tool_hook = run_firms_validator_hook(
                 work_dir=self.run.root / "validation" / "toolpack",
-                before=payload.get("before")
-                or {"firms_current": {"present": False}},
+                before=payload.get("before") or {"firms_current": {"present": False}},
                 after=payload.get("after")
                 or {"firms_current": payload.get("firms_current_after")},
                 delta=payload.get("delta")
@@ -937,9 +1002,7 @@ class Attempt2Operator:
                 },
                 code_sha=state.get("code_sha"),
             )
-            self.run.write_json(
-                "validation/firms_toolpack.json", tool_hook.to_dict()
-            )
+            self.run.write_json("validation/firms_toolpack.json", tool_hook.to_dict())
         elif phase == "dmc":
             tool_hook = run_dmc_validator_hook(
                 work_dir=self.run.root / "validation" / "toolpack",
@@ -973,7 +1036,10 @@ class Attempt2Operator:
             self.run.write_json("validation/dmc_toolpack.json", tool_hook.to_dict())
 
         success_map = {
-            "firms": (Attempt2State.FIRMS_VALIDATED, Attempt2State.FIRMS_VALIDATION_FAILED),
+            "firms": (
+                Attempt2State.FIRMS_VALIDATED,
+                Attempt2State.FIRMS_VALIDATION_FAILED,
+            ),
             "dmc": (Attempt2State.DMC_VALIDATED, Attempt2State.DMC_VALIDATION_FAILED),
             "scoring": (Attempt2State.SCORING_VALIDATED, Attempt2State.SCORING_FAILED),
             "bridge": (Attempt2State.BRIDGE_VALIDATED, Attempt2State.BRIDGE_FAILED),

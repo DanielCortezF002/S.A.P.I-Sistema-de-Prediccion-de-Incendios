@@ -5,16 +5,19 @@ from __future__ import annotations
 import json
 import os
 import subprocess
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from src.ops.attempt2_operator.events import EventLog, content_hash, sha256_file, utc_now_iso
+from src.ops.attempt2_operator.events import (
+    EventLog,
+    content_hash,
+    sha256_file,
+    utc_now_iso,
+)
 from src.ops.attempt2_operator.states import Attempt2State, HUMAN_GATES
 
-DEFAULT_EVIDENCE_ROOT = Path(
-    r"D:\portafolio y seminario\SAPI-71-evidence\attempt2"
-)
+DEFAULT_EVIDENCE_ROOT = Path(r"D:\portafolio y seminario\SAPI-71-evidence\attempt2")
 
 RUN_DIRS = (
     "commands",

@@ -22,7 +22,9 @@ class ValidatorResult:
     evidence: dict[str, Any] = field(default_factory=dict)
     warnings: list[str] = field(default_factory=list)
     failures: list[str] = field(default_factory=list)
-    evidence_acceptance: str | None = None  # ACCEPTED_EVIDENCE | REJECTED_EVIDENCE | ...
+    evidence_acceptance: str | None = (
+        None  # ACCEPTED_EVIDENCE | REJECTED_EVIDENCE | ...
+    )
     note: str = (
         "status is technical PASS/FAIL/INCOMPLETE; "
         "evidence_acceptance is separate and never auto-authorizes"

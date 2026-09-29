@@ -7,9 +7,7 @@ from pathlib import Path
 import pytest
 
 from src.ops.attempt2_operator.operator import Attempt2Operator
-from src.ops.attempt2_operator.run_store import InvalidTransitionError
 from src.ops.attempt2_operator.states import Attempt2State
-from src.ops.attempt2_operator.events import sha256_file
 
 SHA = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
 
@@ -27,7 +25,11 @@ def _boot(tmp_path: Path) -> Attempt2Operator:
         dry_run=True,
         expected_code_sha=SHA,
         run_id="SAPI-ATTEMPT2-FAIL",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "c" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "c" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = {
         "code": {
@@ -65,8 +67,8 @@ def test_unauthorized_firms_writer(tmp_path: Path):
             "firms",
             {
                 "exit_code": 0,
-            "started_at": "2026-09-24T12:01:00+00:00",
-            "finished_at": "2026-09-24T12:02:00+00:00",
+                "started_at": "2026-09-24T12:01:00+00:00",
+                "finished_at": "2026-09-24T12:02:00+00:00",
                 "stdout": "",
                 "stderr": "",
                 "sanitization_status": "PASS",
@@ -215,7 +217,10 @@ def test_invalid_scoring_contract(tmp_path: Path):
     op.advance()
     out = op.import_result(
         "scoring",
-        {"cells": [{"cell_id": "VP-001", "score": 0.1, "rank": 1}], "inputs_fingerprint": "x"},
+        {
+            "cells": [{"cell_id": "VP-001", "score": 0.1, "rank": 1}],
+            "inputs_fingerprint": "x",
+        },
     )
     assert out["result"] == "FAIL"
     assert op.run.current_state() == Attempt2State.SCORING_FAILED
@@ -266,7 +271,10 @@ def test_bridge_500(tmp_path: Path):
     op.advance()
     out = op.import_result(
         "bridge",
-        {"http_status": 500, "body": {"status": "error", "error_type": "internal_error"}},
+        {
+            "http_status": 500,
+            "body": {"status": "error", "error_type": "internal_error"},
+        },
     )
     assert out["result"] == "FAIL"
     assert op.run.current_state() == Attempt2State.BRIDGE_FAILED
@@ -314,7 +322,10 @@ def test_n8n_fail_closed_incomplete(tmp_path: Path):
     op.advance()
     op.import_result(
         "bridge",
-        {"http_status": 200, "body": {"status": "ok", "cells": cells, "inputs_fingerprint": "e" * 64}},
+        {
+            "http_status": 200,
+            "body": {"status": "ok", "cells": cells, "inputs_fingerprint": "e" * 64},
+        },
     )
     op.advance()
     out = op.import_result(
@@ -370,7 +381,10 @@ def test_telegram_without_authorization(tmp_path: Path):
     op.advance()
     op.import_result(
         "bridge",
-        {"http_status": 200, "body": {"status": "ok", "cells": cells, "inputs_fingerprint": "f" * 64}},
+        {
+            "http_status": 200,
+            "body": {"status": "ok", "cells": cells, "inputs_fingerprint": "f" * 64},
+        },
     )
     op.advance()
     with pytest.raises(PermissionError):
@@ -430,7 +444,10 @@ def test_schedule_without_authorization(tmp_path: Path):
     op.advance()
     op.import_result(
         "bridge",
-        {"http_status": 200, "body": {"status": "ok", "cells": cells, "inputs_fingerprint": "g" * 64}},
+        {
+            "http_status": 200,
+            "body": {"status": "ok", "cells": cells, "inputs_fingerprint": "g" * 64},
+        },
     )
     op.advance()
     with pytest.raises(PermissionError):
@@ -454,8 +471,8 @@ def test_different_evidence_no_overwrite(tmp_path: Path):
     op.authorize("FIRMS_WRITER_AUTHORIZATION")
     payload = {
         "exit_code": 0,
-            "started_at": "2026-09-24T12:01:00+00:00",
-            "finished_at": "2026-09-24T12:02:00+00:00",
+        "started_at": "2026-09-24T12:01:00+00:00",
+        "finished_at": "2026-09-24T12:02:00+00:00",
         "stdout": "a",
         "stderr": "",
         "sanitization_status": "PASS",

@@ -556,14 +556,21 @@ def test_missing_pinned_file_is_explicit(tmp_path):
 def test_versioned_only_dmc_preserves_datetime_without_legacy(env):
     publish_dmc(
         env,
-        {"2026-08": _readings("2026-08-30", "2026-08-31 23:45"),
-         "2026-09": _readings("2026-09-01", "2026-09-01 01:00")},
+        {
+            "2026-08": _readings("2026-08-30", "2026-08-31 23:45"),
+            "2026-09": _readings("2026-09-01", "2026-09-01 01:00"),
+        },
         datetime(2026, 9, 1, 2, tzinfo=timezone.utc),
     )
     pinned = pin_dmc("330007", legacy_dir=env / "empty-legacy", store_dir=env / "dmc")
     assert pinned.legacy_coverage_end is None
     assert pd.api.types.is_datetime64_any_dtype(pinned.series["momento"])
-    assert not pinned.series.set_index("momento")["temperatura"].resample("6h").mean().empty
+    assert (
+        not pinned.series.set_index("momento")["temperatura"]
+        .resample("6h")
+        .mean()
+        .empty
+    )
 
 
 def test_store_location_matches_dmc_writer():

@@ -100,29 +100,33 @@ def validate_preflight_snapshot(
             technical = "INCOMPLETE"
         else:
             # UNKNOWN currents are INCOMPLETE but do not alone fail if expected was to observe
-            technical = "INCOMPLETE" if any(
-                c["rule"] in ("PF-FIRMS-CURRENT", "PF-DMC-CURRENT") and c["status"] == "INCOMPLETE"
-                for c in checks
-            ) else "PASS"
+            technical = (
+                "INCOMPLETE"
+                if any(
+                    c["rule"] in ("PF-FIRMS-CURRENT", "PF-DMC-CURRENT")
+                    and c["status"] == "INCOMPLETE"
+                    for c in checks
+                )
+                else "PASS"
+            )
     else:
         technical = "PASS"
 
     # For operator readiness: require PF-SHA PASS and PF-CLEAN PASS and no hard fails
-    ready = (
-        technical == "PASS"
-        or (
-            not hard
-            and any(c["rule"] == "PF-SHA" and c["status"] == "PASS" for c in checks)
-            and any(c["rule"] == "PF-CLEAN" and c["status"] == "PASS" for c in checks)
-            and not any(
-                c["rule"] in ("PF-FIRMS-CURRENT", "PF-DMC-CURRENT") and c["status"] == "INCOMPLETE"
-                for c in checks
-            )
+    ready = technical == "PASS" or (
+        not hard
+        and any(c["rule"] == "PF-SHA" and c["status"] == "PASS" for c in checks)
+        and any(c["rule"] == "PF-CLEAN" and c["status"] == "PASS" for c in checks)
+        and not any(
+            c["rule"] in ("PF-FIRMS-CURRENT", "PF-DMC-CURRENT")
+            and c["status"] == "INCOMPLETE"
+            for c in checks
         )
     )
     # Stricter: UNKNOWN current blocks PREFLIGHT_READY (must be known ABSENT or PRESENT)
     unknown_current = any(
-        c["rule"] in ("PF-FIRMS-CURRENT", "PF-DMC-CURRENT") and c["status"] == "INCOMPLETE"
+        c["rule"] in ("PF-FIRMS-CURRENT", "PF-DMC-CURRENT")
+        and c["status"] == "INCOMPLETE"
         for c in checks
     )
     sha_ok = any(c["rule"] == "PF-SHA" and c["status"] == "PASS" for c in checks)
@@ -159,7 +163,11 @@ def validate_firms_import(payload: dict[str, Any]) -> dict[str, Any]:
     add("exit_known", exit_code is not None, f"exit={exit_code}")
     add("stdout_present", payload.get("stdout_sha256") is not None, "")
     add("stderr_present", payload.get("stderr_sha256") is not None, "")
-    add("sanitization", payload.get("sanitization_status") == "PASS", str(payload.get("sanitization_status")))
+    add(
+        "sanitization",
+        payload.get("sanitization_status") == "PASS",
+        str(payload.get("sanitization_status")),
+    )
 
     schema_ok = payload.get("schema_ok", True)
     hash_ok = payload.get("hash_ok", True)
@@ -210,14 +218,32 @@ def validate_firms_import(payload: dict[str, Any]) -> dict[str, Any]:
 
     # Evidence quality vs operation
     if operation_failed and not any(
-        h in hard for h in ("schema_ok", "hash_ok", "pointer_ok", "attempt1_preserved", "sanitization")
+        h in hard
+        for h in (
+            "schema_ok",
+            "hash_ok",
+            "pointer_ok",
+            "attempt1_preserved",
+            "sanitization",
+        )
     ):
         evidence = "ACCEPTED_EVIDENCE"  # accepted evidence of failure
     elif hard and not success:
-        evidence = "REJECTED_EVIDENCE" if any(
-            h in ("schema_ok", "hash_ok", "pointer_ok", "sanitization", "attempt1_preserved")
-            for h in hard
-        ) else "ACCEPTED_EVIDENCE"
+        evidence = (
+            "REJECTED_EVIDENCE"
+            if any(
+                h
+                in (
+                    "schema_ok",
+                    "hash_ok",
+                    "pointer_ok",
+                    "sanitization",
+                    "attempt1_preserved",
+                )
+                for h in hard
+            )
+            else "ACCEPTED_EVIDENCE"
+        )
     elif success:
         evidence = "ACCEPTED_EVIDENCE"
     else:
@@ -242,7 +268,9 @@ def validate_dmc_import(payload: dict[str, Any]) -> dict[str, Any]:
     hard: list[str] = []
 
     def add(rule: str, ok: bool, detail: str = "") -> None:
-        checks.append({"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail})
+        checks.append(
+            {"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail}
+        )
         if not ok:
             hard.append(rule)
 
@@ -282,14 +310,20 @@ def validate_scoring_result(payload: dict[str, Any]) -> dict[str, Any]:
     hard: list[str] = []
 
     def add(rule: str, ok: bool, detail: str = "") -> None:
-        checks.append({"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail})
+        checks.append(
+            {"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail}
+        )
         if not ok:
             hard.append(rule)
 
     cells = payload.get("cells") or []
     add("cells_50", len(cells) == 50, f"n={len(cells)}")
     fp = payload.get("inputs_fingerprint")
-    add("fingerprint_live", isinstance(fp, str) and len(fp) == 64, "operational live-input fingerprint")
+    add(
+        "fingerprint_live",
+        isinstance(fp, str) and len(fp) == 64,
+        "operational live-input fingerprint",
+    )
     frozen = payload.get("frozen_fingerprint")
     # frozen is separate — optional presence but must not be confused
     add(
@@ -299,9 +333,16 @@ def validate_scoring_result(payload: dict[str, Any]) -> dict[str, Any]:
     )
     add("model_sha_known", bool(payload.get("model_sha")), "")
     ranks = [c.get("rank") for c in cells if isinstance(c, dict)]
-    add("ranks_1_n", sorted(ranks) == list(range(1, len(cells) + 1)) if cells else False, "")
+    add(
+        "ranks_1_n",
+        sorted(ranks) == list(range(1, len(cells) + 1)) if cells else False,
+        "",
+    )
     scores = [c.get("score") for c in cells if isinstance(c, dict)]
-    finite = all(isinstance(s, (int, float)) and s == s and abs(s) != float("inf") for s in scores)
+    finite = all(
+        isinstance(s, (int, float)) and s == s and abs(s) != float("inf")
+        for s in scores
+    )
     add("scores_finite", finite and len(scores) == len(cells), "")
 
     success = not hard
@@ -313,7 +354,10 @@ def validate_scoring_result(payload: dict[str, Any]) -> dict[str, Any]:
         "checks": checks,
         "hard_failures": hard,
         "human_authorization": False,
-        "note": "Does not claim scientific accuracy. Distinguishes live inputs_fingerprint from frozen reproducibility fingerprint.",
+        "note": (
+            "Does not claim scientific accuracy. Distinguishes live "
+            "inputs_fingerprint from frozen reproducibility fingerprint."
+        ),
     }
     out["content_hash"] = content_hash(out)
     return out
@@ -324,7 +368,9 @@ def validate_bridge_result(payload: dict[str, Any]) -> dict[str, Any]:
     hard: list[str] = []
 
     def add(rule: str, ok: bool, detail: str = "") -> None:
-        checks.append({"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail})
+        checks.append(
+            {"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail}
+        )
         if not ok:
             hard.append(rule)
 
@@ -347,7 +393,10 @@ def validate_bridge_result(payload: dict[str, Any]) -> dict[str, Any]:
         "checks": checks,
         "hard_failures": hard,
         "human_authorization": False,
-        "note": "Validates against active main SHA contract; Claude bridge hardening may be unmerged.",
+        "note": (
+            "Validates against active main SHA contract; Claude bridge "
+            "hardening may be unmerged."
+        ),
     }
     out["content_hash"] = content_hash(out)
     return out
@@ -358,19 +407,32 @@ def validate_n8n_result(payload: dict[str, Any]) -> dict[str, Any]:
     hard: list[str] = []
 
     def add(rule: str, ok: bool, detail: str = "") -> None:
-        checks.append({"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail})
+        checks.append(
+            {"rule": rule, "status": "PASS" if ok else "FAIL", "detail": detail}
+        )
         if not ok:
             hard.append(rule)
 
-    add("manual_only", payload.get("schedule_enabled") is not True, "schedule must be OFF")
-    add("telegram_not_sent", payload.get("telegram_sent") is not True, "Telegram must NOT SENT")
+    add(
+        "manual_only",
+        payload.get("schedule_enabled") is not True,
+        "schedule must be OFF",
+    )
+    add(
+        "telegram_not_sent",
+        payload.get("telegram_sent") is not True,
+        "Telegram must NOT SENT",
+    )
     add("score_path_ok", bool(payload.get("score_path_ok")), "")
     # expected fail-closed cases recorded
     cases = payload.get("fail_closed_cases") or {}
     add("case_503_proto", cases.get("prototype_unavailable") is True, "")
     add("case_503_data", cases.get("data_unavailable") is True, "")
     add("case_500", cases.get("internal_error") is True, "")
-    if payload.get("telegram_authorized") is True and payload.get("telegram_sent") is True:
+    if (
+        payload.get("telegram_authorized") is True
+        and payload.get("telegram_sent") is True
+    ):
         add("telegram_gate", False, "Telegram without separate campaign gate")
     success = not hard
     out = {

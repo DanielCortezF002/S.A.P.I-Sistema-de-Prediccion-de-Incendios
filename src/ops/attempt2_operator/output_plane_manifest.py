@@ -64,7 +64,14 @@ def verify_output_plane_manifest(
             "ready": False,
             "manifest_path": None,
             "observed_at": observed_at,
-            "findings": [{"id": "OP-001", "code": "OUTPUT_MANIFEST_NOT_AVAILABLE", "severity": "INFO", "message": "No output plane manifest provided"}],
+            "findings": [
+                {
+                    "id": "OP-001",
+                    "code": "OUTPUT_MANIFEST_NOT_AVAILABLE",
+                    "severity": "INFO",
+                    "message": "No output plane manifest provided",
+                }
+            ],
             "note": "Output plane manifest not provided (optional for operator core)",
         }
 
@@ -79,7 +86,14 @@ def verify_output_plane_manifest(
             "ready": False,
             "manifest_path": str(path),
             "observed_at": observed_at,
-            "findings": [{"id": "OP-002", "code": "OUTPUT_MANIFEST_NOT_FOUND", "severity": "INFO", "message": f"Output plane manifest not found at: {path}"}],
+            "findings": [
+                {
+                    "id": "OP-002",
+                    "code": "OUTPUT_MANIFEST_NOT_FOUND",
+                    "severity": "INFO",
+                    "message": f"Output plane manifest not found at: {path}",
+                }
+            ],
             "note": "Output plane manifest file not found",
         }
 
@@ -93,60 +107,91 @@ def verify_output_plane_manifest(
             "ready": False,
             "manifest_path": str(path),
             "observed_at": observed_at,
-            "findings": [{"id": "OP-003", "code": "OUTPUT_MANIFEST_CORRUPT", "severity": "FAIL", "message": f"Malformed output manifest JSON: {exc}"}],
+            "findings": [
+                {
+                    "id": "OP-003",
+                    "code": "OUTPUT_MANIFEST_CORRUPT",
+                    "severity": "FAIL",
+                    "message": f"Malformed output manifest JSON: {exc}",
+                }
+            ],
             "note": f"Malformed JSON: {exc}",
         }
 
     findings: list[dict[str, Any]] = []
 
     if data.get("schema_version") != SCHEMA_VERSION:
-        findings.append({
-            "id": "OP-004",
-            "code": "UNSUPPORTED_OUTPUT_MANIFEST_SCHEMA",
-            "severity": "FAIL",
-            "message": f"Unsupported schema version: {data.get('schema_version')}, expected {SCHEMA_VERSION}",
-        })
+        findings.append(
+            {
+                "id": "OP-004",
+                "code": "UNSUPPORTED_OUTPUT_MANIFEST_SCHEMA",
+                "severity": "FAIL",
+                "message": (
+                    f"Unsupported schema version: {data.get('schema_version')}, "
+                    f"expected {SCHEMA_VERSION}"
+                ),
+            }
+        )
 
     for field in REQUIRED_FIELDS:
         if field not in data or data[field] is None or data[field] == "":
-            findings.append({
-                "id": "OP-005",
-                "code": "MISSING_REQUIRED_FIELD",
-                "severity": "FAIL",
-                "message": f"Required output plane field missing: {field}",
-            })
+            findings.append(
+                {
+                    "id": "OP-005",
+                    "code": "MISSING_REQUIRED_FIELD",
+                    "severity": "FAIL",
+                    "message": f"Required output plane field missing: {field}",
+                }
+            )
 
     computed_fp = compute_output_manifest_fingerprint(data)
     declared_fp = data.get("manifest_fingerprint")
     if declared_fp and declared_fp != computed_fp:
-        findings.append({
-            "id": "OP-006",
-            "code": "TAMPERED_OUTPUT_ACCEPTANCE",
-            "severity": "FAIL",
-            "message": f"Output manifest fingerprint mismatch: declared {declared_fp} != computed {computed_fp}",
-        })
+        findings.append(
+            {
+                "id": "OP-006",
+                "code": "TAMPERED_OUTPUT_ACCEPTANCE",
+                "severity": "FAIL",
+                "message": (
+                    f"Output manifest fingerprint mismatch: declared "
+                    f"{declared_fp} != computed {computed_fp}"
+                ),
+            }
+        )
 
     # Verify score artifact file if accessible
     expected_artifact_sha = data.get("accepted_score_artifact_sha256")
     target_artifact = (
-        Path(score_artifact_path) if score_artifact_path else Path(data.get("accepted_score_artifact_path", ""))
+        Path(score_artifact_path)
+        if score_artifact_path
+        else Path(data.get("accepted_score_artifact_path", ""))
     )
     if target_artifact and target_artifact.is_file():
         actual_sha = _sha256_file(target_artifact)
         if expected_artifact_sha and actual_sha != expected_artifact_sha:
-            findings.append({
-                "id": "OP-007",
-                "code": "TAMPERED_OUTPUT_ACCEPTANCE",
-                "severity": "FAIL",
-                "message": f"Score artifact SHA {actual_sha} != expected {expected_artifact_sha}",
-            })
+            findings.append(
+                {
+                    "id": "OP-007",
+                    "code": "TAMPERED_OUTPUT_ACCEPTANCE",
+                    "severity": "FAIL",
+                    "message": (
+                        f"Score artifact SHA {actual_sha} != expected "
+                        f"{expected_artifact_sha}"
+                    ),
+                }
+            )
     elif expected_artifact_sha and not (target_artifact and target_artifact.is_file()):
-        findings.append({
-            "id": "OP-008",
-            "code": "SCORE_ARTIFACT_NOT_FOUND",
-            "severity": "INCOMPLETE",
-            "message": f"Score artifact referenced by output manifest not found: {target_artifact}",
-        })
+        findings.append(
+            {
+                "id": "OP-008",
+                "code": "SCORE_ARTIFACT_NOT_FOUND",
+                "severity": "INCOMPLETE",
+                "message": (
+                    f"Score artifact referenced by output manifest not found: "
+                    f"{target_artifact}"
+                ),
+            }
+        )
 
     has_failures = any(f["severity"] == "FAIL" for f in findings)
     has_incomplete = any(f["severity"] == "INCOMPLETE" for f in findings)
@@ -161,7 +206,9 @@ def verify_output_plane_manifest(
         "output_contract_version": data.get("output_contract_version"),
         "accepted_score_artifact_path": str(target_artifact),
         "accepted_score_artifact_sha256": expected_artifact_sha,
-        "presentation_contract_status": data.get("presentation_contract_status", "UNKNOWN"),
+        "presentation_contract_status": data.get(
+            "presentation_contract_status", "UNKNOWN"
+        ),
         "observed_at": observed_at,
         "findings": findings,
     }

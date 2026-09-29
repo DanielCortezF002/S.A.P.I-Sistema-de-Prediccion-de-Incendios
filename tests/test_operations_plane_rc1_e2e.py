@@ -33,7 +33,6 @@ import os
 import subprocess
 from pathlib import Path
 
-import pytest
 
 from src.ops import operational_workspace as ow
 from src.ops import workspace_safety as ws
@@ -45,7 +44,6 @@ from src.ops.attempt2_operator.events import sha256_file
 from src.ops.attempt2_operator.operator import Attempt2Operator
 from src.ops.attempt2_operator.output_plane_manifest import (
     compute_output_manifest_fingerprint,
-    verify_output_plane_manifest,
 )
 from src.ops.attempt2_operator.states import Attempt2State
 from src.ops.attempt2_operator.workspace_manifest import verify_workspace_manifest
@@ -78,7 +76,9 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
 
     # Create tracked files mirroring repo structure
     (repo_dir / "src").mkdir(parents=True)
-    (repo_dir / "src" / "__init__.py").write_text('"""Synthetic SAPI package."""\n', encoding="utf-8")
+    (repo_dir / "src" / "__init__.py").write_text(
+        '"""Synthetic SAPI package."""\n', encoding="utf-8"
+    )
     (repo_dir / "src" / "config.py").write_text('"""Config."""\n', encoding="utf-8")
     (repo_dir / "models").mkdir(parents=True)
     (repo_dir / "models" / ".gitkeep").write_text("", encoding="utf-8")
@@ -105,15 +105,25 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     models_src = stores_root / "models"
 
     raw_src.mkdir(parents=True)
-    (raw_src / "CURRENT.json").write_text('{"state": "ABSENT", "synthetic": true}\n', encoding="utf-8")
-    (raw_src / "firms_data.csv").write_text("latitude,longitude,frp\n-33.4,-70.6,12.5\n", encoding="utf-8")
+    (raw_src / "CURRENT.json").write_text(
+        '{"state": "ABSENT", "synthetic": true}\n', encoding="utf-8"
+    )
+    (raw_src / "firms_data.csv").write_text(
+        "latitude,longitude,frp\n-33.4,-70.6,12.5\n", encoding="utf-8"
+    )
 
     processed_src.mkdir(parents=True)
-    (processed_src / "CURRENT.json").write_text('{"state": "ABSENT", "synthetic": true}\n', encoding="utf-8")
-    (processed_src / "meteo.csv").write_text("temp,rh,wind\n28.5,35.0,15.2\n", encoding="utf-8")
+    (processed_src / "CURRENT.json").write_text(
+        '{"state": "ABSENT", "synthetic": true}\n', encoding="utf-8"
+    )
+    (processed_src / "meteo.csv").write_text(
+        "temp,rh,wind\n28.5,35.0,15.2\n", encoding="utf-8"
+    )
 
     models_src.mkdir(parents=True)
-    (models_src / "model.txt").write_text("SYNTHETIC_MODEL_WEIGHTS_V1\n", encoding="utf-8")
+    (models_src / "model.txt").write_text(
+        "SYNTHETIC_MODEL_WEIGHTS_V1\n", encoding="utf-8"
+    )
 
     # -------------------------------------------------------------------------
     # Step 3: Materializer plan
@@ -122,12 +132,18 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     req = ow.WorkspaceRequest(
         repo_root=repo_dir,
         code_sha=code_sha,
-        source_stores={"raw": raw_src, "processed": processed_src, "models": models_src},
+        source_stores={
+            "raw": raw_src,
+            "processed": processed_src,
+            "models": models_src,
+        },
         destination=dest_workspace,
         margin_bytes=1024 * 1024,
     )
     plan_result = ow.plan(req)
-    assert plan_result["overall_status"] == "PASS", f"Plan failed: {plan_result.get('findings')}"
+    assert (
+        plan_result["overall_status"] == "PASS"
+    ), f"Plan failed: {plan_result.get('findings')}"
     plan_id = plan_result["plan_id"]
     assert plan_id is not None
 
@@ -140,7 +156,9 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     # Step 5: Physical temp workspace materialization
     # -------------------------------------------------------------------------
     mat_result = ow.materialize(req, confirm_plan_id=confirm_plan_id)
-    assert mat_result["overall_status"] == "PASS", f"Materialize failed: {mat_result.get('findings')}"
+    assert (
+        mat_result["overall_status"] == "PASS"
+    ), f"Materialize failed: {mat_result.get('findings')}"
     assert mat_result["promotion_status"] == "PROMOTED"
     assert dest_workspace.is_dir()
     manifest_file = dest_workspace / ow.MANIFEST_NAME
@@ -149,7 +167,11 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     # -------------------------------------------------------------------------
     # Step 6: Verify manifest
     # -------------------------------------------------------------------------
-    ws_ver = verify_workspace_manifest(manifest_file, expected_code_sha=code_sha, expected_workspace_root=dest_workspace)
+    ws_ver = verify_workspace_manifest(
+        manifest_file,
+        expected_code_sha=code_sha,
+        expected_workspace_root=dest_workspace,
+    )
     assert ws_ver["status"] == "PASS"
     assert ws_ver["verification_state"] == "VERIFIED"
     assert ws_ver["code_sha"] == code_sha
@@ -171,7 +193,9 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
             },
         )
     )
-    assert guard_res["overall_status"] == "PASS", f"Guard failed: {guard_res.get('failures')}"
+    assert (
+        guard_res["overall_status"] == "PASS"
+    ), f"Guard failed: {guard_res.get('failures')}"
 
     # -------------------------------------------------------------------------
     # Step 8: Create synthetic DATA_PLANE_MANIFEST (authoritative nested schema v1)
@@ -186,7 +210,7 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     dm_identity = {
         "schema_version": 1,
         "kind": "DATA_PLANE_MANIFEST",
-        "data_readiness_status": "PREPARED",   # highest valid producer state
+        "data_readiness_status": "PREPARED",  # highest valid producer state
         "data_ready_for_scoring": "NOT_EVALUATED",
         "independent_approval": "PENDING",
         "authorizations": {
@@ -214,10 +238,16 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
             "cells": 50,
         },
         "baseline": {"sha256": "g" * 64, "status": "PASS"},
-        "source_evidence": {"sha256": "h" * 64, "status": "PASS"},  # required for PREPARED
+        "source_evidence": {
+            "sha256": "h" * 64,
+            "status": "PASS",
+        },  # required for PREPARED
         "expected_current": {"firms": "ABSENT", "dmc": "ABSENT"},
-        "current_state": {"firms": "ABSENT", "dmc": "ABSENT"},   # must match expected_current
-        "findings": [],                                            # must be empty for PREPARED
+        "current_state": {
+            "firms": "ABSENT",
+            "dmc": "ABSENT",
+        },  # must match expected_current
+        "findings": [],  # must be empty for PREPARED
     }
     dm_fp = compute_data_manifest_fingerprint(dm_identity)
     dm_data = {
@@ -225,15 +255,23 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
         "created_at": "2026-09-25T19:00:00+00:00",
         "identity": dm_identity,
         "fingerprint": dm_fp,
-        "operational_roots": {"workspace": str(dest_workspace), "code": str(dest_workspace)},
-        "observation": {"start": "2026-09-25T19:00:00+00:00", "end": "2026-09-25T19:00:01+00:00"},
+        "operational_roots": {
+            "workspace": str(dest_workspace),
+            "code": str(dest_workspace),
+        },
+        "observation": {
+            "start": "2026-09-25T19:00:00+00:00",
+            "end": "2026-09-25T19:00:01+00:00",
+        },
     }
     data_manifest_file.write_text(json.dumps(dm_data, indent=2), encoding="utf-8")
 
     dm_ver = verify_data_plane_manifest(data_manifest_file, expected_code_sha=code_sha)
-    assert dm_ver["status"] == "PREPARED", f"Data manifest verification failed: {dm_ver['findings']}"
-    assert dm_ver["prepared"] is True   # PREPARED = producer-valid, data staged
-    assert dm_ver["ready"] is False     # ready is always False — no producer READY state
+    assert (
+        dm_ver["status"] == "PREPARED"
+    ), f"Data manifest verification failed: {dm_ver['findings']}"
+    assert dm_ver["prepared"] is True  # PREPARED = producer-valid, data staged
+    assert dm_ver["ready"] is False  # ready is always False — no producer READY state
 
     # -------------------------------------------------------------------------
     # Step 9: Attempt2 Operator init
@@ -284,10 +322,13 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
         "artifacts": {"overall_status": "PASS"},
         "credentials": {"credentials": []},
         "workspace_safety": {"status": "PASS", "overall_status": "PASS"},
-        "workspace_manifest": {"status": "PASS", "fingerprint": ws_ver["manifest_fingerprint"]},
+        "workspace_manifest": {
+            "status": "PASS",
+            "fingerprint": ws_ver["manifest_fingerprint"],
+        },
         "data_plane": {
             "status": "PREPARED",
-            "ready": False,   # always False — no producer READY state
+            "ready": False,  # always False — no producer READY state
             "prepared": True,
             "manifest_fingerprint": dm_fp,
         },
@@ -457,7 +498,9 @@ def test_full_synthetic_operations_e2e(tmp_path: Path):
     op_data["manifest_fingerprint"] = op_fp
     output_manifest_file.write_text(json.dumps(op_data, indent=2), encoding="utf-8")
 
-    out_ver = op.accept_output_manifest(output_manifest_file, score_artifact_path=score_file)
+    out_ver = op.accept_output_manifest(
+        output_manifest_file, score_artifact_path=score_file
+    )
     assert out_ver["status"] == "PASS"
     assert out_ver["manifest_fingerprint"] == op_fp
 

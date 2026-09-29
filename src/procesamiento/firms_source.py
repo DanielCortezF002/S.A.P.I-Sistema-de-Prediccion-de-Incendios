@@ -171,9 +171,9 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
             f"Puntero FIRMS ilegible en {pointer_path.name}: {exc}"
         ) from exc
 
-    if (
-        not isinstance(pointer, dict)
-        or pointer.get("schema_version") not in (POINTER_SCHEMA_VERSION, PROJECTED_POINTER_SCHEMA_VERSION)
+    if not isinstance(pointer, dict) or pointer.get("schema_version") not in (
+        POINTER_SCHEMA_VERSION,
+        PROJECTED_POINTER_SCHEMA_VERSION,
     ):
         raise FirmsSourceError(
             f"Puntero FIRMS con esquema no soportado en {pointer_path.name}."
@@ -217,6 +217,7 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
     if pointer["schema_version"] == PROJECTED_POINTER_SCHEMA_VERSION:
         try:
             from src.ingesta.firms_schema import CONTRACT, validate_operational
+
             if pointer.get("data_contract") != CONTRACT:
                 raise ValueError("Contrato de proyección FIRMS desconocido")
             for key in ("base_sha256", "projected_base_sha256"):
@@ -227,14 +228,23 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
             if "base_relative_path" not in pointer:
                 raise ValueError("Falta procedencia de base FIRMS")
             raw = pointer.get("raw_artifacts")
-            if not isinstance(raw, list) or not raw or [x["path"] for x in raw] != pointer.get("raw_files"):
+            if (
+                not isinstance(raw, list)
+                or not raw
+                or [x["path"] for x in raw] != pointer.get("raw_files")
+            ):
                 raise ValueError("Manifest raw FIRMS inválido")
             if any(not re.fullmatch(r"[0-9a-f]{64}", x["sha256"]) for x in raw):
                 raise ValueError("Hash raw FIRMS inválido")
             frame = validate_operational(target.read_bytes())
-            if len(frame) != pointer.get("row_count") or not 0 <= pointer["new_rows"] <= len(frame):
+            if len(frame) != pointer.get("row_count") or not 0 <= pointer[
+                "new_rows"
+            ] <= len(frame):
                 raise ValueError("Conteo FIRMS inválido")
-            if any(not coverage_start <= date.fromisoformat(d) <= coverage_end for d in frame["acq_date"]):
+            if any(
+                not coverage_start <= date.fromisoformat(d) <= coverage_end
+                for d in frame["acq_date"]
+            ):
                 raise ValueError("Cobertura FIRMS inválida")
         except (ValueError, TypeError, KeyError, AttributeError) as exc:
             raise FirmsSourceError(f"Puntero FIRMS v3 inválido: {exc}") from exc

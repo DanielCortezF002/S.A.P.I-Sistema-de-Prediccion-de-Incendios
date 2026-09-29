@@ -13,8 +13,7 @@ ALLOWED_STATUSES = frozenset({"PASS", "FAIL", "INCOMPLETE", "NOT_AVAILABLE"})
 
 
 class WorkspaceSafetyProvider(Protocol):
-    def check(self, repo: Path, **kwargs: Any) -> dict[str, Any]:
-        ...
+    def check(self, repo: Path, **kwargs: Any) -> dict[str, Any]: ...
 
 
 class NotAvailableWorkspaceSafety:
@@ -56,9 +55,7 @@ class ClaudeWorkspaceSafetyProvider:
         target_mode = (
             Mode.parse(mode)
             if isinstance(mode, str)
-            else mode
-            if mode is not None
-            else self.default_mode
+            else mode if mode is not None else self.default_mode
         )
         resolved_stores = dict(stores) if stores is not None else {}
         if not resolved_stores and target_mode == Mode.OPERATIONAL_REAL_DATA:
@@ -85,7 +82,9 @@ class ClaudeWorkspaceSafetyProvider:
                 "provider": "ClaudeWorkspaceSafetyProvider",
                 "repo": str(repo),
                 "mode": target_mode.value,
-                "observed_at": raw.get("observed_at", datetime.now(timezone.utc).isoformat()),
+                "observed_at": raw.get(
+                    "observed_at", datetime.now(timezone.utc).isoformat()
+                ),
                 "evidence": raw,
                 "findings": raw.get("findings", []),
                 "failures": raw.get("failures", []),
@@ -100,10 +99,16 @@ class ClaudeWorkspaceSafetyProvider:
                 "overall_status": "NOT_AVAILABLE",
                 "provider": "ClaudeWorkspaceSafetyProvider",
                 "repo": str(repo),
-                "mode": target_mode.value if isinstance(target_mode, Mode) else str(target_mode),
+                "mode": (
+                    target_mode.value
+                    if isinstance(target_mode, Mode)
+                    else str(target_mode)
+                ),
                 "observed_at": datetime.now(timezone.utc).isoformat(),
                 "evidence": {},
-                "findings": [{"id": "WS-ERROR", "message": str(exc), "severity": "INCOMPLETE"}],
+                "findings": [
+                    {"id": "WS-ERROR", "message": str(exc), "severity": "INCOMPLETE"}
+                ],
                 "note": f"Provider error: {type(exc).__name__}: {exc}",
             }
 

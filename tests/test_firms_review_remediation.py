@@ -298,7 +298,9 @@ def test_nm02_complete_manifest_identical_when_raw_path_bytes_and_clock_are_froz
     assert json.loads(pointers[0])["new_rows"] == 3
 
 
-def test_mixed_sp_nrt_same_detection_prefers_sp_and_preserves_raw_classification(tmp_path):
+def test_mixed_sp_nrt_same_detection_prefers_sp_and_preserves_raw_classification(
+    tmp_path,
+):
     paths = new_paths(tmp_path / "store")
     standard = row(version="2", type="2")
     near_real_time = row(frp="9.9")
@@ -354,7 +356,9 @@ def test_nm02_only_exact_repetitions_are_consolidated_raw_stays_complete(tmp_pat
     assert validate_publication(paths)["result"] == "FIRMS ACCEPTED"
 
 
-def test_cross_product_permutations_have_one_sp_and_identical_resolved_bytes(tmp_path, monkeypatch):
+def test_cross_product_permutations_have_one_sp_and_identical_resolved_bytes(
+    tmp_path, monkeypatch
+):
     from src.ingesta.nasa_firms_backfill import DateWindow
 
     versions, contents, hashes = [], [], []
@@ -366,19 +370,32 @@ def test_cross_product_permutations_have_one_sp_and_identical_resolved_bytes(tmp
         nrt = row()
         unrelated = row(latitude="-33.1")
         nrt_rows = [nrt, unrelated, nrt] if index != 2 else [unrelated, nrt, nrt]
-        monkeypatch.setattr(fr, "build_windows", lambda *args, order=source_order: [
-            DateWindow(source, START, START) for source in order
-        ])
+        monkeypatch.setattr(
+            fr,
+            "build_windows",
+            lambda *args, order=source_order: [
+                DateWindow(source, START, START) for source in order
+            ],
+        )
         outcome = fr.refresh(
-            paths=paths, map_key="offline", today=START + timedelta(days=1),
+            paths=paths,
+            map_key="offline",
+            today=START + timedelta(days=1),
             client_factory=factory_for(
-                {schema.SP_SOURCE: csv_text([standard, standard]),
-                 schema.NRT_SOURCE: csv_text(nrt_rows)},
-                {s: Availability(s, START, START) for s in sources}, [],
+                {
+                    schema.SP_SOURCE: csv_text([standard, standard]),
+                    schema.NRT_SOURCE: csv_text(nrt_rows),
+                },
+                {s: Availability(s, START, START) for s in sources},
+                [],
             ),
         )
-        source = resolve_firms_source(reproducibility=False, pointer_path=paths.pointer,
-                                      versions_dir=paths.versions_dir, baseline_csv=paths.baseline_csv)
+        source = resolve_firms_source(
+            reproducibility=False,
+            pointer_path=paths.pointer,
+            versions_dir=paths.versions_dir,
+            baseline_csv=paths.baseline_csv,
+        )
         data = source.path.read_bytes()
         actual = schema.validate_operational(data).iloc[1:]
         shared = actual[pd.to_numeric(actual.latitude).round(5).eq(-33.05)]
@@ -396,14 +413,18 @@ def test_sp_type_distinctions_survive_projection_with_multiplicity(tmp_path):
     from src.ingesta.nasa_firms_backfill import reconcile_source_observations
 
     paths = new_paths(tmp_path / "store")
-    sp = schema.parse_source_csv(csv_text([row(version="2", type="0"),
-                                         row(version="2", type="2")]),
-                                 schema.SP_SOURCE, START, START)
+    sp = schema.parse_source_csv(
+        csv_text([row(version="2", type="0"), row(version="2", type="2")]),
+        schema.SP_SOURCE,
+        START,
+        START,
+    )
     nrt = schema.parse_source_csv(csv_text([row()]), schema.NRT_SOURCE, START, START)
     combined = pd.concat([sp, nrt, sp.iloc[[0]]], ignore_index=True)
     retained = reconcile_source_observations(combined)
     assert sorted(retained["type"].tolist()) == ["0", "2"]
-    data, added = fr.build_version_bytes(paths.baseline_csv.read_bytes(), combined,
-                                        START - timedelta(days=1), START)
+    data, added = fr.build_version_bytes(
+        paths.baseline_csv.read_bytes(), combined, START - timedelta(days=1), START
+    )
     assert added == 2
     assert len(schema.validate_operational(data)) == 3

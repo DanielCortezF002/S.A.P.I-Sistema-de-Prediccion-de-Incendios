@@ -52,7 +52,13 @@ DATA_PLANE_MANIFEST_FILENAME = "DATA_PLANE_MANIFEST.json"
 _AUTH_FLAGS = ("attempt2", "writers", "telegram", "schedule")
 
 # Asset blocks checked for status==PASS when readiness==PREPARED
-_PREPARED_ASSET_BLOCKS = ("model", "topography", "baseline", "source_evidence", "code_identity")
+_PREPARED_ASSET_BLOCKS = (
+    "model",
+    "topography",
+    "baseline",
+    "source_evidence",
+    "code_identity",
+)
 
 # Required identity-block fields
 _REQUIRED_IDENTITY_FIELDS = (
@@ -75,6 +81,7 @@ _REQUIRED_IDENTITY_FIELDS = (
 # ---------------------------------------------------------------------------
 # Fingerprint helpers (exact producer recipe at cd9c01408059961fb30e4b6321429a018e4a0df5)
 # ---------------------------------------------------------------------------
+
 
 def _canonical_json(value: Any) -> bytes:
     """Canonical deterministic JSON bytes — exact producer recipe.
@@ -106,6 +113,7 @@ def compute_data_manifest_fingerprint(identity_block: Mapping[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # Producer semantic validator (ported inline — attributed to exact SHA)
 # ---------------------------------------------------------------------------
+
 
 def _producer_semantic_validate(
     raw: dict[str, Any],
@@ -229,6 +237,7 @@ def _producer_semantic_validate(
 # Internal view  (canonical representation for all Operations consumers)
 # ---------------------------------------------------------------------------
 
+
 class DataPlaneManifestView:
     """Canonical internal representation of a parsed Data Plane manifest.
 
@@ -263,28 +272,24 @@ class DataPlaneManifestView:
         self.code_clean: bool | None = code_id.get("clean")
 
         # Component SHAs
-        self.firms_component_sha: str | None = (
-            components.get("firms", {}).get("sha")
-        )
-        self.dmc_component_sha: str | None = (
-            components.get("dmc", {}).get("sha")
-        )
-        self.scoring_inputs_component_sha: str | None = (
-            components.get("scoring_inputs", {}).get("sha")
-        )
+        self.firms_component_sha: str | None = components.get("firms", {}).get("sha")
+        self.dmc_component_sha: str | None = components.get("dmc", {}).get("sha")
+        self.scoring_inputs_component_sha: str | None = components.get(
+            "scoring_inputs", {}
+        ).get("sha")
 
         # Asset identities
         model = identity.get("model") or {}
         self.model_sha: str | None = model.get("sha256") or model.get("sha")
 
         topography = identity.get("topography") or {}
-        self.topography_identity: str | None = (
-            topography.get("table_sha256") or topography.get("grid_sha256")
-        )
+        self.topography_identity: str | None = topography.get(
+            "table_sha256"
+        ) or topography.get("grid_sha256")
 
         baseline = identity.get("baseline") or {}
-        self.baseline_identity: str | None = (
-            baseline.get("sha256") or baseline.get("sha")
+        self.baseline_identity: str | None = baseline.get("sha256") or baseline.get(
+            "sha"
         )
 
         # State
@@ -304,6 +309,7 @@ class DataPlaneManifestView:
 # ---------------------------------------------------------------------------
 # Core verifier
 # ---------------------------------------------------------------------------
+
 
 def verify_data_plane_manifest(
     manifest_path: Path | str | None,
@@ -353,8 +359,10 @@ def verify_data_plane_manifest(
     # ------------------------------------------------------------------ #
     if manifest_path is None:
         return _not_available(
-            None, observed_at,
-            "DM-001", "DATA_MANIFEST_NOT_AVAILABLE",
+            None,
+            observed_at,
+            "DM-001",
+            "DATA_MANIFEST_NOT_AVAILABLE",
             "No data plane manifest provided",
         )
 
@@ -364,8 +372,10 @@ def verify_data_plane_manifest(
 
     if not path.is_file():
         return _not_available(
-            str(path), observed_at,
-            "DM-002", "DATA_MANIFEST_FILE_NOT_FOUND",
+            str(path),
+            observed_at,
+            "DM-002",
+            "DATA_MANIFEST_FILE_NOT_FOUND",
             f"Data plane manifest not found at: {path}",
         )
 
@@ -377,15 +387,28 @@ def verify_data_plane_manifest(
         raw = json.loads(raw_text)
     except json.JSONDecodeError as exc:
         return _fail_result(
-            str(path), observed_at, None,
-            [_finding("DM-003", "DATA_MANIFEST_CORRUPT", "FAIL",
-                       f"Malformed JSON: {exc}")],
+            str(path),
+            observed_at,
+            None,
+            [
+                _finding(
+                    "DM-003", "DATA_MANIFEST_CORRUPT", "FAIL", f"Malformed JSON: {exc}"
+                )
+            ],
         )
     except Exception as exc:
         return _fail_result(
-            str(path), observed_at, None,
-            [_finding("DM-003", "DATA_MANIFEST_READ_ERROR", "FAIL",
-                       f"Cannot read manifest: {exc}")],
+            str(path),
+            observed_at,
+            None,
+            [
+                _finding(
+                    "DM-003",
+                    "DATA_MANIFEST_READ_ERROR",
+                    "FAIL",
+                    f"Cannot read manifest: {exc}",
+                )
+            ],
         )
 
     # ------------------------------------------------------------------ #
@@ -393,11 +416,19 @@ def verify_data_plane_manifest(
     # ------------------------------------------------------------------ #
     if not isinstance(raw, dict):
         return _fail_result(
-            str(path), observed_at, None,
-            [_finding("DM-011", "DATA_MANIFEST_NOT_OBJECT", "FAIL",
-                       f"Manifest JSON root must be a dict/object, "
-                       f"got {type(raw).__name__!r} — value: "
-                       f"{json.dumps(raw)[:80]!r}")],
+            str(path),
+            observed_at,
+            None,
+            [
+                _finding(
+                    "DM-011",
+                    "DATA_MANIFEST_NOT_OBJECT",
+                    "FAIL",
+                    f"Manifest JSON root must be a dict/object, "
+                    f"got {type(raw).__name__!r} — value: "
+                    f"{json.dumps(raw)[:80]!r}",
+                )
+            ],
         )
 
     findings: list[dict[str, Any]] = []
@@ -406,21 +437,29 @@ def verify_data_plane_manifest(
     # 4. Envelope schema version                                           #
     # ------------------------------------------------------------------ #
     if raw.get("schema_version") != SCHEMA_VERSION:
-        findings.append(_finding(
-            "DM-004", "UNSUPPORTED_DATA_MANIFEST_SCHEMA", "FAIL",
-            f"Unsupported schema version: {raw.get('schema_version')!r}, "
-            f"expected {SCHEMA_VERSION}",
-        ))
+        findings.append(
+            _finding(
+                "DM-004",
+                "UNSUPPORTED_DATA_MANIFEST_SCHEMA",
+                "FAIL",
+                f"Unsupported schema version: {raw.get('schema_version')!r}, "
+                f"expected {SCHEMA_VERSION}",
+            )
+        )
 
     # ------------------------------------------------------------------ #
     # 5. Identity block presence                                           #
     # ------------------------------------------------------------------ #
     identity = raw.get("identity")
     if not isinstance(identity, dict):
-        findings.append(_finding(
-            "DM-005", "MISSING_IDENTITY_BLOCK", "FAIL",
-            "Required 'identity' block is missing or not a dict",
-        ))
+        findings.append(
+            _finding(
+                "DM-005",
+                "MISSING_IDENTITY_BLOCK",
+                "FAIL",
+                "Required 'identity' block is missing or not a dict",
+            )
+        )
         return _fail_result(str(path), observed_at, None, findings)
 
     # ------------------------------------------------------------------ #
@@ -428,10 +467,14 @@ def verify_data_plane_manifest(
     # ------------------------------------------------------------------ #
     for field in _REQUIRED_IDENTITY_FIELDS:
         if field not in identity or identity[field] is None:
-            findings.append(_finding(
-                "DM-005", "MISSING_REQUIRED_IDENTITY_FIELD", "FAIL",
-                f"Required identity field missing: identity.{field}",
-            ))
+            findings.append(
+                _finding(
+                    "DM-005",
+                    "MISSING_REQUIRED_IDENTITY_FIELD",
+                    "FAIL",
+                    f"Required identity field missing: identity.{field}",
+                )
+            )
 
     # ------------------------------------------------------------------ #
     # 7. Cryptographic fingerprint (covers identity block only)            #
@@ -443,23 +486,35 @@ def verify_data_plane_manifest(
         computed_fp = compute_data_manifest_fingerprint(identity)
     except (TypeError, ValueError) as exc:
         computed_fp = None
-        findings.append(_finding(
-            "DM-006", "DATA_MANIFEST_FINGERPRINT_ERROR", "FAIL",
-            f"Cannot compute fingerprint: {exc}",
-        ))
+        findings.append(
+            _finding(
+                "DM-006",
+                "DATA_MANIFEST_FINGERPRINT_ERROR",
+                "FAIL",
+                f"Cannot compute fingerprint: {exc}",
+            )
+        )
 
     if computed_fp is not None:
         if declared_fp is None:
-            findings.append(_finding(
-                "DM-006", "DATA_MANIFEST_NO_FINGERPRINT", "FAIL",
-                "Manifest has no 'fingerprint' field",
-            ))
+            findings.append(
+                _finding(
+                    "DM-006",
+                    "DATA_MANIFEST_NO_FINGERPRINT",
+                    "FAIL",
+                    "Manifest has no 'fingerprint' field",
+                )
+            )
         elif declared_fp != computed_fp:
-            findings.append(_finding(
-                "DM-006", "DATA_MANIFEST_TAMPERED", "FAIL",
-                f"Manifest fingerprint mismatch: "
-                f"declared {declared_fp} != computed {computed_fp}",
-            ))
+            findings.append(
+                _finding(
+                    "DM-006",
+                    "DATA_MANIFEST_TAMPERED",
+                    "FAIL",
+                    f"Manifest fingerprint mismatch: "
+                    f"declared {declared_fp} != computed {computed_fp}",
+                )
+            )
 
     fingerprint_ok = (
         computed_fp is not None
@@ -477,10 +532,14 @@ def verify_data_plane_manifest(
         producer_valid = ok
         if not ok:
             for reason in reasons:
-                findings.append(_finding(
-                    "DM-012", "PRODUCER_SEMANTIC_VIOLATION", "FAIL",
-                    f"Producer semantic validation failed: {reason}",
-                ))
+                findings.append(
+                    _finding(
+                        "DM-012",
+                        "PRODUCER_SEMANTIC_VIOLATION",
+                        "FAIL",
+                        f"Producer semantic validation failed: {reason}",
+                    )
+                )
     elif not any(f["severity"] == "FAIL" for f in findings):
         # fingerprint failed — producer check skipped
         # V4 note: V3 DM-009 AUTHORIZATION_CLAIMED is fully subsumed by
@@ -498,11 +557,15 @@ def verify_data_plane_manifest(
             and actual_code_sha
             and actual_code_sha != expected_code_sha
         ):
-            findings.append(_finding(
-                "DM-010", "CODE_SHA_MISMATCH", "WARN",
-                f"Data plane code SHA {actual_code_sha} != "
-                f"expected {expected_code_sha}",
-            ))
+            findings.append(
+                _finding(
+                    "DM-010",
+                    "CODE_SHA_MISMATCH",
+                    "WARN",
+                    f"Data plane code SHA {actual_code_sha} != "
+                    f"expected {expected_code_sha}",
+                )
+            )
 
     # ------------------------------------------------------------------ #
     # 10. Build canonical view                                              #
@@ -511,9 +574,18 @@ def verify_data_plane_manifest(
         view = DataPlaneManifestView(raw)
     except Exception as exc:  # pragma: no cover — defensive
         return _fail_result(
-            str(path), observed_at, computed_fp,
-            findings + [_finding("DM-013", "DATA_MANIFEST_VIEW_ERROR", "FAIL",
-                                  f"Cannot build manifest view: {exc}")],
+            str(path),
+            observed_at,
+            computed_fp,
+            findings
+            + [
+                _finding(
+                    "DM-013",
+                    "DATA_MANIFEST_VIEW_ERROR",
+                    "FAIL",
+                    f"Cannot build manifest view: {exc}",
+                )
+            ],
         )
 
     # ------------------------------------------------------------------ #
@@ -571,13 +643,17 @@ def verify_data_plane_manifest(
 # Private helpers
 # ---------------------------------------------------------------------------
 
+
 def _finding(fid: str, code: str, severity: str, message: str) -> dict[str, Any]:
     return {"id": fid, "code": code, "severity": severity, "message": message}
 
 
 def _not_available(
-    path: str | None, observed_at: str,
-    fid: str, code: str, message: str,
+    path: str | None,
+    observed_at: str,
+    fid: str,
+    code: str,
+    message: str,
 ) -> dict[str, Any]:
     return {
         "status": "NOT_AVAILABLE",

@@ -36,7 +36,11 @@ class EventLog:
     def count(self) -> int:
         if not self.path.exists() or self.path.stat().st_size == 0:
             return 0
-        return sum(1 for line in self.path.read_text(encoding="utf-8").splitlines() if line.strip())
+        return sum(
+            1
+            for line in self.path.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        )
 
     def append(self, event: dict[str, Any]) -> dict[str, Any]:
         seq = self.count() + 1

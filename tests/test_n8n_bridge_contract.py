@@ -149,24 +149,48 @@ def test_invalid_08_nan_score(monkeypatch):
 
 @pytest.mark.parametrize("value", [float("inf"), float("-inf")], ids=["inf", "-inf"])
 def test_invalid_09_infinite_score(monkeypatch, value):
-    _assert_fail_closed(_score(monkeypatch, _set_cell(_fixture_result(), 10, score=value)))
+    _assert_fail_closed(
+        _score(monkeypatch, _set_cell(_fixture_result(), 10, score=value))
+    )
 
 
 @pytest.mark.parametrize(
     "field,value",
-    [("score", None), ("rank", None), ("cell_id", None), ("cell_id", ""),
-     ("score", "0.3"), ("rank", 1.0), ("rank", True), ("score", 1.5)],
+    [
+        ("score", None),
+        ("rank", None),
+        ("cell_id", None),
+        ("cell_id", ""),
+        ("score", "0.3"),
+        ("rank", 1.0),
+        ("rank", True),
+        ("score", 1.5),
+    ],
 )
 def test_invalid_cell_field_types(monkeypatch, field, value):
-    _assert_fail_closed(_score(monkeypatch, _set_cell(_fixture_result(), 5, **{field: value})))
+    _assert_fail_closed(
+        _score(monkeypatch, _set_cell(_fixture_result(), 5, **{field: value}))
+    )
 
 
 @pytest.mark.parametrize(
     "field",
-    ["model_version", "model_status", "station_id", "forecast_time",
-     "weather_timestamp", "horizon_hours", "age_hours", "freshness",
-     "meteo_actual", "firms_origin", "firms_coverage_end", "firms_lag_days",
-     "firms_status", "inputs_fingerprint"],
+    [
+        "model_version",
+        "model_status",
+        "station_id",
+        "forecast_time",
+        "weather_timestamp",
+        "horizon_hours",
+        "age_hours",
+        "freshness",
+        "meteo_actual",
+        "firms_origin",
+        "firms_coverage_end",
+        "firms_lag_days",
+        "firms_status",
+        "inputs_fingerprint",
+    ],
 )
 def test_invalid_10_missing_required_metadata(monkeypatch, field):
     result = dataclasses.replace(_fixture_result(), **{field: None})
@@ -196,8 +220,17 @@ def test_invalid_11_malformed_inputs_fingerprint(monkeypatch, fingerprint):
         {"firms_coverage_end": datetime(2026, 9, 19)},
         {"firms_coverage_end": date(2026, 9, 1), "firms_lag_days": 19},  # > máx
     ],
-    ids=["origin", "status_unknown", "status_vs_lag", "lag_mismatch", "lag_float",
-         "lag_str", "coverage_str", "coverage_datetime", "lag_over_max"],
+    ids=[
+        "origin",
+        "status_unknown",
+        "status_vs_lag",
+        "lag_mismatch",
+        "lag_float",
+        "lag_str",
+        "coverage_str",
+        "coverage_datetime",
+        "lag_over_max",
+    ],
 )
 def test_invalid_12_invalid_firms_metadata(monkeypatch, changes):
     result = dataclasses.replace(_fixture_result(), **changes)
@@ -226,10 +259,22 @@ def test_invalid_12_invalid_firms_metadata(monkeypatch, changes):
         lambda r: dataclasses.replace(r, horizon_hours=0),
         lambda r: dataclasses.replace(r, model_version="   "),
     ],
-    ids=["no_cells", "cells_none", "cells_mixed", "rank_vs_score_order",
-         "display_rank", "tie_group_size", "meteo_incomplete", "meteo_rule_null",
-         "naive_forecast_time", "nat_forecast_time", "age_nan", "freshness",
-         "horizon_zero", "blank_model_version"],
+    ids=[
+        "no_cells",
+        "cells_none",
+        "cells_mixed",
+        "rank_vs_score_order",
+        "display_rank",
+        "tie_group_size",
+        "meteo_incomplete",
+        "meteo_rule_null",
+        "naive_forecast_time",
+        "nat_forecast_time",
+        "age_nan",
+        "freshness",
+        "horizon_zero",
+        "blank_model_version",
+    ],
 )
 def test_invalid_13_structurally_valid_but_semantically_incomplete(monkeypatch, mutate):
     """GridScoreResult bien tipado como dataclass, pero con contenido que

@@ -7,7 +7,9 @@ import re
 from typing import Any
 
 _SECRET_PATTERNS = [
-    re.compile(r"(?i)(api[_-]?key|token|password|authorization|secret|bearer)\s*[=:]\s*\S+"),
+    re.compile(
+        r"(?i)(api[_-]?key|token|password|authorization|secret|bearer)\s*[=:]\s*\S+"
+    ),
     re.compile(r"(?i)(NASA_FIRMS_API_KEY|DMC_TOKEN|DMC_USUARIO|MAP_KEY)\s*[=:]\s*\S+"),
     re.compile(r"(?i)(MAP_KEY)[=:]\S+"),
     re.compile(r"(?i)(Bearer)\s+[A-Za-z0-9\-._~+/]+=*"),
@@ -32,7 +34,9 @@ def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def credential_presence(names: list[str], env: dict[str, str] | None = None) -> list[dict[str, Any]]:
+def credential_presence(
+    names: list[str], env: dict[str, str] | None = None
+) -> list[dict[str, Any]]:
     """Record presence only — never values."""
     import os
 

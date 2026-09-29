@@ -65,7 +65,12 @@ def _make_identity(
     expected_current: dict | None = None,
 ) -> dict:
     if authorizations is None:
-        authorizations = {"attempt2": False, "writers": False, "telegram": False, "schedule": False}
+        authorizations = {
+            "attempt2": False,
+            "writers": False,
+            "telegram": False,
+            "schedule": False,
+        }
     if findings is None:
         findings = []
     if current_state is None:
@@ -79,7 +84,12 @@ def _make_identity(
         "data_ready_for_scoring": "NOT_EVALUATED",
         "independent_approval": "PENDING",
         "authorizations": authorizations,
-        "code_identity": {"sha": code_sha, "tree": "0" * 40, "clean": True, "status": "PASS"},
+        "code_identity": {
+            "sha": code_sha,
+            "tree": "0" * 40,
+            "clean": True,
+            "status": "PASS",
+        },
         "components": {
             "firms": {"sha": firms_sha, "files": [], "status": "PASS"},
             "dmc": {"sha": dmc_sha, "files": [], "status": "PASS"},
@@ -101,14 +111,21 @@ def _make_identity(
 
 
 def _make_manifest(identity: dict, fingerprint: str | None = None) -> dict:
-    fp = fingerprint if fingerprint is not None else compute_data_manifest_fingerprint(identity)
+    fp = (
+        fingerprint
+        if fingerprint is not None
+        else compute_data_manifest_fingerprint(identity)
+    )
     return {
         "schema_version": 1,
         "created_at": "2026-09-25T19:00:00+00:00",
         "identity": identity,
         "fingerprint": fp,
         "operational_roots": {"workspace": "/fake", "code": "/fake"},
-        "observation": {"start": "2026-09-25T19:00:00+00:00", "end": "2026-09-25T19:00:01+00:00"},
+        "observation": {
+            "start": "2026-09-25T19:00:00+00:00",
+            "end": "2026-09-25T19:00:01+00:00",
+        },
     }
 
 
@@ -127,6 +144,7 @@ def _resign(identity: dict) -> str:
 # 1. FINGERPRINT RECIPE (producer-exact canonical)
 # ===========================================================================
 
+
 class TestFingerprintRecipe:
     """Fingerprint = SHA-256(canonical_json(identity_block)).
 
@@ -136,17 +154,21 @@ class TestFingerprintRecipe:
     def test_fingerprint_matches_producer_recipe(self):
         identity = _make_identity()
         expected = hashlib.sha256(
-            json.dumps(identity, sort_keys=True, separators=(",", ":"),
-                       ensure_ascii=True, allow_nan=False).encode("utf-8")
+            json.dumps(
+                identity,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
+            ).encode("utf-8")
         ).hexdigest()
         assert compute_data_manifest_fingerprint(identity) == expected
 
     def test_fingerprint_is_deterministic(self):
         identity = _make_identity()
-        assert (
-            compute_data_manifest_fingerprint(identity)
-            == compute_data_manifest_fingerprint(identity)
-        )
+        assert compute_data_manifest_fingerprint(
+            identity
+        ) == compute_data_manifest_fingerprint(identity)
 
     def test_fingerprint_changes_on_identity_mutation(self):
         identity = _make_identity()
@@ -166,6 +188,7 @@ class TestFingerprintRecipe:
 # 2. REAL MANIFEST ACCEPTANCE
 # ===========================================================================
 
+
 class TestRealManifestAcceptance:
     """The authoritative RC1 Data Plane artifact must be accepted."""
 
@@ -174,10 +197,12 @@ class TestRealManifestAcceptance:
         reason="Real manifest not available in this environment",
     )
     def test_real_manifest_accepted(self):
-        result = verify_data_plane_manifest(REAL_MANIFEST_PATH, expected_code_sha=REAL_CODE_SHA)
-        assert result["status"] == "PREPARED", (
-            f"Expected PREPARED, got {result['status']}. Findings: {result['findings']}"
+        result = verify_data_plane_manifest(
+            REAL_MANIFEST_PATH, expected_code_sha=REAL_CODE_SHA
         )
+        assert (
+            result["status"] == "PREPARED"
+        ), f"Expected PREPARED, got {result['status']}. Findings: {result['findings']}"
         assert result["ready"] is False
         assert result["prepared"] is True
         assert result["producer_valid"] is True
@@ -220,8 +245,10 @@ class TestRealManifestAcceptance:
         actual_fp = hashlib.sha256(
             json.dumps(
                 json.loads(raw.decode("utf-8"))["identity"],
-                sort_keys=True, separators=(",", ":"),
-                ensure_ascii=True, allow_nan=False,
+                sort_keys=True,
+                separators=(",", ":"),
+                ensure_ascii=True,
+                allow_nan=False,
             ).encode("utf-8")
         ).hexdigest()
         assert actual_fp == REAL_FINGERPRINT
@@ -230,6 +257,7 @@ class TestRealManifestAcceptance:
 # ===========================================================================
 # 3. PREPARED SEMANTICS (corrected — READY never existed in producer contract)
 # ===========================================================================
+
 
 class TestPreparedSemantics:
     """PREPARED is the highest valid producer state.
@@ -297,6 +325,7 @@ class TestPreparedSemantics:
 # 4. AUTHORIZATION SEMANTICS
 # ===========================================================================
 
+
 class TestAuthorizationSemantics:
     def test_all_false_accepted(self, tmp_path: Path):
         identity = _make_identity()
@@ -334,6 +363,7 @@ class TestAuthorizationSemantics:
 # 5. FINGERPRINT TAMPER MATRIX (no re-signing — fingerprint mismatch path)
 # ===========================================================================
 
+
 class TestFingerprintTamperMatrix:
     """Previous tamper tests: change data WITHOUT recomputing fingerprint.
     These tests the cryptographic integrity path (DATA_MANIFEST_TAMPERED).
@@ -353,23 +383,28 @@ class TestFingerprintTamperMatrix:
         assert "DATA_MANIFEST_TAMPERED" in codes
 
     def test_tamper_firms_sha(self, tmp_path):
-        identity = _make_identity(); identity["components"]["firms"]["sha"] = "z" * 40
+        identity = _make_identity()
+        identity["components"]["firms"]["sha"] = "z" * 40
         self._tamper_test(tmp_path, identity)
 
     def test_tamper_dmc_sha(self, tmp_path):
-        identity = _make_identity(); identity["components"]["dmc"]["sha"] = "z" * 40
+        identity = _make_identity()
+        identity["components"]["dmc"]["sha"] = "z" * 40
         self._tamper_test(tmp_path, identity)
 
     def test_tamper_model_sha(self, tmp_path):
-        identity = _make_identity(); identity["model"]["sha256"] = "z" * 64
+        identity = _make_identity()
+        identity["model"]["sha256"] = "z" * 64
         self._tamper_test(tmp_path, identity)
 
     def test_tamper_topography_identity(self, tmp_path):
-        identity = _make_identity(); identity["topography"]["table_sha256"] = "z" * 64
+        identity = _make_identity()
+        identity["topography"]["table_sha256"] = "z" * 64
         self._tamper_test(tmp_path, identity)
 
     def test_tamper_baseline_identity(self, tmp_path):
-        identity = _make_identity(); identity["baseline"]["sha256"] = "z" * 64
+        identity = _make_identity()
+        identity["baseline"]["sha256"] = "z" * 64
         self._tamper_test(tmp_path, identity)
 
     def test_tamper_fingerprint_literal(self, tmp_path):
@@ -407,6 +442,7 @@ class TestFingerprintTamperMatrix:
 # These tests verify that correctly re-signed (valid fingerprint) but
 # semantically-invalid manifests are REJECTED by the producer semantic validator.
 # Before the hardening fix, all of these attacks were INCORRECTLY ACCEPTED.
+
 
 class TestResignedAttackMatrix:
     """Phase 7: Semantically invalid manifests with valid re-computed fingerprints.
@@ -520,6 +556,7 @@ class TestResignedAttackMatrix:
 # 7. VALID ALTERNATE FIXTURES (phase 8)
 # ===========================================================================
 
+
 class TestValidAlternateFixtures:
     """Producer-valid synthetic fixtures must be accepted, not falsely rejected."""
 
@@ -564,6 +601,7 @@ class TestValidAlternateFixtures:
 # 8. NON-OBJECT JSON ROOT (NEW-5 fix)
 # ===========================================================================
 
+
 class TestNonObjectJsonRoot:
     """Phase 9: Non-dict JSON roots must FAIL CLOSED — no crash, no PASS."""
 
@@ -571,15 +609,15 @@ class TestNonObjectJsonRoot:
         p = tmp_path / "DATA_PLANE_MANIFEST.json"
         p.write_text(content, encoding="utf-8")
         result = verify_data_plane_manifest(p)
-        assert result["status"] == "FAIL", (
-            f"Expected FAIL for non-object root ({label}), got {result['status']}"
-        )
+        assert (
+            result["status"] == "FAIL"
+        ), f"Expected FAIL for non-object root ({label}), got {result['status']}"
         assert result["ready"] is False
         assert result["prepared"] is False
         codes = [f["code"] for f in result["findings"]]
-        assert "DATA_MANIFEST_NOT_OBJECT" in codes, (
-            f"Expected DATA_MANIFEST_NOT_OBJECT for ({label}). Got codes: {codes}"
-        )
+        assert (
+            "DATA_MANIFEST_NOT_OBJECT" in codes
+        ), f"Expected DATA_MANIFEST_NOT_OBJECT for ({label}). Got codes: {codes}"
 
     def test_array_root_fails(self, tmp_path):
         self._assert_fail_closed(tmp_path, "[]", "[]")
@@ -612,6 +650,7 @@ class TestNonObjectJsonRoot:
 # ===========================================================================
 # 9. EXCEPTION SAFETY
 # ===========================================================================
+
 
 class TestExceptionSafety:
     """Every malformed input must resolve to a structured result — no crash."""
@@ -666,6 +705,7 @@ class TestExceptionSafety:
 # 10. SINGLE PARSER PATH — DataPlaneManifestView
 # ===========================================================================
 
+
 class TestSingleParserPath:
     """All Operations consumers use verify_data_plane_manifest — one canonical path."""
 
@@ -714,8 +754,11 @@ class TestSingleParserPath:
 
     def test_verifier_result_matches_view(self, tmp_path):
         identity = _make_identity(
-            firms_sha="a" * 40, dmc_sha="b" * 40,
-            model_sha="c" * 64, topo_sha="d" * 64, baseline_sha="e" * 64,
+            firms_sha="a" * 40,
+            dmc_sha="b" * 40,
+            model_sha="c" * 64,
+            topo_sha="d" * 64,
+            baseline_sha="e" * 64,
         )
         path = _write(tmp_path, _make_manifest(identity))
         result = verify_data_plane_manifest(path)

@@ -180,7 +180,10 @@ def validate_payload(
             result["findings"].append(
                 {
                     "code": "ORDER_SENSITIVE_CONFLICTS",
-                    "message": "Existing merge contract keeps the first incoming value per momento.",
+                    "message": (
+                        "Existing merge contract keeps the first incoming value per "
+                        "momento."
+                    ),
                 }
             )
         category = "NULLS_ALLOWED_WITHIN_CONTRACT" if nulls else "VALID"

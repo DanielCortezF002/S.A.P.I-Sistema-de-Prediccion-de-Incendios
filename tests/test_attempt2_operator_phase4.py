@@ -306,7 +306,10 @@ def test_n8n_activation_unknown():
     r = evaluate_quiescence(**_base_kwargs(n8n=n8n))
     assert r["status"] in (NOT_QUIESCENT, INCOMPLETE)
     assert r["status"] != QUIESCENT
-    assert any(f["id"] == QG_UNKNOWN_N8N_STATE or f["id"] == QG_N8N_MUST_BE_STOPPED for f in r["findings"])
+    assert any(
+        f["id"] == QG_UNKNOWN_N8N_STATE or f["id"] == QG_N8N_MUST_BE_STOPPED
+        for f in r["findings"]
+    )
 
 
 def test_telegram_disarmed():

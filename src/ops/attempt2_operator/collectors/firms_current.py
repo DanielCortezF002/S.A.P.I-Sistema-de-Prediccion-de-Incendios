@@ -88,8 +88,12 @@ def collect_firms_current(
         "path": str(path),
         "pointer_schema": schema,
         # firms_source resolves both v2 (legacy) and v3 (projected, current publisher).
-        "pointer_schema_expected": [POINTER_SCHEMA_VERSION, PROJECTED_POINTER_SCHEMA_VERSION],
-        "schema_ok": schema in (POINTER_SCHEMA_VERSION, PROJECTED_POINTER_SCHEMA_VERSION),
+        "pointer_schema_expected": [
+            POINTER_SCHEMA_VERSION,
+            PROJECTED_POINTER_SCHEMA_VERSION,
+        ],
+        "schema_ok": schema
+        in (POINTER_SCHEMA_VERSION, PROJECTED_POINTER_SCHEMA_VERSION),
         "selected_version": pointer.get("relative_path"),
         "manifest_identity": pointer.get("sha256"),
         "coverage_start": pointer.get("coverage_start"),

@@ -47,7 +47,9 @@ def _finding(fid: str, severity: str, detail: str) -> dict[str, str]:
         "id": fid,
         "severity": severity,
         "detail": detail,
-        "remediation": FINDING_REMEDIATION.get(fid, "Resolve finding, then rerun preflight."),
+        "remediation": FINDING_REMEDIATION.get(
+            fid, "Resolve finding, then rerun preflight."
+        ),
     }
 
 
@@ -73,7 +75,9 @@ def evaluate_quiescence(
     wstatus = writers.get("status")
     if wstatus == WRITER_ACTIVE:
         failures.append("active_writer")
-        findings.append(_finding(QG_ACTIVE_WRITER, "NOT_QUIESCENT", "protected_writer_running"))
+        findings.append(
+            _finding(QG_ACTIVE_WRITER, "NOT_QUIESCENT", "protected_writer_running")
+        )
     elif wstatus == WRITER_UNKNOWN:
         warnings.append("unknown_writer_state")
         findings.append(
@@ -93,7 +97,9 @@ def evaluate_quiescence(
             findings.append(_finding(qg_active, "NOT_QUIESCENT", f"{side}_lock_active"))
         elif cls == STALE_LOCK:
             failures.append(f"stale_{side}_lock")
-            findings.append(_finding(QG_STALE_LOCK, "NOT_QUIESCENT", f"{side}_lock_stale"))
+            findings.append(
+                _finding(QG_STALE_LOCK, "NOT_QUIESCENT", f"{side}_lock_stale")
+            )
         elif cls == LOCK_UNKNOWN:
             warnings.append(f"unknown_{side}_lock")
             findings.append(
@@ -107,7 +113,10 @@ def evaluate_quiescence(
     execution = n8n.get("execution") or {}
     container_status = n8n.get("container_status")
 
-    if activation.get("status") == "UNKNOWN" or activation.get("any_relevant_active") is None:
+    if (
+        activation.get("status") == "UNKNOWN"
+        or activation.get("any_relevant_active") is None
+    ):
         # Only required when container is RUNNING or policy allows running-if-inactive
         if container_status == "RUNNING" or policy.allow_n8n_running_if_inactive:
             warnings.append("unknown_n8n_state")
@@ -121,7 +130,9 @@ def evaluate_quiescence(
         else:
             failures.append("active_n8n_workflow")
             findings.append(
-                _finding(QG_CONFLICTING_SERVICE, "NOT_QUIESCENT", "relevant_workflow_active")
+                _finding(
+                    QG_CONFLICTING_SERVICE, "NOT_QUIESCENT", "relevant_workflow_active"
+                )
             )
 
     if execution.get("state") == "RUNNING":
@@ -139,19 +150,25 @@ def evaluate_quiescence(
     sched_state = schedule.get("state")
     if sched_state == "SCHEDULE_ENABLED":
         failures.append("enabled_schedule")
-        findings.append(_finding(QG_ENABLED_SCHEDULE, "NOT_QUIESCENT", "schedule_enabled"))
+        findings.append(
+            _finding(QG_ENABLED_SCHEDULE, "NOT_QUIESCENT", "schedule_enabled")
+        )
     elif sched_state == "UNKNOWN" or schedule.get("status") == "UNKNOWN":
         if container_status in ("RUNNING", "STOPPED"):
             # When stopped without DB we already marked UNKNOWN — incomplete
             warnings.append("schedule_unknown")
             findings.append(
-                _finding(QG_SCHEDULE_UNKNOWN, "INCOMPLETE", "schedule_visibility_unknown")
+                _finding(
+                    QG_SCHEDULE_UNKNOWN, "INCOMPLETE", "schedule_visibility_unknown"
+                )
             )
 
     tg_state = telegram.get("state")
     if tg_state == "ARMED":
         failures.append("telegram_armed")
-        findings.append(_finding(QG_TELEGRAM_ARMED, "NOT_QUIESCENT", "telegram_path_armed"))
+        findings.append(
+            _finding(QG_TELEGRAM_ARMED, "NOT_QUIESCENT", "telegram_path_armed")
+        )
     elif tg_state == "UNKNOWN" or telegram.get("status") == "UNKNOWN":
         warnings.append("telegram_unknown")
         findings.append(
@@ -325,5 +342,7 @@ def remediation_for(result: dict[str, Any]) -> dict[str, str]:
     return {
         "reason_code": fid,
         "next": top.get("remediation")
-        or FINDING_REMEDIATION.get(fid, "Resolve quiescence finding, then rerun preflight."),
+        or FINDING_REMEDIATION.get(
+            fid, "Resolve quiescence finding, then rerun preflight."
+        ),
     }

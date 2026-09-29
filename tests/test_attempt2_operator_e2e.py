@@ -39,7 +39,11 @@ def test_synthetic_e2e_accepted(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="SAPI-ATTEMPT2-SYNTH-E2E",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "b" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "b" * 40,
+            "worktree_clean": True,
+        },
     )
     assert op.preflight(snapshot=_good_preflight())["ready_for_authorization"]
     assert op.run.current_state() == Attempt2State.PREFLIGHT_READY
@@ -57,8 +61,8 @@ def test_synthetic_e2e_accepted(tmp_path: Path):
 
     firms = {
         "exit_code": 0,
-            "started_at": "2026-09-24T12:01:00+00:00",
-            "finished_at": "2026-09-24T12:02:00+00:00",
+        "started_at": "2026-09-24T12:01:00+00:00",
+        "finished_at": "2026-09-24T12:02:00+00:00",
         "stdout": "ok",
         "stderr": "",
         "stdout_sha256": None,
@@ -67,7 +71,10 @@ def test_synthetic_e2e_accepted(tmp_path: Path):
         "schema_ok": True,
         "hash_ok": True,
         "pointer_ok": True,
-        "firms_current_after": {"present": True, "path": "processed/firms/CURRENT.json"},
+        "firms_current_after": {
+            "present": True,
+            "path": "processed/firms/CURRENT.json",
+        },
         "attempt1_modified": False,
         "started_at": "2026-09-24T12:01:00+00:00",
         "finished_at": "2026-09-24T12:02:00+00:00",
@@ -83,8 +90,8 @@ def test_synthetic_e2e_accepted(tmp_path: Path):
     op.authorize("DMC_WRITER_AUTHORIZATION")
     dmc = {
         "exit_code": 0,
-            "started_at": "2026-09-24T12:01:00+00:00",
-            "finished_at": "2026-09-24T12:02:00+00:00",
+        "started_at": "2026-09-24T12:01:00+00:00",
+        "finished_at": "2026-09-24T12:02:00+00:00",
         "quality_ok": True,
         "pointer_ok": True,
         "sanitization_status": "PASS",

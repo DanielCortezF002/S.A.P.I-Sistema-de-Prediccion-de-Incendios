@@ -8,7 +8,8 @@
 Cada versión v3 = proyección canónica de la base verificada por sha256
 (sin type, exclusivo de SP, preservado en baseline/raw) + detecciones con
 `acq_date` estrictamente posterior a su `coverage_end`. Conserva valores
-y orden de los campos comunes de filas previas: `assign_episodes` recorre las detecciones en orden temporal,
+y orden de los campos comunes de filas previas: `assign_episodes` recorre las
+detecciones en orden temporal,
 así que agregar solo días posteriores deja idénticos los arribos (y las
 features) de cualquier T ya cubierto. La reconciliación SP/NRT de días ya
 publicados queda fuera: sería un "rebase" explícito, no un refresco.
@@ -177,7 +178,9 @@ def build_version_bytes(
         projected_base = project_base(base)
         # Validate every source row before precedence can remove a counterpart.
         project_frame(new_rows, require_sp_type=True)
-        new_rows = project_frame(reconcile_source_observations(new_rows), require_sp_type=True)
+        new_rows = project_frame(
+            reconcile_source_observations(new_rows), require_sp_type=True
+        )
     except ValueError as exc:
         raise FirmsRefreshError(str(exc), EXIT_DATA) from exc
     if new_rows.empty:
@@ -197,13 +200,20 @@ def build_version_bytes(
         _canonical_tie=list(new_rows.itertuples(index=False, name=None))
     )
     ordered = canonical.sort_values(
-        ["acq_date", "acq_time", "latitude", "longitude", "_canonical_tie"], kind="stable",
-        key=lambda col: pd.to_numeric(col) if col.name in ("acq_time", "latitude", "longitude") else col,
+        ["acq_date", "acq_time", "latitude", "longitude", "_canonical_tie"],
+        kind="stable",
+        key=lambda col: (
+            pd.to_numeric(col)
+            if col.name in ("acq_time", "latitude", "longitude")
+            else col
+        ),
     ).drop(columns="_canonical_tie")
     data = projected_base + serialize(ordered, header=False)
     parsed = pd.read_csv(io.BytesIO(data))
     base_rows = len(pd.read_csv(io.BytesIO(base)))
-    if list(parsed.columns) != list(new_rows.columns) or len(parsed) != base_rows + len(ordered):
+    if list(parsed.columns) != list(new_rows.columns) or len(parsed) != base_rows + len(
+        ordered
+    ):
         raise FirmsRefreshError("La versión construida no se relee íntegra.", EXIT_DATA)
     return data, len(ordered)
 

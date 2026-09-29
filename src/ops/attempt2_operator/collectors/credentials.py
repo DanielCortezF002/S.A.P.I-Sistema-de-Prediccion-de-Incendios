@@ -17,10 +17,7 @@ def collect_credential_presence(
     env: dict[str, str] | None = None,
 ) -> dict[str, Any]:
     source = env if env is not None else os.environ
-    items = [
-        {"name": n, "present": bool(source.get(n))}
-        for n in CREDENTIAL_NAMES
-    ]
+    items = [{"name": n, "present": bool(source.get(n))} for n in CREDENTIAL_NAMES]
     # Fail closed: ensure no accidental value keys
     for item in items:
         assert set(item.keys()) == {"name", "present"}

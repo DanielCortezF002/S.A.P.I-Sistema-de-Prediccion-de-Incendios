@@ -25,22 +25,9 @@ def collect_dmc_current(
     if pointer_path is not None:
         path = Path(pointer_path)
     elif repo is not None:
-        path = (
-            Path(repo)
-            / "data"
-            / "processed"
-            / "dmc"
-            / station_id
-            / "CURRENT.json"
-        )
+        path = Path(repo) / "data" / "processed" / "dmc" / station_id / "CURRENT.json"
     else:
-        path = (
-            Path("data")
-            / "processed"
-            / "dmc"
-            / station_id
-            / "CURRENT.json"
-        )
+        path = Path("data") / "processed" / "dmc" / station_id / "CURRENT.json"
 
     try:
         if not path.exists():

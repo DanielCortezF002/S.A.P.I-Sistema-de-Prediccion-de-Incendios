@@ -9,9 +9,7 @@ from typing import Any
 
 from src.ops.attempt2_operator.paths import StoreRoots
 
-MODEL_SHA_EXPECTED = (
-    "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
-)
+MODEL_SHA_EXPECTED = "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
 FIRMS_BASELINE_SHA_EXPECTED = (
     "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271"
 )

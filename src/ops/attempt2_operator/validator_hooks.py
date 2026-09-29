@@ -14,7 +14,9 @@ from src.ops.attempt2_operator.validator_result import ValidatorResult
 
 def _write_json(path: Path, obj: Any) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(obj, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     return path
 
 
@@ -138,7 +140,12 @@ def run_dmc_validator_hook(
         str(out),
     ]
     if command_evidence is not None:
-        cmd.extend(["--command-evidence", str(_write_json(inp / "command.json", command_evidence))])
+        cmd.extend(
+            [
+                "--command-evidence",
+                str(_write_json(inp / "command.json", command_evidence)),
+            ]
+        )
     if external is not None:
         cmd.extend(
             [

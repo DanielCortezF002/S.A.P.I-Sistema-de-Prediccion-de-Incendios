@@ -33,7 +33,9 @@ class QuiescencePolicy:
             "yes",
         )
         return cls(
-            n8n_container="MAY_BE_RUNNING_IF_INACTIVE" if allow else DEFAULT_N8N_CONTAINER,
+            n8n_container=(
+                "MAY_BE_RUNNING_IF_INACTIVE" if allow else DEFAULT_N8N_CONTAINER
+            ),
             bridge=DEFAULT_BRIDGE,
             web=DEFAULT_WEB,
             allow_n8n_running_if_inactive=allow,

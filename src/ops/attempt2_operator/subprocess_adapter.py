@@ -128,7 +128,11 @@ def run_tool(
         }
         evidence_acceptance = parsed.get("validation_result")
         # Keep technical status separate from evidence acceptance
-        if evidence_acceptance and status == "PASS" and evidence_acceptance == "REJECTED_EVIDENCE":
+        if (
+            evidence_acceptance
+            and status == "PASS"
+            and evidence_acceptance == "REJECTED_EVIDENCE"
+        ):
             warnings.append("evidence_rejected_but_process_exited_0")
 
     return ValidatorResult(

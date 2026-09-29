@@ -4,13 +4,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
 from src.ops.attempt2_operator.collectors.artifacts import (
-    FIRMS_BASELINE_SHA_EXPECTED,
-    MODEL_SHA_EXPECTED,
     collect_artifact_identities,
     resolve_firms_baseline_path,
 )
@@ -113,14 +110,22 @@ def test_unknown_service_on_expected_port(monkeypatch: pytest.MonkeyPatch):
 
 
 def test_known_n8n_container_stopped():
-    containers = [{"Names": "n8n", "Status": "Exited (0) 2 hours ago", "State": "exited"}]
+    containers = [
+        {"Names": "n8n", "Status": "Exited (0) 2 hours ago", "State": "exited"}
+    ]
     s = collect_service_status("n8n", containers=containers, docker_status="AVAILABLE")
     assert s["status"] == "STOPPED"
     assert s["identity_established"] is True
 
 
 def test_known_n8n_container_running():
-    containers = [{"Names": "sapi-ai-orchestrator-n8n", "Status": "Up 10 minutes", "State": "running"}]
+    containers = [
+        {
+            "Names": "sapi-ai-orchestrator-n8n",
+            "Status": "Up 10 minutes",
+            "State": "running",
+        }
+    ]
     s = collect_service_status("n8n", containers=containers, docker_status="AVAILABLE")
     assert s["status"] == "RUNNING"
 
@@ -138,7 +143,11 @@ def test_incomplete_preflight_never_ready(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="SAPI-ATTEMPT2-P3-INCOMPLETE",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "f" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "f" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = {
         "code": {
@@ -179,7 +188,9 @@ def test_preflight_reason_ordering():
     assert "DIRTY_CODE" in codes
     assert highest_priority_reason(reasons)["code"] == "CODE_SHA_MISMATCH"
     # priority table coherent
-    assert REASON_PRIORITY.index("CODE_SHA_MISMATCH") < REASON_PRIORITY.index("DIRTY_CODE")
+    assert REASON_PRIORITY.index("CODE_SHA_MISMATCH") < REASON_PRIORITY.index(
+        "DIRTY_CODE"
+    )
 
 
 def test_next_returns_one_action(tmp_path: Path):
@@ -188,7 +199,11 @@ def test_next_returns_one_action(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="SAPI-ATTEMPT2-P3-NEXT",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "f" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "f" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = {
         "code": {
@@ -211,7 +226,9 @@ def test_next_returns_one_action(tmp_path: Path):
     # Write preflight.json as operator would after failed preflight
     op.preflight(snapshot=snap)
     # Ensure reasons file has priority for next()
-    pf = json.loads((op.run.root / "preflight" / "preflight.json").read_text(encoding="utf-8"))
+    pf = json.loads(
+        (op.run.root / "preflight" / "preflight.json").read_text(encoding="utf-8")
+    )
     if not pf.get("highest_priority_reason"):
         pf["highest_priority_reason"] = {
             "code": "CODE_SHA_MISMATCH",
@@ -260,7 +277,6 @@ def test_runtime_collector_no_mutations(monkeypatch: pytest.MonkeyPatch):
     )
     collect_runtime()
     joined = [" ".join(c) for c in calls]
-    forbidden = ("start", "stop", "restart", "pull", "build", "compose", "up", "down")
     for j in joined:
         low = j.lower()
         assert not any(f" {f}" in f" {low} " for f in ("start", "stop", "restart"))

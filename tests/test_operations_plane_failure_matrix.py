@@ -35,22 +35,17 @@ import pytest
 
 from src.ops import operational_workspace as ow
 from src.ops import workspace_safety as ws
-from src.ops.attempt2_operator.canonical import assert_unknown_invariants, normalize_current
-from src.ops.attempt2_operator.collectors.preflight_collect import (
-    build_reasons,
-    highest_priority_reason,
+from src.ops.attempt2_operator.canonical import (
+    assert_unknown_invariants,
+    normalize_current,
 )
-from src.ops.attempt2_operator.data_plane_manifest import (
-    compute_data_manifest_fingerprint,
-    verify_data_plane_manifest,
-)
+from src.ops.attempt2_operator.data_plane_manifest import verify_data_plane_manifest
 from src.ops.attempt2_operator.operator import Attempt2Operator
 from src.ops.attempt2_operator.output_plane_manifest import (
     compute_output_manifest_fingerprint,
     verify_output_plane_manifest,
 )
 from src.ops.attempt2_operator.quiescence.findings import (
-    QG_ACTIVE_DMC_LOCK,
     QG_ACTIVE_FIRMS_LOCK,
     QG_ACTIVE_WRITER,
     QG_N8N_MUST_BE_STOPPED,
@@ -60,12 +55,13 @@ from src.ops.attempt2_operator.quiescence.findings import (
 from src.ops.attempt2_operator.quiescence.locks import ACTIVE_LOCK, NO_LOCK, STALE_LOCK
 from src.ops.attempt2_operator.quiescence.policy import QuiescencePolicy
 from src.ops.attempt2_operator.quiescence.result import evaluate_quiescence
-from src.ops.attempt2_operator.quiescence.writers import WRITER_ACTIVE, WRITER_NOT_DETECTED
-from src.ops.attempt2_operator.run_store import InvalidTransitionError
+from src.ops.attempt2_operator.quiescence.writers import (
+    WRITER_ACTIVE,
+    WRITER_NOT_DETECTED,
+)
 from src.ops.attempt2_operator.states import Attempt2State
 from src.ops.attempt2_operator.validators import validate_preflight_snapshot
 from src.ops.attempt2_operator.workspace_manifest import verify_workspace_manifest
-from src.ops.attempt2_operator.workspace_safety import check_workspace_safety
 
 SHA = "1111111111111111111111111111111111111111"
 WRONG_SHA = "2222222222222222222222222222222222222222"
@@ -98,7 +94,11 @@ def test_wrong_expected_code_sha_blocked(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="FAIL-WRONG-SHA",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "a" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "a" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = _base_snapshot(expected_sha=WRONG_SHA)
     res = op.preflight(snapshot=snap)
@@ -113,7 +113,11 @@ def test_dirty_code_blocked(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="FAIL-DIRTY",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "a" * 40, "worktree_clean": False},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "a" * 40,
+            "worktree_clean": False,
+        },
     )
     snap = _base_snapshot(expected_sha=SHA)
     snap["code"]["worktree_clean"] = False
@@ -156,7 +160,9 @@ def test_source_store_drift_blocked(tmp_path: Path):
         "tree_sha": "t" * 40,
         "stores": {
             "raw": {
-                "files": [{"path": "data/raw/data.csv", "size": 100, "sha256": "0" * 64}]
+                "files": [
+                    {"path": "data/raw/data.csv", "size": 100, "sha256": "0" * 64}
+                ]
             }
         },
     }
@@ -222,18 +228,33 @@ def test_data_manifest_tampered_blocked(tmp_path: Path):
     identity = {
         "schema_version": 1,
         "kind": "DATA_PLANE_MANIFEST",
-        "data_readiness_status": "PREPARED",   # READY is not a valid producer value
+        "data_readiness_status": "PREPARED",  # READY is not a valid producer value
         "data_ready_for_scoring": "NOT_EVALUATED",
         "independent_approval": "PENDING",
-        "authorizations": {"attempt2": False, "writers": False, "telegram": False, "schedule": False},
-        "code_identity": {"sha": "a" * 40, "tree": "b" * 40, "clean": True, "status": "PASS"},
+        "authorizations": {
+            "attempt2": False,
+            "writers": False,
+            "telegram": False,
+            "schedule": False,
+        },
+        "code_identity": {
+            "sha": "a" * 40,
+            "tree": "b" * 40,
+            "clean": True,
+            "status": "PASS",
+        },
         "components": {
             "firms": {"sha": "c" * 40, "files": [], "status": "PASS"},
             "dmc": {"sha": "d" * 40, "files": [], "status": "PASS"},
             "scoring_inputs": {"sha": "e" * 40, "files": [], "status": "PASS"},
         },
         "model": {"sha256": "f" * 64, "status": "PASS"},
-        "topography": {"table_sha256": "g" * 64, "grid_sha256": "h" * 64, "status": "PASS", "cells": 50},
+        "topography": {
+            "table_sha256": "g" * 64,
+            "grid_sha256": "h" * 64,
+            "status": "PASS",
+            "cells": 50,
+        },
         "baseline": {"sha256": "i" * 64, "status": "PASS"},
         "source_evidence": {"sha256": "j" * 64, "status": "PASS"},
         "expected_current": {"firms": "ABSENT", "dmc": "ABSENT"},
@@ -246,7 +267,10 @@ def test_data_manifest_tampered_blocked(tmp_path: Path):
         "identity": identity,
         "fingerprint": "TAMPERED_FINGERPRINT_HASH_THAT_IS_WRONG",  # intentionally wrong
         "operational_roots": {"workspace": "/fake", "code": "/fake"},
-        "observation": {"start": "2026-09-25T19:00:00+00:00", "end": "2026-09-25T19:00:01+00:00"},
+        "observation": {
+            "start": "2026-09-25T19:00:00+00:00",
+            "end": "2026-09-25T19:00:01+00:00",
+        },
     }
     manifest_file.write_text(json.dumps(data), encoding="utf-8")
     res = verify_data_plane_manifest(manifest_file)
@@ -309,12 +333,17 @@ def _eval_quiescence_test(
             },
             "schedule": {"status": "READY", "state": n8n_schedule_state},
             "telegram": {"status": "READY", "state": n8n_telegram_state},
-            "execution": {"status": "READY", "state": n8n_execution_state, "running": []},
+            "execution": {
+                "status": "READY",
+                "state": n8n_execution_state,
+                "running": [],
+            },
             "mutations": False,
         },
         bridge={"status": "STOPPED"},
         web={"status": "STOPPED"},
-        policy=policy or QuiescencePolicy(
+        policy=policy
+        or QuiescencePolicy(
             n8n_container="MUST_BE_STOPPED",
             bridge="MUST_BE_STOPPED",
             web="MUST_BE_STOPPED",
@@ -374,7 +403,11 @@ def test_writer_authorization_absent_cannot_progress(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="FAIL-NO-AUTH",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "a" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "a" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = _base_snapshot(expected_sha=SHA)
     assert op.preflight(snapshot=snap)["ready_for_authorization"]
@@ -393,7 +426,11 @@ def test_wrong_imported_run_id_rejected(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="RUN-AAA",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "a" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "a" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = _base_snapshot(expected_sha=SHA)
     op.preflight(snapshot=snap)
@@ -419,7 +456,11 @@ def test_wrong_imported_sha_rejected(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="RUN-SHA-CHECK",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "a" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "a" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = _base_snapshot(expected_sha=SHA)
     op.preflight(snapshot=snap)
@@ -445,7 +486,11 @@ def test_conflicting_import_rejected(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="RUN-CONFLICT",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "a" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "a" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = _base_snapshot(expected_sha=SHA)
     op.preflight(snapshot=snap)

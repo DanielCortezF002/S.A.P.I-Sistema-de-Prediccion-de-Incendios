@@ -12,7 +12,9 @@ from src.ops.attempt2_operator.collectors.runtime import (
 )
 from src.ops.attempt2_operator.paths import StoreRoots
 from src.ops.attempt2_operator.quiescence.locks import inspect_refresh_locks
-from src.ops.attempt2_operator.quiescence.n8n_inspect import collect_n8n_quiescence_signals
+from src.ops.attempt2_operator.quiescence.n8n_inspect import (
+    collect_n8n_quiescence_signals,
+)
 from src.ops.attempt2_operator.quiescence.policy import QuiescencePolicy
 from src.ops.attempt2_operator.quiescence.processes import inventory_processes
 from src.ops.attempt2_operator.quiescence.result import evaluate_quiescence

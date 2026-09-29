@@ -20,7 +20,12 @@ from typing import Callable, Iterable
 import pandas as pd
 import requests
 
-from src.config import DATA_PROCESSED_DIR, DATA_RAW_DIR, NASA_FIRMS_API_KEY, VALPARAISO_BBOX
+from src.config import (
+    DATA_PROCESSED_DIR,
+    DATA_RAW_DIR,
+    NASA_FIRMS_API_KEY,
+    VALPARAISO_BBOX,
+)
 from src.procesamiento.firms_source import ensure_writable_firms_path
 from src.ingesta.firms_schema import NRT_SOURCE, SP_SOURCE, parse_source_csv
 from src.refresh.atomic import write_immutable
@@ -129,7 +134,9 @@ def build_windows(
     )
 
 
-def select_boundary_sample(windows: Iterable[DateWindow], limit: int = 4) -> list[DateWindow]:
+def select_boundary_sample(
+    windows: Iterable[DateWindow], limit: int = 4
+) -> list[DateWindow]:
     """Selecciona pocas ventanas alrededor de la transición SP/NRT."""
 
     if limit < 1:
@@ -141,16 +148,13 @@ def select_boundary_sample(windows: Iterable[DateWindow], limit: int = 4) -> lis
 
     sp_count = min(len(sp_windows), (limit + 1) // 2)
     nrt_count = min(len(nrt_windows), limit - sp_count)
-    selected = (
-        (sp_windows[-sp_count:] if sp_count else [])
-        + (nrt_windows[:nrt_count] if nrt_count else [])
+    selected = (sp_windows[-sp_count:] if sp_count else []) + (
+        nrt_windows[:nrt_count] if nrt_count else []
     )
 
     if len(selected) < limit:
         selected_ids = set(selected)
-        selected.extend(
-            window for window in all_windows if window not in selected_ids
-        )
+        selected.extend(window for window in all_windows if window not in selected_ids)
 
     source_priority = {SP_SOURCE: 0, NRT_SOURCE: 1}
     return sorted(
@@ -161,15 +165,21 @@ def select_boundary_sample(windows: Iterable[DateWindow], limit: int = 4) -> lis
 
 def normalized_detection_keys(data: pd.DataFrame) -> pd.DataFrame:
     """Established legacy identity, without changing source values."""
-    return pd.DataFrame({
-        "_latitude_key": pd.to_numeric(data["latitude"], errors="coerce").round(5),
-        "_longitude_key": pd.to_numeric(data["longitude"], errors="coerce").round(5),
-        "acq_date": data["acq_date"],
-        "_time_key": data["acq_time"].astype(str).str.replace(
-            r"\.0$", "", regex=True).str.zfill(4),
-        "satellite": data["satellite"],
-        "instrument": data["instrument"],
-    })
+    return pd.DataFrame(
+        {
+            "_latitude_key": pd.to_numeric(data["latitude"], errors="coerce").round(5),
+            "_longitude_key": pd.to_numeric(data["longitude"], errors="coerce").round(
+                5
+            ),
+            "acq_date": data["acq_date"],
+            "_time_key": data["acq_time"]
+            .astype(str)
+            .str.replace(r"\.0$", "", regex=True)
+            .str.zfill(4),
+            "satellite": data["satellite"],
+            "instrument": data["instrument"],
+        }
+    )
 
 
 def reconcile_source_observations(data: pd.DataFrame) -> pd.DataFrame:
@@ -272,7 +282,9 @@ class NasaFirmsBackfill:
                 if attempt < 3:
                     self.sleep_fn(2**attempt)
 
-        raise RuntimeError("NASA FIRMS no respondió después de 4 intentos") from last_error
+        raise RuntimeError(
+            "NASA FIRMS no respondió después de 4 intentos"
+        ) from last_error
 
     def fetch_availability(self) -> dict[str, Availability]:
         """Consulta límites SP y NRT publicados por FIRMS."""
@@ -315,7 +327,9 @@ class NasaFirmsBackfill:
         ensure_writable_firms_path(raw_path)
 
         response = self._get_with_retry(self.window_url(window))
-        frame = parse_source_csv(response.text, window.source, window.start_date, window.end_date)
+        frame = parse_source_csv(
+            response.text, window.source, window.start_date, window.end_date
+        )
 
         source_dir.mkdir(parents=True, exist_ok=True)
         write_immutable(raw_path, response.text.encode("utf-8"))

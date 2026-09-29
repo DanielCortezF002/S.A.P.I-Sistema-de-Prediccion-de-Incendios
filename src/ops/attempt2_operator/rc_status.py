@@ -12,7 +12,6 @@ Answers:
 
 from __future__ import annotations
 
-import json
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -42,7 +41,11 @@ def collect_rc_status(
     code_ready = (
         git.get("dirty") is False
         and git.get("status") not in ("UNKNOWN", "ERROR")
-        and (git.get("sha_match") is True if expected_code_sha else bool(git.get("head_sha")))
+        and (
+            git.get("sha_match") is True
+            if expected_code_sha
+            else bool(git.get("head_sha"))
+        )
     )
 
     # 2. Workspace Readiness
@@ -104,7 +107,10 @@ def collect_rc_status(
             one_action = {
                 "priority": 1,
                 "code": "CODE_SHA_MISMATCH",
-                "next": f"Checkout expected code SHA ({expected_code_sha}); currently at {git.get('head_sha')}.",
+                "next": (
+                    f"Checkout expected code SHA ({expected_code_sha}); currently "
+                    f"at {git.get('head_sha')}."
+                ),
             }
         else:
             one_action = {
@@ -114,16 +120,24 @@ def collect_rc_status(
             }
     elif not ws_ready:
         if workspace_manifest_path:
+            workspace_message = ws_evidence.get("findings", [{}])[0].get(
+                "message", "Check workspace safety."
+            )
             one_action = {
                 "priority": 2,
                 "code": "WORKSPACE_MANIFEST_INVALID",
-                "next": f"Workspace manifest verification failed: {ws_evidence.get('findings', [{}])[0].get('message', 'Check workspace safety.')}",
+                "next": (
+                    f"Workspace manifest verification failed: " f"{workspace_message}"
+                ),
             }
         else:
             one_action = {
                 "priority": 2,
                 "code": "MATERIALIZE_WORKSPACE",
-                "next": "Materialize canonical operational workspace via: python -m src.ops.operational_workspace plan ...",
+                "next": (
+                    "Materialize canonical operational workspace via: python -m "
+                    "src.ops.operational_workspace plan ..."
+                ),
             }
     elif not q_ready:
         top_finding = quiescence.get("highest_priority_finding") or {}
@@ -139,25 +153,38 @@ def collect_rc_status(
             one_action = {
                 "priority": 3,
                 "code": finding_id,
-                "next": "Achieve quiescence: ensure n8n container is STOPPED, no active refresh writers, no stale locks.",
+                "next": (
+                    "Achieve quiescence: ensure n8n container is STOPPED, no "
+                    "active refresh writers, no stale locks."
+                ),
             }
     elif not dm_ready and not dm_accepted:
         one_action = {
             "priority": 4,
             "code": "AWAIT_DATA_PLANE_MANIFEST",
-            "next": "Provide verified DATA_PLANE_MANIFEST from Astra: --data-readiness-manifest <path>.",
+            "next": (
+                "Provide verified DATA_PLANE_MANIFEST from Astra: "
+                "--data-readiness-manifest <path>."
+            ),
         }
     elif not dm_ready and dm_accepted:
         one_action = {
             "priority": 4,
             "code": "AWAIT_DATA_PLANE_READY",
-            "next": f"Data plane manifest accepted (status={dm_status}). Await data_readiness_status=READY before initializing Attempt 2.",
+            "next": (
+                f"Data plane manifest accepted (status={dm_status}). Await "
+                f"data_readiness_status=READY before initializing Attempt 2."
+            ),
         }
     else:
         one_action = {
             "priority": 5,
             "code": "READY_TO_INITIALIZE_ATTEMPT2",
-            "next": f"Prerequisites ready. Initialize Attempt 2: python -m src.ops.attempt2_operator init --expected-code-sha {expected_code_sha or git.get('head_sha')}",
+            "next": (
+                f"Prerequisites ready. Initialize Attempt 2: python -m "
+                f"src.ops.attempt2_operator init --expected-code-sha "
+                f"{expected_code_sha or git.get('head_sha')}"
+            ),
         }
 
     all_ready = code_ready and ws_ready and q_ready and dm_ready
@@ -186,13 +213,17 @@ def collect_rc_status(
             "workspace": {
                 "ready": ws_ready,
                 "status": ws_status,
-                "manifest_path": str(workspace_manifest_path) if workspace_manifest_path else None,
+                "manifest_path": (
+                    str(workspace_manifest_path) if workspace_manifest_path else None
+                ),
             },
             "data_manifest": {
                 "ready": dm_ready,
                 "accepted": dm_accepted,
                 "status": dm_status,
-                "manifest_path": str(data_plane_manifest_path) if data_plane_manifest_path else None,
+                "manifest_path": (
+                    str(data_plane_manifest_path) if data_plane_manifest_path else None
+                ),
                 "data_readiness_status": dm_res.get("data_readiness_status"),
                 "producer_valid": dm_res.get("producer_valid", False),
                 "writers_authorized": dm_res.get("writers_authorized", False),
@@ -211,7 +242,9 @@ def collect_rc_status(
             "output_contract": {
                 "known": op_known,
                 "status": op_status,
-                "manifest_path": str(output_manifest_path) if output_manifest_path else None,
+                "manifest_path": (
+                    str(output_manifest_path) if output_manifest_path else None
+                ),
             },
         },
         "human_action_required": one_action,
@@ -232,11 +265,32 @@ def format_rc_status_human(status: dict[str, Any]) -> str:
         f"Repository:         {status['repo']}",
         f"Expected Code SHA:  {status.get('expected_code_sha') or 'Not specified'}",
         "------------------------------------------------------------",
-        f"1. CODE IDENTITY READY?    {'[PASS]' if q['code_identity_ready'] else '[BLOCKED]'} (HEAD: {det['code']['head_sha']}, dirty: {det['code']['dirty']})",
-        f"2. WORKSPACE READY?        {'[PASS]' if q['workspace_ready'] else '[BLOCKED]'} (status: {det['workspace']['status']})",
-        f"3. DATA MANIFEST READY?    {'[PASS]' if q['data_manifest_ready'] else '[BLOCKED]'} (status: {det['data_manifest']['status']})",
-        f"4. QUIESCENCE READY?       {'[PASS]' if q['quiescence_ready'] else '[BLOCKED]'} (status: {det['quiescence']['status']})",
-        f"5. OUTPUT CONTRACT KNOWN?  {'[YES]' if q['output_contract_known'] else '[NOT_AVAILABLE]'} (status: {det['output_contract']['status']})",
+        (
+            f"1. CODE IDENTITY READY?    "
+            f"{'[PASS]' if q['code_identity_ready'] else '[BLOCKED]'} "
+            f"(HEAD: {det['code']['head_sha']}, dirty: "
+            f"{det['code']['dirty']})"
+        ),
+        (
+            f"2. WORKSPACE READY?        "
+            f"{'[PASS]' if q['workspace_ready'] else '[BLOCKED]'} "
+            f"(status: {det['workspace']['status']})"
+        ),
+        (
+            f"3. DATA MANIFEST READY?    "
+            f"{'[PASS]' if q['data_manifest_ready'] else '[BLOCKED]'} "
+            f"(status: {det['data_manifest']['status']})"
+        ),
+        (
+            f"4. QUIESCENCE READY?       "
+            f"{'[PASS]' if q['quiescence_ready'] else '[BLOCKED]'} "
+            f"(status: {det['quiescence']['status']})"
+        ),
+        (
+            f"5. OUTPUT CONTRACT KNOWN?  "
+            f"{'[YES]' if q['output_contract_known'] else '[NOT_AVAILABLE]'} "
+            f"(status: {det['output_contract']['status']})"
+        ),
         "------------------------------------------------------------",
         "HUMAN ACTION REQUIRED (HIGHEST PRIORITY):",
         f"[{act['code']}] {act['next']}",

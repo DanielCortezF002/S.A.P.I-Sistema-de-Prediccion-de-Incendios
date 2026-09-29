@@ -8,10 +8,12 @@ from pathlib import Path
 
 import pytest
 
-from src.ops.attempt2_operator.canonical import assert_unknown_invariants, normalize_current
+from src.ops.attempt2_operator.canonical import (
+    assert_unknown_invariants,
+    normalize_current,
+)
 from src.ops.attempt2_operator.collectors.artifacts import collect_artifact_identities
 from src.ops.attempt2_operator.collectors.credentials import collect_credential_presence
-from src.ops.attempt2_operator.collectors.dmc_current import collect_dmc_current
 from src.ops.attempt2_operator.collectors.firms_current import collect_firms_current
 from src.ops.attempt2_operator.collectors.git_state import collect_git_state
 from src.ops.attempt2_operator.collectors.runtime import collect_runtime
@@ -76,7 +78,7 @@ def test_current_absent(tmp_path: Path):
 
 
 def test_current_unknown_unreadable(tmp_path: Path):
-    # Point to a file path that cannot be listed as dir — use invalid unicode? 
+    # Point to a file path that cannot be listed as dir — use invalid unicode?
     # Simulate via firms collector on missing parent that raises — use nonexistent but
     # firms collect ABSENT. For UNKNOWN: unreadable pointer file with bad JSON.
     p = tmp_path / "CURRENT.json"
@@ -115,7 +117,7 @@ def test_runtime_statuses_valid():
 def test_subprocess_pass(tmp_path: Path):
     r = run_tool(
         tool_name="echo_ok",
-        command=[sys.executable, "-c", "print('{\"status\":\"ok\"}')"],
+        command=[sys.executable, "-c", 'print(\'{"status":"ok"}\')'],
         output_dir=tmp_path,
         timeout_s=10,
         code_sha=SHA,
@@ -171,7 +173,11 @@ def _boot(tmp_path: Path) -> Attempt2Operator:
         dry_run=True,
         expected_code_sha=SHA,
         run_id="SAPI-ATTEMPT2-P2",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "d" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "d" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = {
         "code": {
@@ -206,7 +212,11 @@ def test_next_after_incomplete_preflight(tmp_path: Path):
         dry_run=True,
         expected_code_sha=SHA,
         run_id="SAPI-ATTEMPT2-P2-INC",
-        synthetic_identity={"code_sha": SHA, "tree_sha": "e" * 40, "worktree_clean": True},
+        synthetic_identity={
+            "code_sha": SHA,
+            "tree_sha": "e" * 40,
+            "worktree_clean": True,
+        },
     )
     snap = {
         "code": {
