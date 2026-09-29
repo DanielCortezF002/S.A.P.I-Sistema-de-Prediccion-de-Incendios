@@ -422,20 +422,28 @@ def test_consumer_rejects_a_resigned_authorization_claim(tmp_path, flag):
     assert "PRODUCER_SEMANTIC_VIOLATION" in {f["code"] for f in verdict["findings"]}
 
 
-def test_prepared_does_not_open_a_real_operator_init(tmp_path):
-    """Operator init (non dry-run) stays stricter than rc-status: it requires PASS."""
+def test_prepared_opens_a_real_operator_init_but_stays_unauthorized(tmp_path):
+    """PREPARED may initialize a real run (RC1-OPERATIONS-FLOW.md Step 5 precedes the
+    Step 7 human ATTEMPT2_AUTHORIZATION gate; ATTEMPT2-OPERATOR.md's automation boundary
+    is writers/Telegram/schedule/Jira/merge, not run creation). The safety invariant is
+    that the resulting run starts in state NEW with every human gate still False, so no
+    writer, Telegram, schedule, or Attempt2 authorization is ever implied by init alone.
+    """
     _real()
     if not dh.adapter_landed(LANES):
         pytest.skip("asserted post-landing only")
     from src.ops.attempt2_operator.operator import Attempt2Operator
+    from src.ops.attempt2_operator.states import Attempt2State
 
-    with pytest.raises(ValueError, match="Data plane manifest verification failed"):
-        Attempt2Operator.init_run(
-            evidence_root=tmp_path / "ev",
-            expected_code_sha="c" * 40,
-            data_plane_manifest=REAL_DATA_MANIFEST,
-        )
     op = Attempt2Operator.init_run(
+        evidence_root=tmp_path / "ev",
+        expected_code_sha="c" * 40,
+        data_plane_manifest=REAL_DATA_MANIFEST,
+    )
+    assert op.run.current_state() == Attempt2State.NEW
+    gates = op.run.read_authorizations()["gates"]
+    assert not any(gates.values()), gates  # no writer/Telegram/schedule/Attempt2 gate
+    op_dry = Attempt2Operator.init_run(
         evidence_root=tmp_path / "dry",
         dry_run=True,
         synthetic_identity={"code_sha": "c" * 40, "tree_sha": "d" * 40},
@@ -443,7 +451,7 @@ def test_prepared_does_not_open_a_real_operator_init(tmp_path):
         data_plane_manifest=REAL_DATA_MANIFEST,
     )
     assert (
-        op.status()["data_plane_manifest_fingerprint"]
+        op_dry.status()["data_plane_manifest_fingerprint"]
         == LANES["data"]["manifest_fingerprint"]
     )
-    assert not any(op.run.read_authorizations()["gates"].values())
+    assert not any(op_dry.run.read_authorizations()["gates"].values())
