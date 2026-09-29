@@ -332,10 +332,8 @@ ANCHOR_ONLY = {
 }  # fmt: skip
 # Re-signed manifests the PRODUCER rejects but the adapter at 13c9450 still accepts
 # (open finding ADAPTER-GAP-1, owner Antigravity/Astra). Remove entries as they close.
-KNOWN_CONSUMER_GAPS = {
-    "readiness.READY", "current_state.firms", "data_ready_for_scoring",
-    "identity.schema_version",
-}  # fmt: skip
+# ADAPTER-GAP-1 closed: consumer now rejects all four re-signed fields below.
+KNOWN_CONSUMER_GAPS: set[str] = set()
 
 
 @pytest.mark.parametrize("resign", [False, True], ids=["naive", "resigned"])
@@ -420,7 +418,8 @@ def test_consumer_rejects_a_resigned_authorization_claim(tmp_path, flag):
         assert verdict["status"] == "FAIL"
         return
     assert verdict["status"] == "FAIL" and verdict["ready"] is False
-    assert "AUTHORIZATION_CLAIMED" in {f["code"] for f in verdict["findings"]}
+    # V4: DM-009 AUTHORIZATION_CLAIMED is subsumed by producer semantic validation.
+    assert "PRODUCER_SEMANTIC_VIOLATION" in {f["code"] for f in verdict["findings"]}
 
 
 def test_prepared_does_not_open_a_real_operator_init(tmp_path):
