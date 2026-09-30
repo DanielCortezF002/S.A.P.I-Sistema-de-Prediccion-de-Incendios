@@ -221,6 +221,99 @@ def _listing_digest(files: Mapping[str, tuple[int, int]]) -> str:
     )
 
 
+# --- Excepciones humanas a findings específicos (waivers) -----------------------
+
+# Un waiver acepta EXACTAMENTE un finding: mismo finding_id, mismo path y el
+# mismo contenido (sha256 del blob commiteado) que tenía cuando un humano lo
+# revisó. Si el archivo cambia, el sha256 deja de coincidir y el waiver deja
+# de aplicar — el finding vuelve a bloquear sin intervención adicional.
+# Restringido a MW-011 (falso positivo de nombre de archivo, nunca de
+# contenido): un waiver nunca afecta MW-002/003/004/005/006/007/008/009/010/
+# .../020 ni un hallazgo MW-011 por CONTENIDO (secret_content_files) — solo el
+# de NOMBRE (secret_named_files).
+WAIVABLE_FINDING_IDS = frozenset({"MW-011"})
+
+
+@dataclass(frozen=True)
+class FindingWaiver:
+    finding_id: str
+    path: str
+    sha256: str
+    actor: str
+    reason: str
+
+    @classmethod
+    def from_dict(cls, data: Mapping) -> "FindingWaiver":
+        missing = [
+            k
+            for k in ("finding_id", "path", "sha256", "actor", "reason")
+            if not str(data.get(k) or "").strip()
+        ]
+        if missing:
+            raise ValueError(f"Waiver incompleto, faltan campos: {missing}")
+        finding_id = str(data["finding_id"]).strip()
+        if finding_id not in WAIVABLE_FINDING_IDS:
+            raise ValueError(
+                f"finding_id {finding_id!r} no es waivable; solo {sorted(WAIVABLE_FINDING_IDS)}"
+            )
+        sha256 = str(data["sha256"]).strip().lower()
+        if not re.fullmatch(r"[0-9a-f]{64}", sha256):
+            raise ValueError(f"sha256 de waiver inválido (esperado 64 hex): {sha256!r}")
+        return cls(
+            finding_id=finding_id,
+            path=str(data["path"]).strip(),
+            sha256=sha256,
+            actor=str(data["actor"]).strip(),
+            reason=str(data["reason"]).strip(),
+        )
+
+
+def load_waivers(path: Optional[str]) -> tuple[FindingWaiver, ...]:
+    """Lee un archivo JSON (lista de objetos) con excepciones humanas. Nunca
+    imprime ni registra contenido de archivo alguno — solo metadata del waiver."""
+    if not path:
+        return ()
+    with open(path, encoding="utf-8") as fh:
+        raw = json.load(fh)
+    if not isinstance(raw, list):
+        raise ValueError("--waiver-file debe contener una lista JSON de waivers")
+    return tuple(FindingWaiver.from_dict(item) for item in raw)
+
+
+def _find_waiver(
+    waivers: tuple[FindingWaiver, ...], finding_id: str, path: str
+) -> Optional[FindingWaiver]:
+    for w in waivers:
+        if w.finding_id == finding_id and w.path == path:
+            return w
+    return None
+
+
+def _blob_sha256(repo: str, sha: str, path: str) -> Optional[str]:
+    """SHA-256 de los bytes exactos de `path` tal como está commiteado en `sha`."""
+    try:
+        done = subprocess.run(
+            ["git", "--no-optional-locks", "-C", repo, "show", f"{sha}:{path}"],
+            capture_output=True,
+            timeout=30,
+            check=True,
+        )
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired):
+        return None
+    return hashlib.sha256(done.stdout).hexdigest()
+
+
+def _waiver_record(w: FindingWaiver) -> dict:
+    """Registro auditable de un waiver aplicado — sin contenido del archivo."""
+    return {
+        "finding_id": w.finding_id,
+        "path": w.path,
+        "sha256": w.sha256,
+        "actor": w.actor,
+        "reason": w.reason,
+    }
+
+
 # --- Solicitud y plan -----------------------------------------------------------
 
 
@@ -231,6 +324,7 @@ class WorkspaceRequest:
     source_stores: Mapping[str, Path]
     destination: Path
     margin_bytes: Optional[int] = None
+    waivers: tuple[FindingWaiver, ...] = field(default=())
     environ: Optional[Mapping[str, str]] = field(default=None, compare=False)
 
     @classmethod
@@ -241,6 +335,9 @@ class WorkspaceRequest:
             source_stores={k: Path(v) for k, v in data["source_stores"].items()},
             destination=Path(data["destination"]),
             margin_bytes=data.get("margin_bytes"),
+            waivers=tuple(
+                FindingWaiver.from_dict(item) for item in data.get("waivers", [])
+            ),
         )
 
 
@@ -293,6 +390,24 @@ def plan(request: WorkspaceRequest) -> dict:
                     n,
                 )
             )
+
+    # Aplicar waivers SOLO a MW-011 por NOMBRE (nunca por contenido) y solo si
+    # el sha256 del blob commiteado hoy coincide exactamente con el revisado
+    # por el humano. Cualquier otro finding, o un MW-011 cuyo archivo cambió,
+    # sigue bloqueando sin excepción.
+    waivers_applied: list[dict] = []
+    named_secret_files = set(code.get("secret_scan", {}).get("secret_named_files", ()))
+    for f in findings:
+        if f["id"] != "MW-011" or f["subject"] not in named_secret_files:
+            continue
+        w = _find_waiver(request.waivers, "MW-011", f["subject"])
+        if w is None:
+            continue
+        actual = _blob_sha256(repo, sha, f["subject"])
+        if actual is None or actual != w.sha256:
+            continue
+        f["waived"] = _waiver_record(w)
+        waivers_applied.append(f["waived"])
 
     names = set(request.source_stores)
     for missing in sorted(set(REQUIRED_STORES) - names):
@@ -454,7 +569,11 @@ def plan(request: WorkspaceRequest) -> dict:
             for s in stores
         ],
     }
-    status = "FAIL" if any(f["severity"] == "FAIL" for f in findings) else "PASS"
+    status = (
+        "FAIL"
+        if any(f["severity"] == "FAIL" and "waived" not in f for f in findings)
+        else "PASS"
+    )
     return {
         "schema_version": SCHEMA_VERSION,
         "kind": "plan",
@@ -465,6 +584,7 @@ def plan(request: WorkspaceRequest) -> dict:
         "destination": destination,
         "space": space,
         "findings": findings,
+        "waivers_applied": waivers_applied,
         "overall_status": status,
     }
 
@@ -613,14 +733,24 @@ def _recheck_source(store: dict, entries: list[dict]) -> None:
             )
 
 
-def _secret_scan_tree(root: str, store_subpaths: list[str]) -> dict:
-    named, content = [], []
+def _secret_scan_tree(
+    root: str, store_subpaths: list[str], waivers: tuple[FindingWaiver, ...] = ()
+) -> dict:
+    named, content, waived = [], [], []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d != ".git"]
         for fn in filenames:
             rel = os.path.relpath(os.path.join(dirpath, fn), root).replace(os.sep, "/")
             if _SECRET_NAME.search(rel):
-                named.append(rel)
+                # Un waiver solo cubre el hallazgo por NOMBRE, nunca por
+                # contenido, y solo si el archivo materializado tiene
+                # exactamente el sha256 que el humano revisó.
+                w = _find_waiver(waivers, "MW-011", rel)
+                actual = _sha256_file(os.path.join(dirpath, fn)) if w else None
+                if w is not None and actual == w.sha256:
+                    waived.append(_waiver_record(w))
+                else:
+                    named.append(rel)
             if any(rel == p or rel.startswith(p + "/") for p in store_subpaths):
                 path = os.path.join(dirpath, fn)
                 if os.path.getsize(path) <= SECRET_SCAN_MAX_BYTES:
@@ -630,6 +760,7 @@ def _secret_scan_tree(root: str, store_subpaths: list[str]) -> dict:
     return {
         "secret_named_files": sorted(named),
         "secret_content_files": sorted(content),
+        "waivers_applied": waived,
         "status": "FAIL" if named or content else "PASS",
         "values_recorded": False,
     }
@@ -676,6 +807,7 @@ def materialize(
         "dry_run": dry_run,
         "plan": p,
         "findings": list(p["findings"]),
+        "waivers_applied": list(p.get("waivers_applied", [])),
         "promotion_status": "NOT_STARTED",
     }
     if p["overall_status"] != "PASS":
@@ -801,7 +933,8 @@ def materialize(
                 staging,
             )
         manifest["physical_check"] = "PASS"
-        manifest["secret_scan"] = _secret_scan_tree(staging, subpaths)
+        manifest["secret_scan"] = _secret_scan_tree(staging, subpaths, request.waivers)
+        manifest["waivers_applied"] = manifest["secret_scan"]["waivers_applied"]
         if manifest["secret_scan"]["status"] != "PASS":
             raise MaterializationError(
                 "MW-011",
@@ -1056,9 +1189,14 @@ def _summary(result: dict) -> str:
         if isinstance(result.get(key), str):
             lines.append(f"{key}: {result[key]}")
     for f in result.get("findings", []):
+        tag = "WAIVED" if f.get("waived") else f["severity"]
         lines.append(
-            f"  {f['severity']:<5} {f['id']} {f['code']}: {f['message']}"
+            f"  {tag:<6} {f['id']} {f['code']}: {f['message']}"
             + (f" [{f['subject']}]" if f.get("subject") else "")
+        )
+    for w in result.get("waivers_applied", []):
+        lines.append(
+            f"  waiver: {w['finding_id']} [{w['path']}] by {w['actor']}: {w['reason']}"
         )
     return "\n".join(lines)
 
@@ -1078,6 +1216,14 @@ def main(argv: Optional[list[str]] = None) -> int:
         )
         sp.add_argument("--destination", required=True)
         sp.add_argument("--margin-bytes", type=int)
+        sp.add_argument(
+            "--waiver-file",
+            metavar="RUTA",
+            help=(
+                "JSON (lista) de excepciones humanas a findings específicos "
+                "(hoy solo MW-011 por nombre; ver load_waivers)"
+            ),
+        )
 
     common(
         sub.add_parser(
@@ -1121,12 +1267,17 @@ def main(argv: Optional[list[str]] = None) -> int:
             if not sep:
                 parser.error(f"--source-store espera nombre=RUTA: {value!r}")
             stores[name.strip()] = Path(path)
+        try:
+            waivers = load_waivers(args.waiver_file)
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            parser.error(f"--waiver-file inválido: {exc}")
         request = WorkspaceRequest(
             Path(args.repo_root),
             args.code_sha,
             stores,
             Path(args.destination),
             args.margin_bytes,
+            waivers,
         )
         result = (
             plan(request)
