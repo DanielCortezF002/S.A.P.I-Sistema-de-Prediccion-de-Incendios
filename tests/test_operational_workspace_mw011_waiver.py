@@ -59,7 +59,12 @@ def _write(path: Path, data: str) -> Path:
 
 @pytest.fixture(autouse=True)
 def _no_store_overrides(monkeypatch):
-    for name in ("DATA_RAW_DIR", "DATA_PROCESSED_DIR", "DATA_PREDICTIONS_DIR", "MODELS_DIR"):
+    for name in (
+        "DATA_RAW_DIR",
+        "DATA_PROCESSED_DIR",
+        "DATA_PREDICTIONS_DIR",
+        "MODELS_DIR",
+    ):
         monkeypatch.delenv(name, raising=False)
 
 
@@ -197,7 +202,9 @@ def test_non_mw011_finding_id_rejected_at_load(repo_with_credentials_file):
         )
 
 
-def test_other_findings_not_waived_by_mw011_waiver(repo_with_credentials_file, tmp_path):
+def test_other_findings_not_waived_by_mw011_waiver(
+    repo_with_credentials_file, tmp_path
+):
     ctx = repo_with_credentials_file
     digest = _real_blob_sha256(ctx)
     waiver = FindingWaiver("MW-011", ctx["path"], digest, "Daniel", "ok")
@@ -241,7 +248,9 @@ def test_file_change_invalidates_waiver(repo_with_credentials_file):
 def test_waiver_recorded_in_manifest(repo_with_credentials_file):
     ctx = repo_with_credentials_file
     digest = _real_blob_sha256(ctx)
-    waiver = FindingWaiver("MW-011", ctx["path"], digest, "Daniel", "Revisión manual OK")
+    waiver = FindingWaiver(
+        "MW-011", ctx["path"], digest, "Daniel", "Revisión manual OK"
+    )
     req = _req(ctx, waivers=(waiver,))
     plan_id = plan(req)["plan_id"]
     mat = materialize(req, confirm_plan_id=plan_id)
