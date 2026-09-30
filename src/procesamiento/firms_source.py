@@ -19,7 +19,7 @@ Prioridad de `resolve_firms_source()`:
 1. `SAPI_REPRODUCIBILITY_MODE=1` -> snapshot congelado del Hito 1
    (`artifacts/hito1/reproducibility/firms/`), sin cambios respecto a antes.
 2. `CURRENT.json` presente -> la versión que apunta, SOLO si el puntero es
-   válido (esquema 2, ver `POINTER_REQUIRED_FIELDS`), el archivo vive dentro
+   válido (esquema 2 legacy o 3 proyectado, ver `POINTER_REQUIRED_FIELDS`), el archivo vive dentro
    de `data/processed/firms/versions/` y su sha256 coincide. Lo publica
    únicamente `src/refresh/firms_refresh.py`. Cualquier inconsistencia falla de forma explícita
    (`FirmsSourceError`), nunca cae en silencio a otra fuente.
@@ -33,6 +33,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -71,6 +72,9 @@ FIRMS_VERSIONS_DIR = FIRMS_CURRENT_DIR / "versions"
 # Esquema 2 (SAPI-71 Fase B): `relative_path` + `created_at`. El esquema 1
 # (`path`) nunca llegó a escribirse en disco y ya no se acepta.
 POINTER_SCHEMA_VERSION = 2
+# v3 changes CSV semantics from a mixed-source byte prefix to an explicit
+# common-schema projection. v2 remains readable, including rollback targets.
+PROJECTED_POINTER_SCHEMA_VERSION = 3
 POINTER_REQUIRED_FIELDS = (
     "schema_version",
     "relative_path",
@@ -167,9 +171,9 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
             f"Puntero FIRMS ilegible en {pointer_path.name}: {exc}"
         ) from exc
 
-    if (
-        not isinstance(pointer, dict)
-        or pointer.get("schema_version") != POINTER_SCHEMA_VERSION
+    if not isinstance(pointer, dict) or pointer.get("schema_version") not in (
+        POINTER_SCHEMA_VERSION,
+        PROJECTED_POINTER_SCHEMA_VERSION,
     ):
         raise FirmsSourceError(
             f"Puntero FIRMS con esquema no soportado en {pointer_path.name}."
@@ -209,6 +213,41 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
             f"sha256 de {relative!r} no coincide con el puntero FIRMS "
             f"(esperado {expected_sha[:12]}..., real {actual_sha[:12]}...)."
         )
+
+    if pointer["schema_version"] == PROJECTED_POINTER_SCHEMA_VERSION:
+        try:
+            from src.ingesta.firms_schema import CONTRACT, validate_operational
+
+            if pointer.get("data_contract") != CONTRACT:
+                raise ValueError("Contrato de proyección FIRMS desconocido")
+            for key in ("base_sha256", "projected_base_sha256"):
+                if not re.fullmatch(r"[0-9a-f]{64}", pointer.get(key, "")):
+                    raise ValueError("Hash de procedencia FIRMS inválido")
+            if pointer.get("base_origin") not in ("baseline", "current"):
+                raise ValueError("Origen de base FIRMS inválido")
+            if "base_relative_path" not in pointer:
+                raise ValueError("Falta procedencia de base FIRMS")
+            raw = pointer.get("raw_artifacts")
+            if (
+                not isinstance(raw, list)
+                or not raw
+                or [x["path"] for x in raw] != pointer.get("raw_files")
+            ):
+                raise ValueError("Manifest raw FIRMS inválido")
+            if any(not re.fullmatch(r"[0-9a-f]{64}", x["sha256"]) for x in raw):
+                raise ValueError("Hash raw FIRMS inválido")
+            frame = validate_operational(target.read_bytes())
+            if len(frame) != pointer.get("row_count") or not 0 <= pointer[
+                "new_rows"
+            ] <= len(frame):
+                raise ValueError("Conteo FIRMS inválido")
+            if any(
+                not coverage_start <= date.fromisoformat(d) <= coverage_end
+                for d in frame["acq_date"]
+            ):
+                raise ValueError("Cobertura FIRMS inválida")
+        except (ValueError, TypeError, KeyError, AttributeError) as exc:
+            raise FirmsSourceError(f"Puntero FIRMS v3 inválido: {exc}") from exc
 
     return FirmsSource(
         path=target,

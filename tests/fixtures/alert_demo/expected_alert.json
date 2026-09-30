@@ -1,0 +1,107 @@
+{
+  "alert_fingerprint": "e94cd2971d2ec02fbdbf74c58351612f9028d4042ee7f385e8cff65901342c31",
+  "firms": {
+    "coverage_end": "2026-09-19",
+    "lag_days": 1,
+    "origin": "current",
+    "status": "FIRMS AL DÍA"
+  },
+  "generated_at": "2026-09-25T00:00:00+00:00",
+  "inputs_fingerprint": "80f37caac69132b7a5f21506ad6d9919dd79452cf9897ef5ad4c9b93eb57c722",
+  "limitations": [
+    {
+      "code": "RANKING_RELATIVO",
+      "text": "Ranking exploratorio de prioridad relativa (Model D). El score relativo no es una probabilidad calibrada."
+    },
+    {
+      "code": "FIRMS_ANOMALIAS_TERMICAS",
+      "text": "FIRMS reporta anomalías térmicas satelitales; no confirma la existencia de un incendio."
+    },
+    {
+      "code": "VALIDACION_HISTORICA",
+      "text": "La validación disponible es histórica; no existe validación operacional point-in-time con datos FIRMS NRT."
+    }
+  ],
+  "model": {
+    "status": "PROTOTYPE / EXPLORATORY",
+    "version": "prototype_model_d_v1"
+  },
+  "schema_version": "sapi-alert-v1",
+  "scoring_time": "2026-09-20T12:00:00+00:00",
+  "status": "READY",
+  "summary": {
+    "cell_count": 50,
+    "meteo_freshness": "DATOS RECIENTES",
+    "ranking_basis": "rank",
+    "ties_beyond_top_n": 1,
+    "top_group_size": 3,
+    "top_n": 5
+  },
+  "top_cells": [
+    {
+      "cell_id": "VP-012",
+      "display_rank": 1,
+      "geometry": {
+        "max_lat": -33.07,
+        "max_lon": -71.4978,
+        "min_lat": -33.105,
+        "min_lon": -71.5389
+      },
+      "rank": 1,
+      "score": 0.14,
+      "tie_group_size": 3
+    },
+    {
+      "cell_id": "VP-027",
+      "display_rank": 1,
+      "geometry": {
+        "max_lat": -33.035,
+        "max_lon": -71.2923,
+        "min_lat": -33.07,
+        "min_lon": -71.3334
+      },
+      "rank": 2,
+      "score": 0.14,
+      "tie_group_size": 3
+    },
+    {
+      "cell_id": "VP-031",
+      "display_rank": 1,
+      "geometry": {
+        "max_lat": -33.0,
+        "max_lon": -71.5389,
+        "min_lat": -33.035,
+        "min_lon": -71.58
+      },
+      "rank": 3,
+      "score": 0.14,
+      "tie_group_size": 3
+    },
+    {
+      "cell_id": "VP-004",
+      "display_rank": 4,
+      "geometry": {
+        "max_lat": -33.105,
+        "max_lon": -71.4156,
+        "min_lat": -33.14,
+        "min_lon": -71.4567
+      },
+      "rank": 4,
+      "score": 0.121,
+      "tie_group_size": 1
+    },
+    {
+      "cell_id": "VP-008",
+      "display_rank": 5,
+      "geometry": {
+        "max_lat": -33.105,
+        "max_lon": -71.2512,
+        "min_lat": -33.14,
+        "min_lon": -71.2923
+      },
+      "rank": 5,
+      "score": 0.098,
+      "tie_group_size": 2
+    }
+  ]
+}

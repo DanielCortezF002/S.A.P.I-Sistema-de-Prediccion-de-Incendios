@@ -67,7 +67,6 @@ import argparse
 import json
 import math
 import sys
-import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import date, datetime, timedelta, timezone
@@ -78,7 +77,7 @@ from typing import Any, Callable, Optional, Sequence
 import requests
 
 from src.config import DATA_PROCESSED_DIR, DMC_API_BASE_URL, DMC_TOKEN, DMC_USUARIO
-from src.procesamiento.raw_parser import DmcFormatError, _clean_float, parse_dmc_json
+from src.procesamiento.raw_parser import DmcFormatError, _clean_float, parse_dmc_bytes
 from src.refresh.atomic import (
     ImmutableVersionError,
     append_jsonl,
@@ -115,9 +114,18 @@ NULL_ROWS_MAX_RATE = Fraction(1, 100)
 
 
 class DmcRefreshError(RuntimeError):
-    def __init__(self, message: str, exit_code: int) -> None:
+    def __init__(
+        self,
+        message: str,
+        exit_code: int,
+        *,
+        reason: str = "MALFORMED_RESPONSE",
+        details: Optional[dict] = None,
+    ) -> None:
         super().__init__(message)
         self.exit_code = exit_code
+        self.reason = reason
+        self.details = details or {}
 
 
 @dataclass(frozen=True)
@@ -214,6 +222,15 @@ def months_to_fetch(coverage_end: Optional[datetime], now: datetime) -> list[str
 # --- Descarga y validación ----------------------------------------------------
 
 
+def month_source_url(station: str, month: str) -> str:
+    """Shared source interface; credentials are supplied separately as params."""
+    year, mon = month.split("-")
+    return (
+        f"{DMC_API_BASE_URL}/application/servicios/getDatosRecientesEma/"
+        f"{station}/{int(year)}/{int(mon)}"
+    )
+
+
 def _fetch_month(
     session: requests.Session,
     station: str,
@@ -221,11 +238,7 @@ def _fetch_month(
     credentials: tuple[str, str],
     sleep: Callable[[float], None],
 ) -> Any:
-    year, mon = month.split("-")
-    url = (
-        f"{DMC_API_BASE_URL}/application/servicios/getDatosRecientesEma/"
-        f"{station}/{int(year)}/{int(mon)}"
-    )
+    url = month_source_url(station, month)
     params = {"usuario": credentials[0], "token": credentials[1]}
     last: Optional[str] = None
     for attempt in range(MAX_ATTEMPTS):
@@ -340,6 +353,8 @@ def assess_rows(records: list[dict], month: str) -> RowQuality:
                     f"Respuesta DMC {month}: lectura {record['momento']} sin "
                     f"campo {name!r}.",
                     EXIT_DATA,
+                    reason="MISSING_REQUIRED_FIELD",
+                    details={"field": name},
                 )
             value = record[name]
             if value is None:
@@ -351,6 +366,8 @@ def assess_rows(records: list[dict], month: str) -> RowQuality:
                     f"Respuesta DMC {month}: {name}={str(value)[:40]!r} no es "
                     f"numérico (lectura {record['momento']}).",
                     EXIT_DATA,
+                    reason="NONNUMERIC_REQUIRED_FIELD",
+                    details={"field": name},
                 )
         null_rows += has_null
     quality = RowQuality(total_rows=len(records), null_rows=null_rows)
@@ -360,6 +377,8 @@ def assess_rows(records: list[dict], month: str) -> RowQuality:
             f"null (discard_rate={quality.discard_rate:.4f} > "
             f"threshold={float(NULL_ROWS_MAX_RATE)}): no se publica nada.",
             EXIT_DATA,
+            reason="NULLS_EXCEED_LIMIT",
+            details=quality.as_dict(),
         )
     return quality
 
@@ -408,15 +427,12 @@ def validate_version_bytes(
     if len(records) != expected:
         raise DmcRefreshError(f"Versión {month} no se relee íntegra.", EXIT_DATA)
     quality = assess_rows(records, month)
-    with tempfile.TemporaryDirectory() as tmp:
-        probe = Path(tmp) / "version.json"
-        probe.write_bytes(data)
-        try:
-            parsed = parse_dmc_json(probe)
-        except (DmcFormatError, ValueError) as exc:
-            raise DmcRefreshError(
-                f"Versión {month} rechazada por parse_dmc_json: {exc}", EXIT_DATA
-            )
+    try:
+        parsed = parse_dmc_bytes(data, "version.json")
+    except (DmcFormatError, ValueError) as exc:
+        raise DmcRefreshError(
+            f"Versión {month} rechazada por parse_dmc_json: {exc}", EXIT_DATA
+        )
     if expected and parsed.empty:
         raise DmcRefreshError(f"Versión {month} sin lecturas utilizables.", EXIT_DATA)
     usable = quality.total_rows - quality.null_rows
@@ -427,6 +443,52 @@ def validate_version_bytes(
             EXIT_DATA,
         )
     return quality
+
+
+@dataclass(frozen=True)
+class PreparedMonth:
+    """Validated candidate in memory; no paths, locks or publication effects."""
+
+    data: bytes
+    valid: list[dict]
+    incoming_quality: RowQuality
+    quality: RowQuality
+    added: int
+    conflicts: int
+
+
+def prepare_month_payload(
+    payload: Any,
+    station: str,
+    month: str,
+    *,
+    existing_estacion: Optional[dict] = None,
+    existing: Optional[list[dict]] = None,
+) -> PreparedMonth:
+    """The writer's complete monthly preparation, stopping before any write.
+
+    Callers provide prior state explicitly in memory. This does not validate
+    CURRENT, locks, filesystem permissions or other months of a complete run.
+    """
+    estacion, incoming = validate_month_payload(payload, month)
+    if not incoming:
+        raise DmcRefreshError(
+            f"Respuesta DMC vacía para {month}: no se publica nada.",
+            EXIT_DATA,
+            reason="EMPTY_RESPONSE",
+        )
+    incoming_quality = assess_rows(incoming, month)
+    merged, added, conflicts = merge_records(existing or [], incoming)
+    data = canonical_month_bytes(station, existing_estacion or estacion, merged)
+    quality = validate_version_bytes(data, station, month, len(merged))
+    valid = valid_records(merged)
+    if len(valid) != quality.total_rows - quality.null_rows:
+        raise DmcRefreshError(
+            f"Versión {month}: {len(valid)} lecturas válidas, se "
+            f"esperaban {quality.total_rows - quality.null_rows}.",
+            EXIT_DATA,
+        )
+    return PreparedMonth(data, valid, incoming_quality, quality, added, conflicts)
 
 
 # --- Puntero -----------------------------------------------------------------
@@ -581,28 +643,21 @@ def refresh(
                     )
                 # Política sobre el payload mensual recibido; la versión
                 # fusionada se vuelve a evaluar en validate_version_bytes.
-                row_quality[month] = assess_rows(incoming, month).as_dict()
                 existing_estacion, existing = (
                     _month_records(paths, months[month])
                     if month in months
                     else ({}, [])
                 )
-                merged, added, conflicts = merge_records(existing, incoming)
-                data = canonical_month_bytes(
-                    paths.station_id, existing_estacion or estacion, merged
+                prepared = prepare_month_payload(
+                    payload,
+                    paths.station_id,
+                    month,
+                    existing_estacion=existing_estacion,
+                    existing=existing,
                 )
-                quality = validate_version_bytes(
-                    data, paths.station_id, month, len(merged)
-                )
-                # El puntero describe lo publicado utilizable: conteo y
-                # cobertura salen de las lecturas válidas, no de las nulas.
-                valid = valid_records(merged)
-                if len(valid) != quality.total_rows - quality.null_rows:
-                    raise DmcRefreshError(
-                        f"Versión {month}: {len(valid)} lecturas válidas, se "
-                        f"esperaban {quality.total_rows - quality.null_rows}.",
-                        EXIT_DATA,
-                    )
+                row_quality[month] = prepared.incoming_quality.as_dict()
+                data, valid = prepared.data, prepared.valid
+                added, conflicts = prepared.added, prepared.conflicts
                 sha = sha256_bytes(data)
                 name = f"dmc_{paths.station_id}_{month}_{sha[:12]}.json"
                 write_immutable(paths.versions_dir / name, data)

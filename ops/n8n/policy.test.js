@@ -1,18 +1,16 @@
 // Synthetic software fixtures, never Model D evaluation or operational data.
+// fixtures/*.json are real bridge output for a synthetic GridScoreResult, generated and
+// kept current by tests/test_output_pipeline.py: their alert_fingerprint comes from Python.
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { evaluate, deduplicate } = require('./policy');
+const { evaluate, deduplicate, alertFingerprint, DEFAULT_SUPPRESSION_POLICY } = require('./policy');
+const CANONICAL = require('./fixtures/canonical-notification.json');
+const TAMPERED = require('./fixtures/tampered-identity.json');
 const now = '2026-09-24T13:00:00Z';
-function payload() {
-  return { status: 'ok', model_version: 'prototype_model_d_v1', model_status: 'PROTOTYPE / EXPLORATORY',
-    station_id: '330007', horizon_hours: 6, forecast_time: '2026-09-24T12:00:00Z',
-    weather_timestamp: '2026-09-24T12:00:00Z', age_hours: 1, freshness: 'DATOS RECIENTES',
-    firms_origin: 'current', firms_coverage_end: '2026-09-23', firms_lag_days: 1,
-    firms_status: 'FIRMS AL DÍA', inputs_fingerprint: 'a'.repeat(64),
-    meteo_actual: {regla_30_30_30: true, momento_observacion: '2026-09-24T12:00:00Z'},
-    cells: Array.from({length:50}, (_,i) => ({cell_id:`VP-${String(i+1).padStart(3,'0')}`,
-      score: i<2 ? 0.4 : 0.1, rank:i+1, display_rank:i<2 ? 1 : 3, tie_group_size:i<2 ? 2 : 48})) };
-}
+const payload = () => JSON.parse(JSON.stringify(CANONICAL));
+// Re-sign a deliberately modified payload with the canonical recipe (to test policy rules
+// other than identity integrity).
+const resign = p => { p.alert_identity.alert_fingerprint = alertFingerprint(p, p.alert_identity.top_n); return p; };
 const run = p => evaluate({statusCode:200,body:p}, now, 'fixture-1');
 const matrix = [
   ['A', {statusCode:200,body:payload()}, 'candidate', 'relative_top_group_and_meteo_rule'],
@@ -29,36 +27,77 @@ for (const [name,envelope,category,reason] of matrix) test(`matrix ${name}`, () 
   assert.equal(r.category,category); assert.equal(r.reason,reason); assert.equal(r.delivery,'NOT_SENT');
   if(name!=='A') assert.deepEqual(r.top_group,[]);
 });
+test('canonical fixture: identity from Python is verified and used as-is',()=>{
+  const r=run(payload());
+  assert.equal(r.alert_identity_verified,true);
+  assert.equal(r.notification_identity,CANONICAL.alert_identity.alert_fingerprint);
+  assert.equal(r.inputs_fingerprint,CANONICAL.inputs_fingerprint);
+});
+test('tampered fixture is blocked and never notifiable',()=>{
+  const r=run(JSON.parse(JSON.stringify(TAMPERED)));
+  assert.equal(r.category,'blocked'); assert.equal(r.reason,'alert_identity_mismatch');
+  assert.equal(r.alert_identity_verified,false);
+  assert.equal(deduplicate(r,null).would_notify,false);
+});
+for (const [name,change,reason] of [
+  ['missing identity',p=>{delete p.alert_identity;},'missing_alert_identity'],
+  ['missing output schema',p=>{delete p.output_schema_version;},'missing_alert_identity'],
+  ['malformed fingerprint',p=>{p.alert_identity.alert_fingerprint='x';},'missing_alert_identity'],
+  ['foreign identity',p=>{p.alert_identity.alert_fingerprint='0'.repeat(64);},'alert_identity_mismatch'],
+  ['changed inputs',p=>{p.inputs_fingerprint='b'.repeat(64);},'alert_identity_mismatch'],
+  ['changed top score',p=>{p.cells[0].score=p.cells[1].score=0.39;},'alert_identity_mismatch'],
+]) test(`identity fail closed: ${name}`,()=>{
+  const p=payload(); change(p); const r=run(p);
+  assert.equal(r.category,'blocked'); assert.equal(r.reason,reason);
+  assert.equal(deduplicate(r,null).would_notify,false);
+});
 test('all ties, scientific message and independent execution identity',()=>{
   const r=run(payload()); assert.deepEqual(r.top_group,['VP-001','VP-002']);
   for(const text of ['PRUEBA CONTROLADA','NO probabilidad calibrada','NO confirmación de incendio',
-    'FIRMS','T:', 'Ventana:', 'DMC regional', 'lag 1', 'fixture-1']) assert.ok(r.message.includes(text));
+    'FIRMS','T:', 'Ventana:', 'DMC regional', 'lag 1', 'fixture-1', 'Alerta:']) assert.ok(r.message.includes(text));
   assert.ok(!r.notification_identity.includes('fixture-1'));
 });
-test('persistent condition is suppressed despite new inputs or ordering',()=>{
-  const a=run(payload()), p=payload();p.inputs_fingerprint='b'.repeat(64);p.cells.reverse();
+test('retry of the same alert is suppressed, also with cells reordered',()=>{
+  const a=run(payload()), p=payload(); p.cells.reverse();
   const b=deduplicate(run(p),JSON.parse(JSON.stringify(a)));
+  assert.equal(b.notification_identity,a.notification_identity);
   assert.equal(b.would_notify,false); assert.equal(b.condition_changed,false);
+});
+test('a new evaluation (new inputs) is a new alert even with the same top group',()=>{
+  const a=run(payload()), p=resign(Object.assign(payload(),{inputs_fingerprint:'b'.repeat(64)}));
+  const b=deduplicate(run(p),a);
+  assert.deepEqual(b.top_group,a.top_group); assert.notEqual(b.notification_identity,a.notification_identity);
+  assert.equal(b.would_notify,true);
 });
 test('group change, repeated error and recovery',()=>{
   const a=run(payload()), p=payload();
   [p.cells[0].cell_id,p.cells[2].cell_id]=[p.cells[2].cell_id,p.cells[0].cell_id];
-  assert.equal(deduplicate(run(p),a).would_notify,true);
+  assert.equal(deduplicate(run(resign(p)),a).would_notify,true);
   const e=evaluate(matrix[1][1],now,'error');
   assert.equal(deduplicate(e,e).would_notify,false);
   assert.equal(deduplicate(a,e).recovered_from_error,true);
   assert.equal(deduplicate(a,e).would_notify,true);
 });
+test('same alert moving from withheld to candidate is notified once',()=>{
+  const early=evaluate({statusCode:200,body:payload()},'2026-09-24T11:00:00Z','early');
+  assert.equal(early.category,'withheld');
+  const later=deduplicate(run(payload()),early);
+  assert.equal(later.would_notify,true);
+  assert.equal(deduplicate(run(payload()),later).would_notify,false);
+});
 for (const [name,change] of [
-  ['expired',p=>{p.forecast_time='2026-09-24T06:00:00Z';}],
-  ['future weather',p=>{p.weather_timestamp='2026-09-24T13:01:00Z';}],
+  ['expired',p=>{p.forecast_time='2026-09-24T06:00:00+00:00';}],
+  ['future weather',p=>{p.weather_timestamp='2026-09-24T13:01:00+00:00';}],
   ['negative age',p=>{p.age_hours=-1;}],
   ['stale firms',p=>{p.firms_status='FIRMS DESACTUALIZADO';}],
   ['false rule',p=>{p.meteo_actual.regla_30_30_30=false;}],
   ['missing tie',p=>{p.cells[1].display_rank=2;}],
   ['duplicate cell',p=>{p.cells[1].cell_id=p.cells[0].cell_id;}],
   ['missing provenance',p=>{delete p.inputs_fingerprint;}],
-]) test(`fail closed: ${name}`,()=>{const p=payload();change(p);assert.notEqual(run(p).category,'candidate');});
+]) test(`fail closed: ${name}`,()=>{
+  const p=payload(); change(p); if (p.inputs_fingerprint) resign(p);
+  assert.notEqual(run(p).category,'candidate');
+});
 
 // Envelope shape observed in n8n 2.39.10 runtime (fullResponse + responseFormat text).
 const n8n = (statusCode, data) => ({statusCode, statusMessage:'x', headers:{}, data});
@@ -73,4 +112,39 @@ for (const [name,envelope,category,reason] of [
 ]) test(`n8n runtime envelope ${name}`, () => {
   const r=evaluate(envelope,now,'rt-'+name);
   assert.equal(r.category,category); assert.equal(r.reason,reason);
+});
+
+// --- Suppression policy hook: identity untouched, default safe, explicit choices only.
+const at = (p, iso, id) => evaluate({statusCode:200,body:p}, iso, id);
+test('default suppression policy is explicit, frozen and versioned',()=>{
+  assert.ok(Object.isFrozen(DEFAULT_SUPPRESSION_POLICY));
+  const r=deduplicate(run(payload()),null);
+  assert.equal(r.suppression_policy,'sapi-suppression-v1'); assert.equal(r.would_notify,true);
+  assert.equal(r.suppressed_by,null); assert.equal(r.delivery,'NOT_SENT');
+});
+test('time-window option suppresses a new evaluation of the same category within the window',()=>{
+  const policy={...DEFAULT_SUPPRESSION_POLICY, window_minutes:120};
+  const a=at(payload(),'2026-09-24T13:00:00Z','a');
+  const b=at(resign(Object.assign(payload(),{inputs_fingerprint:'c'.repeat(64)})),'2026-09-24T14:00:00Z','b');
+  const r=deduplicate(b,a,policy);
+  assert.notEqual(r.notification_identity,a.notification_identity);  // identity untouched
+  assert.equal(r.would_notify,false); assert.equal(r.suppressed_by,'time_window');
+  assert.equal(deduplicate(b,a).would_notify,true);  // default: no window
+});
+test('category option can also silence operator error notices',()=>{
+  const policy={...DEFAULT_SUPPRESSION_POLICY, never_notify_categories:['withheld','blocked','error']};
+  const e=evaluate(matrix[1][1],now,'e');
+  assert.equal(deduplicate(e,null).would_notify,true);
+  const r=deduplicate(e,null,policy); assert.equal(r.would_notify,false); assert.equal(r.suppressed_by,'category');
+});
+for (const [name,policy] of [
+  ['missing', null], ['unknown key', {...DEFAULT_SUPPRESSION_POLICY, send:true}],
+  ['wrong version', {...DEFAULT_SUPPRESSION_POLICY, version:'x'}],
+  ['retries allowed', {...DEFAULT_SUPPRESSION_POLICY, suppress_same_identity:false}],
+  ['blocked notifiable', {...DEFAULT_SUPPRESSION_POLICY, never_notify_categories:['withheld']}],
+  ['bad window', {...DEFAULT_SUPPRESSION_POLICY, window_minutes:-5}],
+]) test(`invalid suppression policy never notifies: ${name}`,()=>{
+  const r=deduplicate(run(payload()),null,policy);
+  assert.equal(r.would_notify,false); assert.equal(r.suppressed_by,'invalid_suppression_policy');
+  assert.equal(r.delivery,'NOT_SENT');
 });

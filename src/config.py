@@ -76,6 +76,11 @@ DATA_PROCESSED_DIR: Path = BASE_DIR / os.getenv("DATA_PROCESSED_DIR", "data/proc
 DATA_PREDICTIONS_DIR: Path = BASE_DIR / os.getenv("DATA_PREDICTIONS_DIR", "data/predictions")
 MODELS_DIR: Path = BASE_DIR / os.getenv("MODELS_DIR", "models")
 
+# Centro de Control (app/pages/dashboard.py): único endpoint que lee, solo GET.
+# El bridge (tools/n8n_bridge) se publica en 127.0.0.1:8600; desde el contenedor
+# web usar http://host.docker.internal:8600/score.
+SAPI_SCORE_URL: str = os.getenv("SAPI_SCORE_URL", "http://127.0.0.1:8600/score")
+
 CACHE_CONTINGENCY_DAYS: int = int(os.getenv("CACHE_CONTINGENCY_DAYS", "7"))
 GRID_CELL_SIZE_KM: float = float(os.getenv("GRID_CELL_SIZE_KM", "1.0"))
 GRID_MAX_CELLS: int = int(os.getenv("GRID_MAX_CELLS", "50") or "50")

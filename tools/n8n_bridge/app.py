@@ -32,6 +32,8 @@ from src.inference.prototype_service import (
     PrototypeUnavailableError,
     score_current_grid,
 )
+from tools.n8n_bridge.contract import InvalidScoreResultError, validate_grid_result
+from tools.n8n_bridge.output_contract import attach_output_contract
 
 logger = logging.getLogger("sapi.n8n_bridge")
 
@@ -187,8 +189,36 @@ def get_score() -> JSONResponse:
             },
         )
 
-    metadata = _read_metadata_json()
-    disclaimer = (metadata or {}).get("aviso", _FALLBACK_DISCLAIMER)
+    # BRIDGE-01: nunca un 200 con un resultado incompleto o inconsistente
+    # (ver BRIDGE-OUTPUT-CONTRACT.md). Es un fallo interno -- 500
+    # `internal_error`, no el 503 de datos no disponibles --, y nunca se
+    # rellena con celdas vacías ni scores por defecto.
+    try:
+        validate_grid_result(result)
+        metadata = _read_metadata_json()
+        disclaimer = (metadata or {}).get("aviso", _FALLBACK_DISCLAIMER)
+        # sapi-output-v1: mismo resultado + identidades canónicas (entradas y alerta).
+        content = attach_output_contract(
+            _serialize_grid_result(result, disclaimer), result.scoring_inputs
+        )
+        return JSONResponse(status_code=200, content=content)
+    except InvalidScoreResultError as exc:
+        logger.error("Model D score result violates bridge contract: %s", exc)
+        return _invalid_result_response()
+    except Exception:  # noqa: BLE001 -- serialización fallida: mismo cierre
+        logger.exception("Unexpected error while serializing Model D result")
+        return _invalid_result_response()
+
+
+def _invalid_result_response() -> JSONResponse:
     return JSONResponse(
-        status_code=200, content=_serialize_grid_result(result, disclaimer)
+        status_code=500,
+        content={
+            "status": "error",
+            "error_type": "internal_error",
+            "message": (
+                "El resultado de scoring no cumple el contrato de salida del "
+                "puente. Revisar logs del servicio n8n-bridge."
+            ),
+        },
     )

@@ -192,7 +192,11 @@ def pin_dmc(station_id: str, *, legacy_dir: Path, store_dir: Optional[Path]) -> 
             versioned = versioned.loc[versioned["momento"] > legacy_end]
         if not versioned.empty:
             series = (
-                pd.concat([legacy, versioned], ignore_index=True)
+                (
+                    versioned
+                    if legacy.empty
+                    else pd.concat([legacy, versioned], ignore_index=True)
+                )
                 .sort_values("momento")
                 .reset_index(drop=True)
             )

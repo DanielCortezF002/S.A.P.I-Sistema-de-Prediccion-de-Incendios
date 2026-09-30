@@ -1,3 +1,28 @@
+# FIRMS schema correction — Attempt 1 closed
+
+The real 2026-09-24 Attempt 1 ended `FAILED — MANUAL INTERVENTION REQUIRED`
+(exit 65: missing `type`), without publication. Its five raw downloads are
+preserved evidence, not corruption. Attempt 2 is **NOT STARTED**.
+The instructions below do not authorize continuing Attempt 1.
+
+New FIRMS publications use v3 / `viirs-snpp-common-v1`: NRT has 14 columns,
+SP has those plus its original classification, and the operational CSV is
+the common 14 + SAPI provenance. Baseline/raw SP retain `type` unchanged.
+The previous mixed-baseline byte-prefix assertion must not be used for v3.
+The version-controlled read-only gate is `scripts/validate_firms.py`:
+it verifies original and projected base hashes, raw source hashes, complete
+requested coverage, a deterministic rebuild, sidecar/history and lock state.
+It supplements command-output and full-store-inventory checks; it does not
+replace them. Keep the old Attempt 1 validator and evidence untouched.
+See [contract and failure analysis](FIRMS-LIVE-SCHEMA-FAILURE-2026-09-24.md).
+
+Only after review and merge, any Attempt 2 requires a new main SHA, evidence
+directory, pre-flight and explicit human authorization, with the actual
+post-Attempt-1 inventory as baseline (463 files including its five raw CSVs).
+No Attempt 2 operation is prepared or authorized by this document update.
+
+---
+
 # Primer refresh controlado — gate operacional del 24-09-2026
 
 Procedimiento para una operación humana futura. Este documento no autoriza un
