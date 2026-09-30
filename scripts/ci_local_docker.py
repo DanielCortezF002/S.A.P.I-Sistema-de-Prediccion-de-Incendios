@@ -10,6 +10,23 @@ import shutil
 from ci_local import sha, step, pytest_metrics
 
 
+def database_ready_command(database):
+    # The image's init phase serves only the Unix socket (listen_addresses='');
+    # probing over TCP waits for the final server, after 10_postgis.sh has run.
+    return [
+        "docker",
+        "exec",
+        database,
+        "pg_isready",
+        "-h",
+        "127.0.0.1",
+        "-U",
+        "sapi",
+        "-d",
+        "sapi_db",
+    ]
+
+
 def run_docker(runner, identity, required, *, source_context=None, host_callback=None):
     probe = runner.run(
         "docker_probe",
@@ -165,16 +182,7 @@ def run_docker(runner, identity, required, *, source_context=None, host_callback
         ready = False
         for _ in range(30):
             check = subprocess.run(
-                [
-                    "docker",
-                    "exec",
-                    database,
-                    "pg_isready",
-                    "-U",
-                    "sapi",
-                    "-d",
-                    "sapi_db",
-                ],
+                database_ready_command(database),
                 capture_output=True,
                 env=runner.env,
                 timeout=10,

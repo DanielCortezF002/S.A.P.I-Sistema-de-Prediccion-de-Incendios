@@ -420,6 +420,16 @@ def test_docker_partial_creation_cleans_only_owned_resources(release, tmp_path, 
         assert "-v" not in step["command"] and "volume" not in step["command"]
 
 
+def test_database_readiness_probes_final_server_over_tcp():
+    import ci_local_docker
+
+    command = ci_local_docker.database_ready_command("sapi-ci-db-fixture")
+    assert command[:4] == ["docker", "exec", "sapi-ci-db-fixture", "pg_isready"]
+    # A socket-only probe also answers the image's temporary init server.
+    host = command.index("-h")
+    assert command[host + 1] == "127.0.0.1"
+
+
 def test_test_identity_binds_cases_not_duration(tmp_path):
     report = tmp_path / "junit.xml"
     report.write_text(
