@@ -100,3 +100,7 @@ class StoreRoots:
         if self.data_root.name == "data":
             return self.data_root / "processed" / "dmc" / station_id
         return self.data_root / DMC_STORE_REL / station_id
+
+    def dmc_lock(self) -> Path:
+        # The DMC writer locks the whole dmc root, not a station (DmcPaths.lock).
+        return self.dmc_store().parent / ".refresh.lock"

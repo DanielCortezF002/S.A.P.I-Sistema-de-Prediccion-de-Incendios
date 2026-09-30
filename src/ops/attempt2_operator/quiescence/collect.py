@@ -64,7 +64,7 @@ def collect_quiescence(
     )
 
     firms_lock = roots.firms_store() / ".refresh.lock"
-    dmc_lock = roots.dmc_store() / ".refresh.lock"
+    dmc_lock = roots.dmc_lock()
     locks = inspect_refresh_locks(firms_lock=firms_lock, dmc_lock=dmc_lock)
 
     n8n_signals = collect_n8n_quiescence_signals(

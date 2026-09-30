@@ -22,6 +22,12 @@ SERVICE_CONTAINER_HINTS: dict[str, tuple[str, ...]] = {
     "web-presentation": ("sapi-web", "web-presentation"),
 }
 
+# Names that must never identify a service even if they contain its hint:
+# "sapi-n8n-bridge" contains "n8n" but is the bridge (same rule as find_n8n_container).
+SERVICE_CONTAINER_EXCLUDES: dict[str, tuple[str, ...]] = {
+    "n8n": ("bridge",),
+}
+
 SERVICE_PORTS: dict[str, tuple[int, ...]] = {
     "n8n": (5678, 5680),
     "n8n-bridge": (8600,),
@@ -124,16 +130,21 @@ def list_containers_readonly() -> list[dict[str, Any]]:
 
 
 def _match_container(
-    containers: list[dict[str, Any]], hints: tuple[str, ...]
+    containers: list[dict[str, Any]],
+    hints: tuple[str, ...],
+    excludes: tuple[str, ...] = (),
 ) -> dict[str, Any] | None:
+    """Prefer a running match, else the first match; never an excluded name."""
+    candidates = []
     for c in containers:
-        name = str(c.get("Names") or c.get("names") or "")
         # docker ps --format json may use Names like "sapi-n8n-bridge"
-        lname = name.lower()
-        for h in hints:
-            if h.lower() in lname:
-                return c
-    return None
+        lname = str(c.get("Names") or c.get("names") or "").lower()
+        if any(x.lower() in lname for x in excludes):
+            continue
+        if any(h.lower() in lname for h in hints):
+            candidates.append(c)
+    running = [c for c in candidates if _container_running(c) is True]
+    return (running or candidates or [None])[0]
 
 
 def _container_running(c: dict[str, Any]) -> bool | None:
@@ -165,7 +176,9 @@ def collect_service_status(
 
     matched = None
     if containers is not None:
-        matched = _match_container(containers, hints)
+        matched = _match_container(
+            containers, hints, SERVICE_CONTAINER_EXCLUDES.get(service, ())
+        )
 
     identity: dict[str, Any] = {
         "matched_container": None,

@@ -57,7 +57,8 @@ $Evidence = Join-Path 'D:\portafolio y seminario\SAPI-71-evidence' ('first-refre
 New-Item -ItemType Directory -Path $Evidence -ErrorAction Stop | Out-Null
 git rev-parse HEAD 'HEAD^{tree}' origin/main
 git status --short
-docker inspect n8n --format '{{.State.Status}}'
+# Solo lectura: el contenedor n8n real es sapi-ai-orchestrator-n8n (no "n8n").
+docker ps -a --filter name=n8n --format '{{.Names}} {{.Status}}'
 docker stop sapi-n8n-bridge sapi-web
 & $Python -m src.refresh.firms_refresh status | Tee-Object -FilePath "$Evidence\firms-before.json"
 if ($LASTEXITCODE -ne 0) { throw 'FIRMS status falló' }
@@ -97,7 +98,7 @@ if ($Dmc.origin -ne 'current' -or $Dmc.locked) { throw 'ABORT: puntero/lock DMC'
 ```
 
 `status` puede salir con código 0 y `origin=invalid_pointer`: el JSON también es gate.
-Verificar FIRMS schema 2, DMC schema 1; hashes, cobertura, ausencia de regresión
+Verificar FIRMS schema 3 (puntero v3), DMC schema 1; hashes, cobertura, ausencia de regresión
 temporal y `row_quality` por mes. DMC permite hasta 1% de filas explícitamente nulas
 según el contrato integrado; ausentes/no numéricas se rechazan. No flexibilizarlo
 durante la operación para forzar una publicación.
