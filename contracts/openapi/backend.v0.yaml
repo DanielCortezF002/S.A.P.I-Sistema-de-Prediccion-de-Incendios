@@ -1,0 +1,121 @@
+openapi: 3.0.3
+info:
+  title: S.A.P.I. Backend API (Spring Boot)
+  version: 0.1.0
+  description: |
+    Contrato v0 de la API pública del backend de S.A.P.I. v2 (Spring Boot,
+    ADR-001). La consume Streamlit (SAPI-61). El backend obtiene el ranking
+    del servicio ML (`ml-service.v0.yaml`) y lo reexpone sin reordenar ni
+    reformatear scores. No ejecuta inferencia ni calcula features.
+
+    Los schemas de ranking y de error se definen una sola vez en
+    `ml-service.v0.yaml` y aquí se referencian.
+
+    Contract-first (SAPI-56): SAPI-54 y SAPI-57 implementan este documento.
+    Después del checkpoint del contrato solo se admiten cambios compatibles,
+    y los clientes deben ignorar campos desconocidos en las respuestas.
+servers:
+  - url: http://localhost:8080
+    description: Backend local
+tags:
+  - name: health
+  - name: ranking
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getBackendHealth
+      summary: Disponibilidad del backend
+      description: Liveness del backend. No consulta al servicio ML.
+      responses:
+        '200':
+          description: Backend disponible.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BackendHealth'
+              example:
+                status: UP
+  /api/v1/ranking:
+    get:
+      tags: [ranking]
+      operationId: getRanking
+      summary: Ranking relativo de las 50 celdas
+      description: |
+        Pide la evaluación al servicio ML (`POST /predict`) y devuelve el
+        resultado tal cual: mismas 50 celdas, mismo orden, mismos empates y
+        la misma trazabilidad (`model_version`, `forecast_time`,
+        `inputs_fingerprint`). Sin `forecast_time` se usa el último bucket
+        con lectura meteorológica real.
+      parameters:
+        - name: forecast_time
+          in: query
+          required: false
+          description: Hora T de evaluación, ISO 8601 con zona horaria. Opcional.
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Evaluación válida con exactamente 50 celdas.
+          content:
+            application/json:
+              schema:
+                $ref: './ml-service.v0.yaml#/components/schemas/RankingResult'
+              examples:
+                synthetic:
+                  $ref: './ml-service.v0.yaml#/components/examples/RankingResultSynthetic'
+        '422':
+          $ref: './ml-service.v0.yaml#/components/responses/InvalidRequest'
+        '500':
+          $ref: './ml-service.v0.yaml#/components/responses/InternalError'
+        '502':
+          description: El servicio ML respondió algo que no cumple su contrato.
+          content:
+            application/json:
+              schema:
+                $ref: './ml-service.v0.yaml#/components/schemas/Error'
+              example:
+                status: error
+                error_type: upstream_invalid_response
+                message: El servicio ML devolvió una respuesta inválida.
+        '503':
+          description: |
+            El servicio ML no está accesible (`upstream_unavailable`), o no
+            puede puntuar con los insumos disponibles
+            (`prototype_unavailable` / `data_unavailable`, propagados).
+          content:
+            application/json:
+              schema:
+                $ref: './ml-service.v0.yaml#/components/schemas/Error'
+              examples:
+                upstream_unavailable:
+                  value:
+                    status: error
+                    error_type: upstream_unavailable
+                    message: El servicio ML no está disponible.
+                prototype_unavailable:
+                  value:
+                    status: error
+                    error_type: prototype_unavailable
+                    message: No hay lectura meteorológica real para el forecast_time solicitado.
+        '504':
+          description: El servicio ML no respondió dentro del timeout configurado.
+          content:
+            application/json:
+              schema:
+                $ref: './ml-service.v0.yaml#/components/schemas/Error'
+              example:
+                status: error
+                error_type: upstream_timeout
+                message: El servicio ML no respondió a tiempo.
+components:
+  schemas:
+    BackendHealth:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [UP, DOWN]
+          description: UP cuando el backend está disponible.

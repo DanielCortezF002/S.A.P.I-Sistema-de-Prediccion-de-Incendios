@@ -1,0 +1,353 @@
+openapi: 3.0.3
+info:
+  title: S.A.P.I. ML Service (Modelo D)
+  version: 0.1.0
+  description: |
+    Contrato v0 del servicio ML interno de S.A.P.I. v2 (FastAPI, ADR-002).
+    Su único cliente es el backend Spring Boot (`backend.v0.yaml`); no es una
+    API pública.
+
+    - Ejecuta el Modelo D sobre la grilla completa (`score_current_grid()`).
+    - Las features se resuelven dentro del servicio desde los stores
+      versionados FIRMS/DMC. El cliente nunca envía features.
+    - El score es un ranking relativo entre las 50 celdas de una misma
+      evaluación. No es una probabilidad calibrada de incendio
+      (`scientific_model_validation=false`).
+
+    Contract-first (SAPI-56): SAPI-55 implementa este documento. Después del
+    checkpoint del contrato solo se admiten cambios compatibles, y los
+    clientes deben ignorar campos desconocidos en las respuestas.
+servers:
+  - url: http://localhost:8000
+    description: Servicio ML local
+tags:
+  - name: health
+  - name: ranking
+paths:
+  /health:
+    get:
+      tags: [health]
+      operationId: getMlHealth
+      summary: Estado del servicio ML y versión del modelo
+      description: Chequeo barato; nunca ejecuta inferencia.
+      responses:
+        '200':
+          description: Modelo disponible para puntuar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MlHealth'
+              example:
+                status: ok
+                model_version: prototype_model_d_v1
+        '503':
+          description: Modelo o metadata no disponibles; el servicio no puede puntuar.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MlHealth'
+              example:
+                status: degraded
+                model_version: null
+  /predict:
+    post:
+      tags: [ranking]
+      operationId: predictRanking
+      summary: Ranking relativo de las 50 celdas
+      description: |
+        Puntúa la grilla completa con el Modelo D. Sin `forecast_time` usa el
+        último bucket con lectura meteorológica real; nunca inventa
+        meteorología futura. Un `forecast_time` posterior a la última lectura
+        real responde 503 `prototype_unavailable`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PredictRequest'
+            examples:
+              latest:
+                summary: Último bucket real disponible
+                value: {}
+              explicit:
+                summary: forecast_time explícito
+                value:
+                  forecast_time: '2026-10-01T18:00:00-03:00'
+      responses:
+        '200':
+          description: Evaluación válida con exactamente 50 celdas.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RankingResult'
+              examples:
+                synthetic:
+                  $ref: '#/components/examples/RankingResultSynthetic'
+        '422':
+          $ref: '#/components/responses/InvalidRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/ScoringUnavailable'
+components:
+  schemas:
+    PredictRequest:
+      type: object
+      additionalProperties: false
+      description: |
+        Única entrada admitida. No se aceptan features ni otros campos: el
+        servicio las resuelve desde los stores versionados.
+      properties:
+        forecast_time:
+          type: string
+          format: date-time
+          description: Hora T de evaluación, ISO 8601 con zona horaria. Opcional.
+    RankingResult:
+      type: object
+      description: |
+        Resultado de una evaluación válida. Lo comparten `POST /predict`
+        (servicio ML) y `GET /api/v1/ranking` (backend), que lo reexpone sin
+        reordenar ni reformatear. Los nombres de campo son los de
+        `sapi-output-v1`.
+      required:
+        - schema_version
+        - model_version
+        - forecast_time
+        - inputs_fingerprint
+        - score_semantics
+        - scientific_model_validation
+        - cells
+      properties:
+        schema_version:
+          type: string
+          enum: [sapi-ranking-v0]
+          description: Versión de este schema.
+        model_version:
+          type: string
+          minLength: 1
+          description: Versión del artefacto del Modelo D que puntuó.
+        forecast_time:
+          type: string
+          format: date-time
+          description: Hora T evaluada, con zona horaria.
+        inputs_fingerprint:
+          type: string
+          pattern: '^[0-9a-f]{64}$'
+          description: |
+            sha256 canónico del manifest de insumos fijados de la corrida
+            (modelo, FIRMS, DMC y topografía). Los mismos insumos producen el
+            mismo fingerprint.
+        score_semantics:
+          type: string
+          enum: [relative_rank]
+          description: |
+            El score solo ordena las celdas entre sí dentro de esta
+            evaluación.
+        scientific_model_validation:
+          type: boolean
+          enum: [false]
+          description: |
+            El Modelo D no tiene validación científica. Cambiar este valor
+            requiere una nueva versión del contrato.
+        horizon_hours:
+          type: integer
+          minimum: 1
+          description: Horizonte del target del modelo, (T, T+horizon_hours]. Opcional.
+        disclaimer:
+          type: string
+          description: Aviso para mostrar al usuario final. Opcional.
+        cells:
+          type: array
+          minItems: 50
+          maxItems: 50
+          description: |
+            Exactamente 50 celdas, en orden ascendente de `rank`. Invariantes
+            que valida la implementación (JSON Schema no las expresa):
+            - los `cell_id` son únicos y son exactamente VP-001..VP-050;
+            - los `rank` forman 1..50, sin huecos ni repetidos;
+            - `score` no crece al avanzar `rank`;
+            - `display_rank` = 1 + número de celdas con score mayor;
+            - `tie_group_size` = número de celdas con exactamente el mismo score.
+          items:
+            $ref: '#/components/schemas/CellRanking'
+    CellRanking:
+      type: object
+      required: [cell_id, score, rank, display_rank, tie_group_size]
+      properties:
+        cell_id:
+          type: string
+          pattern: '^VP-\d{3}$'
+          description: Identificador de la celda de 1 km² (VP-001..VP-050).
+        score:
+          type: number
+          minimum: 0
+          maximum: 1
+          description: |
+            Score relativo del Modelo D en [0, 1]. Solo es comparable entre
+            celdas de la misma evaluación; no es una probabilidad calibrada de
+            incendio.
+        rank:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: |
+            Posición única 1..50. El orden del servicio es la autoridad: los
+            consumidores no reordenan.
+        display_rank:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: |
+            Posición para mostrar. Las celdas empatadas comparten el menor
+            rank del grupo (método min).
+        tie_group_size:
+          type: integer
+          minimum: 1
+          maximum: 50
+          description: Celdas que comparten exactamente este score (1 = sin empate).
+    MlHealth:
+      type: object
+      required: [status, model_version]
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+        model_version:
+          type: string
+          nullable: true
+          description: Versión del modelo cargado; null si no está disponible.
+    Error:
+      type: object
+      required: [status, error_type, message]
+      properties:
+        status:
+          type: string
+          enum: [error]
+        error_type:
+          type: string
+          description: |
+            Tipo de error. Valores conocidos en v0:
+            - `invalid_request` (422): la petición no cumple el contrato.
+            - `prototype_unavailable` (503): falta o no es legible un insumo
+              fijado, no hay meteorología real para el `forecast_time`
+              pedido, o FIRMS está demasiado desfasado.
+            - `data_unavailable` (503): el contenido de un insumo legible está
+              corrupto.
+            - `internal_error` (500): error inesperado, o un resultado que no
+              cumple este contrato. Nunca se rellena con celdas vacías ni
+              scores por defecto.
+            - `upstream_invalid_response` (502, backend): el servicio ML
+              respondió algo que no cumple el contrato.
+            - `upstream_unavailable` (503, backend): el servicio ML no está
+              accesible.
+            - `upstream_timeout` (504, backend): el servicio ML no respondió a
+              tiempo.
+            La lista es abierta: ante un valor desconocido, el cliente se guía
+            por el código HTTP.
+        message:
+          type: string
+          description: Mensaje legible. Nunca expone detalles internos.
+  responses:
+    InvalidRequest:
+      description: La petición no cumple el contrato (por ejemplo, un campo no admitido).
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: error
+            error_type: invalid_request
+            message: La petición incluye campos no admitidos o un forecast_time inválido.
+    InternalError:
+      description: Error inesperado o resultado que no cumple el contrato.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            status: error
+            error_type: internal_error
+            message: Error interno al generar el ranking.
+    ScoringUnavailable:
+      description: No se puede puntuar con los insumos disponibles.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            prototype_unavailable:
+              value:
+                status: error
+                error_type: prototype_unavailable
+                message: No hay lectura meteorológica real para el forecast_time solicitado.
+            data_unavailable:
+              value:
+                status: error
+                error_type: data_unavailable
+                message: Insumo de datos no disponible o ilegible.
+  examples:
+    RankingResultSynthetic:
+      summary: Ejemplo sintético ilustrativo (no es una corrida real)
+      description: |
+        Valores inventados solo para ilustrar la forma del contrato. Las
+        celdas de rank 3 y 4 empatan (display_rank 3, tie_group_size 2).
+      value:
+        schema_version: sapi-ranking-v0
+        model_version: prototype_model_d_v1
+        forecast_time: '2026-10-01T18:00:00-03:00'
+        inputs_fingerprint: 2650fee17d54a4ca4a3bef743212b9306faa6296c90d80082c97d522335ce874
+        score_semantics: relative_rank
+        scientific_model_validation: false
+        horizon_hours: 6
+        disclaimer: Ejemplo sintético. El score es un ranking relativo, no una probabilidad calibrada de incendio.
+        cells:
+          - {cell_id: VP-023, score: 0.9200, rank: 1, display_rank: 1, tie_group_size: 1}
+          - {cell_id: VP-021, score: 0.9015, rank: 2, display_rank: 2, tie_group_size: 1}
+          - {cell_id: VP-029, score: 0.8830, rank: 3, display_rank: 3, tie_group_size: 2}
+          - {cell_id: VP-026, score: 0.8830, rank: 4, display_rank: 3, tie_group_size: 2}
+          - {cell_id: VP-046, score: 0.8460, rank: 5, display_rank: 5, tie_group_size: 1}
+          - {cell_id: VP-016, score: 0.8275, rank: 6, display_rank: 6, tie_group_size: 1}
+          - {cell_id: VP-037, score: 0.8090, rank: 7, display_rank: 7, tie_group_size: 1}
+          - {cell_id: VP-010, score: 0.7905, rank: 8, display_rank: 8, tie_group_size: 1}
+          - {cell_id: VP-012, score: 0.7720, rank: 9, display_rank: 9, tie_group_size: 1}
+          - {cell_id: VP-003, score: 0.7535, rank: 10, display_rank: 10, tie_group_size: 1}
+          - {cell_id: VP-032, score: 0.7350, rank: 11, display_rank: 11, tie_group_size: 1}
+          - {cell_id: VP-040, score: 0.7165, rank: 12, display_rank: 12, tie_group_size: 1}
+          - {cell_id: VP-044, score: 0.6980, rank: 13, display_rank: 13, tie_group_size: 1}
+          - {cell_id: VP-011, score: 0.6795, rank: 14, display_rank: 14, tie_group_size: 1}
+          - {cell_id: VP-019, score: 0.6610, rank: 15, display_rank: 15, tie_group_size: 1}
+          - {cell_id: VP-028, score: 0.6425, rank: 16, display_rank: 16, tie_group_size: 1}
+          - {cell_id: VP-043, score: 0.6240, rank: 17, display_rank: 17, tie_group_size: 1}
+          - {cell_id: VP-025, score: 0.6055, rank: 18, display_rank: 18, tie_group_size: 1}
+          - {cell_id: VP-047, score: 0.5870, rank: 19, display_rank: 19, tie_group_size: 1}
+          - {cell_id: VP-030, score: 0.5685, rank: 20, display_rank: 20, tie_group_size: 1}
+          - {cell_id: VP-018, score: 0.5500, rank: 21, display_rank: 21, tie_group_size: 1}
+          - {cell_id: VP-041, score: 0.5315, rank: 22, display_rank: 22, tie_group_size: 1}
+          - {cell_id: VP-045, score: 0.5130, rank: 23, display_rank: 23, tie_group_size: 1}
+          - {cell_id: VP-033, score: 0.4945, rank: 24, display_rank: 24, tie_group_size: 1}
+          - {cell_id: VP-006, score: 0.4760, rank: 25, display_rank: 25, tie_group_size: 1}
+          - {cell_id: VP-008, score: 0.4575, rank: 26, display_rank: 26, tie_group_size: 1}
+          - {cell_id: VP-048, score: 0.4390, rank: 27, display_rank: 27, tie_group_size: 1}
+          - {cell_id: VP-039, score: 0.4205, rank: 28, display_rank: 28, tie_group_size: 1}
+          - {cell_id: VP-049, score: 0.4020, rank: 29, display_rank: 29, tie_group_size: 1}
+          - {cell_id: VP-038, score: 0.3835, rank: 30, display_rank: 30, tie_group_size: 1}
+          - {cell_id: VP-013, score: 0.3650, rank: 31, display_rank: 31, tie_group_size: 1}
+          - {cell_id: VP-009, score: 0.3465, rank: 32, display_rank: 32, tie_group_size: 1}
+          - {cell_id: VP-004, score: 0.3280, rank: 33, display_rank: 33, tie_group_size: 1}
+          - {cell_id: VP-050, score: 0.3095, rank: 34, display_rank: 34, tie_group_size: 1}
+          - {cell_id: VP-002, score: 0.2910, rank: 35, display_rank: 35, tie_group_size: 1}
+          - {cell_id: VP-014, score: 0.2725, rank: 36, display_rank: 36, tie_group_size: 1}
+          - {cell_id: VP-017, score: 0.2540, rank: 37, display_rank: 37, tie_group_size: 1}
+          - {cell_id: VP-022, score: 0.2355, rank: 38, display_rank: 38, tie_group_size: 1}
+          - {cell_id: VP-005, score: 0.2170, rank: 39, display_rank: 39, tie_group_size: 1}
+          - {cell_id: VP-024, score: 0.1985, rank: 40, display_rank: 40, tie_group_size: 1}
+          - {cell_id: VP-007, score: 0.1800, rank: 41, display_rank: 41, tie_group_size: 1}
+          - {cell_id: VP-015, score: 0.1615, rank: 42, display_rank: 42, tie_group_size: 1}
+          - {cell_id: VP-027, score: 0.1430, rank: 43, display_rank: 43, tie_group_size: 1}
+          - {cell_id: VP-035, score: 0.1245, rank: 44, display_rank: 44, tie_group_size: 1}
+          - {cell_id: VP-020, score: 0.1060, rank: 45, display_rank: 45, tie_group_size: 1}
+          - {cell_id: VP-034, score: 0.0875, rank: 46, display_rank: 46, tie_group_size: 1}
+          - {cell_id: VP-042, score: 0.0690, rank: 47, display_rank: 47, tie_group_size: 1}
+          - {cell_id: VP-031, score: 0.0505, rank: 48, display_rank: 48, tie_group_size: 1}
+          - {cell_id: VP-001, score: 0.0320, rank: 49, display_rank: 49, tie_group_size: 1}
+          - {cell_id: VP-036, score: 0.0135, rank: 50, display_rank: 50, tie_group_size: 1}
