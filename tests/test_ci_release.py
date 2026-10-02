@@ -364,6 +364,41 @@ def release(monkeypatch):
     return importlib.import_module("ci_release")
 
 
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "ci_release.py"
+
+
+def test_script_entrypoint_runs_main():
+    # Without the __main__ guard `python ci_release.py gate ...` exited 0 doing nothing.
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "--help"], capture_output=True, text=True
+    )
+    assert proc.returncode == 0
+    assert "gate" in proc.stdout and "compare" in proc.stdout
+
+
+def test_script_entrypoint_rejects_incomplete_gate():
+    proc = subprocess.run(
+        [sys.executable, str(SCRIPT), "gate"], capture_output=True, text=True
+    )
+    assert proc.returncode == 2
+    assert "--candidate-sha" in proc.stderr
+
+
+def test_evidence_root_default_and_env_override(release, monkeypatch, tmp_path):
+    import importlib
+
+    monkeypatch.delenv("SAPI_RELEASE_GATE_EVIDENCE", raising=False)
+    assert importlib.reload(release).EVIDENCE == Path(
+        r"C:\SAPI-71-evidence\release-gates"
+    )
+    monkeypatch.setenv("SAPI_RELEASE_GATE_EVIDENCE", str(tmp_path))
+    try:
+        assert importlib.reload(release).EVIDENCE == tmp_path
+    finally:
+        monkeypatch.delenv("SAPI_RELEASE_GATE_EVIDENCE")
+        importlib.reload(release)
+
+
 @pytest.mark.parametrize(
     "host,port",
     [
@@ -418,6 +453,16 @@ def test_docker_partial_creation_cleans_only_owned_resources(release, tmp_path, 
     for step in cleanup:
         assert "sapi-ci-" in step["command"][-1]
         assert "-v" not in step["command"] and "volume" not in step["command"]
+
+
+def test_database_readiness_probes_final_server_over_tcp():
+    import ci_local_docker
+
+    command = ci_local_docker.database_ready_command("sapi-ci-db-fixture")
+    assert command[:4] == ["docker", "exec", "sapi-ci-db-fixture", "pg_isready"]
+    # A socket-only probe also answers the image's temporary init server.
+    host = command.index("-h")
+    assert command[host + 1] == "127.0.0.1"
 
 
 def test_test_identity_binds_cases_not_duration(tmp_path):

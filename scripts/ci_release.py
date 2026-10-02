@@ -41,7 +41,9 @@ from ci_release_core import (
 from ci_release_manifests import ancestry, verify
 
 ROOT = Path(__file__).resolve().parents[1]
-EVIDENCE = Path(r"D:\portafolio y seminario\SAPI-71-evidence\release-gates")
+EVIDENCE = Path(
+    os.environ.get("SAPI_RELEASE_GATE_EVIDENCE", r"C:\SAPI-71-evidence\release-gates")
+)
 WORKER = Path(__file__).with_name("ci_release_worker.py")
 MODEL = "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f"
 FIRMS = "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271"
@@ -755,3 +757,7 @@ def main(argv=None):
         )
         return 0
     return run_gate(args)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
