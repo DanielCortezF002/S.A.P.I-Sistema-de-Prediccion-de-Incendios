@@ -17,7 +17,9 @@ from src.ops.attempt2_operator.events import (
 )
 from src.ops.attempt2_operator.states import Attempt2State, HUMAN_GATES
 
-DEFAULT_EVIDENCE_ROOT = Path(r"D:\portafolio y seminario\SAPI-71-evidence\attempt2")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+# Sibling of the checkout, as in src/output/accepted_run.py; env/CLI take precedence.
+DEFAULT_EVIDENCE_ROOT = REPO_ROOT.parent / "SAPI-71-evidence" / "attempt2"
 
 RUN_DIRS = (
     "commands",

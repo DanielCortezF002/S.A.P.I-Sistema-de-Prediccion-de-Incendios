@@ -48,7 +48,7 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help=(
             "Root for attempt2 runs (default SAPI_ATTEMPT2_EVIDENCE_ROOT "
-            "or SAPI-71-evidence/attempt2)"
+            "or SAPI-71-evidence/attempt2 next to the checkout)"
         ),
     )
     parser.add_argument(

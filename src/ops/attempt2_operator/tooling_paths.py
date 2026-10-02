@@ -5,7 +5,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-DEFAULT_PLANNING = Path(r"D:\portafolio y seminario\SAPI-71-evidence\planning")
+REPO_ROOT = Path(__file__).resolve().parents[3]
+# Sibling of the checkout, as in src/output/accepted_run.py; env vars take precedence.
+DEFAULT_PLANNING = REPO_ROOT.parent / "SAPI-71-evidence" / "planning"
 
 
 def evidence_tools_root() -> Path | None:

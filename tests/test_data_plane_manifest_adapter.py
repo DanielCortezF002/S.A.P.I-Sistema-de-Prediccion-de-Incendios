@@ -39,9 +39,11 @@ from src.ops.attempt2_operator.data_plane_manifest import (
 # Canonical fixture builder (authoritative nested schema v1, PREPARED default)
 # ---------------------------------------------------------------------------
 
-REAL_MANIFEST_PATH = Path(
-    r"D:\portafolio y seminario\SAPI-71-evidence"
-    r"\data-plane-rc1-2026-09-25\DATA_PLANE_MANIFEST.json"
+REAL_MANIFEST_PATH = (
+    Path(__file__).resolve().parents[1].parent
+    / "SAPI-71-evidence"
+    / "data-plane-rc1-2026-09-25"
+    / "DATA_PLANE_MANIFEST.json"
 )
 REAL_FINGERPRINT = "5a6484fc4b047751fa6cec8e29a377c0ed96a19e1873ec25539745bca32a1ae0"
 REAL_CODE_SHA = "cd9c01408059961fb30e4b6321429a018e4a0df5"
