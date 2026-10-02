@@ -177,7 +177,7 @@ components:
         cell_id:
           type: string
           pattern: '^VP-\d{3}$'
-          description: Identificador de la celda de 1 km² (VP-001..VP-050).
+          description: 'Identificador de una celda de la grilla de 50 celdas (VP-001..VP-050). Cada celda mide 0,0411° × 0,035° (≈3,8 × 3,9 km, ≈15 km²), definida en src/geo/grid.py.'
         score:
           type: number
           minimum: 0
