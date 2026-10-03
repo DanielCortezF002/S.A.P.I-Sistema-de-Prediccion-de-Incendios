@@ -1,0 +1,37 @@
+# S.A.P.I. v2 - Servicio ML (SAPI-55): expone el Modelo D por HTTP en el
+# puerto 8000 (contracts/openapi/ml-service.v0.yaml). Su único cliente es el
+# backend Spring Boot. Misma base y dependencias de sistema que
+# Dockerfile.n8n-bridge: score_current_grid() importa rasterio (vía
+# src.procesamiento.dem_features), que necesita gdal/geos/proj.
+#
+# Higiene SAPI-70: `COPY . .` respeta .dockerignore (sin .env, .venv ni
+# caches). El servicio no recibe credenciales: el Modelo D solo lee el modelo
+# versionado y los stores FIRMS/DMC, que se montan en solo lectura en runtime.
+FROM python:3.14-slim
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gdal-bin libgdal-dev libgeos-dev libproj-dev gcc g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+ENV GDAL_CONFIG=/usr/bin/gdal-config
+
+COPY requirements.txt requirements-dev.txt ./
+RUN pip install --no-cache-dir -r requirements-dev.txt
+
+COPY . .
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+# Usuario sin privilegios: el servicio solo lee archivos.
+RUN useradd --system --uid 10001 --no-create-home sapi
+USER sapi
+
+EXPOSE 8000
+
+# --host 0.0.0.0 es el bind interno del contenedor; el puerto publicado en el
+# host (127.0.0.1:8000) se controla al ejecutar el contenedor (SAPI-60).
+CMD ["uvicorn", "services.ml_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
