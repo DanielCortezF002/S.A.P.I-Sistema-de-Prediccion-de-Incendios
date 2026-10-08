@@ -8,8 +8,9 @@ Modelo D (F2), hashes del Output Plane de readiness (F3), rutas congeladas
 `RankingResult` (F4c), artefactos Hito 1 (F5), migraciones V001-V003 (F6),
 contratos v0 (F7), modificaciones accidentales (F8) y modelo (F9).
 
-No escribe nada en el repositorio salvo el JSON opcional de `--json`. No
-importa codigo del repo salvo para F2, que corre en un subproceso con
+No escribe nada en el repositorio salvo el JSON opcional de `--json`. Del
+codigo del repo solo carga `src/procesamiento/firms_source.py` (stdlib pura)
+para leer la ruta del snapshot FIRMS, y F2, que corre en un subproceso con
 `SAPI_REPRODUCIBILITY_MODE=1` y se omite (SKIP) si faltan dependencias.
 
 Modo A: HEAD == baseline. Modo B: el baseline es ancestro de HEAD (ya hay
@@ -26,6 +27,7 @@ from __future__ import annotations
 import argparse
 import ast
 import hashlib
+import importlib.util
 import json
 import os
 import platform
@@ -93,11 +95,30 @@ CONTRACT_PINS = {
     ),
 }
 
+
+def _firms_reproducibility_csv() -> str:
+    """Ruta del snapshot FIRMS R3, leída de su única fuente de verdad.
+
+    tests/test_firms_source.py exige que la ruta de la línea base FIRMS viva
+    solo en src/procesamiento/firms_source.py. Ese módulo usa solo la stdlib,
+    así que se carga por ruta, sin ejecutar `src/procesamiento/__init__.py`.
+    """
+    path = REPO_ROOT / "src" / "procesamiento" / "firms_source.py"
+    spec = importlib.util.spec_from_file_location("_freeze_firms_source", path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module  # dataclasses resuelve el módulo por nombre
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.modules.pop(spec.name, None)
+    return module.FIRMS_REPRODUCIBILITY_CSV.relative_to(REPO_ROOT).as_posix()
+
+
 # Snapshots R3 cuyo sha256 publicado es sobre bytes CRLF (.gitattributes -text).
 CRLF_ARTIFACTS = (
     "artifacts/hito1/reproducibility/dem/grid_topography.csv",
     "artifacts/hito1/reproducibility/dmc/dmc_historico_330007_2026-08.json",
-    "artifacts/hito1/reproducibility/firms/nasa_firms_2021-08-30_2026-08-30.csv",
+    _firms_reproducibility_csv(),
 )
 
 # Output Plane hasheado por src/output/readiness.py (OUTPUT_SOURCES, L40-56).
