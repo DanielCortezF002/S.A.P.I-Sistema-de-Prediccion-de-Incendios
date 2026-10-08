@@ -2,15 +2,14 @@
 
 <div align="center">
 
-![Python](https://img.shields.io/badge/Python-3.11-3776AB?style=flat-square&logo=python&logoColor=white)
-![XGBoost](https://img.shields.io/badge/XGBoost-2.0-FF6600?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)
+![Modelo D](https://img.shields.io/badge/Modelo_D-HistGradientBoosting_(baseline)-FF6600?style=flat-square)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-PostGIS-336791?style=flat-square&logo=postgresql&logoColor=white)
-![Streamlit](https://img.shields.io/badge/Streamlit-1.32-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
-![License](https://img.shields.io/badge/Licencia-MIT-green?style=flat-square)
-![Coverage](https://img.shields.io/badge/Cobertura_Tests-84.07%25-brightgreen?style=flat-square)
-![Tests](https://img.shields.io/badge/Tests-221_passed-brightgreen?style=flat-square)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.63-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
 
-**Sistema de software geoespacial basado en Machine Learning para la predicción probabilística de focos de ignición forestal en la Región de Valparaíso, Chile.**
+**Prototipo de software geoespacial basado en Machine Learning que ordena 50 celdas del corredor Viña del Mar – Quilpué (Región de Valparaíso, Chile) según su riesgo *relativo* de recibir una nueva detección satelital de anomalía térmica (NASA FIRMS) en las próximas 6 horas.**
+
+> El score del Modelo D es un **ranking relativo** entre las celdas de una misma evaluación: **no es una probabilidad calibrada de incendio** y el modelo no tiene validación científica (`scientific_model_validation = false`). Una detección FIRMS es una anomalía térmica observada por satélite, **no** un incendio confirmado en terreno. Ver [`docs/model_card_baseline.md`](docs/model_card_baseline.md).
 
 [Ver demo](#-demo) · [Instalación rápida](#️-instalación) · [Documentación técnica](#-documentación) · [Resultados](#-resultados-obtenidos)
 
@@ -22,161 +21,130 @@
 
 Chile enfrenta cada verano una crisis de incendios forestales cuyo paradigma de respuesta sigue siendo **100% reactivo**: las alertas se activan cuando el fuego ya existe y es visible. En Valparaíso, la latencia entre el inicio real del foco y el despliegue de brigadas es de entre 20 y 60 minutos — tiempo más que suficiente para que un foco incipiente escale a megaincendio en su compleja red de quebradas.
 
-**S.A.P.I. desplaza ese eje.** En lugar de detectar el fuego cuando ya arde, el sistema genera cada madrugada un mapa de calor probabilístico que indica qué zonas de la región tienen mayor riesgo de ignición en las próximas 24 horas, permitiendo a los analistas de CONAF y SENAPRED posicionar brigadas **antes** de que ocurra la catástrofe.
+**S.A.P.I. busca desplazar ese eje.** En lugar de esperar a que el fuego sea visible, el prototipo ordena las celdas de la zona de estudio según su riesgo relativo de recibir una nueva detección satelital en las próximas horas (horizonte actual: 6 h), para apoyar la priorización preventiva. Es un prototipo académico exploratorio: no reemplaza los sistemas oficiales de alerta ni debe usarse para decisiones operacionales.
 
 ```
 Paradigma actual:  Ignición → Detección visual → Confirmación → Despliegue (≥20 min tarde)
-S.A.P.I.:         Predicción nocturna → Mapa de riesgo → Despliegue preventivo → 0 víctimas
+S.A.P.I. (visión): Ranking relativo de riesgo → Priorización → Despliegue preventivo
 ```
 
 ---
 
 ## Arquitectura del Sistema
 
-S.A.P.I. adopta un diseño modular en tres capas completamente desacopladas, comunicadas a través de un **contrato de datos estricto** que garantiza que la interfaz nunca bloquee al pipeline y el pipeline nunca bloquee al modelo.
+La arquitectura objetivo de Sprint 2 está congelada en
+[`docs/architecture-stack-freeze-sprint2.md`](docs/architecture-stack-freeze-sprint2.md):
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                    FUENTES DE DATOS EXTERNAS                     │
-│   NASA FIRMS (MODIS/VIIRS) │ DMC Chile │ CONAF │ DEM Topografía │
-└────────────────────┬────────────────────────────────────────────┘
-                     │ HTTPS / REST API / CSV
-                     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              MÓDULO 1 — INGESTA Y ETL  (src/ingesta/)           │
-│  ThreadPoolExecutor · Reintentos exponenciales (tenacity)        │
-│  Staging tables con MD5 hash · Formato Parquet intermedio        │
-└────────────────────┬────────────────────────────────────────────┘
-                     │ Write
-                     ▼
-┌─────────────────────────────────────────────────────────────────┐
-│         CAPA DE PERSISTENCIA — PostgreSQL 15 + PostGIS           │
-│  Única Fuente de Verdad (SSoT) · ACID compliance                 │
-│  Índices espaciales GiST · Grilla territorial 1 km²             │
-└──────────┬──────────────────────────────────────┬───────────────┘
-           │ Read (features)                       │ Read (predicciones)
-           ▼                                       ▼
-┌──────────────────────────┐           ┌───────────────────────────┐
-│  MÓDULO 2 — MOTOR ML     │           │  MÓDULO 3 — VISUALIZACIÓN │
-│  (src/modelo/)           │  Write →  │  (app/)                   │
-│  Feature Engineering     │           │  Streamlit 1.32 + Folium  │
-│  SMOTE balancing         │           │  Caché bi-nivel RAM       │
-│  XGBoost · Serialización │           │  Mapa coroplético ≤0.2s   │
-└──────────────────────────┘           └───────────────────────────┘
+Streamlit (presentación) → Spring Boot (API pública, registro de ejecuciones)
+                         → FastAPI (servicio ML interno, Modelo D)
+                         → PostgreSQL/PostGIS (persistencia operacional v2)
 ```
+
+**Estado real al checkpoint de Sprint 2 (`cd6b58e`)** — se distingue lo
+implementado de lo planificado:
+
+| Componente | Estado | Evidencia |
+|---|---|---|
+| Servicio ML FastAPI (`GET /health`, `POST /predict`) | Implementado (SAPI-55) | `services/ml_api/`, `tests/test_ml_api.py` |
+| Backend Spring Boot | Solo `GET /health` (SAPI-54); integración con el servicio ML pendiente (SAPI-57) | `services/backend/` |
+| Contratos OpenAPI v0 | Definidos (SAPI-56) | `contracts/openapi/` |
+| Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V003 definidas (SAPI-58); persistencia de resultados pendiente (SAPI-59) | `db/migration/`, `db/README.md` |
+| Streamlit | Implementado; hoy puntúa en el mismo proceso con `score_current_grid()`; consumo del backend pendiente (SAPI-61) | `app/` |
+| Docker Compose de la arquitectura v2 | Pendiente (SAPI-60). El `docker-compose.yml` actual levanta los servicios de Hito 1 | `docker-compose.yml` |
+| Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
 
 ### Stack tecnológico
 
-| Capa | Tecnología | Justificación |
-|------|-----------|---------------|
-| Ingesta | `Python 3.11` + `requests` + `tenacity` | Reintentos exponenciales, I/O no bloqueante |
-| Procesamiento espacial | `GeoPandas 0.14` + `PostGIS` | Joins vectoriales, grilla WGS84 de 1 km² |
-| Persistencia | `PostgreSQL 15` + `PostGIS` | ACID, índices GiST, SSoT anti-race conditions |
-| Machine Learning | `XGBoost 2.0` + `scikit-learn 1.4` + `imbalanced-learn` | Regularización L1/L2, SMOTE, SHAP |
-| Visualización | `Streamlit 1.32` + `Folium 0.16` | Caché bi-nivel, renderizado <0.2s |
-| Contenerización | `Docker` + `Docker Compose` | Paridad total dev/prod, 3 contenedores aislados |
-| CI/CD | `GitHub Actions` + `pytest` + `pre-commit` | Bloqueo automático si coverage < 80% |
+| Capa | Tecnología (versiones fijadas) |
+|------|-----------|
+| Lenguaje / runtime ML | `Python 3.14.6`, `pandas 3.0.5`, `scikit-learn 1.9.0` |
+| Modelo | Modelo D: `HistGradientBoostingClassifier`, `class_weight="balanced"`, sin SMOTE |
+| Procesamiento espacial | `GeoPandas 1.1.4`, `rasterio 1.4.4` |
+| Servicio ML | `FastAPI 0.141.1` + `uvicorn 0.53.0` |
+| Backend | `Spring Boot 4.1.1` + `Java 21` |
+| Persistencia | `PostgreSQL 15` + `PostGIS 3.4` (imagen `postgis/postgis:15-3.4`) |
+| Visualización | `Streamlit 1.63.0` + `Folium 0.20.0` |
+| Contenerización | `Docker` + `Docker Compose` |
+| Calidad | `pytest` (gate de cobertura 80 %), `black`, `flake8` |
 
 ---
 
 ## Fuentes de Datos
 
-El sistema integra únicamente fuentes públicas y de acceso abierto — sin dependencias comerciales de ningún tipo:
+El sistema usa únicamente fuentes públicas y de acceso abierto:
 
-| Fuente | Datos provistos | Frecuencia |
+| Fuente | Datos usados por el Modelo D | Estado |
 |--------|----------------|------------|
-| **NASA FIRMS** (MODIS/VIIRS) | Anomalías térmicas activas, NDVI, EVI | Diaria |
-| **Dirección Meteorológica de Chile (DMC)** | Temperatura, humedad relativa, velocidad del viento | Horaria |
-| **CONAF** | Historial de igniciones, coordenadas, superficie afectada (2020–2025) | Estática + anual |
-| **Modelo Digital de Elevación (DEM)** | Altitud, pendiente, orientación de ladera | Estática |
+| **NASA FIRMS** (VIIRS) | Detecciones satelitales de anomalías térmicas (no confirman incendio en terreno); definen el target y el historial por celda | Integrada |
+| **Dirección Meteorológica de Chile (DMC)** | Temperatura, humedad relativa y viento de la estación regional 330007 (serie regional, no por celda) | Integrada |
+| **Copernicus DEM** (GLO-30 vía OpenTopography) | Elevación, pendiente y orientación por celda | Integrada |
+| **CONAF** | Historial de igniciones | **No integrada** (spike SAPI-49, fuera del alcance de Sprint 2) |
 
 ---
 
 ## Resultados Obtenidos
 
-### Rendimiento del Motor Predictivo
+### Motor predictivo (Modelo D, baseline experimental)
 
-El clasificador XGBoost supera consistentemente al modelo baseline Random Forest, priorizando la minimización de falsos negativos:
+El modelo activo es el **Modelo D** (`HistGradientBoostingClassifier`,
+`prototype_model_d_v1`), documentado en
+[`docs/model_card_baseline.md`](docs/model_card_baseline.md) con validación
+temporal walk-forward causal. Sus métricas son **exploratorias**: se reportan
+por fold como métricas de ranking (PR-AUC, precision@k, recall@k) y no existe
+un umbral operacional validado. El clasificador XGBoost y el baseline Random
+Forest del pipeline de Hito 1 (`src/modelo/`) son legacy y no producen el
+ranking que muestra el prototipo.
 
-> ⚠️ **Nota (2026-09-01):** los valores 71% / 78% / 0.83 citados históricamente acá son valores de mock de `tests/test_pipeline.py`, copiados a `reports/metrics.json` en el mismo commit (`30c8a26`, 20-jun-2026) que agregó ese código — **nunca hubo una corrida real del pipeline detrás**, y el archivo nunca se regeneró desde entonces (confirmado por historial de git). Una corrida real el 2026-09-01 con datos de invierno dio `recall=0.0` / `auc-roc=nan`, correctamente, por ausencia real de casos positivos en esa ventana de datos. Falta una corrida con datos de temporada de incendios (verano) para tener una métrica real. La tabla de abajo deliberadamente **no** compara esos números fabricados contra el objetivo.
+> ⚠️ **Nota histórica (2026-09-01):** los valores 71% / 78% / 0.83 que este README citó en el pasado eran valores de mock de `tests/test_pipeline.py` (commit `30c8a26`), sin una corrida real detrás. No deben citarse como resultados.
 
-| Métrica | Baseline (Random Forest) | **Modelo Final (XGBoost)** | Objetivo |
-|---------|--------------------------|---------------------------|----------|
-| Recall (Sensibilidad) | pendiente de corrida real¹ | pendiente de corrida real¹ | ≥ 75% |
-| AUC-ROC | — (no calculado en el baseline) | pendiente de corrida real¹ | ≥ 0.80 |
+### Rendimiento
 
-¹ Valor histórico sin corrida real detrás (71% / 78% / 0.83) — ver nota arriba. No se muestra en esta tabla para que no se lea como comparable contra el objetivo.
+La latencia del sistema **todavía no está medida formalmente** (atributo de
+calidad QA-08 en `docs/atributos-calidad-hito1.md`: `NOT_MEASURED`). La única
+medición registrada es informal: `score_current_grid()` tarda ~14 s por
+evaluación completa en la máquina de desarrollo
+(`docs/architecture-stack-freeze-sprint2.md`, nota `ScoringInputs`). La
+medición formal de latencia por servicio está planificada para Sprint 2.
 
-> **¿Por qué priorizar Recall?** En contextos de emergencia, un falso negativo (zona de alto riesgo no alertada) tiene consecuencias humanas irreversibles. El sistema está calibrado para que ningún cuadrante crítico quede sin alertar.
-
-### Rendimiento del Servidor (Mitigación R-10)
-
-El riesgo técnico crítico era la latencia de renderizado cartográfico en instancias cloud con 1 GB de RAM:
-
-| Indicador | Sin optimización | **Con optimización** |
-|-----------|-----------------|----------------------|
-| Latencia de carga inicial | 8.4 segundos | **< 0.2 segundos** ✅ |
-| Consumo RAM servidor | ~900 MB (OOM) | **< 250 MB** ✅ |
-| Peso GeoJSON transmitido | ~45 MB | **~12 MB** (−73%) ✅ |
-
-**Técnicas aplicadas:** simplificación topográfica con Douglas-Peucker (`GeoPandas.simplify()`), caché bi-nivel `@st.cache_data` + `@st.cache_resource`, y bloqueo de re-ejecución con `returned_objects=[]`.
-
-### Suite de Testing
+### Suite de testing
 
 ```
-pytest tests/ -v --cov=src --cov=app
-
-221 passed in 253s
-Total Test Coverage: 84.07%  ✅ (umbral mínimo: 80%) — corrida real 2026-09-02, ver reports/coverage_run.txt
+pip install -r requirements-dev.txt
+pytest            # gate de cobertura: 80 % sobre app/ y src/ (pytest.ini)
 ```
+
+Los conteos de tests y la cobertura de cada corte se registran como evidencia
+versionada (Hito 1: `artifacts/hito1/testing/`; Sprint 2: `artifacts/hito2/`),
+no en este README, para que no queden desactualizados.
 
 ---
 
 ## Estructura del Repositorio
 
 ```
-sapi-valparaiso/
-│
-├── app/                        # Módulo 3: Interfaz web (Streamlit)
-│   ├── app.py                  # Servidor principal y lógica de caché
-│   └── utils/                  # Contrato de datos y helpers de renderizado
-│
-├── data/                       # Almacenamiento local (excluido en .gitignore)
-│   ├── raw/                    # Payloads crudos de APIs externas
-│   └── processed/              # Matrices de features en formato Parquet
-│
-├── docs/                       # Documentación técnica y diagramas UML
-│
-├── models/                     # Binarios serializados de clasificadores (.pkl)
-│
-├── notebooks/                  # Bitácoras CRISP-DM interactivas
-│   ├── 01_exploracion.ipynb
-│   ├── 02_limpieza.ipynb
-│   ├── 03_entrenamiento.ipynb
-│   └── 04_evaluacion.ipynb
-│
-├── scripts/                    # Orquestadores del pipeline ETL
-│   ├── ingesta_nasa.py
-│   ├── ingesta_dmc.py
-│   ├── ingesta_conaf.py
-│   └── run_pipeline.sh
-│
-├── src/                        # Core del backend (lógica de negocio)
-│   ├── ingesta/                # Captura paralela con ThreadPoolExecutor
-│   ├── procesamiento/          # Feature Engineering (Regla 30-30-30, lags)
-│   ├── modelo/                 # Entrenamiento, optimización y serialización
-│   └── query/                  # Contrato de datos y abstracción PostGIS
-│
-├── tests/                      # Suite automatizada (221 tests, 84.07% coverage)
-│   ├── test_ingesta.py
-│   ├── test_procesamiento.py
-│   ├── test_modelo.py
-│   └── test_app.py
-│
-├── Dockerfile
+S.A.P.I-Sistema-de-Prediccion-de-Incendios/
+├── app/                 # Streamlit (presentación); vista Prototipo y Centro de Control
+├── services/
+│   ├── ml_api/          # Servicio ML FastAPI (SAPI-55): /health, /predict
+│   └── backend/         # Backend Spring Boot (SAPI-54): /health
+├── contracts/openapi/   # Contratos OpenAPI v0 (SAPI-56)
+├── db/migration/        # Esquema PostgreSQL/PostGIS v2 (SAPI-58)
+├── src/
+│   ├── inference/       # Ruta activa del Modelo D (score_current_grid)
+│   ├── procesamiento/   # Features (FIRMS, DMC regional, DEM)
+│   ├── refresh/         # Refresco versionado FIRMS/DMC (SAPI-71)
+│   ├── geo/             # Grilla de 50 celdas (VP-001..VP-050)
+│   └── modelo/, pipeline/, query/   # Ruta legacy de Hito 1 (no activa)
+├── models/              # Artefacto congelado del Modelo D (.pkl + metadata)
+├── artifacts/           # Evidencia versionada (hito1/, hito2/)
+├── docs/                # Documentación técnica, freeze de arquitectura, model card
+├── scripts/             # Entrenamiento, verificación y utilidades
+├── tests/               # Suite pytest
+├── tools/, ops/         # Tooling de operación (puente n8n, refresco controlado)
+├── docker/initdb/       # Esquema legacy de Hito 1 (LEGACY_ONLY)
 ├── docker-compose.yml
-├── requirements.txt
-└── README.md
+└── Dockerfile.*         # analytics (legacy), web, ml-api, n8n-bridge
 ```
 
 ---
@@ -185,61 +153,72 @@ sapi-valparaiso/
 
 ### Requisitos previos
 
-- Python 3.11+
-- PostgreSQL 15+ con extensión PostGIS activa
-- Docker y Docker Compose (recomendado)
+- Python 3.14
+- Docker y Docker Compose
+- Java 21 (solo para el backend Spring Boot; el wrapper `mvnw` descarga Maven)
 
-### Opción A — Docker (recomendado)
+### Opción A — Docker Compose (estado actual)
 
-Levanta los tres contenedores (persistencia, backend y visualización) con un solo comando:
+> El `docker-compose.yml` actual levanta los servicios de Hito 1 (PostGIS
+> legacy, loop analytics legacy, Streamlit y puente n8n). La composición de la
+> arquitectura v2 (Spring Boot + FastAPI + PostGIS v2) es el entregable SAPI-60
+> y todavía no está implementada.
 
 ```bash
 git clone https://github.com/DanielCortezF002/S.A.P.I-Sistema-de-Prediccion-de-Incendios.git
-cd sapi-valparaiso
-docker-compose up --build
+cd S.A.P.I-Sistema-de-Prediccion-de-Incendios
+cp .env.example .env            # completar valores locales; nunca versionar .env
+docker compose up --build
 ```
 
-La interfaz estará disponible en `http://localhost:8501`.
+La interfaz Streamlit queda en `http://localhost:8501`. Sin datos locales en
+`data/`, el modo Prototipo del contenedor no puede puntuar (no hay
+meteorología ni FIRMS recientes); para una corrida sin datos locales usar la
+Opción B con `SAPI_REPRODUCIBILITY_MODE=1` (snapshot versionado de Hito 1,
+`forecast_time` 2026-09-01T00:00Z).
 
 ### Opción B — Entorno local
 
 ```bash
-# 1. Clonar el repositorio
 git clone https://github.com/DanielCortezF002/S.A.P.I-Sistema-de-Prediccion-de-Incendios.git
-cd sapi-valparaiso
+cd S.A.P.I-Sistema-de-Prediccion-de-Incendios
 
-# 2. Crear y activar entorno virtual
-python3.11 -m venv venv
-source venv/bin/activate        # Linux / macOS
-# venv\Scripts\activate         # Windows
+python3.14 -m venv .venv
+source .venv/bin/activate        # Linux / macOS
+# .venv\Scripts\activate         # Windows
 
-# 3. Instalar dependencias y activar hooks de calidad
 pip install --upgrade pip
-pip install -r requirements.txt
-pre-commit install
+pip install -r requirements-dev.txt   # incluye requirements.txt + herramientas de test
 
-# 4. Verificar la suite de tests
-pytest tests/ -v --cov=src --cov=app
+pytest                                # gate de cobertura 80 % (pytest.ini)
+SAPI_REPRODUCIBILITY_MODE=1 streamlit run app/app.py
+```
 
-# 5. Iniciar la interfaz
-streamlit run app/app.py
+Servicios v2 por separado:
+
+```bash
+SAPI_REPRODUCIBILITY_MODE=1 uvicorn services.ml_api.main:app --port 8000   # servicio ML
+cd services/backend && ./mvnw verify                                        # backend
 ```
 
 ---
 
 ## Demo
 
-> *Capturas de pantalla del dashboard en producción — próximamente.*
+En la versión objetivo, el sistema muestra un mapa de la zona de estudio
+donde cada celda se colorea según su posición en el **ranking relativo** de
+riesgo de la evaluación actual:
 
-En la versión objetivo, el sistema genera cada madrugada un mapa coroplético de la Región de Valparaíso donde cada celda de 1 km² aparece coloreada según su probabilidad de ignición predicha:
+- 🟢 **Verde** — Riesgo relativo bajo
+- 🟠 **Ámbar** — Riesgo relativo medio
+- 🔴 **Rojo** — Riesgo relativo alto
 
-- 🟢 **Verde** — Riesgo bajo
-- 🟠 **Ámbar** — Riesgo medio
-- 🔴 **Rojo** — Riesgo alto
-
-La demo de esta entrega no cubre la región completa ni alcanza esa resolución:
-son 50 celdas de ~11,5 km² sobre el corredor Viña del Mar – Quilpué – Villa
-Alemana. Ver [`docs/alcance-prototipo.md`](docs/alcance-prototipo.md).
+La demo de esta entrega no cubre la región completa: son 50 celdas de
+0,0411° × 0,035° (≈3,8 × 3,9 km, ≈15 km² cada una) sobre el corredor
+Viña del Mar – Quilpué – Villa Alemana, definidas en `src/geo/grid.py`. Los
+documentos de Hito 1 que citan "~11,5 km²" se refieren a los círculos de
+visualización legacy, no a las celdas reales. Ver
+[`docs/alcance-prototipo.md`](docs/alcance-prototipo.md).
 
 El nivel medio era amarillo hasta la centralización de tokens de diseño. Se
 cambió a ámbar porque el amarillo daba 1,66:1 de contraste sobre el mapa base,
@@ -248,31 +227,30 @@ relleno de una celda de riesgo medio era prácticamente invisible. La paleta
 completa vive en `app/theme/tokens.py` y sus umbrales los verifica
 `tests/test_theme.py`.
 
-Al hacer clic en cualquier zona, el analista obtiene la probabilidad exacta de ignición y el desglose de las variables dominantes (temperatura, humedad, viento, pendiente topográfica).
+Al seleccionar una celda, el analista ve su posición en el ranking, su score
+relativo (comparable solo con las demás celdas de la misma evaluación) y el
+contexto disponible: meteorología regional, topografía e historial de
+detecciones FIRMS. Las celdas empatadas comparten posición y el empate se
+muestra explícitamente.
 
 ---
 
 ## Integración Continua
 
-Cada `push` o `pull request` hacia `main` dispara automáticamente el pipeline de GitHub Actions:
-
-```
-[git push] → [Pre-commit hooks: flake8 + black] → [GitHub Actions CI]
-                                                          ↓
-                                              pytest 221 tests + coverage
-                                                          ↓
-                                         ┌── PASS (≥80%) → Deploy automático
-                                         └── FAIL (<80%) → Merge bloqueado
-```
+El workflow `.github/workflows/ci.yml` define un job que ejecuta `black
+--check`, `flake8` y `pytest` (gate de cobertura 80 %) sobre `push` y
+`pull_request` hacia `main` y `develop`. **A la fecha (2026-10-08) GitHub
+Actions no registra ninguna ejecución de este workflow**, y no existe despliegue
+automático. Su actualización y primera ejecución verificable es parte del
+Quality Gate W0 de Sprint 2 (`artifacts/hito2/`).
 
 ### Estrategia de ramas
 
 | Rama | Propósito |
 |------|-----------|
-| `main` | Código estable en producción |
-| `develop` | Integración continua — siempre compila |
-| `feature/HU-XX` | Una rama por historia de usuario |
-| `hotfix/descripcion` | Correcciones urgentes de producción |
+| `main` | Código integrado |
+| `develop` | Rama de integración histórica |
+| `feat/SAPI-XX-…`, `docs/…`, `chore/…` | Una rama por issue de Jira, integrada vía pull request |
 
 ---
 
@@ -280,8 +258,8 @@ Cada `push` o `pull request` hacia `main` dispara automáticamente el pipeline d
 
 El proyecto aplica de forma combinada:
 
-- **Scrum** para la gestión del proyecto: sprints de 3 semanas, 45 horas/sprint, seguimiento en Jira ([tablero público](https://danielcortez.atlassian.net/jira/software/projects/SAPI/boards))
-- **CRISP-DM** para el ciclo de vida del dato: 6 fases mapeadas directamente a los 3 sprints de ejecución
+- **Scrum** para la gestión del proyecto, con seguimiento en Jira (proyecto `SAPI`)
+- **CRISP-DM** para el ciclo de vida del dato
 
 ---
 
@@ -299,7 +277,8 @@ El proyecto aplica de forma combinada:
 
 ## Licencia
 
-Distribuido bajo licencia MIT. Ver `LICENSE` para más información.
+Pendiente de definición: el repositorio todavía no incluye un archivo
+`LICENSE`.
 
 ---
 

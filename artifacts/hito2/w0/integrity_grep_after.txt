@@ -1,0 +1,46 @@
+# W0.6 integrity grep (DESPUÉS)
+sha base: 60b1260399a68a4df5365c0699448db57d251a3a + cambios W0.6 sin commitear
+utc: 2026-10-08T00:30:41Z
+host: vm
+command: (mismo grep que integrity_grep_before.txt)
+
+## README.md
+5:![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)
+6:![Modelo D](https://img.shields.io/badge/Modelo_D-HistGradientBoosting_(baseline)-FF6600?style=flat-square)
+7:![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-PostGIS-336791?style=flat-square&logo=postgresql&logoColor=white)
+8:![Streamlit](https://img.shields.io/badge/Streamlit-1.63-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
+12:> El score del Modelo D es un **ranking relativo** entre las celdas de una misma evaluación: **no es una probabilidad calibrada de incendio** y el modelo no tiene validación científica (`scientific_model_validation = false`). Una detección FIRMS es una anomalía térmica observada por satélite, **no** un incendio confirmado en terreno. Ver [`docs/model_card_baseline.md`](docs/model_card_baseline.md).
+55:| Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
+61:| Lenguaje / runtime ML | `Python 3.14.6`, `pandas 3.0.5`, `scikit-learn 1.9.0` |
+95:un umbral operacional validado. El clasificador XGBoost y el baseline Random
+156:- Python 3.14
+219:documentos de Hito 1 que citan "~11,5 km²" se refieren a los círculos de
+281:`LICENSE`.
+
+## Clasificación: 'probab' solo aparece en negación explícita (L12: 'no es una probabilidad calibrada'); XGBoost solo como legacy; 11,5 km² solo como aclaración de círculos legacy.
+
+## contracts/openapi/README.md:5-7
+SAPI-56). Estado al checkpoint de Sprint 2 (`cd6b58e`): el servicio ML
+implementa `ml-service.v0.yaml` completo (SAPI-55); el backend implementa solo
+`GET /health` (SAPI-54) y `GET /api/v1/ranking` sigue pendiente (SAPI-57).
+
+## requirements-dev.txt comentarios
+1:# Dependencias ML, batch y desarrollo (Docker analytics + CI local). Tambien
+2:# lo instalan Dockerfile.ml-api y Dockerfile.n8n-bridge (fastapi/uvicorn).
+3:# Version que reproduce el Modelo D publicado (models/prototype_model_d.pkl) de
+4:# forma bit-identica, verificado 09-09-2026 -- ver docs/deploy.md.
+5:# scikit-learn/joblib/rasterio/imbalanced-learn se heredan de requirements.txt
+6:# desde el 09-09-2026 (son runtime, no solo training -- ver requirements.txt).
+15:# fastapi/uvicorn: servicio ML de la arquitectura v2 (services/ml_api,
+16:# Dockerfile.ml-api, SAPI-55) y puente HTTP local de desarrollo n8n-bridge
+17:# (tools/n8n_bridge/app.py, Dockerfile.n8n-bridge).
+20:# httpx: dependencia de fastapi.testclient.TestClient (tests/test_n8n_bridge.py,
+21:# tests/test_ml_api.py).
+
+## docs/arquitectura.md
+10:> (≈3,8 × 3,9 km, ≈15 km²; `src/geo/grid.py`); el valor "~11,5 km²" que citaba
+12:> "latencia < 0,2 s" que citaba no tiene medición reproducible versionada
+57:- Baseline: Random Forest; producción demo: XGBoost + SMOTE (train split temporal) — pipeline implementado y funcional
+
+## readiness OUTPUT_SOURCES contiene alguno de estos archivos?
+ninguno (OK)

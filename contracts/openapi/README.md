@@ -2,7 +2,9 @@
 
 Contratos de la arquitectura v2 (Streamlit → Spring Boot → FastAPI/Modelo D →
 PostgreSQL/PostGIS), definidos antes que los servicios (contract-first,
-SAPI-56). Los servicios que los implementan todavía no existen.
+SAPI-56). Estado al checkpoint de Sprint 2 (`cd6b58e`): el servicio ML
+implementa `ml-service.v0.yaml` completo (SAPI-55); el backend implementa solo
+`GET /health` (SAPI-54) y `GET /api/v1/ranking` sigue pendiente (SAPI-57).
 
 | Archivo | Servicio | Puerto | Endpoints | Implementa |
 |---|---|---|---|---|
