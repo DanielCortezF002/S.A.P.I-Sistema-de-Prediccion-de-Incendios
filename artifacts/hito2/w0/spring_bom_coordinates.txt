@@ -1,0 +1,43 @@
+# W0.3 coordenadas gestionadas por el BOM spring-boot-dependencies 4.1.1
+sha: d27079cea016240ccc871809f992354e53e78527
+utc: 2026-10-08T00:26:56Z
+host: vm (cloud sandbox)
+command: ./mvnw -B -q help:effective-pom -Doutput=target/effective-pom.xml + parse dependencyManagement
+
+MANAGED  org.springframework.boot:spring-boot-starter-restclient:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-restclient-test:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-jdbc:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-jdbc-test:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-data-jdbc:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-flyway:4.1.1
+MANAGED  org.springframework.boot:spring-boot-flyway:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-actuator:4.1.1
+MANAGED  org.springframework.boot:spring-boot-starter-validation:4.1.1
+MANAGED  org.springframework.boot:spring-boot-testcontainers:4.1.1
+MANAGED  org.flywaydb:flyway-core:12.4.0
+MANAGED  org.flywaydb:flyway-database-postgresql:12.4.0
+MANAGED  org.postgresql:postgresql:42.7.13
+MANAGED  org.testcontainers:testcontainers:2.0.5
+MANAGED  org.testcontainers:testcontainers-postgresql:2.0.5
+ABSENT   org.testcontainers:postgresql
+MANAGED  org.testcontainers:testcontainers-junit-jupiter:2.0.5
+ABSENT   org.testcontainers:junit-jupiter
+MANAGED  org.springframework:spring-web:7.0.9
+MANAGED  org.yaml:snakeyaml:2.6
+
+flyway.version = 12.4.0
+postgresql.version = 42.7.13
+testcontainers.version = 2.0.5
+jackson-bom.version = 3.1.5
+spring-framework.version = 7.0.9
+snakeyaml.version = 2.6
+
+RESULT: PASS si cada necesidad tiene al menos una coordenada MANAGED
+
+## Resolución real (POM de prueba fuera del repo, parent spring-boot-starter-parent 4.1.1)
+command: mvnw -B -q dependency:resolve + dependency:tree (scratchpad/w0-deps/pom.xml)
+restclient 4.1.1, jdbc 4.1.1, flyway-database-postgresql 12.4.0 (+flyway-core 12.4.0), postgresql 42.7.13 runtime,
+spring-boot-testcontainers 4.1.1, testcontainers-postgresql 2.0.5, testcontainers-junit-jupiter 2.0.5 -> BUILD SUCCESS
+RESULT: PASS (todas las necesidades de SAPI-57/59 resuelven contra Maven Central)
+Implicancia W0.4: usar imagen flyway/flyway:12.4.0 (existencia del tag: VERIFICAR en host)
+Docker Hub (HTTPS API, 2026-10-08T00:27:44Z): flyway/flyway:12.4.0 -> 200 (existe, amd64 sha256:0d37ec97…); postgis/postgis:15-3.4 -> 200 (existe)
