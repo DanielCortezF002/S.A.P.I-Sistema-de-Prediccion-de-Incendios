@@ -1,61 +1,134 @@
+# S.A.P.I. - CI veraz (Quality Gate W0.9, decisión H11, Revisión 3 §3.1).
+#
+# GitHub Actions es el MERGE GATE preferido, no una dependencia dura: cada job
+# invoca scripts/merge_gate.py, el mismo runner del fallback (nube sin Docker o
+# Windows/Omen con Docker), con los mismos criterios y el mismo formato de
+# evidencia. El gate usa el run de `push` sobre el SHA head.
+#
+# Notas:
+# - `push` en todas las ramas (no tags): corre sin PR, también en ramas apiladas.
+# - `workflow_dispatch` solo aparece una vez que este archivo está en `main`.
+# - Lint bloqueante solo en rutas v2; la deuda legacy se reporta (no bloquea).
+# - sql-migration-validation = SQL MIGRATION VALIDATION (psql), NO es Flyway.
+#   flyway-integration = REAL FLYWAY INTEGRATION VALIDATION (Flyway CLI 12.4.0).
+# - El job e2e se agrega con PR-6 (SAPI-66), cuando exista la prueba.
 name: CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: ["**"]
   pull_request:
-    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
 
 jobs:
-  test:
+  freeze:
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgis/postgis:15-3.4
-        env:
-          POSTGRES_USER: sapi
-          POSTGRES_PASSWORD: sapi_secret
-          POSTGRES_DB: sapi_db
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U sapi -d sapi_db"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/merge_gate.py --job freeze
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-freeze-${{ github.sha }}
+          path: ${{ runner.temp }}/sapi-gate
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/merge_gate.py --job python
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-python-${{ github.sha }}
+          path: ${{ runner.temp }}/sapi-gate
 
-      - name: Initialize database schema
-        env:
-          DATABASE_URL: postgresql://sapi:sapi_secret@localhost:5432/sapi_db
-          DATABASE_URL_DIRECT: postgresql://sapi:sapi_secret@localhost:5432/sapi_db
-          PGPASSWORD: sapi_secret
-        run: |
-          sudo apt-get update && sudo apt-get install -y postgresql-client
-          for f in docker/initdb/*.sql; do
-            psql -h localhost -U sapi -d sapi_db -f "$f"
-          done
+  backend-unit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+          cache-dependency-path: services/backend/pom.xml
+      - run: python3 scripts/merge_gate.py --job backend-unit
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-backend-unit-${{ github.sha }}
+          path: ${{ runner.temp }}/sapi-gate
 
-      - name: Format check
-        run: black --check src app tests
+  sql-migration-validation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/merge_gate.py --job sql-migration-validation
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-sql-migration-validation-${{ github.sha }}
+          path: ${{ runner.temp }}/sapi-gate
 
-      - name: Lint
-        run: flake8 src app tests --max-line-length=100 --extend-ignore=E203,W503
+  flyway-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/merge_gate.py --job flyway-integration
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-flyway-integration-${{ github.sha }}
+          path: ${{ runner.temp }}/sapi-gate
 
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql://sapi:sapi_secret@localhost:5432/sapi_db
-          DATABASE_URL_DIRECT: postgresql://sapi:sapi_secret@localhost:5432/sapi_db
-        run: pytest
+  container-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: python3 scripts/merge_gate.py --job container-smoke
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gate-container-smoke-${{ github.sha }}
+          path: ${{ runner.temp }}/sapi-gate
