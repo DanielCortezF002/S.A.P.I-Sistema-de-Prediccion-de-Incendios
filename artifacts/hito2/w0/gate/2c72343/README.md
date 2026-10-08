@@ -25,3 +25,9 @@ Las rutas locales del sandbox se reemplazaron por `<gate-out>`,
 `<fresh-clone>`, `<venv>` y `<scratch>`; ningún otro contenido fue editado.
 Este commit solo toca `artifacts/hito2/**`, así que hereda el gate de
 `2c72343` (`merge_gate.py --inherit 2c72343`).
+
+**Nota (commit posterior):** el `.gitignore` del repo ignora `*.log`, por lo que
+los 6 logs por job no entraron en el primer commit de evidencia. Se agregaron
+renombrados `<job>.log` → `<job>.log.txt`, con el contenido sin cambios (salvo
+el reemplazo de rutas descrito arriba). Desde el SHA siguiente, `merge_gate.py`
+y `w0_host_checks.ps1` escriben los logs directamente como `.txt`.
