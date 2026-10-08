@@ -1,0 +1,191 @@
+{
+  "schema": "sapi-merge-gate-v1",
+  "sha": "2c72343184f28cd614e7b60d6c1275b9f8c8971b",
+  "branch": "HEAD",
+  "started_utc": "2026-10-08T23:04:23Z",
+  "environment": {
+    "platform": "Linux-6.18.44-fc-v80-x86_64-with-glibc2.39",
+    "python": "3.14.6",
+    "java": "openjdk version \"21.0.12.1\" 2026-08-18",
+    "docker": "failed to connect to the docker API at unix:///var/run/docker.sock; check if the path is correct and if the daemon is running: dial unix /var/run/docker.sock: connect: no such file or directory",
+    "git_core_autocrlf": "unset",
+    "github_actions": false,
+    "runner_os": "",
+    "github_run_url": ""
+  },
+  "jobs": [
+    {
+      "job": "freeze",
+      "kind": "freeze_check F1-F9 (SKIP = FAIL en modo gate)",
+      "status": "PASS",
+      "duration_s": 8.3,
+      "commands": [
+        {
+          "command": [
+            "<venv>/bin/python",
+            "-B",
+            "scripts/freeze_check.py",
+            "--json",
+            "<gate-out>/freeze_check.json",
+            "--allow-tag",
+            "hito2-sprint2-rc1",
+            "--allow-tag",
+            "hito2-sprint2-rc2",
+            "--allow-tag",
+            "hito2-sprint2-rc3",
+            "--allow-tag",
+            "hito2-sprint2-rc4",
+            "--allow-tag",
+            "hito2-sprint2-rc5",
+            "--allow-tag",
+            "hito2-sprint2-final"
+          ],
+          "cwd": "<fresh-clone>",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "problems": []
+      },
+      "log": "freeze.log"
+    },
+    {
+      "job": "python",
+      "kind": "lint v2 + pytest completo (cobertura >= 80 %)",
+      "status": "PASS",
+      "duration_s": 286.9,
+      "commands": [
+        {
+          "command": [
+            "<venv>/bin/python",
+            "-m",
+            "black",
+            "--check",
+            "services/ml_api",
+            "scripts/freeze_check.py",
+            "scripts/merge_gate.py",
+            "tests/test_openapi_contracts.py",
+            "tests/test_ml_api.py",
+            "tests/test_merge_gate.py"
+          ],
+          "cwd": "<fresh-clone>",
+          "exit": 0
+        },
+        {
+          "command": [
+            "<venv>/bin/python",
+            "-m",
+            "flake8",
+            "--max-line-length=100",
+            "--extend-ignore=E203,W503",
+            "services/ml_api",
+            "scripts/freeze_check.py",
+            "scripts/merge_gate.py",
+            "tests/test_openapi_contracts.py",
+            "tests/test_ml_api.py",
+            "tests/test_merge_gate.py"
+          ],
+          "cwd": "<fresh-clone>",
+          "exit": 0
+        },
+        {
+          "command": [
+            "<venv>/bin/python",
+            "-B",
+            "-m",
+            "pytest",
+            "-q",
+            "--junitxml=<gate-out>/pytest-junit.xml"
+          ],
+          "cwd": "<fresh-clone>",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "v2_lint_paths": [
+          "services/ml_api",
+          "scripts/freeze_check.py",
+          "scripts/merge_gate.py",
+          "tests/test_openapi_contracts.py",
+          "tests/test_ml_api.py",
+          "tests/test_merge_gate.py"
+        ],
+        "black_v2_exit": 0,
+        "flake8_v2_exit": 0,
+        "pytest_exit": 0,
+        "legacy_flake8_violations_informative": 231
+      },
+      "log": "python.log"
+    },
+    {
+      "job": "backend-unit",
+      "kind": "mvnw -B verify -DskipITs (JDK 21)",
+      "status": "PASS",
+      "duration_s": 19.9,
+      "commands": [
+        {
+          "command": [
+            "sh",
+            "mvnw",
+            "-B",
+            "verify",
+            "-DskipITs"
+          ],
+          "cwd": "<fresh-clone>/services/backend",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "surefire_reports": [
+          "TEST-cl.sapi.backend.BackendApplicationTests.xml",
+          "TEST-cl.sapi.backend.HealthControllerTests.xml"
+        ]
+      },
+      "log": "backend-unit.log"
+    },
+    {
+      "job": "sql-migration-validation",
+      "kind": "SQL MIGRATION VALIDATION (psql, no Flyway)",
+      "status": "NOT_VERIFIABLE_IN_THIS_ENVIRONMENT",
+      "duration_s": 0.0,
+      "commands": [],
+      "details": {
+        "missing": [
+          "PowerShell",
+          "Docker"
+        ]
+      },
+      "log": "sql-migration-validation.log"
+    },
+    {
+      "job": "flyway-integration",
+      "kind": "REAL FLYWAY INTEGRATION VALIDATION (Flyway CLI 12.4.0)",
+      "status": "NOT_VERIFIABLE_IN_THIS_ENVIRONMENT",
+      "duration_s": 0.0,
+      "commands": [],
+      "details": {
+        "missing": [
+          "PowerShell",
+          "Docker"
+        ]
+      },
+      "log": "flyway-integration.log"
+    },
+    {
+      "job": "container-smoke",
+      "kind": "imágenes ML (/predict reproducible) y backend (/health)",
+      "status": "NOT_VERIFIABLE_IN_THIS_ENVIRONMENT",
+      "duration_s": 0.0,
+      "commands": [],
+      "details": {
+        "missing": [
+          "PowerShell",
+          "Docker"
+        ]
+      },
+      "log": "container-smoke.log"
+    }
+  ],
+  "finished_utc": "2026-10-08T23:09:38Z",
+  "verdict": "NOT_VERIFIABLE_IN_THIS_ENVIRONMENT"
+}
