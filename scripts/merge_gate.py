@@ -221,7 +221,7 @@ class JobRun:
     def __init__(self, name: str, out_dir: Path, cwd: Path) -> None:
         self.name = name
         self.cwd = cwd
-        self.log_path = out_dir / f"{name}.log"
+        self.log_path = out_dir / f"{name}.txt"  # *.log está en .gitignore
         self.commands: list[dict] = []
         self.details: dict = {}
         self.started = time.monotonic()
@@ -392,13 +392,25 @@ def environment(cwd: Path) -> dict:
     }
 
 
+def branch_name(cwd: Path) -> str:
+    """Rama del SHA validado (en un clon por SHA o en CI el HEAD puede estar suelto)."""
+    branch = git("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd)
+    if branch != "HEAD":
+        return branch
+    return (
+        os.environ.get("SAPI_GATE_BRANCH")
+        or os.environ.get("GITHUB_REF_NAME")
+        or "HEAD"
+    )
+
+
 def run_jobs(jobs: list[str], out_dir: Path, cwd: Path, allowed_tags) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     sha = head_sha(cwd)
     summary = {
         "schema": "sapi-merge-gate-v1",
         "sha": sha,
-        "branch": git("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd),
+        "branch": branch_name(cwd),
         "started_utc": utc_now(),
         "environment": environment(cwd),
         "jobs": [],
@@ -510,7 +522,8 @@ def main(argv: list[str] | None = None) -> int:
         for tag in args.allow_tag:
             command += ["--allow-tag", tag]
         command += ["--out", str(out_dir)]
-        return subprocess.run(command, cwd=clone).returncode
+        env = dict(os.environ, SAPI_GATE_BRANCH=branch_name(REPO_ROOT))
+        return subprocess.run(command, cwd=clone, env=env).returncode
 
     summary = run_jobs(jobs, out_dir, REPO_ROOT, allowed_tags)
     print(f"GATE {summary['verdict']} sha={summary['sha'][:12]} evidencia={out_dir}")

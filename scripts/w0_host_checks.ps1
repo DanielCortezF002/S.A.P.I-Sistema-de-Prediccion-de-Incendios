@@ -125,7 +125,7 @@ function New-Result([string]$Name, [string]$Kind) {
         expected = [ordered]@{}
         observed = [ordered]@{}
         failures = @()
-        log = "$Name.log"
+        log = "$Name.txt"
     }
 }
 
@@ -440,7 +440,7 @@ foreach ($name in $Check) {
         "sql-migration-validation" { "SQL MIGRATION VALIDATION (psql, not Flyway)" }
     }
     $r = New-Result $name $kind
-    $log = Join-Path $OutDir "$name.log"
+    $log = Join-Path $OutDir "$name.txt"  # *.log is git-ignored in this repo
     Write-Text $log ("# $name - $kind`n# sha=$sha utc=$(UtcNow)`n")
     Write-Host ("[{0}] {1} ..." -f (UtcNow), $name)
     try {

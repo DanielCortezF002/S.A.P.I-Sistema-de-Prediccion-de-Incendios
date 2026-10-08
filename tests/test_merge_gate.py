@@ -183,3 +183,10 @@ def test_docker_job_without_docker_is_not_verifiable_never_pass(monkeypatch, tmp
 def test_v2_lint_paths_exist():
     for path in mg.V2_LINT_PATHS:
         assert (ROOT / path).exists(), path
+
+
+def test_evidence_logs_are_not_git_ignored(tmp_path):
+    """El repo ignora *.log: los logs de evidencia se escriben como .txt."""
+    run = mg.JobRun("freeze", tmp_path, ROOT)
+    assert run.log_path.suffix == ".txt"
+    assert '"$name.txt"' in HOST_CHECKS.read_text(encoding="utf-8")
