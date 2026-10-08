@@ -1,0 +1,23 @@
+# W0.9 deuda de lint legacy (informativa, NO bloqueante, H11)
+head: 0ff01a745eb7414e99e8ff5d3fa8ec596ebd50a8
+utc: 2026-10-08T22:46:59Z
+alcance: src app tests (mismo alcance que el ci.yml previo)
+
+$ black --check src app tests
+84 files would be reformatted, 163 files would be left unchanged.
+
+$ flake8 --max-line-length=100 --extend-ignore=E203,W503 src app tests | wc -l
+231
+
+## violaciones flake8 por código
+    145 E501
+     48 E402
+     17 F401
+      7 E712
+      4 W291
+      3 E302
+      2 F841
+      2 F541
+      1 W391
+      1 E305
+      1 E127

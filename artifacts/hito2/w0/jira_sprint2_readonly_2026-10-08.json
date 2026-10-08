@@ -1,0 +1,50 @@
+{
+  "purpose": "Instantánea de solo lectura del estado de Jira para la evidencia W0 (Sprint 2). No se modificó Jira.",
+  "captured_utc": "2026-10-08T22:47:30Z",
+  "site": "danielhetfield255.atlassian.net",
+  "access": "read-only (searchJiraIssuesUsingJql)",
+  "jql": "project = SAPI AND (sprint = 36 OR key in (SAPI-26, SAPI-32, SAPI-43, SAPI-49, SAPI-50, SAPI-51, SAPI-52, SAPI-54, SAPI-55, SAPI-56, SAPI-57, SAPI-58, SAPI-59, SAPI-60, SAPI-61, SAPI-62, SAPI-63, SAPI-64, SAPI-65, SAPI-66, SAPI-67, SAPI-68, SAPI-69, SAPI-70, SAPI-71, SAPI-72)) ORDER BY key ASC",
+  "fields": ["summary", "status", "issuetype", "priority", "Story point estimate (customfield_10016)", "Sprint (customfield_10020)"],
+  "sprint_36": {
+    "name": "Sprint 2",
+    "state": "active",
+    "startDate": "2026-10-02T03:00:00.000Z",
+    "endDate": "2026-10-16T23:00:00.000Z",
+    "goal": "Vertical slice local reproducible S.A.P.I. v2 con datos reales: FIRMS/DMC → FastAPI/Modelo D → Spring Boot → PostgreSQL/PostGIS → Streamlit → E2E (docker compose up). Score = ranking relativo; scientific_model_validation=false."
+  },
+  "issues": [
+    {"key": "SAPI-26", "summary": "Historial de Ocurrencia de Incendios", "status": "En curso", "type": "Tarea", "priority": "Medium", "sp": 8, "sprint": "Sprint 1"},
+    {"key": "SAPI-32", "summary": "Normalización y Pipeline de Limpieza de Software", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 5, "sprint": "Sprint 1"},
+    {"key": "SAPI-43", "summary": "Ejecución del Pipeline Diario con Datos Reales", "status": "Por hacer", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-49", "summary": "Spike — Identificar fuente real de datos históricos CONAF", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 3, "sprint": "Sprint 2"},
+    {"key": "SAPI-50", "summary": "Integridad causal del dataset temporal (DMC regional, causalidad ≤T, target honesto)", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null},
+    {"key": "SAPI-51", "summary": "Ranking de riesgo confiable y aislado de datos sintéticos/legacy", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null},
+    {"key": "SAPI-52", "summary": "Presentación robusta y honesta de información por celda (carga sin excepción, DEM N/D)", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null},
+    {"key": "SAPI-54", "summary": "S2-01 — Inicializar backend Spring Boot de S.A.P.I.", "status": "Finalizado", "type": "Tarea", "priority": "High", "sp": 3, "sprint": "Sprint 2"},
+    {"key": "SAPI-55", "summary": "S2-02 — Exponer Modelo D mediante microservicio FastAPI", "status": "Finalizado", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-56", "summary": "S2-03 — Definir contrato OpenAPI Spring Boot ↔ FastAPI", "status": "Finalizado", "type": "Tarea", "priority": "High", "sp": 3, "sprint": "Sprint 2"},
+    {"key": "SAPI-57", "summary": "S2-04 — Integrar Spring Boot con el microservicio FastAPI", "status": "Por hacer", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-58", "summary": "S2-05 — Diseñar esquema operacional PostgreSQL/PostGIS para Sprint 2", "status": "Finalizado", "type": "Tarea", "priority": "High", "sp": 3, "sprint": "Sprint 2"},
+    {"key": "SAPI-59", "summary": "S2-06 — Persistir resultados de inferencia en PostgreSQL/PostGIS", "status": "Por hacer", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-60", "summary": "S2-07 — Entorno reproducible con Docker Compose (Spring Boot + FastAPI + PostgreSQL)", "status": "Por hacer", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-61", "summary": "S2-08 — Adaptar Streamlit para consumir el backend REST en lugar de score_current_grid()", "status": "Por hacer", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-62", "summary": "S2-09 — Formalizar Modelo D como baseline experimental documentado", "status": "Finalizado", "type": "Tarea", "priority": "Medium", "sp": 3, "sprint": "Sprint 2"},
+    {"key": "SAPI-63", "summary": "S2-10 — Construir dataset de secuencias temporales para experimento", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-64", "summary": "S2-11 — Ejecutar experimento RNN/LSTM sin reemplazar el baseline", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 8, "sprint": null},
+    {"key": "SAPI-65", "summary": "S2-12 — Comparar Modelo D vs modelo temporal con evidencia", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 5, "sprint": null},
+    {"key": "SAPI-66", "summary": "S2-13 — Prueba E2E del vertical slice S.A.P.I. v2", "status": "Por hacer", "type": "Tarea", "priority": "High", "sp": 5, "sprint": "Sprint 2"},
+    {"key": "SAPI-67", "summary": "S2-14 — Spike y ADR de selección de proveedor cloud", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 3, "sprint": "Sprint 2"},
+    {"key": "SAPI-68", "summary": "S2-15 — Desplegar vertical slice S.A.P.I. v2 en cloud", "status": "Por hacer", "type": "Tarea", "priority": "Medium", "sp": 8, "sprint": null},
+    {"key": "SAPI-69", "summary": "Centralizar fuente FIRMS y validar formato DMC", "status": "Finalizado", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null},
+    {"key": "SAPI-70", "summary": "Asegurar build Docker y excluir secretos/artefactos locales", "status": "Finalizado", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null},
+    {"key": "SAPI-71", "summary": "Implementar refresh DMC/FIRMS atómico, versionado e idempotente", "status": "PENDIENTE A VALIDACION", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null},
+    {"key": "SAPI-72", "summary": "OPS — Normalizar rutas de evidencia y eliminar defaults dependientes de D:\\", "status": "PENDIENTE A VALIDACION", "type": "Tarea", "priority": "Medium", "sp": null, "sprint": null}
+  ],
+  "sprint_2_totals": {
+    "issues_in_sprint_36": 14,
+    "sp_in_sprint_36": 58,
+    "sp_finalizado_jira": 17,
+    "sp_finalizado_jira_keys": ["SAPI-54", "SAPI-55", "SAPI-56", "SAPI-58", "SAPI-62"],
+    "note": "SP 'Finalizado' según Jira; el estado real según DoD V2 está en docs/hito2/estado-sprint2.md y en el W0 EXECUTION REPORT."
+  }
+}
