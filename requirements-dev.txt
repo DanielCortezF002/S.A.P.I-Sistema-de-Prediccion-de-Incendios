@@ -20,3 +20,8 @@ uvicorn==0.53.0
 # httpx: dependencia de fastapi.testclient.TestClient (tests/test_n8n_bridge.py,
 # tests/test_ml_api.py).
 httpx==0.28.1
+# Contratos OpenAPI (tests/test_openapi_contracts.py, Quality Gate W0.8):
+# validan contracts/openapi/*.v0.yaml y la respuesta real del servicio ML.
+PyYAML==6.0.3
+openapi-spec-validator==0.9.0
+openapi-schema-validator==0.9.0
