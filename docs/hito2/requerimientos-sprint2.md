@@ -127,18 +127,26 @@ congelados hasta después de la presentación del Hito 2 por decisión del
 
 > **Como** ingeniero de software, **quiero** que Spring Boot consuma el microservicio FastAPI mediante HTTP, **para** que el backend orqueste la inferencia sin acoplamiento directo a Python.
 
-| ID | Criterio (Jira, literal) | RN | Verificación planificada | Evidencia planificada |
-|---|---|---|---|---|
-| SAPI-57.CA1 | Spring Boot consume FastAPI con WebClient o RestTemplate | — | Test con stub HTTP | surefire de PR-2 |
-| SAPI-57.CA2 | Maneja timeout y error (FastAPI caído) con respuesta controlada | RN-09 | Tests 502/503/504 | surefire de PR-2 |
-| SAPI-57.CA3 | Expone `GET /api/v1/ranking` que devuelve las 50 celdas ordenadas por score | RN-02, RN-03 | Test de contrato contra `backend.v0.yaml` | surefire de PR-2 |
-| SAPI-57.CA4 | Test de integración Spring ↔ FastAPI PASS (mock o real) | — | `*IT` contra un stub; E2E real en SAPI-66 | surefire y failsafe |
-| SAPI-57.CA5 | Logs estructurados de cada llamada | — | Test de log (`request_id`, latencia) | muestra de log |
+| ID | Criterio (Jira, literal) | RN | Verificación | Evidencia | Estado |
+|---|---|---|---|---|---|
+| SAPI-57.CA1 | Spring Boot consume FastAPI con WebClient o RestTemplate | — | `RankingEndpointIntegrationTests`: `POST /predict` por HTTP real con `RestClient`, cuerpo `{}` o `{"forecast_time": …}` sin modificar | `artifacts/hito2/testing/sapi-57/` | Implementado con `RestClient` (ver nota); en revisión (PR-2) |
+| SAPI-57.CA2 | Maneja timeout y error (FastAPI caído) con respuesta controlada | RN-09 | 15 respuestas del ML mapeadas (502/503/422/500), timeout → 504, cuerpo > 1 MiB → 502, `forecast_time` inválido → 422 sin llamar al ML, ML caído → 503 (`RankingMlUnavailableTests`); cada cuerpo de error se valida contra `backend.v0.yaml` | idem | Implementado; en revisión (PR-2) |
+| SAPI-57.CA3 | Expone `GET /api/v1/ranking` que devuelve las 50 celdas ordenadas por score | RN-02, RN-03 | `RankingResultValidatorTests` (invariantes de la grilla); la respuesta 200 son los mismos bytes del ML y cumple `backend.v0.yaml` → `RankingResult` (validador JSON Schema en dialecto OpenAPI 3.0, siguiendo `$ref`) | idem | Implementado; en revisión (PR-2) |
+| SAPI-57.CA4 | Test de integración Spring ↔ FastAPI PASS (mock o real) | — | Mock: `RankingEndpointIntegrationTests` (stub HTTP en 127.0.0.1). Real: `RankingRealMlServiceTests` contra el servicio FastAPI con `SAPI_IT_ML_BASE_URL` (los mismos bytes que `POST /predict`); E2E completo en SAPI-66 | idem | Implementado; en revisión (PR-2). Ver nota |
+| SAPI-57.CA5 | Logs estructurados de cada llamada | — | Un evento `ml_predict` por llamada con `request_id`, `ml_http_status`, `ml_latency_ms`, `outcome` y trazabilidad, como pares clave-valor SLF4J y en JSON con `logging.structured.format.console=logstash` | muestra de log en idem | Implementado; en revisión (PR-2) |
 
 **Nota de coherencia (CA1):** el plan usa `RestClient`, la API síncrona que en
 Spring Framework 6+/Boot 4 sucede a `RestTemplate`. Cumple la intención del CA
 (cliente HTTP síncrono), pero el texto literal nombra otras dos APIs. Requiere
-la aceptación de Daniel o un ajuste de redacción en Jira.
+la aceptación de Daniel o un ajuste de redacción en Jira. La implementación de
+SAPI-57 usa `RestClient` (ADR-010) y no cambia de API por la redacción.
+
+**Nota de verificación (CA4):** el plan preveía un `*IT` en failsafe. El CA
+admite "mock o real" y los tests de integración de SAPI-57 no necesitan Docker,
+así que corren en surefire (job `backend-unit`). El test contra el FastAPI real
+se activa con `SAPI_IT_ML_BASE_URL`; sin esa variable se omite y queda como
+"skipped" en surefire. El job `backend-it` (failsafe + Testcontainers) empieza
+con SAPI-59 (PR-3).
 
 ### SAPI-59 — S2-06 Persistir resultados de inferencia en PostgreSQL/PostGIS (Por hacer)
 
