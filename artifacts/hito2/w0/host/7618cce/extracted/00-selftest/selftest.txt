@@ -1,0 +1,14 @@
+# selftest - preflight self-test
+# sha=7618cce00123ac0b3f0c18e2ba8ec6778f19059a utc=2026-10-09T14:20:13Z
+$ git -C C:\Users\danie\AppData\Local\sapi-w0\src-7618cce-20261009-142010 rev-parse HEAD
+7618cce00123ac0b3f0c18e2ba8ec6778f19059a
+exit=0
+$ docker version --format {{.Client.Version}}
+29.8.1
+exit=0
+$ docker version --format {{.Server.Version}}
+29.8.1
+exit=0
+$ docker compose version --short
+5.5.1
+exit=0

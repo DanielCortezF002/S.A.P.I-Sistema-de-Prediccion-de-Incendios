@@ -1,0 +1,85 @@
+# container-smoke-ml - W0.2 ML image smoke
+# sha=7618cce00123ac0b3f0c18e2ba8ec6778f19059a utc=2026-10-09T14:20:16Z
+$ docker version --format {{.Server.Version}}
+29.8.1
+exit=0
+$ docker build --progress=plain -f C:\Users\danie\AppData\Local\sapi-w0\src-7618cce-20261009-142010\Dockerfile.ml-api -t sapi-w0-ml:7618cce C:\Users\danie\AppData\Local\sapi-w0\src-7618cce-20261009-142010
+#0 building with "desktop-linux" instance using docker driver
+System.Management.Automation.RemoteException
+#1 [internal] load build definition from Dockerfile.ml-api
+#1 transferring dockerfile: 1.42kB 0.0s done
+#1 DONE 0.0s
+System.Management.Automation.RemoteException
+#2 [internal] load metadata for docker.io/library/python:3.14-slim
+#2 DONE 0.0s
+System.Management.Automation.RemoteException
+#3 [internal] load .dockerignore
+#3 transferring context:
+#3 transferring context: 3.33kB done
+#3 DONE 0.0s
+System.Management.Automation.RemoteException
+#4 [1/7] FROM docker.io/library/python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d
+#4 resolve docker.io/library/python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d 0.0s done
+#4 DONE 0.0s
+System.Management.Automation.RemoteException
+#5 [internal] load build context
+#5 transferring context: 15.57MB 0.8s done
+#5 DONE 0.8s
+System.Management.Automation.RemoteException
+#6 [4/7] COPY requirements.txt requirements-dev.txt ./
+#6 CACHED
+System.Management.Automation.RemoteException
+#7 [2/7] WORKDIR /app
+#7 CACHED
+System.Management.Automation.RemoteException
+#8 [3/7] RUN apt-get update && apt-get install -y --no-install-recommends     gdal-bin libgdal-dev libgeos-dev libproj-dev gcc g++     && rm -rf /var/lib/apt/lists/*
+#8 CACHED
+System.Management.Automation.RemoteException
+#9 [5/7] RUN pip install --no-cache-dir -r requirements-dev.txt
+#9 CACHED
+System.Management.Automation.RemoteException
+#10 [6/7] COPY . .
+#10 DONE 0.2s
+System.Management.Automation.RemoteException
+#11 [7/7] RUN useradd --system --uid 10001 --no-create-home sapi
+#11 0.298 useradd warning: sapi's uid 10001 is greater than SYS_UID_MAX 999
+#11 DONE 0.3s
+System.Management.Automation.RemoteException
+#12 exporting to image
+#12 exporting layers
+#12 exporting layers 0.4s done
+#12 exporting manifest sha256:02304a1c6290fa114468f2e325605aa84af2eb0bf8c26199727d4c479348b506 0.0s done
+#12 exporting config sha256:fffe8a877426bb10bb88a48af45970e04e3c4299639a5bc74f2d7620460e0e35 0.0s done
+#12 exporting attestation manifest sha256:99ffe4a3b90e0bf2b0dd3ef12957a709d7b471189afe464c8ef49590b523af5b 0.0s done
+#12 exporting manifest list sha256:3bbef3ddb99291751eb244665fb569386062456c18ab64029d9581ef4b8623d1 0.0s done
+#12 naming to docker.io/library/sapi-w0-ml:7618cce done
+#12 unpacking to docker.io/library/sapi-w0-ml:7618cce
+#12 unpacking to docker.io/library/sapi-w0-ml:7618cce 0.2s done
+#12 DONE 0.8s
+exit=0
+$ docker run -d --name sapi-w0-ml-7242a776 -e SAPI_REPRODUCIBILITY_MODE=1 sapi-w0-ml:7618cce
+3e72b64798e63f3cc702c3b138ba0b9c22250bd344e31914266bfbfb755d4de1
+exit=0
+$ docker exec sapi-w0-ml-7242a776 python -c <health probe>
+{"status": null, "error": "URLError"}
+exit=0
+$ docker exec sapi-w0-ml-7242a776 python -c <health probe>
+{"status": 200, "body": {"status": "ok", "model_version": "prototype_model_d_v1"}}
+exit=0
+$ docker exec sapi-w0-ml-7242a776 python -c <POST /predict {} + fingerprint>
+{"status": 200, "n_cells": 50, "forecast_time": "2026-09-01T00:00:00Z", "first_cell": "VP-001", "first_score": 0.13129336874795144, "ranking_fingerprint": "33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff", "score_semantics": "relative_rank", "scientific_model_validation": false, "model_version": "prototype_model_d_v1"}
+exit=0
+$ docker exec sapi-w0-ml-7242a776 id -u
+10001
+exit=0
+$ docker logs --tail 40 sapi-w0-ml-7242a776
+INFO:     Started server process [1]
+INFO:     127.0.0.1:41640 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57044 - "POST /predict HTTP/1.1" 200 OK
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+exit=0
+$ docker rm -f sapi-w0-ml-7242a776
+sapi-w0-ml-7242a776
+exit=0

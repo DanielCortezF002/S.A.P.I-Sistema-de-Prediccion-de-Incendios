@@ -1,0 +1,46 @@
+{
+    "check":  "flyway-integration",
+    "kind":  "W0.4 REAL FLYWAY INTEGRATION VALIDATION",
+    "status":  "PASS",
+    "started_utc":  "2026-10-09T14:20:32Z",
+    "finished_utc":  "2026-10-09T14:20:46Z",
+    "expected":  {
+                     "network":  "created",
+                     "postgis_start":  "exit 0",
+                     "postgis_ready":  true,
+                     "migrate_1_exit":  0,
+                     "migrate_1_executed":  3,
+                     "validate_exit":  0,
+                     "info_exit":  0,
+                     "migrate_2_exit":  0,
+                     "migrate_2_executed":  0,
+                     "flyway_schema_history":  "1:true,2:true,3:true",
+                     "tables":  "celdas_geom,ejecuciones,predicciones_celda",
+                     "cells":  "50",
+                     "invalid_geometries":  "0"
+                 },
+    "observed":  {
+                     "migrations":  "V001__enable_postgis.sql, V002__create_sapi_v2_schema.sql, V003__seed_celdas_geom.sql",
+                     "network":  "exit 0",
+                     "postgis_start":  "exit 0",
+                     "postgis_ready":  true,
+                     "migrate_1_exit":  0,
+                     "migrate_1_executed":  3,
+                     "validate_exit":  0,
+                     "info_exit":  0,
+                     "migrate_2_exit":  0,
+                     "migrate_2_executed":  0,
+                     "flyway_history_expected_literal":  "001:true,002:true,003:true",
+                     "flyway_history_observed_raw":  "001:true,002:true,003:true",
+                     "flyway_history_expected_normalized":  "1:true,2:true,3:true",
+                     "flyway_history_observed_normalized":  "1:true,2:true,3:true",
+                     "flyway_schema_history":  "1:true,2:true,3:true",
+                     "tables":  "celdas_geom,ejecuciones,predicciones_celda",
+                     "cells":  "50",
+                     "invalid_geometries":  "0"
+                 },
+    "failures":  [
+
+                 ],
+    "log":  "flyway-integration.txt"
+}

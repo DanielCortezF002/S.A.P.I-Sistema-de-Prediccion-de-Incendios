@@ -1,0 +1,76 @@
+# W0.6 integrity grep (FINAL W0, re-ejecutado)
+sha: 4809fa73887f132421b7c8db8899020e13305a57
+utc: 2026-10-09T14:23:19Z
+host: vm
+command: grep -n -i -E "probab|img.shields|Python 3\.1[0-9]|python3\.11|XGBoost|contenedores|sapi-valparaiso|11,5 km|1 km²|221|84\.07|Deploy automático|calibrad|LICENSE" README.md ; sed -n 5,7p contracts/openapi/README.md ; grep -n "^#" requirements-dev.txt ; grep -n -E "11,5|0\.2s|XGBoost" docs/arquitectura.md
+
+## README.md
+5:![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=flat-square&logo=python&logoColor=white)
+6:![Modelo D](https://img.shields.io/badge/Modelo_D-HistGradientBoosting_(baseline)-FF6600?style=flat-square)
+7:![PostgreSQL](https://img.shields.io/badge/PostgreSQL_15-PostGIS-336791?style=flat-square&logo=postgresql&logoColor=white)
+8:![Streamlit](https://img.shields.io/badge/Streamlit-1.63-FF4B4B?style=flat-square&logo=streamlit&logoColor=white)
+12:> El score del Modelo D es un **ranking relativo** entre las celdas de una misma evaluación: **no es una probabilidad calibrada de incendio** y el modelo no tiene validación científica (`scientific_model_validation = false`). Una detección FIRMS es una anomalía térmica observada por satélite, **no** un incendio confirmado en terreno. Ver [`docs/model_card_baseline.md`](docs/model_card_baseline.md).
+55:| Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
+61:| Lenguaje / runtime ML | `Python 3.14.6`, `pandas 3.0.5`, `scikit-learn 1.9.0` |
+95:un umbral operacional validado. El clasificador XGBoost y el baseline Random
+156:- Python 3.14
+219:documentos de Hito 1 que citan "~11,5 km²" se refieren a los círculos de
+281:`LICENSE`.
+
+## contracts/openapi/README.md:5-7
+SAPI-56). Estado al checkpoint de Sprint 2 (`cd6b58e`): el servicio ML
+implementa `ml-service.v0.yaml` completo (SAPI-55); el backend implementa solo
+`GET /health` (SAPI-54) y `GET /api/v1/ranking` sigue pendiente (SAPI-57).
+
+## requirements-dev.txt comentarios
+1:# Dependencias ML, batch y desarrollo (Docker analytics + CI local). Tambien
+2:# lo instalan Dockerfile.ml-api y Dockerfile.n8n-bridge (fastapi/uvicorn).
+3:# Version que reproduce el Modelo D publicado (models/prototype_model_d.pkl) de
+4:# forma bit-identica, verificado 09-09-2026 -- ver docs/deploy.md.
+5:# scikit-learn/joblib/rasterio/imbalanced-learn se heredan de requirements.txt
+6:# desde el 09-09-2026 (son runtime, no solo training -- ver requirements.txt).
+15:# fastapi/uvicorn: servicio ML de la arquitectura v2 (services/ml_api,
+16:# Dockerfile.ml-api, SAPI-55) y puente HTTP local de desarrollo n8n-bridge
+17:# (tools/n8n_bridge/app.py, Dockerfile.n8n-bridge).
+20:# httpx: dependencia de fastapi.testclient.TestClient (tests/test_n8n_bridge.py,
+21:# tests/test_ml_api.py).
+23:# Contratos OpenAPI (tests/test_openapi_contracts.py, Quality Gate W0.8):
+24:# validan contracts/openapi/*.v0.yaml y la respuesta real del servicio ML.
+
+## docs/arquitectura.md
+10:> (≈3,8 × 3,9 km, ≈15 km²; `src/geo/grid.py`); el valor "~11,5 km²" que citaba
+57:- Baseline: Random Forest; producción demo: XGBoost + SMOTE (train split temporal) — pipeline implementado y funcional
+
+## Cambios desde W0.6 (cde49fd) en los 4 archivos auditados
+ requirements-dev.txt | 5 +++++
+ 1 file changed, 5 insertions(+)
+Interpretación: README.md, contracts/openapi/README.md y docs/arquitectura.md no cambiaron desde W0.6.
+requirements-dev.txt solo suma los pins de W0.8 (PyYAML, openapi-spec-validator, openapi-schema-validator) y su comentario.
+Comparado con integrity_grep_after.txt: la sección README.md es idéntica. En docs/arquitectura.md falta la línea 12
+('latencia < 0,2 s') solo porque este patrón usa '0\.2s' sin espacio; el archivo es byte-idéntico al de W0.6.
+
+## Raíces §11.6 en archivos de texto agregados/modificados por W0 (cd6b58e..HEAD, sin artifacts/)
+README.md:1:# S.A.P.I. — Sistema de Alerta y Predicción de Incendios Forestales
+README.md:12:> El score del Modelo D es un **ranking relativo** entre las celdas de una misma evaluación: **no es una probabilidad calibrada de incendio** y el modelo no tiene validación científica (`scientific_model_validation = false`). Una detección FIRMS es una anomalía térmica observada por satélite, **no** un incendio confirmado en terreno. Ver [`docs/model_card_baseline.md`](docs/model_card_baseline.md).
+contracts/openapi/README.md:21:  (`score_semantics: relative_rank`). No es una probabilidad calibrada de
+docs/architecture-stack-freeze-sprint2-erratum.md:16:| E5 | L196-197 | El resultado "se persiste en `predicciones_riesgo` (o tabla equivalente)" | V002 L24-74 | La tabla equivalente es `ejecuciones` + `predicciones_celda`. `predicciones_riesgo` tiene semántica de probabilidad y no se usa |
+docs/arquitectura.md:3:Sistema de Alerta y Predicción de Incendios para la Región de Valparaíso.
+docs/hito2/decisiones-w0.md:35:| H6 | Contrato v0.2 | **Aprobada para diseño y validación en W0:** aditivo, con campos de procedencia y frescura; el score no se convierte en probabilidad; no se exponen features internas por celda; no se rompe la compatibilidad v0. La implementación pertenece a W1 | B → aprobada |
+docs/hito2/decisiones-w0.md:46:| H17 | Textos "Probabilidad" del modo Demo legacy | Abierta; plazo W3. Mientras tanto, oculto detrás de H7 | D |
+docs/hito2/definition-of-done.md:27:   probabilidad ni una detección FIRMS como incendio confirmado;
+docs/hito2/requerimientos-sprint2.md:86:| SAPI-55.CA6 | Score documentado como relativo, no probabilidad calibrada | RN-01 | `test_no_field_is_named_as_a_probability` | `tests/test_ml_api.py`, `docs/model_card_baseline.md` | CUMPLIDO |
+docs/hito2/requerimientos-sprint2.md:99:| SAPI-56.CA4 | Score NO se llama "probabilidad" en ningún campo del contrato | RN-01 | W0.8 (ninguna propiedad contiene "probab") | W0.8 | CUMPLIDO por lectura; automatización en W0.8 |
+docs/hito2/requerimientos-sprint2.md:212:| SAPI-43.CA7 | Se mantiene `scientific_model_validation=false` (score = ranking relativo, no probabilidad calibrada) | RN-01 | CHECK en V002 y contrato | idem |
+docs/hito2/requerimientos-sprint2.md:225:| RN-01 | El score es un ranking relativo dentro de una evaluación; no es una probabilidad y el modelo no tiene validación científica | V002 L30-31 (defaults), L38-39 (CHECK); `services/ml_api/main.py:101-102`; `contracts/openapi/ml-service.v0.yaml` (`score_semantics`, `scientific_model_validation`) |
+tests/test_openapi_contracts.py:243:def test_no_contract_property_is_named_as_a_probability(ml_spec, backend_spec):
+tests/test_openapi_contracts.py:244:    """SAPI-56.CA4, RN-01: ningún campo del contrato se llama probabilidad."""
+tests/test_openapi_contracts.py:246:    assert not [n for n in names if "probab" in n.lower()]
+
+## Clasificación de las raíces §11.6
+- Negaciones explícitas: README.md:12, contracts/openapi/README.md:21, definition-of-done.md:27, requerimientos-sprint2.md:86/99/212/225, test_openapi_contracts.py:243-246.
+- Referencias a decisiones, sin afirmación: decisiones-w0.md:35 (H6: 'el score no se convierte en probabilidad') y :46 (H17 abierta).
+- Tabla legacy citada como NO usada: erratum E5 (`predicciones_riesgo`).
+- Observación conocida (no es regresión de W0): el nombre del sistema 'Sistema de Alerta y Predicción de Incendios'
+  en README.md:1 y docs/arquitectura.md:3. Inconsistencia de nombre registrada en la Rev2 §2.4 (RUBRIC_CONFLICT_2);
+  su errata está planificada en evolucion-hito1-hito2 (PR-8). No es una afirmación de predicción calibrada.
+Veredicto: sin regresión de integridad en W0.
