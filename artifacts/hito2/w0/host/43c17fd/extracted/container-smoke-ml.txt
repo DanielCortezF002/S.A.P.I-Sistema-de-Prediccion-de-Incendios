@@ -1,0 +1,463 @@
+# container-smoke-ml - W0.2 ML image smoke
+# sha=43c17fd9cc8614fa70e27e03aa1ff49d2462aed6 utc=2026-10-09T00:12:33Z
+$ docker version --format {{.Server.Version}}
+29.8.1
+exit=0
+$ docker build --progress=plain -f C:\Users\danie\AppData\Local\Temp\sapi-w0-43c17fd\Dockerfile.ml-api -t sapi-w0-ml:43c17fd C:\Users\danie\AppData\Local\Temp\sapi-w0-43c17fd
+#0 building with "desktop-linux" instance using docker driver
+System.Management.Automation.RemoteException
+#1 [internal] load build definition from Dockerfile.ml-api
+#1 transferring dockerfile: 1.42kB 0.0s done
+#1 DONE 0.1s
+System.Management.Automation.RemoteException
+#2 [internal] load metadata for docker.io/library/python:3.14-slim
+#2 DONE 0.1s
+System.Management.Automation.RemoteException
+#3 [internal] load .dockerignore
+#3 transferring context: 3.33kB 0.0s done
+#3 DONE 0.0s
+System.Management.Automation.RemoteException
+#4 [internal] load build context
+#4 DONE 0.0s
+System.Management.Automation.RemoteException
+#5 [1/7] FROM docker.io/library/python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d
+#5 resolve docker.io/library/python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d 0.1s done
+#5 DONE 0.1s
+System.Management.Automation.RemoteException
+#4 [internal] load build context
+#4 transferring context: 15.55MB 2.2s done
+#4 DONE 2.2s
+System.Management.Automation.RemoteException
+#6 [2/7] WORKDIR /app
+#6 CACHED
+System.Management.Automation.RemoteException
+#7 [3/7] RUN apt-get update && apt-get install -y --no-install-recommends     gdal-bin libgdal-dev libgeos-dev libproj-dev gcc g++     && rm -rf /var/lib/apt/lists/*
+#7 CACHED
+System.Management.Automation.RemoteException
+#8 [4/7] COPY requirements.txt requirements-dev.txt ./
+#8 DONE 0.1s
+System.Management.Automation.RemoteException
+#9 [5/7] RUN pip install --no-cache-dir -r requirements-dev.txt
+#9 2.964 Collecting pandas==3.0.5 (from -r /app/requirements.txt (line 6))
+#9 3.046   Downloading pandas-3.0.5-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (79 kB)
+#9 3.379 Collecting numpy==2.5.2 (from -r /app/requirements.txt (line 7))
+#9 3.405   Downloading numpy-2.5.2-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (6.6 kB)
+#9 3.427 Collecting geopandas==1.1.4 (from -r /app/requirements.txt (line 8))
+#9 3.445   Downloading geopandas-1.1.4-py3-none-any.whl.metadata (2.3 kB)
+#9 3.547 Collecting shapely==2.1.2 (from -r /app/requirements.txt (line 9))
+#9 3.563   Downloading shapely-2.1.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.8 kB)
+#9 3.647 Collecting pyproj==3.7.2 (from -r /app/requirements.txt (line 10))
+#9 3.788   Downloading pyproj-3.7.2-cp314-cp314-manylinux_2_28_x86_64.whl.metadata (31 kB)
+#9 3.827 Collecting requests==2.34.2 (from -r /app/requirements.txt (line 11))
+#9 3.841   Downloading requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+#9 3.868 Collecting tenacity==9.1.4 (from -r /app/requirements.txt (line 12))
+#9 3.880   Downloading tenacity-9.1.4-py3-none-any.whl.metadata (1.2 kB)
+#9 3.937 Collecting psycopg2-binary==2.9.12 (from -r /app/requirements.txt (line 13))
+#9 3.950   Downloading psycopg2_binary-2.9.12-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (4.9 kB)
+#9 4.221 Collecting sqlalchemy==2.0.52 (from -r /app/requirements.txt (line 14))
+#9 4.241   Downloading sqlalchemy-2.0.52-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (9.6 kB)
+#9 4.477 Collecting geoalchemy2==0.20.0 (from -r /app/requirements.txt (line 15))
+#9 4.506   Downloading geoalchemy2-0.20.0-py3-none-any.whl.metadata (2.0 kB)
+#9 4.549 Collecting streamlit==1.63.0 (from -r /app/requirements.txt (line 16))
+#9 4.573   Downloading streamlit-1.63.0-py3-none-any.whl.metadata (10 kB)
+#9 4.614 Collecting folium==0.20.0 (from -r /app/requirements.txt (line 17))
+#9 4.638   Downloading folium-0.20.0-py2.py3-none-any.whl.metadata (4.2 kB)
+#9 4.660 Collecting streamlit-folium==0.27.4 (from -r /app/requirements.txt (line 18))
+#9 4.675   Downloading streamlit_folium-0.27.4-py3-none-any.whl.metadata (2.1 kB)
+#9 4.699 Collecting python-dotenv==1.2.3 (from -r /app/requirements.txt (line 19))
+#9 4.720   Downloading python_dotenv-1.2.3-py3-none-any.whl.metadata (29 kB)
+#9 4.823 Collecting pyarrow==25.0.1 (from -r /app/requirements.txt (line 20))
+#9 4.851   Downloading pyarrow-25.0.1-cp314-cp314-manylinux_2_28_x86_64.whl.metadata (3.0 kB)
+#9 4.973 Collecting scikit-learn==1.9.0 (from -r /app/requirements.txt (line 32))
+#9 5.122   Downloading scikit_learn-1.9.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (11 kB)
+#9 5.198 Collecting joblib==1.5.3 (from -r /app/requirements.txt (line 33))
+#9 5.236   Downloading joblib-1.5.3-py3-none-any.whl.metadata (5.5 kB)
+#9 5.372 Collecting rasterio==1.4.4 (from -r /app/requirements.txt (line 41))
+#9 5.514   Downloading rasterio-1.4.4-cp314-cp314-manylinux_2_28_x86_64.whl.metadata (9.3 kB)
+#9 5.681 Collecting imbalanced-learn==0.14.2 (from -r /app/requirements.txt (line 50))
+#9 5.702   Downloading imbalanced_learn-0.14.2-py3-none-any.whl.metadata (8.9 kB)
+#9 5.863 Collecting scipy==1.18.1 (from -r requirements-dev.txt (line 8))
+#9 5.887   Downloading scipy-1.18.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (62 kB)
+#9 6.044 Collecting xgboost==3.4.1 (from -r requirements-dev.txt (line 9))
+#9 6.059   Downloading xgboost-3.4.1-py3-none-manylinux_2_28_x86_64.whl.metadata (2.0 kB)
+#9 6.089 Collecting pytest==9.1.1 (from -r requirements-dev.txt (line 10))
+#9 6.103   Downloading pytest-9.1.1-py3-none-any.whl.metadata (7.6 kB)
+#9 6.127 Collecting pytest-cov==7.1.0 (from -r requirements-dev.txt (line 11))
+#9 6.144   Downloading pytest_cov-7.1.0-py3-none-any.whl.metadata (32 kB)
+#9 6.208 Collecting flake8==7.3.0 (from -r requirements-dev.txt (line 12))
+#9 6.225   Downloading flake8-7.3.0-py2.py3-none-any.whl.metadata (3.8 kB)
+#9 6.281 Collecting black==26.5.1 (from -r requirements-dev.txt (line 13))
+#9 6.300   Downloading black-26.5.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (95 kB)
+#9 6.526 Collecting locust==2.46.5 (from -r requirements-dev.txt (line 14))
+#9 6.661   Downloading locust-2.46.5-py3-none-any.whl.metadata (11 kB)
+#9 6.699 Collecting fastapi==0.141.1 (from -r requirements-dev.txt (line 18))
+#9 6.716   Downloading fastapi-0.141.1-py3-none-any.whl.metadata (27 kB)
+#9 6.742 Collecting uvicorn==0.53.0 (from -r requirements-dev.txt (line 19))
+#9 6.760   Downloading uvicorn-0.53.0-py3-none-any.whl.metadata (6.6 kB)
+#9 6.781 Collecting httpx==0.28.1 (from -r requirements-dev.txt (line 22))
+#9 6.794   Downloading httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+#9 6.828 Collecting PyYAML==6.0.3 (from -r requirements-dev.txt (line 25))
+#9 6.845   Downloading pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.4 kB)
+#9 6.865 Collecting openapi-spec-validator==0.9.0 (from -r requirements-dev.txt (line 26))
+#9 6.877   Downloading openapi_spec_validator-0.9.0-py3-none-any.whl.metadata (6.5 kB)
+#9 6.897 Collecting openapi-schema-validator==0.9.0 (from -r requirements-dev.txt (line 27))
+#9 6.911   Downloading openapi_schema_validator-0.9.0-py3-none-any.whl.metadata (10 kB)
+#9 6.933 Collecting python-dateutil>=2.8.2 (from pandas==3.0.5->-r /app/requirements.txt (line 6))
+#9 6.945   Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl.metadata (8.4 kB)
+#9 6.984 Collecting pyogrio>=0.7.2 (from geopandas==1.1.4->-r /app/requirements.txt (line 8))
+#9 6.997   Downloading pyogrio-0.13.0-cp311-abi3-manylinux_2_28_x86_64.whl.metadata (5.8 kB)
+#9 7.020 Collecting packaging (from geopandas==1.1.4->-r /app/requirements.txt (line 8))
+#9 7.036   Downloading packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+#9 7.062 Collecting certifi (from pyproj==3.7.2->-r /app/requirements.txt (line 10))
+#9 7.077   Downloading certifi-2026.7.22-py3-none-any.whl.metadata (2.5 kB)
+#9 7.165 Collecting charset_normalizer<4,>=2 (from requests==2.34.2->-r /app/requirements.txt (line 11))
+#9 7.181   Downloading charset_normalizer-3.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (46 kB)
+#9 7.208 Collecting idna<4,>=2.5 (from requests==2.34.2->-r /app/requirements.txt (line 11))
+#9 7.221   Downloading idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+#9 7.253 Collecting urllib3<3,>=1.26 (from requests==2.34.2->-r /app/requirements.txt (line 11))
+#9 7.268   Downloading urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+#9 7.435 Collecting greenlet>=1 (from sqlalchemy==2.0.52->-r /app/requirements.txt (line 14))
+#9 7.452   Downloading greenlet-3.5.6-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+#9 7.473 Collecting typing-extensions>=4.6.0 (from sqlalchemy==2.0.52->-r /app/requirements.txt (line 14))
+#9 7.486   Downloading typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+#9 7.512 Collecting altair!=5.4.0,!=5.4.1,<7,>=5.0.0 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 7.524   Downloading altair-6.3.0-py3-none-any.whl.metadata (11 kB)
+#9 7.549 Collecting click<9,>=7.0 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 7.566   Downloading click-8.5.0-py3-none-any.whl.metadata (2.6 kB)
+#9 7.702 Collecting pillow<13,>=7.1.0 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 7.718   Downloading pillow-12.3.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl.metadata (9.1 kB)
+#9 7.738 Collecting pydeck<1,>=0.8.0b4 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 7.757   Downloading pydeck-0.9.3-py2.py3-none-any.whl.metadata (4.2 kB)
+#9 7.975 Collecting protobuf<8,>=5.26.1 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 7.989   Downloading protobuf-7.36.2-cp310-abi3-manylinux2014_x86_64.whl.metadata (595 bytes)
+#9 8.011 Collecting toml<2,>=0.10.1 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.025   Downloading toml-0.10.2-py2.py3-none-any.whl.metadata (7.1 kB)
+#9 8.069 Collecting starlette<2,>=0.46.0 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.082   Downloading starlette-1.7.0-py3-none-any.whl.metadata (6.6 kB)
+#9 8.139 Collecting httptools<1,>=0.6.3 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.160   Downloading httptools-0.8.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (3.5 kB)
+#9 8.221 Collecting anyio<5,>=4.0.0 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.238   Downloading anyio-4.15.1-py3-none-any.whl.metadata (4.7 kB)
+#9 8.266 Collecting python-multipart<1,>=0.0.10 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.281   Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+#9 8.404 Collecting websockets<17,>=12.0.0 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.418   Downloading websockets-16.1.1-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (6.8 kB)
+#9 8.435 Collecting itsdangerous<3,>=2.1.2 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.453   Downloading itsdangerous-2.2.0-py3-none-any.whl.metadata (1.9 kB)
+#9 8.495 Collecting watchdog<7,>=2.1.5 (from streamlit==1.63.0->-r /app/requirements.txt (line 16))
+#9 8.511   Downloading watchdog-6.0.0-py3-none-manylinux2014_x86_64.whl.metadata (44 kB)
+#9 8.538 Collecting h11>=0.8 (from uvicorn==0.53.0->-r requirements-dev.txt (line 19))
+#9 8.550   Downloading h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+#9 8.569 Collecting branca>=0.6.0 (from folium==0.20.0->-r /app/requirements.txt (line 17))
+#9 8.589   Downloading branca-0.8.2-py3-none-any.whl.metadata (1.7 kB)
+#9 8.609 Collecting jinja2>=2.9 (from folium==0.20.0->-r /app/requirements.txt (line 17))
+#9 8.623   Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+#9 8.649 Collecting xyzservices (from folium==0.20.0->-r /app/requirements.txt (line 17))
+#9 8.664   Downloading xyzservices-2026.9.1-py3-none-any.whl.metadata (4.1 kB)
+#9 8.716 Collecting narwhals>=2.0.1 (from scikit-learn==1.9.0->-r /app/requirements.txt (line 32))
+#9 8.731   Downloading narwhals-2.26.0-py3-none-any.whl.metadata (15 kB)
+#9 8.752 Collecting threadpoolctl>=3.5.0 (from scikit-learn==1.9.0->-r /app/requirements.txt (line 32))
+#9 8.764   Downloading threadpoolctl-3.7.0-py3-none-any.whl.metadata (24 kB)
+#9 8.786 Collecting affine (from rasterio==1.4.4->-r /app/requirements.txt (line 41))
+#9 8.798   Downloading affine-3.0.1-py3-none-any.whl.metadata (4.5 kB)
+#9 8.816 Collecting attrs (from rasterio==1.4.4->-r /app/requirements.txt (line 41))
+#9 8.831   Downloading attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+#9 8.853 Collecting cligj>=0.5 (from rasterio==1.4.4->-r /app/requirements.txt (line 41))
+#9 8.875   Downloading cligj-0.7.2-py3-none-any.whl.metadata (5.0 kB)
+#9 8.890 Collecting click-plugins (from rasterio==1.4.4->-r /app/requirements.txt (line 41))
+#9 8.907   Downloading click_plugins-1.1.1.2-py2.py3-none-any.whl.metadata (6.5 kB)
+#9 8.931 Collecting pyparsing (from rasterio==1.4.4->-r /app/requirements.txt (line 41))
+#9 8.944   Downloading pyparsing-3.3.3-py3-none-any.whl.metadata (5.9 kB)
+#9 9.088 Collecting sklearn-compat<0.2,>=0.1.6 (from imbalanced-learn==0.14.2->-r /app/requirements.txt (line 50))
+#9 9.102   Downloading sklearn_compat-0.1.6-py3-none-any.whl.metadata (22 kB)
+#9 9.126 Collecting nvidia-nccl-cu13 (from xgboost==3.4.1->-r requirements-dev.txt (line 9))
+#9 9.139   Downloading nvidia_nccl_cu13-2.32.3-py3-none-manylinux_2_27_x86_64.whl.metadata (2.1 kB)
+#9 9.155 Collecting iniconfig>=1.0.1 (from pytest==9.1.1->-r requirements-dev.txt (line 10))
+#9 9.167   Downloading iniconfig-2.3.1-py3-none-any.whl.metadata (2.8 kB)
+#9 9.186 Collecting pluggy<2,>=1.5 (from pytest==9.1.1->-r requirements-dev.txt (line 10))
+#9 9.200   Downloading pluggy-1.6.0-py3-none-any.whl.metadata (4.8 kB)
+#9 9.222 Collecting pygments>=2.7.2 (from pytest==9.1.1->-r requirements-dev.txt (line 10))
+#9 9.233   Downloading pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+#9 9.592 Collecting coverage>=7.10.6 (from coverage[toml]>=7.10.6->pytest-cov==7.1.0->-r requirements-dev.txt (line 11))
+#9 9.651   Downloading coverage-7.16.2-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (8.2 kB)
+#9 9.687 Collecting mccabe<0.8.0,>=0.7.0 (from flake8==7.3.0->-r requirements-dev.txt (line 12))
+#9 9.707   Downloading mccabe-0.7.0-py2.py3-none-any.whl.metadata (5.0 kB)
+#9 9.727 Collecting pycodestyle<2.15.0,>=2.14.0 (from flake8==7.3.0->-r requirements-dev.txt (line 12))
+#9 9.742   Downloading pycodestyle-2.14.0-py2.py3-none-any.whl.metadata (4.5 kB)
+#9 9.767 Collecting pyflakes<3.5.0,>=3.4.0 (from flake8==7.3.0->-r requirements-dev.txt (line 12))
+#9 9.785   Downloading pyflakes-3.4.0-py2.py3-none-any.whl.metadata (3.5 kB)
+#9 9.823 Collecting mypy-extensions>=0.4.3 (from black==26.5.1->-r requirements-dev.txt (line 13))
+#9 9.841   Downloading mypy_extensions-1.1.0-py3-none-any.whl.metadata (1.1 kB)
+#9 9.860 Collecting pathspec>=1.0.0 (from black==26.5.1->-r requirements-dev.txt (line 13))
+#9 9.875   Downloading pathspec-1.1.1-py3-none-any.whl.metadata (14 kB)
+#9 9.911 Collecting platformdirs>=2 (from black==26.5.1->-r requirements-dev.txt (line 13))
+#9 9.936   Downloading platformdirs-4.12.4-py3-none-any.whl.metadata (5.5 kB)
+#9 9.955 Collecting pytokens~=0.4.0 (from black==26.5.1->-r requirements-dev.txt (line 13))
+#9 9.979   Downloading pytokens-0.4.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+#9 10.00 Collecting configargparse>=1.7.1 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.01   Downloading configargparse-1.8.0-py3-none-any.whl.metadata (23 kB)
+#9 10.03 Collecting flask-cors>=3.0.10 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.05   Downloading flask_cors-6.0.5-py3-none-any.whl.metadata (5.4 kB)
+#9 10.08 Collecting flask-login>=0.6.3 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.10   Downloading Flask_Login-0.6.3-py3-none-any.whl.metadata (5.8 kB)
+#9 10.12 Collecting flask>=2.0.0 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.15   Downloading flask-3.1.3-py3-none-any.whl.metadata (3.2 kB)
+#9 10.25 Collecting gevent>=24.10.1 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.27   Downloading gevent-26.9.0-cp314-cp314-manylinux_2_28_x86_64.whl.metadata (14 kB)
+#9 10.57 Collecting geventhttpclient>=2.3.1 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.58   Downloading geventhttpclient-2.6.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (12 kB)
+#9 10.65 Collecting msgpack>=1.0.0 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.67   Downloading msgpack-1.2.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (8.3 kB)
+#9 10.74 Collecting psutil>=5.9.1 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.77   Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl.metadata (22 kB)
+#9 10.79 Collecting python-engineio>=4.12.2 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.82   Downloading python_engineio-4.14.0-py3-none-any.whl.metadata (2.5 kB)
+#9 10.85 Collecting python-socketio>=5.13.0 (from python-socketio[client]>=5.13.0->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 10.87   Downloading python_socketio-5.17.0-py3-none-any.whl.metadata (3.6 kB)
+#9 11.06 Collecting pyzmq>=25.0.0 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 11.31   Downloading pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl.metadata (3.8 kB)
+#9 11.35 Collecting werkzeug>=2.0.0 (from locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 11.37   Downloading werkzeug-3.1.9-py3-none-any.whl.metadata (4.1 kB)
+#9 11.45 Collecting pydantic>=2.9.0 (from fastapi==0.141.1->-r requirements-dev.txt (line 18))
+#9 11.47   Downloading pydantic-2.14.0-py3-none-any.whl.metadata (131 kB)
+#9 11.50 Collecting typing-inspection>=0.4.2 (from fastapi==0.141.1->-r requirements-dev.txt (line 18))
+#9 11.51   Downloading typing_inspection-0.4.4-py3-none-any.whl.metadata (2.6 kB)
+#9 11.53 Collecting annotated-doc>=0.0.2 (from fastapi==0.141.1->-r requirements-dev.txt (line 18))
+#9 11.56   Downloading annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+#9 11.58 Collecting httpcore==1.* (from httpx==0.28.1->-r requirements-dev.txt (line 22))
+#9 11.60   Downloading httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+#9 11.63 Collecting jsonschema<5.0.0,>=4.26.0 (from openapi-spec-validator==0.9.0->-r requirements-dev.txt (line 26))
+#9 11.65   Downloading jsonschema-4.26.0-py3-none-any.whl.metadata (7.6 kB)
+#9 11.68 Collecting jsonschema-path<0.6.0,>=0.5.0 (from openapi-spec-validator==0.9.0->-r requirements-dev.txt (line 26))
+#9 11.69   Downloading jsonschema_path-0.5.0-py3-none-any.whl.metadata (8.1 kB)
+#9 11.73 Collecting lazy-object-proxy<2.0,>=1.7.1 (from openapi-spec-validator==0.9.0->-r requirements-dev.txt (line 26))
+#9 11.75   Downloading lazy_object_proxy-1.12.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl.metadata (5.1 kB)
+#9 11.77 Collecting pydantic-settings<3.0.0,>=2.0.0 (from openapi-spec-validator==0.9.0->-r requirements-dev.txt (line 26))
+#9 11.79   Downloading pydantic_settings-2.15.0-py3-none-any.whl.metadata (3.9 kB)
+#9 11.81 Collecting jsonschema-specifications>=2024.10.1 (from openapi-schema-validator==0.9.0->-r requirements-dev.txt (line 27))
+#9 11.82   Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl.metadata (2.9 kB)
+#9 11.84 Collecting referencing<0.38.0,>=0.37.0 (from openapi-schema-validator==0.9.0->-r requirements-dev.txt (line 27))
+#9 11.85   Downloading referencing-0.37.0-py3-none-any.whl.metadata (2.8 kB)
+#9 11.87 Collecting rfc3339-validator (from openapi-schema-validator==0.9.0->-r requirements-dev.txt (line 27))
+#9 11.88   Downloading rfc3339_validator-0.1.4-py2.py3-none-any.whl.metadata (1.5 kB)
+#9 12.09 Collecting rpds-py>=0.25.0 (from jsonschema<5.0.0,>=4.26.0->openapi-spec-validator==0.9.0->-r requirements-dev.txt (line 26))
+#9 12.10   Downloading rpds_py-2026.9.1-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (4.1 kB)
+#9 12.12 Collecting pathable<0.7.0,>=0.6.0 (from jsonschema-path<0.6.0,>=0.5.0->openapi-spec-validator==0.9.0->-r requirements-dev.txt (line 26))
+#9 12.14   Downloading pathable-0.6.0-py3-none-any.whl.metadata (7.2 kB)
+#9 12.17 Collecting annotated-types>=0.6.0 (from pydantic>=2.9.0->fastapi==0.141.1->-r requirements-dev.txt (line 18))
+#9 12.18   Downloading annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+#9 12.70 Collecting pydantic-core==2.50.0 (from pydantic>=2.9.0->fastapi==0.141.1->-r requirements-dev.txt (line 18))
+#9 12.71   Downloading pydantic_core-2.50.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl.metadata (6.5 kB)
+#9 12.76 Collecting blinker>=1.9.0 (from flask>=2.0.0->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 12.77   Downloading blinker-1.9.0-py3-none-any.whl.metadata (1.6 kB)
+#9 12.82 Collecting markupsafe>=2.1.1 (from flask>=2.0.0->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 12.84   Downloading markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl.metadata (2.7 kB)
+#9 12.86 Collecting zope.event (from gevent>=24.10.1->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 12.88   Downloading zope_event-6.2-py3-none-any.whl.metadata (5.4 kB)
+#9 12.97 Collecting zope.interface (from gevent>=24.10.1->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 12.99   Downloading zope_interface-8.6-cp314-cp314-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl.metadata (47 kB)
+#9 13.02 Collecting brotli (from geventhttpclient>=2.3.1->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 13.04   Downloading brotli-1.2.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl.metadata (6.1 kB)
+#9 13.07 Collecting six>=1.5 (from python-dateutil>=2.8.2->pandas==3.0.5->-r /app/requirements.txt (line 6))
+#9 13.08   Downloading six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+#9 13.10 Collecting simple-websocket>=0.10.0 (from python-engineio>=4.12.2->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 13.11   Downloading simple_websocket-1.1.0-py3-none-any.whl.metadata (1.5 kB)
+#9 13.13 Collecting bidict>=0.21.0 (from python-socketio>=5.13.0->python-socketio[client]>=5.13.0->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 13.15   Downloading bidict-0.24.1-py3-none-any.whl.metadata (8.7 kB)
+#9 13.17 Collecting websocket-client>=0.54.0 (from python-socketio[client]>=5.13.0->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 13.19   Downloading websocket_client-1.9.2-py3-none-any.whl.metadata (8.3 kB)
+#9 13.20 Collecting wsproto (from simple-websocket>=0.10.0->python-engineio>=4.12.2->locust==2.46.5->-r requirements-dev.txt (line 14))
+#9 13.22   Downloading wsproto-1.3.2-py3-none-any.whl.metadata (5.2 kB)
+#9 13.37 Downloading pandas-3.0.5-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (11.0 MB)
+#9 14.72    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 11.0/11.0 MB 8.1 MB/s  0:00:01
+#9 14.73 Downloading numpy-2.5.2-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (16.7 MB)
+#9 15.54    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 16.7/16.7 MB 20.9 MB/s  0:00:00
+#9 15.55 Downloading geopandas-1.1.4-py3-none-any.whl (343 kB)
+#9 15.71 Downloading shapely-2.1.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (3.1 MB)
+#9 15.81    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 3.1/3.1 MB 32.8 MB/s  0:00:00
+#9 16.19 Downloading pyproj-3.7.2-cp314-cp314-manylinux_2_28_x86_64.whl (9.5 MB)
+#9 17.55    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 9.5/9.5 MB 6.9 MB/s  0:00:01
+#9 17.57 Downloading requests-2.34.2-py3-none-any.whl (73 kB)
+#9 17.59 Downloading tenacity-9.1.4-py3-none-any.whl (28 kB)
+#9 17.61 Downloading psycopg2_binary-2.9.12-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (4.3 MB)
+#9 18.04    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 4.3/4.3 MB 10.0 MB/s  0:00:00
+#9 18.05 Downloading sqlalchemy-2.0.52-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (3.3 MB)
+#9 18.42    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 3.3/3.3 MB 8.9 MB/s  0:00:00
+#9 18.44 Downloading geoalchemy2-0.20.0-py3-none-any.whl (96 kB)
+#9 18.46 Downloading streamlit-1.63.0-py3-none-any.whl (10.5 MB)
+#9 19.32    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 10.5/10.5 MB 12.2 MB/s  0:00:00
+#9 19.34 Downloading pyarrow-25.0.1-cp314-cp314-manylinux_2_28_x86_64.whl (50.1 MB)
+#9 21.46    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 50.1/50.1 MB 23.7 MB/s  0:00:02
+#9 21.48 Downloading uvicorn-0.53.0-py3-none-any.whl (87 kB)
+#9 21.50 Downloading folium-0.20.0-py2.py3-none-any.whl (113 kB)
+#9 21.51 Downloading streamlit_folium-0.27.4-py3-none-any.whl (536 kB)
+#9 21.54    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 536.9/536.9 kB 27.7 MB/s  0:00:00
+#9 21.55 Downloading python_dotenv-1.2.3-py3-none-any.whl (22 kB)
+#9 21.69 Downloading scikit_learn-1.9.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (9.1 MB)
+#9 22.75    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 9.1/9.1 MB 8.5 MB/s  0:00:01
+#9 22.78 Downloading joblib-1.5.3-py3-none-any.whl (309 kB)
+#9 22.94 Downloading rasterio-1.4.4-cp314-cp314-manylinux_2_28_x86_64.whl (35.4 MB)
+#9 29.07    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 35.4/35.4 MB 5.7 MB/s  0:00:06
+#9 29.09 Downloading imbalanced_learn-0.14.2-py3-none-any.whl (236 kB)
+#9 29.11 Downloading scipy-1.18.1-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (35.3 MB)
+#9 30.84    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 35.3/35.3 MB 20.9 MB/s  0:00:01
+#9 30.85 Downloading xgboost-3.4.1-py3-none-manylinux_2_28_x86_64.whl (57.6 MB)
+#9 33.81    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 57.6/57.6 MB 19.5 MB/s  0:00:02
+#9 33.82 Downloading pytest-9.1.1-py3-none-any.whl (386 kB)
+#9 33.88 Downloading pytest_cov-7.1.0-py3-none-any.whl (22 kB)
+#9 33.90 Downloading flake8-7.3.0-py2.py3-none-any.whl (57 kB)
+#9 34.06 Downloading black-26.5.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (1.9 MB)
+#9 34.18    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 1.9/1.9 MB 14.7 MB/s  0:00:00
+#9 34.32 Downloading locust-2.46.5-py3-none-any.whl (1.5 MB)
+#9 34.51    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 1.5/1.5 MB 7.5 MB/s  0:00:00
+#9 34.53 Downloading fastapi-0.141.1-py3-none-any.whl (131 kB)
+#9 34.56 Downloading httpx-0.28.1-py3-none-any.whl (73 kB)
+#9 34.59 Downloading pyyaml-6.0.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (794 kB)
+#9 34.64    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 794.2/794.2 kB 14.4 MB/s  0:00:00
+#9 34.66 Downloading openapi_spec_validator-0.9.0-py3-none-any.whl (50 kB)
+#9 34.68 Downloading openapi_schema_validator-0.9.0-py3-none-any.whl (19 kB)
+#9 34.70 Downloading altair-6.3.0-py3-none-any.whl (797 kB)
+#9 34.85    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 797.2/797.2 kB 9.4 MB/s  0:00:00
+#9 34.86 Downloading anyio-4.15.1-py3-none-any.whl (132 kB)
+#9 34.89 Downloading charset_normalizer-3.5.2-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (255 kB)
+#9 34.92 Downloading click-8.5.0-py3-none-any.whl (125 kB)
+#9 34.94 Downloading httpcore-1.0.9-py3-none-any.whl (78 kB)
+#9 34.96 Downloading httptools-0.8.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (481 kB)
+#9 35.02 Downloading idna-3.20-py3-none-any.whl (69 kB)
+#9 35.04 Downloading itsdangerous-2.2.0-py3-none-any.whl (16 kB)
+#9 35.06 Downloading jsonschema-4.26.0-py3-none-any.whl (90 kB)
+#9 35.08 Downloading jsonschema_path-0.5.0-py3-none-any.whl (24 kB)
+#9 35.10 Downloading lazy_object_proxy-1.12.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (71 kB)
+#9 35.13 Downloading mccabe-0.7.0-py2.py3-none-any.whl (7.3 kB)
+#9 35.15 Downloading pathable-0.6.0-py3-none-any.whl (18 kB)
+#9 35.16 Downloading pillow-12.3.0-cp314-cp314-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl (6.9 MB)
+#9 35.58    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 6.9/6.9 MB 17.1 MB/s  0:00:00
+#9 35.59 Downloading pluggy-1.6.0-py3-none-any.whl (20 kB)
+#9 35.61 Downloading protobuf-7.36.2-cp310-abi3-manylinux2014_x86_64.whl (343 kB)
+#9 35.65 Downloading pycodestyle-2.14.0-py2.py3-none-any.whl (31 kB)
+#9 35.66 Downloading pydantic-2.14.0-py3-none-any.whl (487 kB)
+#9 35.70 Downloading pydantic_core-2.50.0-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (2.2 MB)
+#9 35.81    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 2.2/2.2 MB 20.9 MB/s  0:00:00
+#9 35.83 Downloading pydantic_settings-2.15.0-py3-none-any.whl (69 kB)
+#9 35.85 Downloading pydeck-0.9.3-py2.py3-none-any.whl (11.4 MB)
+#9 36.52    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 11.4/11.4 MB 17.7 MB/s  0:00:00
+#9 36.53 Downloading pyflakes-3.4.0-py2.py3-none-any.whl (63 kB)
+#9 36.55 Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+#9 36.56 Downloading pytokens-0.4.1-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (268 kB)
+#9 36.60 Downloading referencing-0.37.0-py3-none-any.whl (26 kB)
+#9 36.61 Downloading sklearn_compat-0.1.6-py3-none-any.whl (22 kB)
+#9 36.63 Downloading starlette-1.7.0-py3-none-any.whl (78 kB)
+#9 36.65 Downloading threadpoolctl-3.7.0-py3-none-any.whl (26 kB)
+#9 36.66 Downloading toml-0.10.2-py2.py3-none-any.whl (16 kB)
+#9 36.67 Downloading typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+#9 36.69 Downloading urllib3-2.8.0-py3-none-any.whl (135 kB)
+#9 36.71 Downloading watchdog-6.0.0-py3-none-manylinux2014_x86_64.whl (79 kB)
+#9 36.73 Downloading websockets-16.1.1-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (187 kB)
+#9 36.75 Downloading annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+#9 36.77 Downloading annotated_types-0.8.0-py3-none-any.whl (13 kB)
+#9 36.78 Downloading attrs-26.1.0-py3-none-any.whl (67 kB)
+#9 36.80 Downloading branca-0.8.2-py3-none-any.whl (26 kB)
+#9 36.81 Downloading certifi-2026.7.22-py3-none-any.whl (136 kB)
+#9 36.83 Downloading cligj-0.7.2-py3-none-any.whl (7.1 kB)
+#9 36.85 Downloading configargparse-1.8.0-py3-none-any.whl (34 kB)
+#9 36.86 Downloading coverage-7.16.2-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (258 kB)
+#9 36.90 Downloading flask-3.1.3-py3-none-any.whl (103 kB)
+#9 36.92 Downloading blinker-1.9.0-py3-none-any.whl (8.5 kB)
+#9 36.93 Downloading flask_cors-6.0.5-py3-none-any.whl (16 kB)
+#9 36.95 Downloading Flask_Login-0.6.3-py3-none-any.whl (17 kB)
+#9 36.96 Downloading gevent-26.9.0-cp314-cp314-manylinux_2_28_x86_64.whl (2.2 MB)
+#9 37.17    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 2.2/2.2 MB 11.3 MB/s  0:00:00
+#9 37.19 Downloading geventhttpclient-2.6.0-cp314-cp314-manylinux1_x86_64.manylinux_2_28_x86_64.manylinux_2_5_x86_64.whl (163 kB)
+#9 37.21 Downloading greenlet-3.5.6-cp314-cp314-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl (670 kB)
+#9 37.27    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 670.8/670.8 kB 13.1 MB/s  0:00:00
+#9 37.28 Downloading h11-0.16.0-py3-none-any.whl (37 kB)
+#9 37.30 Downloading iniconfig-2.3.1-py3-none-any.whl (7.6 kB)
+#9 37.31 Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+#9 37.33 Downloading jsonschema_specifications-2025.9.1-py3-none-any.whl (18 kB)
+#9 37.34 Downloading markupsafe-3.0.4-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (23 kB)
+#9 37.36 Downloading msgpack-1.2.3-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl (462 kB)
+#9 37.40 Downloading mypy_extensions-1.1.0-py3-none-any.whl (5.0 kB)
+#9 37.42 Downloading narwhals-2.26.0-py3-none-any.whl (474 kB)
+#9 37.46 Downloading packaging-26.3-py3-none-any.whl (129 kB)
+#9 37.49 Downloading pathspec-1.1.1-py3-none-any.whl (57 kB)
+#9 37.50 Downloading platformdirs-4.12.4-py3-none-any.whl (32 kB)
+#9 37.52 Downloading psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl (155 kB)
+#9 37.54 Downloading pygments-2.21.0-py3-none-any.whl (1.3 MB)
+#9 37.61    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 1.3/1.3 MB 18.9 MB/s  0:00:00
+#9 37.63 Downloading pyogrio-0.13.0-cp311-abi3-manylinux_2_28_x86_64.whl (33.3 MB)
+#9 39.26    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 33.3/33.3 MB 20.4 MB/s  0:00:01
+#9 39.28 Downloading python_dateutil-2.9.0.post0-py2.py3-none-any.whl (229 kB)
+#9 39.31 Downloading python_engineio-4.14.0-py3-none-any.whl (60 kB)
+#9 39.32 Downloading python_socketio-5.17.0-py3-none-any.whl (82 kB)
+#9 39.34 Downloading bidict-0.24.1-py3-none-any.whl (36 kB)
+#9 39.36 Downloading pyzmq-27.2.0-cp312-abi3-manylinux_2_26_x86_64.manylinux_2_28_x86_64.whl (872 kB)
+#9 39.40    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 872.3/872.3 kB 25.5 MB/s  0:00:00
+#9 39.42 Downloading rpds_py-2026.9.1-cp314-cp314-manylinux_2_17_x86_64.manylinux2014_x86_64.whl (371 kB)
+#9 39.45 Downloading simple_websocket-1.1.0-py3-none-any.whl (13 kB)
+#9 39.47 Downloading six-1.17.0-py2.py3-none-any.whl (11 kB)
+#9 39.48 Downloading typing_inspection-0.4.4-py3-none-any.whl (14 kB)
+#9 39.49 Downloading websocket_client-1.9.2-py3-none-any.whl (95 kB)
+#9 39.51 Downloading werkzeug-3.1.9-py3-none-any.whl (228 kB)
+#9 39.54 Downloading affine-3.0.1-py3-none-any.whl (10 kB)
+#9 39.56 Downloading brotli-1.2.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl (1.4 MB)
+#9 39.66    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 1.4/1.4 MB 15.7 MB/s  0:00:00
+#9 39.73 Downloading click_plugins-1.1.1.2-py2.py3-none-any.whl (11 kB)
+#9 39.76 Downloading nvidia_nccl_cu13-2.32.3-py3-none-manylinux_2_27_x86_64.whl (305.1 MB)
+#9 53.58    ÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöüÔöü 305.1/305.1 MB 22.2 MB/s  0:00:13
+#9 53.59 Downloading pyparsing-3.3.3-py3-none-any.whl (126 kB)
+#9 53.61 Downloading rfc3339_validator-0.1.4-py2.py3-none-any.whl (3.5 kB)
+#9 53.62 Downloading wsproto-1.3.2-py3-none-any.whl (24 kB)
+#9 53.64 Downloading xyzservices-2026.9.1-py3-none-any.whl (98 kB)
+#9 53.66 Downloading zope_event-6.2-py3-none-any.whl (6.5 kB)
+#9 53.68 Downloading zope_interface-8.6-cp314-cp314-manylinux1_x86_64.manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_5_x86_64.whl (270 kB)
+#9 54.47 Installing collected packages: brotli, zope.interface, zope.event, xyzservices, websockets, websocket-client, watchdog, urllib3, typing-extensions, toml, threadpoolctl, tenacity, six, rpds-py, pyzmq, PyYAML, pytokens, python-multipart, python-dotenv, pyparsing, pygments, pyflakes, pycodestyle, pyarrow, psycopg2-binary, psutil, protobuf, pluggy, platformdirs, pillow, pathspec, pathable, packaging, nvidia-nccl-cu13, numpy, narwhals, mypy-extensions, msgpack, mccabe, markupsafe, lazy-object-proxy, joblib, itsdangerous, iniconfig, idna, httptools, h11, greenlet, coverage, configargparse, click, charset_normalizer, certifi, blinker, bidict, attrs, annotated-types, annotated-doc, wsproto, werkzeug, uvicorn, typing-inspection, sqlalchemy, shapely, scipy, rfc3339-validator, requests, referencing, python-dateutil, pytest, pyproj, pyogrio, pydantic-core, jinja2, httpcore, gevent, flake8, cligj, click-plugins, black, anyio, affine, xgboost, starlette, simple-websocket, scikit-learn, rasterio, pytest-cov, pydeck, pydantic, pandas, jsonschema-specifications, jsonschema-path, httpx, geventhttpclient, geoalchemy2, flask, branca, sklearn-compat, python-engineio, pydantic-settings, jsonschema, geopandas, folium, flask-login, flask-cors, fastapi, python-socketio, openapi-schema-validator, imbalanced-learn, altair, streamlit, openapi-spec-validator, streamlit-folium, locust
+#9 87.46 
+#9 87.47 Successfully installed PyYAML-6.0.3 affine-3.0.1 altair-6.3.0 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.15.1 attrs-26.1.0 bidict-0.24.1 black-26.5.1 blinker-1.9.0 branca-0.8.2 brotli-1.2.0 certifi-2026.7.22 charset_normalizer-3.5.2 click-8.5.0 click-plugins-1.1.1.2 cligj-0.7.2 configargparse-1.8.0 coverage-7.16.2 fastapi-0.141.1 flake8-7.3.0 flask-3.1.3 flask-cors-6.0.5 flask-login-0.6.3 folium-0.20.0 geoalchemy2-0.20.0 geopandas-1.1.4 gevent-26.9.0 geventhttpclient-2.6.0 greenlet-3.5.6 h11-0.16.0 httpcore-1.0.9 httptools-0.8.0 httpx-0.28.1 idna-3.20 imbalanced-learn-0.14.2 iniconfig-2.3.1 itsdangerous-2.2.0 jinja2-3.1.6 joblib-1.5.3 jsonschema-4.26.0 jsonschema-path-0.5.0 jsonschema-specifications-2025.9.1 lazy-object-proxy-1.12.0 locust-2.46.5 markupsafe-3.0.4 mccabe-0.7.0 msgpack-1.2.3 mypy-extensions-1.1.0 narwhals-2.26.0 numpy-2.5.2 nvidia-nccl-cu13-2.32.3 openapi-schema-validator-0.9.0 openapi-spec-validator-0.9.0 packaging-26.3 pandas-3.0.5 pathable-0.6.0 pathspec-1.1.1 pillow-12.3.0 platformdirs-4.12.4 pluggy-1.6.0 protobuf-7.36.2 psutil-7.2.2 psycopg2-binary-2.9.12 pyarrow-25.0.1 pycodestyle-2.14.0 pydantic-2.14.0 pydantic-core-2.50.0 pydantic-settings-2.15.0 pydeck-0.9.3 pyflakes-3.4.0 pygments-2.21.0 pyogrio-0.13.0 pyparsing-3.3.3 pyproj-3.7.2 pytest-9.1.1 pytest-cov-7.1.0 python-dateutil-2.9.0.post0 python-dotenv-1.2.3 python-engineio-4.14.0 python-multipart-0.0.32 python-socketio-5.17.0 pytokens-0.4.1 pyzmq-27.2.0 rasterio-1.4.4 referencing-0.37.0 requests-2.34.2 rfc3339-validator-0.1.4 rpds-py-2026.9.1 scikit-learn-1.9.0 scipy-1.18.1 shapely-2.1.2 simple-websocket-1.1.0 six-1.17.0 sklearn-compat-0.1.6 sqlalchemy-2.0.52 starlette-1.7.0 streamlit-1.63.0 streamlit-folium-0.27.4 tenacity-9.1.4 threadpoolctl-3.7.0 toml-0.10.2 typing-extensions-4.16.0 typing-inspection-0.4.4 urllib3-2.8.0 uvicorn-0.53.0 watchdog-6.0.0 websocket-client-1.9.2 websockets-16.1.1 werkzeug-3.1.9 wsproto-1.3.2 xgboost-3.4.1 xyzservices-2026.9.1 zope.event-6.2 zope.interface-8.6
+#9 87.47 WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+#9 DONE 88.9s
+System.Management.Automation.RemoteException
+#10 [6/7] COPY . .
+#10 DONE 0.4s
+System.Management.Automation.RemoteException
+#11 [7/7] RUN useradd --system --uid 10001 --no-create-home sapi
+#11 0.288 useradd warning: sapi's uid 10001 is greater than SYS_UID_MAX 999
+#11 DONE 0.3s
+System.Management.Automation.RemoteException
+#12 exporting to image
+#12 exporting layers
+#12 exporting layers 34.7s done
+#12 exporting manifest sha256:cc8bffd4835f607ccee580f6f9f2cbb491e17776e8b348d971e9335becfe394b 0.0s done
+#12 exporting config sha256:8cee9971b3dbd1968863a6b9280f7938046ba16115ade844aba82a023ca7b3e4 0.0s done
+#12 exporting attestation manifest sha256:f5461e55b76bd1c5f02fd30624e2d3974170c11dc12833315c30a28f87cb54f7 0.0s done
+#12 exporting manifest list sha256:7772c2ab5c845ac91914f2687bca7df44e2a1646cf88f39c980c3471f04cdc56 0.0s done
+#12 naming to docker.io/library/sapi-w0-ml:43c17fd done
+#12 unpacking to docker.io/library/sapi-w0-ml:43c17fd
+#12 unpacking to docker.io/library/sapi-w0-ml:43c17fd 11.5s done
+#12 DONE 46.3s
+exit=0
+$ docker run -d --name sapi-w0-ml-43e9e046 -e SAPI_REPRODUCIBILITY_MODE=1 sapi-w0-ml:43c17fd
+8b1d0c283a3b017e9b5ffe2d0afa53727caad20a98cc5b4a51d27c426b28d8ab
+exit=0
+$ docker exec sapi-w0-ml-43e9e046 python -c <health probe>
+{"status": null, "error": "URLError"}
+exit=0
+$ docker exec sapi-w0-ml-43e9e046 python -c <health probe>
+{"status": 200, "body": {"status": "ok", "model_version": "prototype_model_d_v1"}}
+exit=0
+$ docker exec sapi-w0-ml-43e9e046 python -c <POST /predict {} + fingerprint>
+{"status": 200, "n_cells": 50, "forecast_time": "2026-09-01T00:00:00Z", "first_cell": "VP-001", "first_score": 0.13129336874795144, "ranking_fingerprint": "33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff", "score_semantics": "relative_rank", "scientific_model_validation": false, "model_version": "prototype_model_d_v1"}
+exit=0
+$ docker exec sapi-w0-ml-43e9e046 id -u
+10001
+exit=0
+$ docker logs --tail 40 sapi-w0-ml-43e9e046
+INFO:     127.0.0.1:57374 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57380 - "POST /predict HTTP/1.1" 200 OK
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+exit=0
+$ docker rm -f sapi-w0-ml-43e9e046
+sapi-w0-ml-43e9e046
+exit=0

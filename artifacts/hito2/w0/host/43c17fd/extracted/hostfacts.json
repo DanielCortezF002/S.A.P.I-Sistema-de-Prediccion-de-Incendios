@@ -1,0 +1,36 @@
+{
+    "check":  "hostfacts",
+    "kind":  "W0.5 host facts",
+    "status":  "PASS",
+    "started_utc":  "2026-10-09T00:12:28Z",
+    "finished_utc":  "2026-10-09T00:12:33Z",
+    "expected":  {
+                     "docker_server":  "running",
+                     "docker_compose":  "\u003e= 2.24.0",
+                     "demo_ports_free":  "8501,8080,8000,5432",
+                     "git_core_autocrlf":  "false or unset",
+                     "git_worktree_clean":  0
+                 },
+    "observed":  {
+                     "os":  "Microsoft Windows NT 10.0.26200.0",
+                     "powershell":  "5.1.26100.9444",
+                     "machine":  "DANIEL",
+                     "docker_server":  "29.8.1",
+                     "docker_compose":  "5.5.1",
+                     "docker_info":  "Docker Desktop | CPUs=16 | MemTotal=8325332992",
+                     "demo_ports_free":  "busy=-",
+                     "legacy_volume_sapi_pgdata":  "absent",
+                     "disk_free_gb":  428.2,
+                     "git_core_autocrlf":  "false",
+                     "git_head":  "43c17fd9cc8614fa70e27e03aa1ff49d2462aed6",
+                     "git_worktree_clean":  0,
+                     "java":  "openjdk version \"21.0.12.1\" 2026-08-18 LTS",
+                     "python":  "Python 3.14.7",
+                     "py":  "Python 3.14.7",
+                     "execution_policy":  "Bypass"
+                 },
+    "failures":  [
+
+                 ],
+    "log":  "hostfacts.txt"
+}

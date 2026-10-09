@@ -1,0 +1,19 @@
+{
+    "schema":  "sapi-w0-host-checks-v1",
+    "sha":  "43c17fd9cc8614fa70e27e03aa1ff49d2462aed6",
+    "started_utc":  "2026-10-09T00:12:25Z",
+    "finished_utc":  "2026-10-09T00:12:27Z",
+    "machine":  "DANIEL",
+    "powershell":  "5.1.26100.9444",
+    "checks":  [
+                   {
+                       "check":  "selftest",
+                       "kind":  "preflight self-test",
+                       "status":  "PASS",
+                       "failures":  [
+
+                                    ]
+                   }
+               ],
+    "overall":  "PASS"
+}

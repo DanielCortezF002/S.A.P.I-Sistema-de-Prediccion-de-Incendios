@@ -1,0 +1,23 @@
+{
+    "check":  "container-smoke-backend",
+    "kind":  "W0.3 backend image smoke",
+    "status":  "PASS",
+    "started_utc":  "2026-10-09T00:14:59Z",
+    "finished_utc":  "2026-10-09T00:15:10Z",
+    "expected":  {
+                     "image_build":  "exit 0",
+                     "container_start":  "exit 0",
+                     "health":  "200 {\"status\":\"UP\"}",
+                     "container_uid":  "10001"
+                 },
+    "observed":  {
+                     "image_build":  "exit 0",
+                     "container_start":  "exit 0",
+                     "health":  "200 {\"status\":\"UP\"}",
+                     "container_uid":  "10001"
+                 },
+    "failures":  [
+
+                 ],
+    "log":  "container-smoke-backend.txt"
+}

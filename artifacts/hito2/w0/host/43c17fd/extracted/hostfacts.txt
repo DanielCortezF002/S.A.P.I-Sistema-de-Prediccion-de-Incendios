@@ -1,0 +1,35 @@
+# hostfacts - W0.5 host facts
+# sha=43c17fd9cc8614fa70e27e03aa1ff49d2462aed6 utc=2026-10-09T00:12:28Z
+$ docker version --format {{.Server.Version}}
+29.8.1
+exit=0
+$ docker compose version --short
+5.5.1
+exit=0
+$ docker info --format {{.OperatingSystem}} | CPUs={{.NCPU}} | MemTotal={{.MemTotal}}
+Docker Desktop | CPUs=16 | MemTotal=8325332992
+exit=0
+$ docker volume ls --format {{.Name}}
+n8n-sapi-ai-orchestrator_sapi_ai_orchestrator_n8n_data
+n8n_n8n_data
+exit=0
+$ git -C C:\Users\danie\AppData\Local\Temp\sapi-w0-43c17fd config --get core.autocrlf
+false
+exit=0
+$ git -C C:\Users\danie\AppData\Local\Temp\sapi-w0-43c17fd rev-parse HEAD
+43c17fd9cc8614fa70e27e03aa1ff49d2462aed6
+exit=0
+$ git -C C:\Users\danie\AppData\Local\Temp\sapi-w0-43c17fd status --porcelain
+
+exit=0
+$ java -version
+openjdk version "21.0.12.1" 2026-08-18 LTS
+OpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)
+OpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode, sharing)
+exit=0
+$ python --version
+Python 3.14.7
+exit=0
+$ py --version
+Python 3.14.7
+exit=0

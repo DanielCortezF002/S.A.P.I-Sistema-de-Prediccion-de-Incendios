@@ -1,0 +1,31 @@
+﻿SAPI-58 migration integration - 2026-10-08T21:15:44.1345167-03:00
+image=postgis/postgis:15-3.4 container=sapi58-mig-161ca78de81e (no volume, no published port)
+migrations: V001__enable_postgis.sql, V002__create_sapi_v2_schema.sql, V003__seed_celdas_geom.sql
+PASS  postgis-ready  
+PASS  apply V001__enable_postgis.sql  
+PASS  apply V002__create_sapi_v2_schema.sql  
+PASS  apply V003__seed_celdas_geom.sql  
+PASS  tables  celdas_geom,ejecuciones,predicciones_celda
+PASS  gist-index  CREATE INDEX celdas_geom_geom_gist ON public.celdas_geom USING gist (geom)
+PASS  cell-time-index  CREATE INDEX predicciones_celda_cell_time_idx ON public.predicciones_celda USING btree (cell_id, forecast_time DESC)
+PASS  50-cells  count=50
+PASS  cell-ids  VP-001..VP-050 distinct=50
+PASS  geometry-valid-4326  invalid=0
+PASS  cells-do-not-overlap  overlapping_pairs=0
+PASS  cell-area-km2  avg_km2=14.90
+PASS  no-probability-columns  count=0
+PASS  insert-ejecucion  id=1
+PASS  insert-predicciones  
+PASS  fk-unknown-cell  (rejected by predicciones_celda_celda_fk)
+PASS  fk-forecast-time-mismatch  (rejected by predicciones_celda_ejecucion_fk)
+PASS  score-above-1  (rejected by predicciones_celda_score_rango)
+PASS  duplicate-rank  (rejected by predicciones_celda_rank_unico)
+PASS  display-rank-above-rank  (rejected by predicciones_celda_display_rank_min)
+PASS  score-semantics  (rejected by ejecuciones_score_semantics_ranking)
+PASS  scientific-validation-true  (rejected by ejecuciones_sin_validacion_cientifica)
+PASS  duplicate-natural-key  (rejected by ejecuciones_clave_natural)
+PASS  fingerprint-not-hex  (rejected by ejecuciones_fingerprint_hex)
+PASS  bad-cell-id  (rejected by celdas_geom_cell_id_formato)
+PASS  cascade-delete  remaining=0
+PASS  container-removed  sapi58-mig-161ca78de81e
+RESULT: SAPI-58 clean PostGIS migration integration PASS

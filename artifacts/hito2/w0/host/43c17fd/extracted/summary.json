@@ -1,0 +1,51 @@
+{
+    "schema":  "sapi-w0-host-checks-v1",
+    "sha":  "43c17fd9cc8614fa70e27e03aa1ff49d2462aed6",
+    "started_utc":  "2026-10-09T00:12:28Z",
+    "finished_utc":  "2026-10-09T00:15:52Z",
+    "machine":  "DANIEL",
+    "powershell":  "5.1.26100.9444",
+    "checks":  [
+                   {
+                       "check":  "hostfacts",
+                       "kind":  "W0.5 host facts",
+                       "status":  "PASS",
+                       "failures":  [
+
+                                    ]
+                   },
+                   {
+                       "check":  "container-smoke-ml",
+                       "kind":  "W0.2 ML image smoke",
+                       "status":  "PASS",
+                       "failures":  [
+
+                                    ]
+                   },
+                   {
+                       "check":  "container-smoke-backend",
+                       "kind":  "W0.3 backend image smoke",
+                       "status":  "PASS",
+                       "failures":  [
+
+                                    ]
+                   },
+                   {
+                       "check":  "flyway-integration",
+                       "kind":  "W0.4 REAL FLYWAY INTEGRATION VALIDATION",
+                       "status":  "FAIL",
+                       "failures":  [
+                                        "flyway_schema_history"
+                                    ]
+                   },
+                   {
+                       "check":  "sql-migration-validation",
+                       "kind":  "SQL MIGRATION VALIDATION (psql, not Flyway)",
+                       "status":  "PASS",
+                       "failures":  [
+
+                                    ]
+                   }
+               ],
+    "overall":  "FAIL"
+}
