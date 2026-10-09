@@ -100,6 +100,7 @@ V2_LINT_PATHS = (
     "tests/test_openapi_contracts.py",
     "tests/test_ml_api.py",
     "tests/test_merge_gate.py",
+    "tests/test_w0_host_checks.py",
 )
 LEGACY_LINT_SCOPE = ("src", "app", "tests")
 FLAKE8_ARGS = ("--max-line-length=100", "--extend-ignore=E203,W503")

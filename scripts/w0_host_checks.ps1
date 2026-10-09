@@ -331,6 +331,55 @@ function Check-BackendContainer($r, [string]$log, [string]$short) {
     }
 }
 
+# --- flyway-integration helpers ---------------------------------------------
+# Flyway stores the version exactly as written in the file name, with leading
+# zeros (V001__x.sql -> "001"). The first Omen run (43c17fd) compared it against a
+# hand-written, unpadded 1/2/3 expectation and reported a HARNESS_FALSE_NEGATIVE.
+# Expectations are now derived from db/migration and compared semantically.
+
+# "001" -> "1", "1.0" -> "1.0", "1_1" -> "1.1" (Flyway accepts "_" as separator).
+function ConvertTo-FlywayVersionKey([string]$Version) {
+    $segments = @($Version.Trim() -split "[._]" | ForEach-Object {
+        $digits = $_.TrimStart("0")
+        if ($digits -eq "") { "0" } else { $digits }
+    })
+    return ($segments -join ".")
+}
+
+# Versions literally as they appear in db/migration/V<version>__<desc>.sql, sorted.
+function Get-ExpectedFlywayVersions([string]$MigrationDir) {
+    return @(Get-ChildItem -Path $MigrationDir -Filter "V*__*.sql" | Sort-Object Name | ForEach-Object {
+        ($_.Name -replace "^V", "") -replace "__.*$", ""
+    })
+}
+
+# Compares flyway_schema_history ("<version>:<success>,..." by installed_rank) with
+# the expected versions: same count, same order, semantically equal versions and
+# success=true for every row. Missing, extra, reordered or failed rows never match.
+function Compare-FlywayHistory([string[]]$ExpectedVersions, [string]$ObservedRaw) {
+    $observedRows = @()
+    if ($ObservedRaw) { $observedRows = @($ObservedRaw.Trim() -split "," | Where-Object { $_ -ne "" }) }
+    $expectedNormalized = @($ExpectedVersions | ForEach-Object { (ConvertTo-FlywayVersionKey $_) + ":true" })
+    $observedNormalized = @($observedRows | ForEach-Object {
+        $parts = $_ -split ":", 2
+        $success = $(if ($parts.Count -gt 1) { $parts[1].Trim().ToLower() } else { "missing" })
+        (ConvertTo-FlywayVersionKey $parts[0]) + ":" + $success
+    })
+    $match = ($expectedNormalized.Count -gt 0 -and $expectedNormalized.Count -eq $observedNormalized.Count)
+    if ($match) {
+        for ($i = 0; $i -lt $expectedNormalized.Count; $i++) {
+            if ($expectedNormalized[$i] -ne $observedNormalized[$i]) { $match = $false }
+        }
+    }
+    return [ordered]@{
+        expected_literal = (@($ExpectedVersions | ForEach-Object { $_ + ":true" }) -join ",")
+        observed_raw = $ObservedRaw
+        expected_normalized = ($expectedNormalized -join ",")
+        observed_normalized = ($observedNormalized -join ",")
+        match = $match
+    }
+}
+
 # --- flyway-integration (W0.4): REAL FLYWAY INTEGRATION VALIDATION -----------
 function Check-FlywayIntegration($r, [string]$log) {
     if (-not (Docker-Ready $log)) { Expect $r "docker" "running" "unavailable" $false; return }
@@ -341,6 +390,7 @@ function Check-FlywayIntegration($r, [string]$log) {
     $password = "sapi-w0-local-test"
     $migrations = (Resolve-Path (Join-Path $repo "db/migration")).Path
     $r.observed.migrations = (Get-ChildItem $migrations -Filter "V*__*.sql" | Sort-Object Name | ForEach-Object { $_.Name }) -join ", "
+    $expectedVersions = Get-ExpectedFlywayVersions $migrations
 
     function Psql([string]$Sql) {
         $res = Invoke-Native $log "docker" @("exec", $pg, "psql", "-X", "-q", "-v", "ON_ERROR_STOP=1", "-At", "-U", $user, "-d", $db, "-h", "127.0.0.1", "-c", $Sql)
@@ -372,7 +422,8 @@ function Check-FlywayIntegration($r, [string]$log) {
         Expect $r "network" "created" ("exit " + $n.code) ($n.code -eq 0)
         $run = Invoke-Native $log "docker" @(
             "run", "-d", "--name", $pg, "--network", $net, "--tmpfs", "/var/lib/postgresql/data",
-            "-e", "POSTGRES_USER=$user", "-e", "POSTGRES_PASSWORD=$password", "-e", "POSTGRES_DB=$db", $PostgisImage)
+            "-e", "POSTGRES_USER=$user", "-e", "POSTGRES_PASSWORD=$password", "-e", "POSTGRES_DB=$db", $PostgisImage) `
+            "docker run -d --name $pg --network $net --tmpfs /var/lib/postgresql/data -e POSTGRES_USER=$user -e POSTGRES_PASSWORD=*** -e POSTGRES_DB=$db $PostgisImage"
         Expect $r "postgis_start" "exit 0" ("exit " + $run.code) ($run.code -eq 0)
         if ($run.code -ne 0) { return }
         $ready = $false
@@ -387,7 +438,7 @@ function Check-FlywayIntegration($r, [string]$log) {
         $m1 = Flyway "migrate"
         $e1 = Executed $m1
         Expect $r "migrate_1_exit" 0 $m1.code ($m1.code -eq 0)
-        Expect $r "migrate_1_executed" 3 $e1 ($e1 -eq 3)
+        Expect $r "migrate_1_executed" $expectedVersions.Count $e1 ($e1 -eq $expectedVersions.Count)
         $v = Flyway "validate"
         Expect $r "validate_exit" 0 $v.code ($v.code -eq 0)
         $info = Flyway "info"
@@ -398,7 +449,12 @@ function Check-FlywayIntegration($r, [string]$log) {
         Expect $r "migrate_2_executed" 0 $e2 ($e2 -eq 0)
 
         $history = Psql "SELECT string_agg(version || ':' || success, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL"
-        Expect $r "flyway_schema_history" "1:true,2:true,3:true" $history ($history -eq "1:true,2:true,3:true")
+        $cmp = Compare-FlywayHistory $expectedVersions $history
+        $r.observed.flyway_history_expected_literal = $cmp.expected_literal
+        $r.observed.flyway_history_observed_raw = $cmp.observed_raw
+        $r.observed.flyway_history_expected_normalized = $cmp.expected_normalized
+        $r.observed.flyway_history_observed_normalized = $cmp.observed_normalized
+        Expect $r "flyway_schema_history" $cmp.expected_normalized $cmp.observed_normalized $cmp.match
         $tables = Psql "SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname='public' AND tablename IN ('celdas_geom','ejecuciones','predicciones_celda')"
         Expect $r "tables" "celdas_geom,ejecuciones,predicciones_celda" $tables ($tables -eq "celdas_geom,ejecuciones,predicciones_celda")
         $cells = Psql "SELECT count(*) FROM celdas_geom"
