@@ -1,0 +1,108 @@
+# backend-unit - mvnw -B verify -DskipITs (JDK 21)
+# utc=2026-10-09T04:42:09Z
+
+$ sh mvnw -B verify -DskipITs   (cwd=<fresh-clone>/services/backend)
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=35105 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------------< cl.sapi:backend >---------------------------
+[INFO] Building backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ backend ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 2 source files with javac [debug parameters release 21] to target/classes
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ backend ---
+[INFO] skip non existing resourceDirectory <fresh-clone>/services/backend/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 2 source files with javac [debug parameters release 21] to target/test-classes
+[INFO] <fresh-clone>/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: <fresh-clone>/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java uses unchecked or unsafe operations.
+[INFO] <fresh-clone>/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=35105 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
+[INFO] Running cl.sapi.backend.HealthControllerTests
+04:42:19.451 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.HealthControllerTests]: HealthControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+04:42:19.582 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.HealthControllerTests
+04:42:19.723 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.HealthControllerTests]: HealthControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+04:42:19.726 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.HealthControllerTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-09T04:42:20.196Z  INFO 7057 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Starting HealthControllerTests using Java 21.0.12.1 with PID 7057 (started by root in <fresh-clone>/services/backend)
+2026-10-09T04:42:20.198Z  INFO 7057 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : No active profile set, falling back to 1 default profile: "default"
+2026-10-09T04:42:21.411Z  INFO 7057 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-09T04:42:21.432Z  INFO 7057 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-09T04:42:21.433Z  INFO 7057 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-09T04:42:21.475Z  INFO 7057 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1244 ms
+2026-10-09T04:42:21.941Z  INFO 7057 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 41445 (http) with context path '/'
+2026-10-09T04:42:21.949Z  INFO 7057 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Started HealthControllerTests in 2.159 seconds (process running for 3.545)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+WARNING: A Java agent has been loaded dynamically (/root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+2026-10-09T04:42:23.496Z  INFO 7057 --- [sapi-backend] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-09T04:42:23.497Z  INFO 7057 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-09T04:42:23.498Z  INFO 7057 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.485 s -- in cl.sapi.backend.HealthControllerTests
+[INFO] Running cl.sapi.backend.BackendApplicationTests
+2026-10-09T04:42:23.746Z  INFO 7057 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-09T04:42:23.749Z  INFO 7057 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+2026-10-09T04:42:23.751Z  INFO 7057 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-09T04:42:23.752Z  INFO 7057 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-09T04:42:23.815Z  INFO 7057 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Starting BackendApplicationTests using Java 21.0.12.1 with PID 7057 (started by root in <fresh-clone>/services/backend)
+2026-10-09T04:42:23.816Z  INFO 7057 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : No active profile set, falling back to 1 default profile: "default"
+2026-10-09T04:42:24.024Z  INFO 7057 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Started BackendApplicationTests in 0.247 seconds (process running for 5.62)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.293 s -- in cl.sapi.backend.BackendApplicationTests
+2026-10-09T04:42:24.058Z  INFO 7057 --- [sapi-backend] [ionShutdownHook] o.s.boot.tomcat.GracefulShutdown         : Commencing graceful shutdown. Waiting for active requests to complete
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.5.1:jar (default-jar) @ backend ---
+[INFO] Building jar: <fresh-clone>/services/backend/target/backend-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.1.1:repackage (repackage) @ backend ---
+[INFO] Replacing main artifact <fresh-clone>/services/backend/target/backend-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to <fresh-clone>/services/backend/target/backend-0.0.1-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  13.715 s
+[INFO] Finished at: 2026-10-09T04:42:25Z
+[INFO] ------------------------------------------------------------------------
+exit=0
