@@ -23,10 +23,19 @@
 # is only listed, never touched. No .env is read or printed. Results are never
 # simulated: a check that cannot run is FAIL with its reason.
 #
+# Evidence output (HARNESS_EVIDENCE_OUTPUT_FAILURE fix, after the df29550 run):
+# the harness never deletes or moves OutDir. Every evidence write goes through
+# Save-Evidence, which never throws: on failure it records the error, re-creates
+# OutDir and retries once. A check during which any evidence write failed can
+# never be PASS, summary.json and manifest.sha256 are always attempted, and the
+# run exits 3 (HARNESS_EVIDENCE_OUTPUT_FAILURE) so callers do not package
+# incomplete evidence. Keep OutDir outside cloud-synced folders (OneDrive).
+#
 # Usage (repository root):
 #   powershell -NoProfile -ExecutionPolicy Bypass -File scripts\w0_host_checks.ps1 `
 #       -Check hostfacts,container-smoke-ml -OutDir C:\path\to\evidence
-# Exit code 0 = every requested check PASS, 1 = at least one FAIL.
+# Exit code 0 = every requested check PASS, 1 = at least one check FAIL,
+# 2 = unknown check, 3 = HARNESS_EVIDENCE_OUTPUT_FAILURE (evidence incomplete).
 param(
     [string[]]$Check = @("hostfacts"),
     [Parameter(Mandatory = $true)][string]$OutDir
@@ -56,19 +65,59 @@ if ($unknown.Count -gt 0) {
     Write-Host ("Unknown check(s): " + ($unknown -join ", ") + ". Known: " + ($KnownChecks -join ", "))
     exit 2
 }
-New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
-$OutDir = (Resolve-Path $OutDir).Path
+try {
+    New-Item -ItemType Directory -Force -Path $OutDir -ErrorAction Stop | Out-Null
+    $OutDir = (Resolve-Path -LiteralPath $OutDir -ErrorAction Stop).Path
+} catch {
+    Write-Host ("HARNESS_EVIDENCE_OUTPUT_FAILURE: cannot create OutDir '" + $OutDir + "': " + $_.Exception.Message)
+    exit 3
+}
 $rand = [guid]::NewGuid().ToString("N").Substring(0, 8)
 $utf8 = New-Object System.Text.UTF8Encoding $false
+$EvidenceErrors = New-Object System.Collections.Generic.List[string]
+$OutDirCloudSynced = $false
+foreach ($syncRoot in @($env:OneDrive, $env:OneDriveConsumer, $env:OneDriveCommercial)) {
+    if ($syncRoot -and $OutDir.StartsWith($syncRoot, [System.StringComparison]::OrdinalIgnoreCase)) { $OutDirCloudSynced = $true }
+}
+if ($OutDirCloudSynced) {
+    Write-Host "WARNING: OutDir is inside OneDrive; the sync client may move or delete it. Prefer a local folder."
+}
 
 function UtcNow { (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ") }
 
+# (Re)creates OutDir if it is missing. Never deletes anything.
+function Ensure-OutDir {
+    if (-not (Test-Path -LiteralPath $OutDir -PathType Container)) {
+        New-Item -ItemType Directory -Force -Path $OutDir -ErrorAction Stop | Out-Null
+    }
+}
+
+# Single evidence-write path. Never throws (a throwing logger aborted the
+# df29550 checks halfway and skipped their docker cleanup). On failure: record
+# the error, re-create OutDir, retry once. Returns $true only if the text landed.
+function Save-Evidence([string]$Path, [string]$Text, [bool]$Append) {
+    for ($attempt = 1; $attempt -le 2; $attempt++) {
+        try {
+            if ($Append) { [System.IO.File]::AppendAllText($Path, $Text, $utf8) }
+            else { [System.IO.File]::WriteAllText($Path, $Text, $utf8) }
+            return $true
+        } catch {
+            $EvidenceErrors.Add(("{0} {1}: {2}: {3}" -f (UtcNow), (Split-Path -Leaf $Path), $_.Exception.GetType().Name, $_.Exception.Message))
+            try { Ensure-OutDir } catch {
+                $EvidenceErrors.Add(("{0} OutDir: {1}" -f (UtcNow), $_.Exception.Message))
+                return $false
+            }
+        }
+    }
+    return $false
+}
+
 function Write-Text([string]$Path, [string]$Text) {
-    [System.IO.File]::WriteAllText($Path, $Text, $utf8)
+    Save-Evidence $Path $Text $false | Out-Null
 }
 
 function Add-Log([string]$LogFile, [string]$Text) {
-    [System.IO.File]::AppendAllText($LogFile, $Text + "`n", $utf8)
+    Save-Evidence $LogFile ($Text + "`n") $true | Out-Null
 }
 
 function Invoke-Native([string]$LogFile, [string]$Exe, [string[]]$NativeArgs, [string]$Shown = "") {
@@ -148,8 +197,8 @@ function Docker-Ready([string]$LogFile) {
 function Check-SelfTest($r, [string]$log) {
     $r.observed.powershell = $PSVersionTable.PSVersion.ToString()
     $probe = Join-Path $OutDir "selftest.write-probe"
-    $writable = $true
-    try { Write-Text $probe "ok"; Remove-Item -Force $probe } catch { $writable = $false }
+    $writable = Save-Evidence $probe "ok" $false
+    if ($writable) { Remove-Item -Force -LiteralPath $probe -ErrorAction SilentlyContinue }
     Expect $r "evidence_folder_writable" $true $writable $writable
     $git = Invoke-Native $log "git" @("-C", $repo, "rev-parse", "HEAD")
     Expect $r "git" "HEAD readable" $git.out.Trim() ($git.code -eq 0)
@@ -496,6 +545,13 @@ foreach ($name in $Check) {
         "sql-migration-validation" { "SQL MIGRATION VALIDATION (psql, not Flyway)" }
     }
     $r = New-Result $name $kind
+    $errorsBefore = $EvidenceErrors.Count
+    # Test-only fault injection: simulates an external actor (e.g. OneDrive)
+    # taking OutDir away right before this check. Inactive unless the variable is set.
+    if ($env:SAPI_W0_FAULT_LOSE_OUTDIR_BEFORE -eq $name) {
+        Move-Item -LiteralPath $OutDir -Destination ($OutDir + ".lost-" + $rand)
+        Write-Host ("[fault-injection] OutDir moved away before " + $name)
+    }
     $log = Join-Path $OutDir "$name.txt"  # *.log is git-ignored in this repo
     Write-Text $log ("# $name - $kind`n# sha=$sha utc=$(UtcNow)`n")
     Write-Host ("[{0}] {1} ..." -f (UtcNow), $name)
@@ -513,14 +569,25 @@ foreach ($name in $Check) {
         $r.failures += "exception"
     }
     if ($r.expected.Count -eq 0 -and $r.failures.Count -eq 0) { $r.failures += "no-assertions" }
+    if ($EvidenceErrors.Count -gt $errorsBefore) { $r.failures += "evidence-write-error" }
     $r.status = $(if ($r.failures.Count -eq 0) { "PASS" } else { "FAIL" })
     $r.finished_utc = UtcNow
-    Write-Text (Join-Path $OutDir "$name.json") ($r | ConvertTo-Json -Depth 8)
+    $jsonPath = Join-Path $OutDir "$name.json"
+    Write-Text $jsonPath ($r | ConvertTo-Json -Depth 8)
+    if ($EvidenceErrors.Count -gt $errorsBefore -and $r.status -eq "PASS") {
+        # The JSON itself failed to land: never report PASS without its evidence.
+        $r.failures += "evidence-write-error"
+        $r.status = "FAIL"
+        Write-Text $jsonPath ($r | ConvertTo-Json -Depth 8)
+    }
     Write-Host ("[{0}] {1}: {2}{3}" -f (UtcNow), $name, $r.status, $(if ($r.failures.Count) { " (" + ($r.failures -join ", ") + ")" } else { "" }))
     $results += $r
 }
 
-$overall = $(if (@($results | Where-Object { $_.status -ne "PASS" }).Count -eq 0) { "PASS" } else { "FAIL" })
+$checksPass = (@($results | Where-Object { $_.status -ne "PASS" }).Count -eq 0)
+$harnessStatus = $(if ($EvidenceErrors.Count -eq 0) { "PASS" } else { "FAIL" })
+$overall = $(if ($checksPass -and $harnessStatus -eq "PASS") { "PASS" } else { "FAIL" })
+try { Ensure-OutDir } catch { $EvidenceErrors.Add(("{0} OutDir: {1}" -f (UtcNow), $_.Exception.Message)) }
 $summary = [ordered]@{
     schema = "sapi-w0-host-checks-v1"
     sha = $sha
@@ -530,17 +597,45 @@ $summary = [ordered]@{
     powershell = $PSVersionTable.PSVersion.ToString()
     checks = @($results | ForEach-Object { [ordered]@{ check = $_.check; kind = $_.kind; status = $_.status; failures = $_.failures } })
     overall = $overall
+    harness_evidence = [ordered]@{
+        status = $harnessStatus
+        write_errors = @($EvidenceErrors)
+        outdir_cloud_synced = $OutDirCloudSynced
+    }
 }
-Write-Text (Join-Path $OutDir "summary.json") ($summary | ConvertTo-Json -Depth 6)
+$errorsAtSummary = $EvidenceErrors.Count
+$summaryOk = Save-Evidence (Join-Path $OutDir "summary.json") ($summary | ConvertTo-Json -Depth 6) $false
 
-$manifest = Get-ChildItem -Path $OutDir -File | Where-Object { $_.Name -ne "manifest.sha256" } | Sort-Object Name | ForEach-Object {
-    (Get-FileHash -Algorithm SHA256 -Path $_.FullName).Hash.ToLower() + "  " + $_.Name
+$manifestLines = @()
+try {
+    $manifestLines = @(Get-ChildItem -LiteralPath $OutDir -File -ErrorAction Stop | Where-Object { $_.Name -ne "manifest.sha256" } | Sort-Object Name | ForEach-Object {
+        (Get-FileHash -Algorithm SHA256 -LiteralPath $_.FullName -ErrorAction Stop).Hash.ToLower() + "  " + $_.Name
+    })
+} catch { $EvidenceErrors.Add(("{0} manifest: {1}" -f (UtcNow), $_.Exception.Message)) }
+$manifestOk = Save-Evidence (Join-Path $OutDir "manifest.sha256") (($manifestLines -join "`n") + "`n") $false
+
+# The manifest must cover summary.json and verify against the bytes on disk.
+$manifestVerified = $false
+if ($summaryOk -and $manifestOk) {
+    try {
+        $manifestVerified = ($manifestLines.Count -gt 0) -and (@($manifestLines | Where-Object { $_ -match "  summary\.json$" }).Count -eq 1)
+        foreach ($line in $manifestLines) {
+            $hash, $file = $line -split "  ", 2
+            $actual = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $OutDir $file) -ErrorAction Stop).Hash.ToLower()
+            if ($actual -ne $hash) { $manifestVerified = $false }
+        }
+    } catch { $manifestVerified = $false }
 }
-Write-Text (Join-Path $OutDir "manifest.sha256") (($manifest -join "`n") + "`n")
+$evidenceComplete = ($harnessStatus -eq "PASS" -and $EvidenceErrors.Count -eq $errorsAtSummary -and $summaryOk -and $manifestOk -and $manifestVerified)
 
 Write-Host ""
 Write-Host "==================== W0 HOST CHECKS ===================="
 foreach ($x in $results) { Write-Host ("{0,-26} {1}" -f $x.check, $x.status) }
 Write-Host ("OVERALL                    " + $overall)
 Write-Host ("Evidence: " + $OutDir)
+if (-not $evidenceComplete) {
+    Write-Host ("HARNESS_EVIDENCE_OUTPUT_FAILURE: " + $EvidenceErrors.Count + " evidence write error(s); evidence is incomplete, do not package it.")
+    foreach ($e in $EvidenceErrors) { Write-Host ("  " + $e) }
+    exit 3
+}
 if ($overall -eq "PASS") { exit 0 } else { exit 1 }

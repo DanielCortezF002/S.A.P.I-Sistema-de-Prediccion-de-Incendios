@@ -100,6 +100,17 @@ def test_checker_does_not_log_the_postgis_password():
     assert "POSTGRES_PASSWORD=***" in text
 
 
+def test_harness_never_removes_outdir_and_writes_never_throw():
+    text = _script_text()
+    assert "Remove-Item -Recurse" not in text
+    assert "Remove-Item -Force $OutDir" not in text
+    assert "function Save-Evidence" in text
+    write_text = text.split("function Write-Text", 1)[1].split("}", 1)[0]
+    add_log = text.split("function Add-Log", 1)[1].split("}", 1)[0]
+    assert "Save-Evidence" in write_text and "Save-Evidence" in add_log
+    assert "exit 3" in text
+
+
 # --- Comportamiento: funciones reales con PowerShell -----------------------------
 
 
