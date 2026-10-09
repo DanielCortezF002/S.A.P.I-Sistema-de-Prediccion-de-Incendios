@@ -6,11 +6,20 @@ autorizarse W0 (mensaje "EXECUTION AUTHORIZATION: GO W0 ONLY" de Daniel,
 las aclaraciones de la sección 3 vienen de la revisión adversarial del plan y
 corrigen inconsistencias internas, sin cambiar lo aprobado.
 
+La sección 4 registra las decisiones que Daniel aprobó el 2026-10-09 para el
+gate G9 de W1 (D-N3, D-N13, D-N11, H14 y H3). Las secciones 1–3 se conservan
+como registro histórico; donde D-N13 las reemplaza, se indica en el lugar.
+
 Clases: **A**, adoptada según el plan; **B**, requiere validación de Daniel
 antes de W1; **C**, requiere información externa (profesor); **D**, diferible
 (se indica plazo).
 
 ## 1. Ruta y alcance
+
+> **Reemplazado en parte por D-N13 (2026-10-09, §4.2).** Ya no rigen las viñetas
+> de fallback ("Ruta B"), de "Ruta C" ni la frase "se planifica para el CUT B y
+> se conserva el CUT A como respaldo". El antiguo "Ruta B" corresponde al nuevo
+> **CUT A**. El resto de esta sección no cambia con D-N13.
 
 - **Ruta principal:** A, walking skeleton / vertical slice reproducible.
 - **Fallback:** Ruta B (backend + persistencia + evidencia) si el calendario o
@@ -45,6 +54,9 @@ antes de W1; **C**, requiere información externa (profesor); **D**, diferible
 | H16 | Higiene del repo (`.cursorrules`, PNG sin fuente) | Abierta; plazo W3 | D |
 | H17 | Textos "Probabilidad" del modo Demo legacy | Abierta; plazo W3. Mientras tanto, oculto detrás de H7 | D |
 
+Actualización 2026-10-09: H3 y H14 quedaron aprobadas en G9 (§4). La columna
+de estado de esta tabla refleja el 2026-10-08 y no se reescribe.
+
 ## 3. Aclaraciones de la revisión adversarial del plan
 
 La revisión independiente del plan aprobado encontró inconsistencias
@@ -69,12 +81,12 @@ internas. Se corrigen así, sin cambiar las decisiones de la sección 2.
    campos opcionales a la clase `RankingResult`. La verificación de freeze F4c
    (`scripts/freeze_check.py`) ya acepta campos nuevos en esa clase y falla si
    se altera o elimina un campo existente.
-4. **CUT C sin stretch.** El CUT C es el CUT B más endurecimiento (corrida
+4. *(Reemplazada por D-N13, §4.2.)* **CUT C sin stretch.** El CUT C es el CUT B más endurecimiento (corrida
    operacional de SAPI-43 si SAPI-71 se ejecutó, CI verde, ensayos). El
    stretch sigue congelado hasta después de la presentación.
 5. **Tags y freeze check.** F1 acepta los 6 tags fijados más los que Daniel
    autorice (`--allow-tag`). Un tag nuevo no autorizado es FAIL.
-6. **Disparador de la Ruta B** (default propuesto; Daniel lo confirma cuando
+6. *(Reemplazada por D-N13, §4.2.)* **Disparador de la Ruta B** (default propuesto; Daniel lo confirma cuando
    se conozca H1): el gate de W1 no da GO a más tardar 6 días hábiles antes
    de la presentación, o PR-3 no está mergeado 4 días hábiles antes. En ese
    caso, la Ruta B es PR-2 + PR-3 (+ `/latest`) más evidencia, y SAPI-60, 61
@@ -86,3 +98,105 @@ internas. Se corrigen así, sin cambiar las decisiones de la sección 2.
    `app/components/prototype_view.py` quedan protegidos en F4. El historial de
    cambios de Hito 2 vive en `docs/hito2/`, no en
    `docs/change-log-posthito1.md`, que sigue congelado.
+
+## 4. Decisiones del gate G9 de W1 (2026-10-09)
+
+Fuente: mensaje "G9 — DECISIONES HUMANAS APROBADAS" de Daniel, 2026-10-09,
+emitido después del W0 EXECUTION REPORT
+(`artifacts/hito2/w0/W0_EXECUTION_REPORT.md`). Referencia: Revisión 3 (FINAL
+CONSENSUS DELTA) §2.1, §3 y §7. Daniel aprobó las cinco; el agente solo las
+registra. Ninguna autoriza por sí sola iniciar W1, abrir PR-W0, crear tags ni
+modificar Jira.
+
+| ID | Decisión | Estado |
+|---|---|---|
+| D-N3 | W0 llega a `main` como **un único PR** (PR-W0) desde `chore/hito2-w0-gate` | **Aprobada.** Condiciones de apertura en §4.1 |
+| D-N13 | Régimen de cortes de la Revisión 3, con la precisión de Daniel sobre "CI verde" | **Aprobada con precisión.** Ver §4.2 |
+| D-N11 | El Centro de Control queda fuera del producto de Sprint 2 y no se modifica | **Aprobada** |
+| H14 | Prefijo de tags `hito2-sprint2`, lista finita | **Aprobada.** Ver §4.3 |
+| H3 | Runner de migraciones: Flyway dentro de Spring Boot | **Aprobada** (cierra la condición del 2026-10-08: G5 en PASS). Ver §4.4 |
+
+### 4.1 D-N3: PR-W0
+
+- Un solo PR desde `chore/hito2-w0-gate` hacia `main`, con los commits
+  granulares de W0.
+- No se abre hasta que estas decisiones estén registradas y el gate final se
+  haya re-ejecutado sobre el commit que las registra. Además, Daniel indicó no
+  abrirlo hasta su GO W1 explícito.
+- Su gate es el de la Revisión 3 §3.1 para PR-W0: `freeze`, `python` y
+  `backend-unit` en verde sobre el SHA head (Actions o fallback reproducible),
+  más G3–G6 con evidencia Docker vigente.
+- El método de merge lo decide Daniel al mergear. La recomendación del agente
+  es un merge commit, que conserva los commits de evidencia.
+
+### 4.2 D-N13: régimen de cortes
+
+Reemplaza el régimen de la sección 1 (fallback "Ruta B", "Ruta C") y las
+aclaraciones 3.4 y 3.6. El antiguo "Ruta B" corresponde al nuevo **CUT A**.
+
+**Regla obligatoria (precisión de Daniel):**
+- GitHub Actions **no** es dependencia dura.
+- Toda referencia a "CI verde" se interpreta como **MERGE GATE**: GitHub Actions
+  cuando esté disponible; el fallback reproducible equivalente
+  (`scripts/merge_gate.py` y `scripts/w0_host_checks.ps1`, con los mismos jobs y
+  criterios) cuando no lo esté.
+- Ningún corte A, B o C puede activarse únicamente porque GitHub Actions esté
+  deshabilitado o no tenga runs.
+
+**Reglas del régimen:**
+- Los cortes son acumulativos: A ⊇ B ⊇ C.
+- Se activa el más severo cuyo disparador se haya cumplido.
+- Nunca se recorta de forma preventiva.
+- Lo activa Daniel por escrito, en este registro y en Jira.
+- Ningún corte se dispara porque Actions esté deshabilitado, porque los
+  profesores no respondan o porque no haya aceptación externa.
+
+| Corte | Disparador (hora de Chile) | Alcance |
+|---|---|---|
+| **C** | SAPI-71 Attempt 2 sin éxito al mar 13, 12:00; o corrida operacional sin evidencia al jue 15, 14:00 | FULL salvo la corrida operacional de SAPI-43, que queda PARTIAL con el mecanismo probado y el 503 auditado |
+| **B** | B1: PR-3 no mergeado al lun 12, 23:59. B2: E2E no verde sobre el SHA candidato (head de PR-6 rebasado sobre `main`) al mié 14, 18:00 | C + persistencia sin V004 (auditoría por logs, brecha declarada en ADR-007) y/o E2E manual guionado en lugar del automatizado |
+| **A** | A1: NO-GO W1 al sáb 10, 10:00 por Docker inviable en todos los entornos (T1 cumplido y W0.12 negado o fallido) | B + SAPI-57 y SAPI-61 demostrados en ejecución nativa sin contenedores (UI ↔ Spring ↔ ML), tests unitarios y de contrato, validación SQL estática y evidencia de diseño. Pendientes: SAPI-59 en ITs, SAPI-60, SAPI-66 y la corrida SAPI-43 |
+| | A2: G5 (Flyway real) en FAIL sin alternativa H3 al sáb 10, 10:00 | B + SAPI-59 pendiente. Compose sin base v2 |
+| | A3: PR-2 no mergeado en la ventana del dom 11, 09:00–10:00 | B + backend y persistencia con ITs (Actions o Windows/Omen) + corrida grabada. Pendientes: SAPI-60, 61 y 66 |
+
+Regla adicional (Revisión 2 §27, sin cambios en la Revisión 3): si el
+ACCEPTANCE FREEZE no se cumple al sáb 17, 12:00, se congela lo que esté DONE y
+se activa el corte que corresponda.
+
+Estado al registrar: el disparador A2 no se cumple, porque G5 está en PASS
+(`artifacts/hito2/w0/host/7618cce/`).
+
+### 4.3 H14: tags
+
+- Prefijo `hito2-sprint2`. Lista finita: `hito2-sprint2-rc1`,
+  `hito2-sprint2-rc2`, `hito2-sprint2-rc3`, `hito2-sprint2-rc4`,
+  `hito2-sprint2-rc5` y `hito2-sprint2-final`.
+- Un tag nunca se mueve: un fix crea el siguiente rc.
+- Es la lista que el job `freeze` ya admite (`TAG_PREFIX` y `ALLOWED_TAGS` en
+  `scripts/merge_gate.py`, presentes desde antes de esta decisión).
+- No se crea ningún tag hasta que corresponda según el flujo: `rc1` en DEMO
+  FREEZE y `final` en ACCEPTANCE FREEZE.
+
+### 4.4 H3: Flyway dentro de Spring Boot
+
+Base: G5 en PASS. Flyway 12.4.0 real aplicó V001–V003 sobre
+`postgis/postgis:15-3.4`; `validate` OK; segundo `migrate` sin pendientes.
+
+Condiciones aprobadas:
+- Usar las migraciones versionadas de `db/migration`. V001–V003 siguen
+  congeladas.
+- `validate`/`migrate` reales.
+- **Nunca `baselineOnMigrate`.**
+- Integración con PostgreSQL/PostGIS.
+- ITs con Testcontainers.
+- SQL MIGRATION VALIDATION (`sql-migration-validation`) se mantiene separada de
+  REAL FLYWAY INTEGRATION (`flyway-integration` y `backend-it`). Ninguna
+  sustituye a la otra, y la validación SQL nunca cierra un CA de Flyway.
+
+Referencia de implementación para PR-3 (recomendación del agente, se concreta
+en ese PR):
+- Flyway 12.4.0 y `spring-boot-starter-flyway` 4.1.1 desde el BOM de Spring
+  Boot.
+- `locations` en `filesystem:` hacia `db/migration`.
+- `validate-on-migrate`.
+- Testcontainers 2.0.5 con `postgis/postgis:15-3.4`.
