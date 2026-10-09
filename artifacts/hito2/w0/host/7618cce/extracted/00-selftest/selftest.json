@@ -1,0 +1,26 @@
+{
+    "check":  "selftest",
+    "kind":  "preflight self-test",
+    "status":  "PASS",
+    "started_utc":  "2026-10-09T14:20:13Z",
+    "finished_utc":  "2026-10-09T14:20:14Z",
+    "expected":  {
+                     "evidence_folder_writable":  true,
+                     "git":  "HEAD readable",
+                     "docker_cli":  "installed",
+                     "docker_daemon":  "running (start Docker Desktop if this fails)",
+                     "docker_compose":  "installed"
+                 },
+    "observed":  {
+                     "powershell":  "5.1.26100.9444",
+                     "evidence_folder_writable":  true,
+                     "git":  "7618cce00123ac0b3f0c18e2ba8ec6778f19059a",
+                     "docker_cli":  "29.8.1",
+                     "docker_daemon":  "29.8.1",
+                     "docker_compose":  "5.5.1"
+                 },
+    "failures":  [
+
+                 ],
+    "log":  "selftest.txt"
+}

@@ -1,0 +1,176 @@
+{
+  "baseline": "cd6b58eb9bd4b9a22b8937c4cda73be46322cddb",
+  "head": "df295500ad9fe6f431aa3f7f5d6b05a64d43b4e1",
+  "branch": "HEAD",
+  "mode": "B",
+  "utc": "2026-10-09T00:31:39Z",
+  "host": "vm",
+  "python": "3.14.6",
+  "git": "git version 2.43.0",
+  "command": "python -B scripts/freeze_check.py --json [gate-out]/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final",
+  "verdict": "FREEZE CHECK PASS",
+  "checks": [
+    {
+      "check": "F1 HEAD",
+      "status": "PASS",
+      "expected": "cd6b58e ancestro de HEAD (modo B)",
+      "observed": "df29550 ancestro=True"
+    },
+    {
+      "check": "F1 tags locales",
+      "status": "PASS",
+      "expected": "subconjunto de tags fijados + --allow-tag",
+      "observed": "0 tag(s) esperados"
+    },
+    {
+      "check": "F1 tags remotos",
+      "status": "PASS",
+      "expected": "6 tags fijados intactos, sin tags nuevos no autorizados",
+      "observed": "movidos=- nuevos=-"
+    },
+    {
+      "check": "F1 origin/main",
+      "status": "PASS",
+      "expected": "== cd6b58e o descendiente",
+      "observed": "cd6b58e"
+    },
+    {
+      "check": "F8 worktree limpio",
+      "status": "PASS",
+      "expected": "git status vacío",
+      "observed": "0 entrada(s)"
+    },
+    {
+      "check": "F8 ignorados inesperados",
+      "status": "PASS",
+      "expected": "sin archivos ignorados fuera de caches",
+      "observed": "ninguno"
+    },
+    {
+      "check": "F8 stash/worktrees",
+      "status": "PASS",
+      "expected": "stash vacío, 1 worktree",
+      "observed": "stash=0 worktrees=1"
+    },
+    {
+      "check": "F6/F9 db/migration/V001__enable_postgis.sql",
+      "status": "PASS",
+      "expected": "5f3606cb3b51",
+      "observed": "5f3606cb3b51"
+    },
+    {
+      "check": "F6/F9 db/migration/V002__create_sapi_v2_schema.sql",
+      "status": "PASS",
+      "expected": "22df9f6843a2",
+      "observed": "22df9f6843a2"
+    },
+    {
+      "check": "F6/F9 db/migration/V003__seed_celdas_geom.sql",
+      "status": "PASS",
+      "expected": "02690a1684aa",
+      "observed": "02690a1684aa"
+    },
+    {
+      "check": "F6/F9 models/prototype_model_d.pkl",
+      "status": "PASS",
+      "expected": "ac017bef1f42",
+      "observed": "ac017bef1f42"
+    },
+    {
+      "check": "F6/F9 models/prototype_model_d_metadata.json",
+      "status": "PASS",
+      "expected": "fc2c62341d82",
+      "observed": "fc2c62341d82"
+    },
+    {
+      "check": "F6/F9 artifacts/hito1/reproducibility/manifest.json",
+      "status": "PASS",
+      "expected": "a02500da7fb2",
+      "observed": "a02500da7fb2"
+    },
+    {
+      "check": "F6 db/migration",
+      "status": "PASS",
+      "expected": "V001-V003 fijados; solo V004+ nuevos",
+      "observed": "3 archivos"
+    },
+    {
+      "check": "F9 models/",
+      "status": "PASS",
+      "expected": "solo .gitkeep, pkl y metadata",
+      "observed": "models/.gitkeep, models/prototype_model_d.pkl, models/prototype_model_d_metadata.json"
+    },
+    {
+      "check": "F7 contratos v0",
+      "status": "PASS",
+      "expected": "sha256 fijados",
+      "observed": "idénticos"
+    },
+    {
+      "check": "F4b contratos aditivos",
+      "status": "PASS",
+      "expected": "solo adiciones",
+      "observed": "sin cambios"
+    },
+    {
+      "check": "F4c servicio ML",
+      "status": "PASS",
+      "expected": "idéntico salvo _ranking y campos nuevos de RankingResult",
+      "observed": "OK"
+    },
+    {
+      "check": "F3 readiness (baseline)",
+      "status": "PASS",
+      "expected": "17 b3d32f5025bb… 2622fcdc8231…",
+      "observed": "17 b3d32f5025bb… 2622fcdc8231…"
+    },
+    {
+      "check": "F3 readiness (HEAD)",
+      "status": "PASS",
+      "expected": "17 b3d32f5025bb… 2622fcdc8231…",
+      "observed": "17 b3d32f5025bb… 2622fcdc8231…"
+    },
+    {
+      "check": "F3 readiness (worktree)",
+      "status": "PASS",
+      "expected": "b3d32f5025bb…",
+      "observed": "b3d32f5025bb…"
+    },
+    {
+      "check": "F4 congelados (commits)",
+      "status": "PASS",
+      "expected": "sin cambios desde baseline",
+      "observed": "sin cambios"
+    },
+    {
+      "check": "F4 congelados (worktree)",
+      "status": "PASS",
+      "expected": "sin cambios locales",
+      "observed": "sin cambios"
+    },
+    {
+      "check": "F4 congelados (archivos nuevos)",
+      "status": "PASS",
+      "expected": "sin archivos nuevos bajo rutas congeladas",
+      "observed": "ninguno"
+    },
+    {
+      "check": "F5 verify_reproducibility",
+      "status": "PASS",
+      "expected": "exit 0, VERIFICADOS (5), sin discrepancias",
+      "observed": "exit 0"
+    },
+    {
+      "check": "F5 contrato CRLF (.gitattributes)",
+      "status": "PASS",
+      "expected": "3 snapshots i/crlf attr/-text",
+      "observed": "3/3"
+    },
+    {
+      "check": "F2 fingerprint Modelo D",
+      "status": "PASS",
+      "expected": "2026-09-01 00:00:00+00:00 50 VP-001 0.131293368748 / 33c2eacc49bd…",
+      "observed": "2026-09-01 00:00:00+00:00 50 VP-001 0.131293368748 / 33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff"
+    }
+  ]
+}

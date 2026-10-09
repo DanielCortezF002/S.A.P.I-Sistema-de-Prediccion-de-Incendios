@@ -1,0 +1,11 @@
+# W0.6 tests de regresión dirigidos
+sha base: 60b1260399a68a4df5365c0699448db57d251a3a + cambios W0.6
+utc: 2026-10-08T00:30:47Z
+host: vm; python: Python 3.14.6
+command: python -B -m pytest -p no:cacheprovider --no-cov -q tests/test_output_readiness.py tests/test_docker_build_hygiene.py tests/test_db_migrations_v2.py tests/test_ml_api.py
+
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    array.shape = self.shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+41 passed, 2 skipped, 892 warnings in 17.00s

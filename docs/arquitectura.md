@@ -1,7 +1,16 @@
 # Arquitectura S.A.P.I. — Prototipo Funcional UAT
 
 Sistema de Alerta y Predicción de Incendios para la Región de Valparaíso.
-Prototipo académico con **50 celdas** de demo (~11,5 km² c/u) optimizado para latencia < 0.2s.
+Prototipo académico con **50 celdas** de demo.
+
+> **Documento de Hito 1 (arquitectura legacy).** Describe los contenedores y
+> tablas de la entrega de Hito 1. La arquitectura vigente de Sprint 2 está en
+> [`architecture-stack-freeze-sprint2.md`](architecture-stack-freeze-sprint2.md).
+> Correcciones (Sprint 2, W0): las celdas reales miden 0,0411° × 0,035°
+> (≈3,8 × 3,9 km, ≈15 km²; `src/geo/grid.py`); el valor "~11,5 km²" que citaba
+> este documento corresponde a los círculos de visualización legacy. La cifra
+> "latencia < 0,2 s" que citaba no tiene medición reproducible versionada
+> (QA-08 `NOT_MEASURED` en `atributos-calidad-hito1.md`) y no debe citarse.
 
 ## Contenedores Docker Compose
 

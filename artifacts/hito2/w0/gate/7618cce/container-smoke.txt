@@ -1,0 +1,4 @@
+# container-smoke - imágenes ML (/predict reproducible) y backend (/health)
+# utc=2026-10-09T04:42:25Z
+
+NOT_VERIFIABLE_IN_THIS_ENVIRONMENT: falta PowerShell, Docker

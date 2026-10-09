@@ -1,0 +1,80 @@
+# Reproducción en sandbox (Linux, pwsh 7.4.6) del incidente df29550
+# docker falso: daemon sano, pero borra OutDir cuando hostfacts ejecuta 'docker volume ls'
+# (simula un actor externo como OneDrive). Checks: selftest,hostfacts,selftest
+
+===== script de df29550 (antes del fix) =====
+[2026-10-09T04:36:09Z] selftest ...
+[2026-10-09T04:36:09Z] selftest: FAIL (git)
+[2026-10-09T04:36:09Z] hostfacts ...
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:71
+Line |
+  71 |      [System.IO.File]::AppendAllText($LogFile, $Text + "`n", $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "AppendAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/hostfacts.txt'."
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:67
+Line |
+  67 |      [System.IO.File]::WriteAllText($Path, $Text, $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "WriteAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/hostfacts.json'."
+[2026-10-09T04:36:10Z] hostfacts: PASS
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:67
+Line |
+  67 |      [System.IO.File]::WriteAllText($Path, $Text, $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "WriteAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/selftest.txt'."
+[2026-10-09T04:36:10Z] selftest ...
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:71
+Line |
+  71 |      [System.IO.File]::AppendAllText($LogFile, $Text + "`n", $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "AppendAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/selftest.txt'."
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:67
+Line |
+  67 |      [System.IO.File]::WriteAllText($Path, $Text, $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "WriteAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/selftest.json'."
+[2026-10-09T04:36:10Z] selftest: FAIL (evidence_folder_writable)
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:67
+Line |
+  67 |      [System.IO.File]::WriteAllText($Path, $Text, $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "WriteAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/summary.json'."
+Get-ChildItem: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:536
+Line |
+ 536 |  $manifest = Get-ChildItem -Path $OutDir -File | Where-Object { $_.Nam …
+     |              ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Cannot find path '<scratch>/evrepro/out-old' because it does not exist.
+MethodInvocationException: <scratch>/evrepro/old/scripts/w0_host_checks.ps1:67
+Line |
+  67 |      [System.IO.File]::WriteAllText($Path, $Text, $utf8)
+     |      ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+     | Exception calling "WriteAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-old/manifest.sha256'."
+
+==================== W0 HOST CHECKS ====================
+selftest                   FAIL
+hostfacts                  PASS
+selftest                   FAIL
+OVERALL                    FAIL
+Evidence: <scratch>/evrepro/out-old
+exit=1
+contenido de OutDir al final: 
+OutDir no existe: sin summary.json ni manifest.sha256
+
+===== script corregido =====
+[2026-10-09T04:36:10Z] selftest ...
+[2026-10-09T04:36:10Z] selftest: PASS
+[2026-10-09T04:36:10Z] hostfacts ...
+[2026-10-09T04:36:11Z] hostfacts: FAIL (git_worktree_clean, evidence-write-error)
+[2026-10-09T04:36:11Z] selftest ...
+[2026-10-09T04:36:11Z] selftest: PASS
+
+==================== W0 HOST CHECKS ====================
+selftest                   PASS
+hostfacts                  FAIL
+selftest                   PASS
+OVERALL                    FAIL
+Evidence: <scratch>/evrepro/out-new
+HARNESS_EVIDENCE_OUTPUT_FAILURE: 1 evidence write error(s); evidence is incomplete, do not package it.
+  2026-10-09T04:36:10Z hostfacts.txt: MethodInvocationException: Exception calling "AppendAllText" with "3" argument(s): "Could not find a part of the path '<scratch>/evrepro/out-new/hostfacts.txt'."
+exit=3
+contenido de OutDir al final: hostfacts.json hostfacts.txt manifest.sha256 selftest.json selftest.txt summary.json 

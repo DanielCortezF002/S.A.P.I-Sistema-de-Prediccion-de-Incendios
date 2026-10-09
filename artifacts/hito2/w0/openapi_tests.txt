@@ -1,0 +1,35 @@
+# W0.8 tests de contrato OpenAPI
+sha base: e8368f4c09561c2d73ac3886de3b84e4649e2570 + tests/test_openapi_contracts.py
+utc: 2026-10-08T00:36:10Z
+host: vm; python: Python 3.14.6; openapi-spec-validator 0.9.0, openapi-schema-validator 0.9.0, PyYAML 6.0.3
+command: python -B -m pytest -p no:cacheprovider --no-cov -v tests/test_openapi_contracts.py
+
+tests/test_openapi_contracts.py::test_contracts_are_valid_openapi_303[ml-service.v0.yaml] PASSED [  7%]
+tests/test_openapi_contracts.py::test_contracts_are_valid_openapi_303[backend.v0.yaml] PASSED [ 15%]
+tests/test_openapi_contracts.py::test_backend_cross_file_refs_resolve PASSED [ 23%]
+tests/test_openapi_contracts.py::test_spec_validator_rejects_a_broken_contract PASSED [ 30%]
+tests/test_openapi_contracts.py::test_synthetic_example_satisfies_ranking_rules PASSED [ 38%]
+tests/test_openapi_contracts.py::test_no_contract_property_is_named_as_a_probability PASSED [ 46%]
+tests/test_openapi_contracts.py::test_ranking_semantics_are_pinned_in_the_contract PASSED [ 53%]
+tests/test_openapi_contracts.py::test_example_error_types_are_documented PASSED [ 61%]
+tests/test_openapi_contracts.py::test_fastapi_spec_matches_frozen_contract PASSED [ 69%]
+tests/test_openapi_contracts.py::test_drift_detector_catches_a_removed_required_field PASSED [ 76%]
+tests/test_openapi_contracts.py::test_real_model_response_validates_against_contract PASSED [ 84%]
+tests/test_openapi_contracts.py::test_real_error_responses_validate_against_contract[campo-no-admitido] PASSED [ 92%]
+tests/test_openapi_contracts.py::test_real_error_responses_validate_against_contract[forecast-futuro] PASSED [100%]
+======================= 13 passed, 199 warnings in 3.64s =======================
+
+## Qué compara la detección de deriva (shapes YAML vs FastAPI)
+  from starlette.testclient import TestClient as TestClient  # noqa
+PredictRequest props True 1 required True allowed {}
+RankingResult props True 9 required True allowed {'schema_version': ['sapi-ranking-v0'], 'score_semantics': ['relative_rank'], 'scientific_model_validation': [False]}
+CellRanking props True 5 required True allowed {}
+MlHealth props True 2 required True allowed {'status': ['degraded', 'ok']}
+Error props True 3 required True allowed {'status': ['error']}
+
+## Mutaciones externas (copia del YAML en memoria):
+quitar RankingResult.disclaimer del YAML -> ["RankingResult.properties: YAML=['cells', 'forecast_time', 'horizon_hours', 'inputs_fingerprint', 'model_version', 'schema_version', 'scientific_model_validation', 'score_semantics'] FastAPI=['cells', 'disclaimer', 'forecast_time', 'horizon_hours', 'inputs_fingerprint', 'model_version', 'schema_version', 'scientific_model_validation', 'score_semantics']"]
+cambiar score_semantics a probability -> ["RankingResult.score_semantics valores: YAML=['probability'] FastAPI=['relative_rank']"]
+agregar 504 en YAML sin implementarlo -> ["códigos ausentes en POST /predict: ['504']"]
+
+RESULT: PASS (13/13; los controles negativos detectan contratos rotos y deriva)

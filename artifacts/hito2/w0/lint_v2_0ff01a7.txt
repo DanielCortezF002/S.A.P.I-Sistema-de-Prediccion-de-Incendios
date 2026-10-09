@@ -1,0 +1,14 @@
+# W0.9 lint de rutas v2 (bloqueante, H11)
+head: 0ff01a745eb7414e99e8ff5d3fa8ec596ebd50a8
+utc: 2026-10-08T22:46:59Z
+black: black, 26.5.1 (compiled: yes)
+flake8: 7.3.0 (mccabe: 0.7.0, pycodestyle: 2.14.0, pyflakes: 3.4.0) CPython 3.14.6 on
+rutas v2: services/ml_api scripts/freeze_check.py tests/test_openapi_contracts.py tests/test_ml_api.py
+
+$ black --check services/ml_api scripts/freeze_check.py tests/test_openapi_contracts.py tests/test_ml_api.py
+All done! ✨ 🍰 ✨
+5 files would be left unchanged.
+exit=0
+
+$ flake8 --max-line-length=100 --extend-ignore=E203,W503 services/ml_api scripts/freeze_check.py tests/test_openapi_contracts.py tests/test_ml_api.py
+exit=0

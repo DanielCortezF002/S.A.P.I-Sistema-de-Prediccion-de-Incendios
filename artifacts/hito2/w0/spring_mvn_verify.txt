@@ -1,0 +1,113 @@
+# W0.3 Spring/Maven spike
+sha: d27079cea016240ccc871809f992354e53e78527
+utc: 2026-10-08T00:25:57Z
+host: vm (cloud sandbox, sin daemon Docker)
+command: ./mvnw -v && ./mvnw -B verify
+
+wget: Failed to fetch https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.zip
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------------< cl.sapi:backend >---------------------------
+[INFO] Building backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ backend ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 2 source files with javac [debug parameters release 21] to target/classes
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ backend ---
+[INFO] skip non existing resourceDirectory /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/src/test/resources
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 2 source files with javac [debug parameters release 21] to target/test-classes
+[INFO] /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java uses unchecked or unsafe operations.
+[INFO] /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running cl.sapi.backend.HealthControllerTests
+00:26:16.606 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.HealthControllerTests]: HealthControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+00:26:16.773 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.HealthControllerTests
+00:26:16.904 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.HealthControllerTests]: HealthControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+00:26:16.907 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.HealthControllerTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-08T00:26:17.288Z  INFO 8000 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Starting HealthControllerTests using Java 21.0.12.1 with PID 8000 (started by root in /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend)
+2026-10-08T00:26:17.290Z  INFO 8000 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : No active profile set, falling back to 1 default profile: "default"
+2026-10-08T00:26:18.065Z  INFO 8000 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-08T00:26:18.087Z  INFO 8000 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-08T00:26:18.088Z  INFO 8000 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-08T00:26:18.149Z  INFO 8000 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 830 ms
+2026-10-08T00:26:18.561Z  INFO 8000 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 34327 (http) with context path '/'
+2026-10-08T00:26:18.566Z  INFO 8000 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Started HealthControllerTests in 1.577 seconds (process running for 3.085)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically (/root/.m2/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2026-10-08T00:26:19.917Z  INFO 8000 --- [sapi-backend] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-08T00:26:19.918Z  INFO 8000 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-08T00:26:19.920Z  INFO 8000 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 3.734 s -- in cl.sapi.backend.HealthControllerTests
+[INFO] Running cl.sapi.backend.BackendApplicationTests
+2026-10-08T00:26:20.099Z  INFO 8000 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T00:26:20.100Z  INFO 8000 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+2026-10-08T00:26:20.102Z  INFO 8000 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-08T00:26:20.103Z  INFO 8000 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-08T00:26:20.129Z  INFO 8000 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Starting BackendApplicationTests using Java 21.0.12.1 with PID 8000 (started by root in /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend)
+2026-10-08T00:26:20.129Z  INFO 8000 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : No active profile set, falling back to 1 default profile: "default"
+2026-10-08T00:26:20.311Z  INFO 8000 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Started BackendApplicationTests in 0.201 seconds (process running for 4.829)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.223 s -- in cl.sapi.backend.BackendApplicationTests
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 3, Failures: 0, Errors: 0, Skipped: 0
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.5.1:jar (default-jar) @ backend ---
+[INFO] Building jar: /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/target/backend-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.1.1:repackage (repackage) @ backend ---
+[INFO] Replacing main artifact /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/target/backend-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to /home/user/S.A.P.I-Sistema-de-Prediccion-de-Incendios/services/backend/target/backend-0.0.1-SNAPSHOT.jar.original
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  24.582 s
+[INFO] Finished at: 2026-10-08T00:26:25Z
+[INFO] ------------------------------------------------------------------------
+RESULT: PASS (BUILD SUCCESS)
+
+## Nota: primer 'mvnw -v' falló al descargar la distribución con wget (proxy del sandbox); la siguiente invocación la descargó y verify corrió con:
+Apache Maven 3.9.16 (2bdd9fddda4b155ebf8000e807eb73fd829a51d5)
+Maven home: /root/.m2/wrapper/dists/apache-maven-3.9.16/56ba1f9f
+Java version: 21.0.12.1, vendor: Ubuntu, runtime: /usr/lib/jvm/java-21-openjdk-amd64

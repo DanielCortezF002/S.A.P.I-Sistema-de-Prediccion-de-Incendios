@@ -1,0 +1,3 @@
+INHERIT FAIL: 7618cce00123..ec65008ad71e
+  fuera de la herencia: docs/hito2/decisiones-w0.md
+exit=1

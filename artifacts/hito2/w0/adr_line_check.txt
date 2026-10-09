@@ -1,0 +1,65 @@
+# W0.10 verificación de líneas del freeze citadas por ADRs/erratum
+sha: 99918462ab29b9f512ab994c4248e551a0b63eab
+utc: 2026-10-08T00:38:55Z
+host: vm
+command: grep -n -E '^### ADR-00[1-6]|Estado:' docs/architecture-stack-freeze-sprint2.md; sed -n '60,63p;139p;160,163p;175,178p;196,197p;201p;272,273p;277,278p;288,293p;297,299p;356,357p' docs/architecture-stack-freeze-sprint2.md
+
+241:### ADR-001 — Spring Boot como backend de aplicación
+256:- **Estado:** propuesto.
+258:### ADR-002 — FastAPI como servicio ML
+274:- **Estado:** propuesto.
+276:### ADR-003 — PostgreSQL/PostGIS como persistencia operacional
+294:- **Estado:** propuesto.
+296:### ADR-004 — Docker Compose para entorno reproducible
+308:- **Estado:** propuesto.
+310:### ADR-005 — REST/OpenAPI como contratos entre servicios
+322:- **Estado:** propuesto.
+324:### ADR-006 — Modelo D como baseline y modelos temporales como experimento
+344:- **Estado:** propuesto.
+
+--- L60,63
+- **Clasificación: `LEGACY_ONLY`.** El esquema y el código PostGIS
+  existen y funcionan, pero hoy no forman parte del pipeline de
+  entrenamiento ni de inferencia que produce el ranking que ve el
+  dashboard en modo Prototipo.
+--- L139,139
+  autorización, valida contratos de entrada/salida, y es responsable de
+--- L160,163
+  metadata de corridas cuando se justifique. Tanto Spring Boot como
+  FastAPI pueden leer/escribir, pero solo Spring Boot es responsable de
+  las escrituras de auditoría/registro; FastAPI solo persiste
+  resultados de inferencia cuando el backend se lo solicita.
+--- L175,178
+- El esquema de base de datos (`matriz_features`, `predicciones_riesgo`)
+  se define una sola vez (SQL en `docker/initdb/`) y ambos servicios lo
+  comparten vía el mismo motor PostgreSQL — no hay una copia de esquema
+  por servicio.
+--- L196,197
+- El resultado de scoring se persiste en `predicciones_riesgo` (o
+  tabla equivalente del pipeline nuevo) vía PostGIS.
+--- L201,201
+- No requiere: autenticación real, UI pulida, cobertura de los otros
+--- L272,273
+  colocan en la misma red/infra; necesidad de versionar el contrato de
+  features esperado por el modelo.
+--- L277,278
+- **Contexto:** el esquema PostGIS ya existe y funciona
+  (`docker/initdb/`), pero está clasificado `LEGACY_ONLY` — no forma
+--- L288,293
+- **Consecuencias:** reactivar y adaptar el código legacy de
+  persistencia (`persister.py`) en vez de reescribirlo desde cero.
+- **Riesgos:** el esquema actual (`UNIQUE(cell_id, fecha)`) fue
+  diseñado para el pipeline legacy diario, no para el pipeline temporal
+  de 6h de Modelo D — puede requerir ajuste de granularidad temporal
+  antes de reutilizarse tal cual.
+--- L297,299
+- **Contexto:** hoy existen `Dockerfile.analytics`, `Dockerfile.web` y
+  un `docker-compose.yml`, pero no cubren el vertical slice de 4 capas
+  (Streamlit + Spring Boot + FastAPI + PostgreSQL/PostGIS).
+--- L356,357
+- Diseño físico exacto de tablas para Sprint 2 (más allá del esquema
+  legacy heredado — granularidad temporal, índices, particionamiento).
+
+freeze doc sha256 (sin cambios): b97f04d5ead3349a761341938d873fb41766df3eb39d91ca8c67d7f2f5a6ddfd
+freeze doc modificado en esta rama: 0 (esperado 0)
+RESULT: PASS

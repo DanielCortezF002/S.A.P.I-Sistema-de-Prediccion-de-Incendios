@@ -1,0 +1,109 @@
+# container-smoke-backend - W0.3 backend image smoke
+# sha=43c17fd9cc8614fa70e27e03aa1ff49d2462aed6 utc=2026-10-09T00:14:59Z
+$ docker version --format {{.Server.Version}}
+29.8.1
+exit=0
+$ docker build --progress=plain -t sapi-w0-backend:43c17fd C:\Users\danie\AppData\Local\Temp\sapi-w0-43c17fd\services\backend
+#0 building with "desktop-linux" instance using docker driver
+System.Management.Automation.RemoteException
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 888B 0.0s done
+#1 DONE 0.0s
+System.Management.Automation.RemoteException
+#2 [internal] load metadata for docker.io/library/maven:3.9-eclipse-temurin-21
+#2 DONE 0.0s
+System.Management.Automation.RemoteException
+#3 [internal] load metadata for docker.io/library/eclipse-temurin:21-jre
+#3 DONE 0.0s
+System.Management.Automation.RemoteException
+#4 [internal] load .dockerignore
+#4 transferring context: 70B done
+#4 DONE 0.0s
+System.Management.Automation.RemoteException
+#5 [internal] load build context
+#5 DONE 0.0s
+System.Management.Automation.RemoteException
+#6 [build 1/7] FROM docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320
+#6 resolve docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320
+#6 resolve docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 0.0s done
+#6 DONE 0.0s
+System.Management.Automation.RemoteException
+#7 [stage-1 1/4] FROM docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5
+#7 resolve docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5 0.0s done
+#7 DONE 0.0s
+System.Management.Automation.RemoteException
+#5 [internal] load build context
+#5 transferring context: 19.13kB 0.0s done
+#5 DONE 0.0s
+System.Management.Automation.RemoteException
+#8 [build 2/7] WORKDIR /build
+#8 CACHED
+System.Management.Automation.RemoteException
+#9 [build 3/7] COPY .mvn .mvn
+#9 CACHED
+System.Management.Automation.RemoteException
+#10 [build 4/7] COPY mvnw pom.xml ./
+#10 CACHED
+System.Management.Automation.RemoteException
+#11 [build 5/7] RUN sh ./mvnw -B -q dependency:go-offline
+#11 CACHED
+System.Management.Automation.RemoteException
+#12 [build 6/7] COPY src src
+#12 DONE 0.0s
+System.Management.Automation.RemoteException
+#13 [build 7/7] RUN sh ./mvnw -B -q -DskipTests package
+#13 DONE 5.4s
+System.Management.Automation.RemoteException
+#14 [stage-1 2/4] RUN useradd --system --uid 10001 --no-create-home sapi
+#14 CACHED
+System.Management.Automation.RemoteException
+#15 [stage-1 3/4] WORKDIR /app
+#15 CACHED
+System.Management.Automation.RemoteException
+#16 [stage-1 4/4] COPY --from=build /build/target/backend-0.0.1-SNAPSHOT.jar app.jar
+#16 DONE 0.1s
+System.Management.Automation.RemoteException
+#17 exporting to image
+#17 exporting layers
+#17 exporting layers 0.5s done
+#17 exporting manifest sha256:571a156d1cbac2fe4ebdf596b5c11c5006382e90bb08c7925b249e6eb6f19384 0.0s done
+#17 exporting config sha256:e1cdcfe7d368cc7415564d1dbd8b4b22e28011cfcad904d19e6fc32bd53cfb55 0.0s done
+#17 exporting attestation manifest sha256:9e24b35ac8adaaecca18d2023253bdd4e7b28603ec1f04ef49aa60d594d63669 0.0s done
+#17 exporting manifest list sha256:be88268414f5fbe0af8beb57bdec6e6ed5d7615d548198772d8cc6110d9af004 0.0s done
+#17 naming to docker.io/library/sapi-w0-backend:43c17fd done
+#17 unpacking to docker.io/library/sapi-w0-backend:43c17fd 0.1s done
+#17 DONE 0.7s
+exit=0
+$ docker run -d --name sapi-w0-backend-43e9e046 -p 127.0.0.1:50612:8080 sapi-w0-backend:43c17fd
+c6fe31e7937525d3a48423a3633599761b698eeeb40222dd77a5c207118e6d44
+exit=0
+GET http://127.0.0.1:50612/health -> 200 {"status":"UP"}
+$ docker exec sapi-w0-backend-43e9e046 id -u
+10001
+exit=0
+$ docker logs --tail 40 sapi-w0-backend-43e9e046
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-09T00:15:08.327Z  INFO 1 --- [sapi-backend] [           main] cl.sapi.backend.BackendApplication       : Starting BackendApplication v0.0.1-SNAPSHOT using Java 21.0.12.1 with PID 1 (/app/app.jar started by sapi in /app)
+2026-10-09T00:15:08.332Z  INFO 1 --- [sapi-backend] [           main] cl.sapi.backend.BackendApplication       : No active profile set, falling back to 1 default profile: "default"
+2026-10-09T00:15:09.096Z  INFO 1 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 8080 (http)
+2026-10-09T00:15:09.109Z  INFO 1 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-09T00:15:09.110Z  INFO 1 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-09T00:15:09.135Z  INFO 1 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 734 ms
+2026-10-09T00:15:09.430Z  INFO 1 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 8080 (http) with context path '/'
+2026-10-09T00:15:09.443Z  INFO 1 --- [sapi-backend] [           main] cl.sapi.backend.BackendApplication       : Started BackendApplication in 1.502 seconds (process running for 1.986)
+2026-10-09T00:15:09.543Z  INFO 1 --- [sapi-backend] [nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-09T00:15:09.543Z  INFO 1 --- [sapi-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-09T00:15:09.544Z  INFO 1 --- [sapi-backend] [nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+exit=0
+$ docker rm -f sapi-w0-backend-43e9e046
+sapi-w0-backend-43e9e046
+exit=0

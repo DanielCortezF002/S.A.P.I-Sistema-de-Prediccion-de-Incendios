@@ -1,0 +1,4 @@
+# sql-migration-validation - SQL MIGRATION VALIDATION (psql, no Flyway)
+# utc=2026-10-09T00:35:27Z
+
+NOT_VERIFIABLE_IN_THIS_ENVIRONMENT: falta PowerShell, Docker
