@@ -17,6 +17,11 @@ así que este es el FALLBACK GATE (Revisión 3 §3.1). 2026-10-08, 23:11–23:16
 
 Esto cubre G1/G2 del W1 ENTRY GATE para este SHA. Los jobs Docker (G3–G6) se
 cierran con la evidencia del host, que se versiona en `artifacts/hito2/w0/host/`.
-Las rutas locales se reemplazaron por los marcadores `<gate-out>`,
-`<fresh-clone>`, `<venv>` y `<scratch>`. Este commit solo toca `artifacts/hito2/**`
+Las rutas locales se reemplazaron por los marcadores `[gate-out]`,
+`[fresh-clone]`, `[venv]` y `[scratch]`. Este commit solo toca `artifacts/hito2/**`
 y hereda el gate de `6f0fde6`.
+
+**Corrección de saneamiento (2026-10-09):** la primera versión de esta carpeta reemplazó las rutas
+locales por marcadores con `<...>`, lo que dejaba los XML (junit/surefire) mal formados. Se regeneraron
+todos los archivos desde las salidas originales del gate con marcadores entre corchetes (`[gate-out]`,
+`[fresh-clone]`, `[venv]`, `[scratch]`, `[pwsh-7.4.6]`); el contenido no cambió.

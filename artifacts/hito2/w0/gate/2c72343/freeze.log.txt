@@ -1,7 +1,7 @@
 # freeze - freeze_check F1-F9 (SKIP = FAIL en modo gate)
 # utc=2026-10-08T23:04:23Z
 
-$ <venv>/bin/python -B scripts/freeze_check.py --json <gate-out>/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final   (cwd=<fresh-clone>)
+$ [venv]/bin/python -B scripts/freeze_check.py --json [gate-out]/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final   (cwd=[fresh-clone])
 baseline: cd6b58eb9bd4b9a22b8937c4cda73be46322cddb
 head: 2c72343184f28cd614e7b60d6c1275b9f8c8971b
 branch: HEAD
@@ -10,7 +10,7 @@ utc: 2026-10-08T23:04:31Z
 host: vm
 python: 3.14.6
 git: git version 2.43.0
-command: python -B scripts/freeze_check.py --json <gate-out>/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final
+command: python -B scripts/freeze_check.py --json [gate-out]/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final
 verdict: FREEZE CHECK PASS
 PASS  F1 HEAD                                              esperado=cd6b58e ancestro de HEAD (modo B)  observado=2c72343 ancestro=True
 PASS  F1 tags locales                                      esperado=subconjunto de tags fijados + --allow-tag  observado=0 tag(s) esperados

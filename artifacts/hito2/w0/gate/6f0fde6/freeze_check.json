@@ -7,7 +7,7 @@
   "host": "vm",
   "python": "3.14.6",
   "git": "git version 2.43.0",
-  "command": "python -B scripts/freeze_check.py --json <gate-out>/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final",
+  "command": "python -B scripts/freeze_check.py --json [gate-out]/freeze_check.json --allow-tag hito2-sprint2-rc1 --allow-tag hito2-sprint2-rc2 --allow-tag hito2-sprint2-rc3 --allow-tag hito2-sprint2-rc4 --allow-tag hito2-sprint2-rc5 --allow-tag hito2-sprint2-final",
   "verdict": "FREEZE CHECK PASS",
   "checks": [
     {

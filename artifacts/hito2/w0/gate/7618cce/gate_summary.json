@@ -22,11 +22,11 @@
       "commands": [
         {
           "command": [
-            "<venv>/bin/python",
+            "[venv]/bin/python",
             "-B",
             "scripts/freeze_check.py",
             "--json",
-            "<gate-out>/freeze_check.json",
+            "[gate-out]/freeze_check.json",
             "--allow-tag",
             "hito2-sprint2-rc1",
             "--allow-tag",
@@ -40,7 +40,7 @@
             "--allow-tag",
             "hito2-sprint2-final"
           ],
-          "cwd": "<fresh-clone>",
+          "cwd": "[fresh-clone]",
           "exit": 0
         }
       ],
@@ -57,7 +57,7 @@
       "commands": [
         {
           "command": [
-            "<venv>/bin/python",
+            "[venv]/bin/python",
             "-m",
             "black",
             "--check",
@@ -70,12 +70,12 @@
             "tests/test_w0_host_checks.py",
             "tests/test_w0_host_checks_evidence.py"
           ],
-          "cwd": "<fresh-clone>",
+          "cwd": "[fresh-clone]",
           "exit": 0
         },
         {
           "command": [
-            "<venv>/bin/python",
+            "[venv]/bin/python",
             "-m",
             "flake8",
             "--max-line-length=100",
@@ -89,19 +89,19 @@
             "tests/test_w0_host_checks.py",
             "tests/test_w0_host_checks_evidence.py"
           ],
-          "cwd": "<fresh-clone>",
+          "cwd": "[fresh-clone]",
           "exit": 0
         },
         {
           "command": [
-            "<venv>/bin/python",
+            "[venv]/bin/python",
             "-B",
             "-m",
             "pytest",
             "-q",
-            "--junitxml=<gate-out>/pytest-junit.xml"
+            "--junitxml=[gate-out]/pytest-junit.xml"
           ],
-          "cwd": "<fresh-clone>",
+          "cwd": "[fresh-clone]",
           "exit": 0
         }
       ],
@@ -137,7 +137,7 @@
             "verify",
             "-DskipITs"
           ],
-          "cwd": "<fresh-clone>/services/backend",
+          "cwd": "[fresh-clone]/services/backend",
           "exit": 0
         }
       ],

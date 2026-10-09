@@ -1,15 +1,15 @@
 # python - lint v2 + pytest completo (cobertura >= 80 %)
 # utc=2026-10-08T23:04:31Z
 
-$ <venv>/bin/python -m black --check services/ml_api scripts/freeze_check.py scripts/merge_gate.py tests/test_openapi_contracts.py tests/test_ml_api.py tests/test_merge_gate.py   (cwd=<fresh-clone>)
+$ [venv]/bin/python -m black --check services/ml_api scripts/freeze_check.py scripts/merge_gate.py tests/test_openapi_contracts.py tests/test_ml_api.py tests/test_merge_gate.py   (cwd=[fresh-clone])
 All done! ✨ 🍰 ✨
 7 files would be left unchanged.
 exit=0
 
-$ <venv>/bin/python -m flake8 --max-line-length=100 --extend-ignore=E203,W503 services/ml_api scripts/freeze_check.py scripts/merge_gate.py tests/test_openapi_contracts.py tests/test_ml_api.py tests/test_merge_gate.py   (cwd=<fresh-clone>)
+$ [venv]/bin/python -m flake8 --max-line-length=100 --extend-ignore=E203,W503 services/ml_api scripts/freeze_check.py scripts/merge_gate.py tests/test_openapi_contracts.py tests/test_ml_api.py tests/test_merge_gate.py   (cwd=[fresh-clone])
 exit=0
 
-$ <venv>/bin/python -B -m pytest -q --junitxml=<gate-out>/pytest-junit.xml   (cwd=<fresh-clone>)
+$ [venv]/bin/python -B -m pytest -q --junitxml=[gate-out]/pytest-junit.xml   (cwd=[fresh-clone])
 ........................................................................ [  3%]
 ........................................................................ [  7%]
 ........................................................................ [ 11%]
@@ -38,7 +38,7 @@ $ <venv>/bin/python -B -m pytest -q --junitxml=<gate-out>/pytest-junit.xml   (cw
 ......                                                                   [100%]
 =============================== warnings summary ===============================
 ../../../../../../venv314/lib/python3.14/site-packages/fastapi/testclient.py:1
-  <venv>/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+  [venv]/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
     from starlette.testclient import TestClient as TestClient  # noqa
 
 tests/test_app_integration.py: 495 warnings
@@ -53,7 +53,7 @@ tests/test_n8n_bridge.py: 198 warnings
 tests/test_openapi_contracts.py: 198 warnings
 tests/test_prototype_service.py: 396 warnings
 tests/test_scoring_inputs.py: 1881 warnings
-  <venv>/lib/python3.14/site-packages/joblib/numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  [venv]/lib/python3.14/site-packages/joblib/numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
   As an alternative, you can create a new view using np.reshape (with copy=False if needed).
     array.shape = self.shape
 
@@ -61,26 +61,26 @@ tests/test_dem_features.py: 9 warnings
 tests/test_dem_ingester.py: 3 warnings
 tests/test_dem_terrain.py: 3 warnings
 tests/test_procesamiento.py: 3 warnings
-  <venv>/lib/python3.14/site-packages/rasterio/transform.py:178: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  [venv]/lib/python3.14/site-packages/rasterio/transform.py:178: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     return Affine.translation(west, north) * Affine.scale(xsize, -ysize)
 
 tests/test_dem_features.py: 90 warnings
 tests/test_procesamiento.py: 750 warnings
-  <venv>/lib/python3.14/site-packages/rasterio/features.py:420: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  [venv]/lib/python3.14/site-packages/rasterio/features.py:420: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     return _bounds(geom, north_up=north_up, transform=transform)
 
 tests/test_dem_features.py: 12 warnings
 tests/test_procesamiento.py: 150 warnings
-  <venv>/lib/python3.14/site-packages/rasterio/windows.py:360: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  [venv]/lib/python3.14/site-packages/rasterio/windows.py:360: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     x, y = transform * (window.col_off or 0.0, window.row_off or 0.0)
 
 tests/test_dem_features.py: 12 warnings
 tests/test_procesamiento.py: 150 warnings
-  <venv>/lib/python3.14/site-packages/rasterio/windows.py:361: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  [venv]/lib/python3.14/site-packages/rasterio/windows.py:361: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     return Affine.translation(
 
 tests/test_dem_features.py::test_sample_grid_topography_returns_nan_for_cell_outside_raster_coverage
-  <venv>/lib/python3.14/site-packages/rasterio/__init__.py:366: NotGeoreferencedWarning: The given matrix is equal to Affine.identity or its flipped counterpart. GDAL may ignore this matrix and save no geotransform without raising an error. This behavior is somewhat driver-specific.
+  [venv]/lib/python3.14/site-packages/rasterio/__init__.py:366: NotGeoreferencedWarning: The given matrix is equal to Affine.identity or its flipped counterpart. GDAL may ignore this matrix and save no geotransform without raising an error. This behavior is somewhat driver-specific.
     dataset = writer(
 
 tests/test_dem_ingester.py::test_fetch_downloads_reads_and_writes_manifest
@@ -88,50 +88,50 @@ tests/test_dem_ingester.py::test_fetch_reuses_cache_without_calling_api
 tests/test_dem_ingester.py::test_fetch_reuses_cache_without_calling_api
 tests/test_dem_ingester.py::test_fetch_force_true_bypasses_cache
 tests/test_dem_ingester.py::test_fetch_force_true_bypasses_cache
-  <fresh-clone>/src/ingesta/dem_ingester.py:183: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  [fresh-clone]/src/ingesta/dem_ingester.py:183: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
   As an alternative, you can create a new view using np.reshape (with copy=False if needed).
     band = dataset.read(1)
 
 tests/test_dem_terrain.py::test_reproject_produces_near_isotropic_metric_pixels
 tests/test_dem_terrain.py::test_processor_end_to_end_on_synthetic_hill
-  <venv>/lib/python3.14/site-packages/rasterio/transform.py:189: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+  [venv]/lib/python3.14/site-packages/rasterio/transform.py:189: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
     return Affine.translation(west, north) * Affine.scale(
 
 tests/test_dem_terrain.py::test_reproject_rejects_dem_without_crs
-  <venv>/lib/python3.14/site-packages/rasterio/__init__.py:366: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
+  [venv]/lib/python3.14/site-packages/rasterio/__init__.py:366: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
     dataset = writer(
 
 tests/test_dem_terrain.py::test_reproject_rejects_dem_without_crs
-  <venv>/lib/python3.14/site-packages/rasterio/__init__.py:356: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
+  [venv]/lib/python3.14/site-packages/rasterio/__init__.py:356: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
     dataset = DatasetReader(path, driver=driver, sharing=sharing, **kwargs)
 
 tests/test_firms_baseline_guard.py::test_parallel_ingester_firms_rejects_frozen_output_before_network
 tests/test_ingesta.py::test_ingest_nasa_missing_api_key_degrades
 tests/test_ingesta.py::test_ingest_nasa_success_writes_daily_csv
 tests/test_ingesta_degradation.py::test_ingester_fails_when_fallback_empty
-  <fresh-clone>/src/ingesta/parallel_ingester.py:158: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  [fresh-clone]/src/ingesta/parallel_ingester.py:158: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     end_date = datetime.utcnow().date()
 
 tests/test_ingesta.py::test_ingest_dmc_keeps_stations_without_data_in_payload
 tests/test_ingesta.py::test_ingest_dmc_missing_credentials_degrades
 tests/test_ingesta.py::test_ingest_dmc_empty_station_catalog_degrades
 tests/test_ingesta_degradation.py::test_ingester_degrades_to_postgis_on_dmc_failure
-  <fresh-clone>/src/ingesta/parallel_ingester.py:200: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  [fresh-clone]/src/ingesta/parallel_ingester.py:200: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     out_path = self.raw_dir / f"dmc_meteo_{datetime.utcnow().date().isoformat()}.json"
 
 tests/test_ingesta.py::test_ingest_conaf_success_when_api_reachable_without_seed
 tests/test_ingesta.py::test_ingest_conaf_falls_back_to_institutional_seed_when_degrade_fails
 tests/test_ingesta_degradation.py::test_conaf_loads_institutional_seed_on_failure
-  <fresh-clone>/src/ingesta/parallel_ingester.py:230: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  [fresh-clone]/src/ingesta/parallel_ingester.py:230: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     out_path = self.raw_dir / f"conaf_incendios_{datetime.utcnow().date().isoformat()}.json"
 
 tests/test_procesamiento.py::test_process_all_with_sample_raw
-  <fresh-clone>/src/procesamiento/data_processor.py:152: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  [fresh-clone]/src/procesamiento/data_processor.py:152: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     "fecha": row.get("acq_date", datetime.utcnow().date()),
 
 tests/test_procesamiento.py::test_process_all_with_sample_raw
 tests/test_procesamiento.py::test_process_all_with_sample_raw
-  <fresh-clone>/src/procesamiento/data_processor.py:304: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  [fresh-clone]/src/procesamiento/data_processor.py:304: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
     "fecha": row.get("fecha", datetime.utcnow()),
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html

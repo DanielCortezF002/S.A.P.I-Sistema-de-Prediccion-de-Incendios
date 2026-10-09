@@ -3,7 +3,7 @@
 Corrida de `python scripts/merge_gate.py --job all --fresh-clone` sobre un clon
 limpio de `df295500ad9fe6f431aa3f7f5d6b05a64d43b4e1` (`chore/hito2-w0-gate`).
 Sandbox: Linux, Python 3.14.6, OpenJDK 21, sin Docker. Se usó
-`SAPI_PWSH=<pwsh-7.4.6>` (PowerShell 7.4.6 local, no en PATH) para que los tests
+`SAPI_PWSH=[pwsh-7.4.6]` (PowerShell 7.4.6 local, no en PATH) para que los tests
 de comportamiento del checker se ejecutaran dentro de `pytest`. 2026-10-09,
 00:31–00:35 UTC.
 
@@ -16,3 +16,8 @@ de comportamiento del checker se ejecutaran dentro de `pytest`. 2026-10-09,
 
 Rutas locales reemplazadas por marcadores. Commit solo de evidencia: hereda el
 gate de `df29550`.
+
+**Corrección de saneamiento (2026-10-09):** la primera versión de esta carpeta reemplazó las rutas
+locales por marcadores con `<...>`, lo que dejaba los XML (junit/surefire) mal formados. Se regeneraron
+todos los archivos desde las salidas originales del gate con marcadores entre corchetes (`[gate-out]`,
+`[fresh-clone]`, `[venv]`, `[scratch]`, `[pwsh-7.4.6]`); el contenido no cambió.

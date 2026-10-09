@@ -1,7 +1,7 @@
 # backend-unit - mvnw -B verify -DskipITs (JDK 21)
 # utc=2026-10-08T23:16:35Z
 
-$ sh mvnw -B verify -DskipITs   (cwd=<fresh-clone>/services/backend)
+$ sh mvnw -B verify -DskipITs   (cwd=[fresh-clone]/services/backend)
 Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cacerts -Djavax.net.ssl.trustStoreType=JKS -Dhttps.proxyHost=127.0.0.1 -Dhttps.proxyPort=38511 -Dhttp.nonProxyHosts=localhost|127.0.0.1|::1|127.*|0.*|::|169.254.*|api.anthropic.com|api-staging.anthropic.com|api-pr-preview.anthropic.com|mcp-proxy.anthropic.com|mcp-proxy-staging.anthropic.com|registry.npmjs.org|jsr.io|npm.jsr.io|pypi.org|files.pythonhosted.org|index.crates.io|proxy.golang.org|host.docker.internal|10.*|172.16.*|172.17.*|172.18.*|172.19.*|172.20.*|172.21.*|172.22.*|172.23.*|172.24.*|172.25.*|172.26.*|172.27.*|172.28.*|172.29.*|172.30.*|172.31.*|192.168.*|100.64.0.0/10|*.svc.cluster.local|*.svc.cluster.local -Djdk.http.auth.tunneling.disabledSchemes= -Djdk.http.auth.proxying.disabledSchemes=
 [INFO] Scanning for projects...
 [INFO] 
@@ -19,13 +19,13 @@ Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cace
 [INFO] Compiling 2 source files with javac [debug parameters release 21] to target/classes
 [INFO] 
 [INFO] --- resources:3.5.0:testResources (default-testResources) @ backend ---
-[INFO] skip non existing resourceDirectory <fresh-clone>/services/backend/src/test/resources
+[INFO] skip non existing resourceDirectory [fresh-clone]/services/backend/src/test/resources
 [INFO] 
 [INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ backend ---
 [INFO] Recompiling the module because of changed dependency.
 [INFO] Compiling 2 source files with javac [debug parameters release 21] to target/test-classes
-[INFO] <fresh-clone>/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: <fresh-clone>/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java uses unchecked or unsafe operations.
-[INFO] <fresh-clone>/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: Recompile with -Xlint:unchecked for details.
+[INFO] [fresh-clone]/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: [fresh-clone]/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java uses unchecked or unsafe operations.
+[INFO] [fresh-clone]/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: Recompile with -Xlint:unchecked for details.
 [INFO] 
 [INFO] --- surefire:3.5.6:test (default-test) @ backend ---
 [INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
@@ -49,7 +49,7 @@ Picked up JAVA_TOOL_OPTIONS: -Djavax.net.ssl.trustStore=/etc/ssl/certs/java/cace
 
  :: Spring Boot ::                (v4.1.1)
 
-2026-10-08T23:16:42.372Z  INFO 17212 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Starting HealthControllerTests using Java 21.0.12.1 with PID 17212 (started by root in <fresh-clone>/services/backend)
+2026-10-08T23:16:42.372Z  INFO 17212 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Starting HealthControllerTests using Java 21.0.12.1 with PID 17212 (started by root in [fresh-clone]/services/backend)
 2026-10-08T23:16:42.374Z  INFO 17212 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : No active profile set, falling back to 1 default profile: "default"
 2026-10-08T23:16:43.303Z  INFO 17212 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
 2026-10-08T23:16:43.322Z  INFO 17212 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
@@ -82,7 +82,7 @@ WARNING: Dynamic loading of agents will be disallowed by default in a future rel
 
  :: Spring Boot ::                (v4.1.1)
 
-2026-10-08T23:16:45.462Z  INFO 17212 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Starting BackendApplicationTests using Java 21.0.12.1 with PID 17212 (started by root in <fresh-clone>/services/backend)
+2026-10-08T23:16:45.462Z  INFO 17212 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Starting BackendApplicationTests using Java 21.0.12.1 with PID 17212 (started by root in [fresh-clone]/services/backend)
 2026-10-08T23:16:45.462Z  INFO 17212 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : No active profile set, falling back to 1 default profile: "default"
 2026-10-08T23:16:45.776Z  INFO 17212 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Started BackendApplicationTests in 0.408 seconds (process running for 5.091)
 [INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.468 s -- in cl.sapi.backend.BackendApplicationTests
@@ -94,11 +94,11 @@ WARNING: Dynamic loading of agents will be disallowed by default in a future rel
 [INFO] 
 [INFO] 
 [INFO] --- jar:3.5.1:jar (default-jar) @ backend ---
-[INFO] Building jar: <fresh-clone>/services/backend/target/backend-0.0.1-SNAPSHOT.jar
+[INFO] Building jar: [fresh-clone]/services/backend/target/backend-0.0.1-SNAPSHOT.jar
 [INFO] 
 [INFO] --- spring-boot:4.1.1:repackage (repackage) @ backend ---
-[INFO] Replacing main artifact <fresh-clone>/services/backend/target/backend-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
-[INFO] The original artifact has been renamed to <fresh-clone>/services/backend/target/backend-0.0.1-SNAPSHOT.jar.original
+[INFO] Replacing main artifact [fresh-clone]/services/backend/target/backend-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to [fresh-clone]/services/backend/target/backend-0.0.1-SNAPSHOT.jar.original
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
