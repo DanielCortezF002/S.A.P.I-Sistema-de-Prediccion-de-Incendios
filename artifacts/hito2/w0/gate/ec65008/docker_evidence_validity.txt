@@ -1,0 +1,9 @@
+$ python scripts/merge_gate.py --evidence-valid 7618cce00123ac0b3f0c18e2ba8ec6778f19059a --job container-smoke
+container-smoke: VIGENTE 
+exit=0
+$ python scripts/merge_gate.py --evidence-valid 7618cce00123ac0b3f0c18e2ba8ec6778f19059a --job flyway-integration
+flyway-integration: VIGENTE 
+exit=0
+$ python scripts/merge_gate.py --evidence-valid 43c17fd --job sql-migration-validation
+sql-migration-validation: VIGENTE 
+exit=0
