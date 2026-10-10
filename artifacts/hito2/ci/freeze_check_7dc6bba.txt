@@ -1,0 +1,37 @@
+baseline: cd6b58eb9bd4b9a22b8937c4cda73be46322cddb
+head: 7dc6bbad232808ee750d912812cebe2e39f62092
+branch: feat/SAPI-57-ranking-ml-client
+mode: B
+utc: 2026-10-10T01:31:57Z
+host: vm
+python: 3.14.6
+git: git version 2.43.0
+command: python -B scripts/freeze_check.py --json [scratch]/freeze_e1.json
+verdict: FREEZE CHECK PASS
+PASS  F1 HEAD                                              esperado=cd6b58e ancestro de HEAD (modo B)  observado=7dc6bba ancestro=True
+PASS  F1 tags locales                                      esperado=subconjunto de tags fijados + --allow-tag  observado=6 tag(s) esperados
+PASS  F1 tags remotos                                      esperado=6 tags fijados intactos, sin tags nuevos no autorizados  observado=movidos=- nuevos=-
+PASS  F1 origin/main                                       esperado=== cd6b58e o descendiente  observado=8a14054
+PASS  F8 worktree limpio                                   esperado=git status vacío  observado=0 entrada(s)
+PASS  F8 ignorados inesperados                             esperado=sin archivos ignorados fuera de caches  observado=ninguno
+PASS  F8 stash/worktrees                                   esperado=stash vacío, 1 worktree  observado=stash=0 worktrees=1
+PASS  F6/F9 db/migration/V001__enable_postgis.sql          esperado=5f3606cb3b51  observado=5f3606cb3b51
+PASS  F6/F9 db/migration/V002__create_sapi_v2_schema.sql   esperado=22df9f6843a2  observado=22df9f6843a2
+PASS  F6/F9 db/migration/V003__seed_celdas_geom.sql        esperado=02690a1684aa  observado=02690a1684aa
+PASS  F6/F9 models/prototype_model_d.pkl                   esperado=ac017bef1f42  observado=ac017bef1f42
+PASS  F6/F9 models/prototype_model_d_metadata.json         esperado=fc2c62341d82  observado=fc2c62341d82
+PASS  F6/F9 artifacts/hito1/reproducibility/manifest.json  esperado=a02500da7fb2  observado=a02500da7fb2
+PASS  F6 db/migration                                      esperado=V001-V003 fijados; solo V004+ nuevos  observado=3 archivos
+PASS  F9 models/                                           esperado=solo .gitkeep, pkl y metadata  observado=models/.gitkeep, models/prototype_model_d.pkl, models/prototype_model_d_metadata.json
+PASS  F7 contratos v0                                      esperado=sha256 fijados  observado=idénticos
+PASS  F4b contratos aditivos                               esperado=solo adiciones  observado=sin cambios
+PASS  F4c servicio ML                                      esperado=idéntico salvo _ranking y campos nuevos de RankingResult  observado=OK
+PASS  F3 readiness (baseline)                              esperado=17 b3d32f5025bb… 2622fcdc8231…  observado=17 b3d32f5025bb… 2622fcdc8231…
+PASS  F3 readiness (HEAD)                                  esperado=17 b3d32f5025bb… 2622fcdc8231…  observado=17 b3d32f5025bb… 2622fcdc8231…
+PASS  F3 readiness (worktree)                              esperado=b3d32f5025bb…  observado=b3d32f5025bb…
+PASS  F4 congelados (commits)                              esperado=sin cambios desde baseline  observado=sin cambios
+PASS  F4 congelados (worktree)                             esperado=sin cambios locales  observado=sin cambios
+PASS  F4 congelados (archivos nuevos)                      esperado=sin archivos nuevos bajo rutas congeladas  observado=ninguno
+PASS  F5 verify_reproducibility                            esperado=exit 0, VERIFICADOS (5), sin discrepancias  observado=exit 0
+PASS  F5 contrato CRLF (.gitattributes)                    esperado=3 snapshots i/crlf attr/-text  observado=3/3
+PASS  F2 fingerprint Modelo D                              esperado=2026-09-01 00:00:00+00:00 50 VP-001 0.131293368748 / 33c2eacc49bd…  observado=2026-09-01 00:00:00+00:00 50 VP-001 0.131293368748 / 33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff
