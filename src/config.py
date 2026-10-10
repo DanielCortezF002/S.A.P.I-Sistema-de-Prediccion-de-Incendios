@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 from pathlib import Path
 
@@ -101,7 +102,12 @@ SAPI_UI_LEGACY_MODES_DEFAULT = "0"
 
 
 def _env_float(name: str, default: float) -> float:
-    """Lee un float de entorno; un valor vacío o no numérico usa el default."""
+    """Lee un float de entorno para timeouts.
+
+    Solo acepta valores finitos y estrictamente positivos; vacío, no numérico,
+    `nan`, `±inf`, cero o negativo usan el default (un timeout infinito
+    equivale a no tener timeout).
+    """
     raw = os.getenv(name, "").strip()
     if not raw:
         return default
@@ -109,7 +115,7 @@ def _env_float(name: str, default: float) -> float:
         value = float(raw)
     except ValueError:
         return default
-    return value if value > 0 else default
+    return value if math.isfinite(value) and value > 0 else default
 
 
 def get_backend_base_url() -> str:

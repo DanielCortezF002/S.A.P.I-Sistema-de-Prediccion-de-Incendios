@@ -34,6 +34,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from app.utils.backend_client import (
+    KNOWN_ERROR_TYPES,
     RANKING_PATH,
     BackendError,
     BackendRankingClient,
@@ -308,11 +309,14 @@ def _inject_css() -> None:
 def _render_header(view: RankingView) -> None:
     date_line = _human_date(view.forecast_time)
     window_end = view.window_end
-    window_line = (
-        f"{_human_hm(view.forecast_time)} → {_human_hm(window_end)} UTC"
-        if window_end is not None
-        else f"{_human_hm(view.forecast_time)} UTC · horizonte {NOT_PROVIDED}"
-    )
+    if window_end is not None:
+        window_line = f"{_human_hm(view.forecast_time)} → {_human_hm(window_end)} UTC"
+    elif view.horizon_hours is not None:
+        # Horizonte informado pero T+h no representable: ausencia explícita,
+        # sin recortar a una fecha inventada.
+        window_line = f"{_human_hm(view.forecast_time)} UTC · ventana no representable"
+    else:
+        window_line = f"{_human_hm(view.forecast_time)} UTC · horizonte {NOT_PROVIDED}"
     station_line = (
         f"DMC {_esc(view.station_name)} · {_esc(view.station_id)}"
         if view.station_available
@@ -486,6 +490,8 @@ def _render_selected_panel(
             f"<li><span>T+{view.horizon_hours}h</span><b>{_human_date(window_end)} "
             f"{_human_hm(window_end)} UTC</b></li>"
         )
+    elif view.horizon_hours is not None:
+        window_rows = "<li><span>Horizonte</span><b>ventana no representable</b></li>"
     else:
         window_rows = f"<li><span>Horizonte</span><b>{_esc(NOT_PROVIDED)}</b></li>"
     st.markdown(
@@ -547,7 +553,11 @@ def _render_tech_expander(view: RankingView) -> None:
             f"- **Ventana evaluada:** {_iso_utc(view.forecast_time)} → {_iso_utc(window_end)} "
             f"(h={view.horizon_hours}h)"
             if window_end is not None
-            else f"- **Ventana evaluada:** horizonte {NOT_PROVIDED}"
+            else (
+                "- **Ventana evaluada:** ventana no representable"
+                if view.horizon_hours is not None
+                else f"- **Ventana evaluada:** horizonte {NOT_PROVIDED}"
+            )
         ),
         f"- **Estación DMC:** {station}",
         (
@@ -588,13 +598,10 @@ def _render_backend_error(exc: BackendError) -> None:
     """Estado de error controlado (CA4): mensaje genérico, sin host ni stack."""
     st.markdown("## S.A.P.I. — PROTOTIPO EXPLORATORIO")
     st.error(f"No se pudo obtener el ranking del backend: {exc.user_message}")
-    details = []
-    if exc.error_type:
-        details.append(f"tipo reportado por el backend: `{exc.error_type}`")
-    if exc.backend_message:
-        details.append(f"mensaje del backend: {exc.backend_message}")
-    if details:
-        st.caption(" · ".join(details))
+    # Solo texto local. El `message` remoto no existe en BackendError y el
+    # `error_type` se vuelve a filtrar contra el enum del contrato por defensa.
+    if exc.error_type in KNOWN_ERROR_TYPES:
+        st.caption(f"tipo reportado por el backend: `{exc.error_type}`")
     st.caption(
         "La vista consume únicamente `GET /api/v1/ranking` del backend Spring Boot "
         "(`SAPI_BACKEND_BASE_URL`). No se ejecuta inferencia local ni se muestran "

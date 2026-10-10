@@ -22,11 +22,12 @@ fuente estática `src/geo/grid.py` solo para validar el conjunto de celdas.
 
 from __future__ import annotations
 
+import json
 import math
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timezone
-from typing import Any, Mapping, Optional
+from datetime import date, datetime, timedelta, timezone
+from typing import Any, Iterator, Mapping, Optional
 
 import requests
 
@@ -39,6 +40,22 @@ SCORE_SEMANTICS = "relative_rank"
 EXPECTED_CELL_COUNT = 50
 EXPECTED_CELL_IDS: frozenset[str] = frozenset(c["cell_id"] for c in all_cells())
 MAX_BODY_BYTES = 2 * 1024 * 1024
+# Tamaño de lectura por chunk: el buffer nunca supera MAX_BODY_BYTES y el
+# exceso detectado en un chunk se descarta sin acumularlo.
+BODY_CHUNK_BYTES = 64 * 1024
+# `error_type` del contrato (`Error` en ml-service.v0 / backend.v0). Cualquier
+# otro valor remoto se descarta: nunca llega a la presentación.
+KNOWN_ERROR_TYPES: frozenset[str] = frozenset(
+    {
+        "invalid_request",
+        "internal_error",
+        "upstream_invalid_response",
+        "upstream_unavailable",
+        "prototype_unavailable",
+        "data_unavailable",
+        "upstream_timeout",
+    }
+)
 
 _CELL_ID_RE = re.compile(r"^VP-\d{3}$")
 _FINGERPRINT_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -95,20 +112,25 @@ _USER_MESSAGES = {
         "no se muestra para no presentar datos inválidos."
     ),
 }
-_MAX_REMOTE_MESSAGE_CHARS = 200
 
 
 class BackendError(Exception):
     """Fallo controlado al obtener el ranking del backend.
+
+    El objeto es la frontera de presentación: solo transporta texto local
+    (`user_message`) y, como máximo, un `error_type` del enum del contrato. El
+    `message` remoto del cuerpo `Error` es detalle operativo no confiable y
+    no se conserva en ningún atributo.
 
     Attributes:
         kind: Categoría (`connection`, `timeout`, `http_backend`,
             `invalid_json`, `invalid_ranking`).
         user_message: Texto genérico apto para la UI (sin detalles internos).
         http_status: Código HTTP cuando `kind == http_backend`.
-        error_type: `error_type` del cuerpo `Error` del contrato, si llegó.
-        backend_message: `message` del cuerpo `Error`, saneado y acotado.
-        detail: Motivo técnico para logs/tests; nunca se muestra al usuario.
+        error_type: `error_type` del contrato, solo si pertenece a
+            `KNOWN_ERROR_TYPES`; en otro caso `None`.
+        detail: Motivo técnico local (nombre de excepción, regla incumplida);
+            nunca incorpora texto remoto ni se muestra al usuario.
     """
 
     def __init__(
@@ -118,12 +140,12 @@ class BackendError(Exception):
         detail: str = "",
         http_status: Optional[int] = None,
         error_type: Optional[str] = None,
-        backend_message: Optional[str] = None,
     ) -> None:
         self.kind = kind
         self.http_status = http_status
-        self.error_type = error_type
-        self.backend_message = backend_message
+        self.error_type = (
+            error_type if isinstance(error_type, str) and error_type in KNOWN_ERROR_TYPES else None
+        )
         self.detail = detail
         if kind == ERROR_KIND_HTTP_BACKEND:
             self.user_message = _HTTP_USER_MESSAGES.get(
@@ -189,12 +211,18 @@ class RankingView:
 
     @property
     def window_end(self) -> Optional[datetime]:
-        """Fin de la ventana (T + horizon_hours) o None si el horizonte no llegó."""
+        """Fin de la ventana (T + horizon_hours).
+
+        `None` si el horizonte no llegó o si la suma no es representable como
+        `datetime` (horizonte absurdo). No se recorta a una fecha inventada:
+        la ausencia es explícita y la presentación la trata como tal.
+        """
         if self.horizon_hours is None:
             return None
-        return datetime.fromtimestamp(
-            self.forecast_time.timestamp() + self.horizon_hours * 3600, tz=timezone.utc
-        )
+        try:
+            return self.forecast_time + timedelta(hours=self.horizon_hours)
+        except (OverflowError, ValueError):
+            return None
 
     @property
     def missing_additive_fields(self) -> tuple[str, ...]:
@@ -449,33 +477,100 @@ def parse_ranking(payload: Any, fetched_at: Optional[datetime] = None) -> Rankin
     )
 
 
-def _sanitize_remote_text(value: Any) -> Optional[str]:
-    """Texto remoto para mostrar: solo str, sin controles, acotado."""
-    if not isinstance(value, str):
-        return None
-    cleaned = "".join(ch for ch in value if ch.isprintable()).strip()
-    if not cleaned:
-        return None
-    return cleaned[:_MAX_REMOTE_MESSAGE_CHARS]
+class _BodyTooLarge(Exception):
+    """El cuerpo supera `MAX_BODY_BYTES` (detectado antes o durante la lectura)."""
 
 
-def _error_from_response(response: requests.Response) -> BackendError:
-    error_type: Optional[str] = None
-    message: Optional[str] = None
+def _declared_length(response: Any) -> Optional[int]:
+    """`Content-Length` declarado, o None si falta o no es un entero válido."""
+    headers = getattr(response, "headers", None) or {}
     try:
-        body = response.json()
+        raw = headers.get("Content-Length")
+    except AttributeError:
+        return None
+    if raw is None:
+        return None
+    try:
+        length = int(str(raw).strip())
     except ValueError:
-        body = None
-    if isinstance(body, Mapping):
-        error_type = _sanitize_remote_text(body.get("error_type"))
-        message = _sanitize_remote_text(body.get("message"))
+        return None
+    return length if length >= 0 else None
+
+
+def _iter_bounded(response: Any, limit: int) -> Iterator[bytes]:
+    """Itera chunks acotados y aborta en cuanto el acumulado superaría `limit`.
+
+    Nunca accede a `response.content` ni a `response.json()`: ambos
+    materializarían el cuerpo completo antes de poder comprobar el tamaño.
+    """
+    received = 0
+    for chunk in response.iter_content(chunk_size=BODY_CHUNK_BYTES):
+        if not chunk:
+            continue
+        received += len(chunk)
+        if received > limit:
+            raise _BodyTooLarge(f"cuerpo mayor a {limit} bytes")
+        yield chunk
+
+
+def _read_bounded_body(response: Any, limit: int = MAX_BODY_BYTES) -> bytes:
+    """Lee el cuerpo en streaming sin superar `limit` bytes.
+
+    Un `Content-Length` mayor al límite falla antes de leer; la ausencia de la
+    cabecera o un valor incorrecto no relajan la comprobación durante la
+    lectura. El llamador es responsable de cerrar la respuesta.
+
+    Raises:
+        _BodyTooLarge: Si el cuerpo declarado o leído supera `limit`.
+        requests.exceptions.RequestException: Fallos de red durante la lectura.
+    """
+    declared = _declared_length(response)
+    if declared is not None and declared > limit:
+        raise _BodyTooLarge(f"Content-Length {declared} supera {limit} bytes")
+    return b"".join(_iter_bounded(response, limit))
+
+
+def _error_type_from_body(body: bytes) -> Optional[str]:
+    """`error_type` del cuerpo `Error`, solo si es un valor del contrato.
+
+    El `message` remoto se ignora deliberadamente: es detalle operativo no
+    confiable y no debe cruzar la frontera de presentación.
+    """
+    try:
+        payload = json.loads(body.decode("utf-8", errors="replace"))
+    except ValueError:
+        return None
+    if not isinstance(payload, Mapping):
+        return None
+    error_type = payload.get("error_type")
+    if isinstance(error_type, str) and error_type in KNOWN_ERROR_TYPES:
+        return error_type
+    return None
+
+
+def _http_error(status: int, error_type: Optional[str], note: str) -> BackendError:
     return BackendError(
         ERROR_KIND_HTTP_BACKEND,
-        detail=f"HTTP {response.status_code} error_type={error_type}",
-        http_status=int(response.status_code),
+        detail=f"HTTP {status} error_type={error_type} {note}".rstrip(),
+        http_status=status,
         error_type=error_type,
-        backend_message=message,
     )
+
+
+def _error_from_response(response: Any) -> BackendError:
+    """Clasifica una respuesta HTTP != 200 leyendo el cuerpo de forma acotada.
+
+    Si el cuerpo de error es demasiado grande o la lectura falla, el error
+    sigue siendo controlado (`http_backend` con el status) sin `error_type`.
+    """
+    status = int(response.status_code)
+    try:
+        body = _read_bounded_body(response)
+    except _BodyTooLarge:
+        return _http_error(status, None, "cuerpo de error descartado por tamaño")
+    except requests.exceptions.RequestException as exc:
+        return _http_error(status, None, f"cuerpo de error ilegible ({type(exc).__name__})")
+    return _http_error(status, _error_type_from_body(body), "")
 
 
 class BackendRankingClient:
@@ -543,6 +638,7 @@ class BackendRankingClient:
                 params=params,
                 headers={"Accept": "application/json"},
                 timeout=self.timeout,
+                stream=True,
             )
         except requests.exceptions.Timeout as exc:
             raise BackendError(ERROR_KIND_TIMEOUT, detail=type(exc).__name__) from exc
@@ -550,15 +646,26 @@ class BackendRankingClient:
             raise BackendError(ERROR_KIND_CONNECTION, detail=type(exc).__name__) from exc
 
         fetched_at = datetime.now(timezone.utc)
-        if response.status_code != 200:
-            raise _error_from_response(response)
-        content = response.content or b""
+        try:
+            if response.status_code != 200:
+                raise _error_from_response(response)
+            try:
+                content = _read_bounded_body(response)
+            except _BodyTooLarge as exc:
+                raise _invalid(str(exc)) from exc
+            except requests.exceptions.Timeout as exc:
+                raise BackendError(ERROR_KIND_TIMEOUT, detail=type(exc).__name__) from exc
+            except requests.exceptions.RequestException as exc:
+                raise BackendError(ERROR_KIND_CONNECTION, detail=type(exc).__name__) from exc
+        finally:
+            # Libera la conexión en todos los caminos, incluido el aborto por
+            # tamaño: lo que no se leyó no se lee nunca.
+            response.close()
+
         if not content.strip():
             raise BackendError(ERROR_KIND_INVALID_JSON, detail="cuerpo vacío")
-        if len(content) > MAX_BODY_BYTES:
-            raise _invalid(f"cuerpo mayor a {MAX_BODY_BYTES} bytes")
         try:
-            payload = response.json()
-        except ValueError as exc:
+            payload = json.loads(content.decode("utf-8"))
+        except (UnicodeDecodeError, ValueError) as exc:
             raise BackendError(ERROR_KIND_INVALID_JSON, detail="JSON inválido") from exc
         return parse_ranking(payload, fetched_at=fetched_at)
