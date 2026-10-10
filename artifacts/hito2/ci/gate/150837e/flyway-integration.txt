@@ -1,0 +1,12 @@
+# flyway-integration - REAL FLYWAY INTEGRATION VALIDATION (Flyway CLI 12.4.0)
+# utc=2026-10-10T15:53:01Z
+
+$ pwsh -NoProfile -File scripts/w0_host_checks.ps1 -Check flyway-integration -OutDir [gate-out]/flyway-integration   (cwd=[gate-out]/src-799s5a62)
+[2026-10-10T15:53:02Z] flyway-integration ...
+[2026-10-10T15:53:17Z] flyway-integration: PASS
+
+==================== W0 HOST CHECKS ====================
+flyway-integration         PASS
+OVERALL                    PASS
+Evidence: [gate-out]/flyway-integration
+exit=0

@@ -1,0 +1,5 @@
+$ python scripts/merge_gate.py --evidence-valid 7618cce00123ac0b3f0c18e2ba8ec6778f19059a --job container-smoke
+container-smoke: CADUCA contracts/openapi/README.md, services/backend/pom.xml, services/backend/src/main/java/cl/sapi/backend/ranking/ForecastTime.java, services/backend/src/main/java/cl/sapi/backend/ranking/RankingError.java, services/backend/src/main/java/cl/sapi/backend/ranking/RankingOutcome.java, services/backend/src/main/java/cl/sapi/backend/ranking/RankingResultValidator.java, services/back
+exit=0
+# flyway-integration y sql-migration-validation: evidencia nueva sobre 150837e en este mismo gate (PASS, sandbox con Docker).
+# container-smoke: no se ejecutó en el sandbox (Dockerfile.ml-api no se puede construir: egress bloquea los mirrors de Debian). Pendiente en el host.

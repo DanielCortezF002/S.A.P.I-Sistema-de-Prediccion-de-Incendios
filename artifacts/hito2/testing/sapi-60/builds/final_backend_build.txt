@@ -1,0 +1,67 @@
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 888B done
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/eclipse-temurin:21-jre
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/maven:3.9-eclipse-temurin-21
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 70B done
+#4 DONE 0.0s
+
+#5 [stage-1 1/4] FROM docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5
+#5 resolve docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5 0.0s done
+#5 CACHED
+
+#6 [build 1/7] FROM docker.io/library/maven:3.9-eclipse-temurin-21@sha256:f023a8d2a99c4b4fe907cfa6430f229610e4d488ce3fcf8226509c4466c46139
+#6 resolve docker.io/library/maven:3.9-eclipse-temurin-21@sha256:f023a8d2a99c4b4fe907cfa6430f229610e4d488ce3fcf8226509c4466c46139 0.0s done
+#6 DONE 0.0s
+
+#7 [build 2/7] WORKDIR /build
+#7 CACHED
+
+#8 [internal] load build context
+#8 transferring context: 4.46kB done
+#8 DONE 0.0s
+
+#9 [build 3/7] COPY .mvn .mvn
+#9 DONE 0.9s
+
+#10 [stage-1 2/4] RUN useradd --system --uid 10001 --no-create-home sapi
+#10 0.952 useradd warning: sapi's uid 10001 is greater than SYS_UID_MAX 999
+#10 DONE 1.0s
+
+#11 [build 4/7] COPY mvnw pom.xml ./
+#11 DONE 0.0s
+
+#12 [stage-1 3/4] WORKDIR /app
+#12 DONE 0.0s
+
+#13 [build 5/7] RUN sh ./mvnw -B -q dependency:go-offline
+#13 DONE 116.6s
+
+#14 [build 6/7] COPY src src
+#14 DONE 0.1s
+
+#15 [build 7/7] RUN sh ./mvnw -B -q -DskipTests package
+#15 DONE 7.3s
+
+#16 [stage-1 4/4] COPY --from=build /build/target/backend-0.0.1-SNAPSHOT.jar app.jar
+#16 DONE 0.2s
+
+#17 exporting to image
+#17 exporting layers
+#17 exporting layers 1.2s done
+#17 exporting manifest sha256:a235abe52956506622999ebd1d0ff38c8347613c08573ff291fd49c260fdad0d done
+#17 exporting config sha256:327ef2884d4c35d3e40886aeba0943231122c39323885b951fb7933f8dedbe99 done
+#17 exporting attestation manifest sha256:e9159f30b1d91a4b41f3e5323dbeb46e9c3d00192d39bf6031325b56176486d9 done
+#17 exporting manifest list sha256:23b1530d257f1ce6fbeb29f7d624310e84a84137b1db05a3432bb6f0a3cbee53 done
+#17 naming to docker.io/library/sapi60-preflight-backend:latest done
+#17 unpacking to docker.io/library/sapi60-preflight-backend:latest
+#17 unpacking to docker.io/library/sapi60-preflight-backend:latest 0.3s done
+#17 DONE 1.6s

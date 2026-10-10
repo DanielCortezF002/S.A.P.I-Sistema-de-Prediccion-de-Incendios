@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.149" tests="6" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="invalidValuesFailAtStartup" classname="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.061">
+    <system-out><![CDATA[2026-10-10T15:52:49.278Z  WARN 32127 --- [sapi-backend] [           main] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.boot.context.properties.ConfigurationPropertiesBindException: Error creating bean with name 'sapi.ml-cl.sapi.backend.ranking.ml.MlServiceProperties': Could not bind properties to 'MlServiceProperties' : prefix=sapi.ml, ignoreInvalidFields=false, ignoreUnknownFields=true
+2026-10-10T15:52:49.302Z  WARN 32127 --- [sapi-backend] [           main] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.boot.context.properties.ConfigurationPropertiesBindException: Error creating bean with name 'sapi.ml-cl.sapi.backend.ranking.ml.MlServiceProperties': Could not bind properties to 'MlServiceProperties' : prefix=sapi.ml, ignoreInvalidFields=false, ignoreUnknownFields=true
+]]></system-out>
+  </testcase>
+  <testcase name="timeoutsBind(String, long)[1]" classname="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.023"/>
+  <testcase name="timeoutsBind(String, long)[2]" classname="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.011"/>
+  <testcase name="timeoutsBind(String, long)[3]" classname="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.008"/>
+  <testcase name="timeoutsBind(String, long)[4]" classname="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.008"/>
+  <testcase name="timeoutsBind(String, long)[5]" classname="cl.sapi.backend.ranking.ml.MlServicePropertiesTests" time="0.007"/>
+</testsuite>

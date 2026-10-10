@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-failsafe-plugin/xsd/failsafe-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="8.927" tests="11" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="ca4Concurrent" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.87">
+    <system-out><![CDATA[15:53:58.824 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+15:53:59.086 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Loaded org.testcontainers.dockerclient.UnixSocketClientProviderStrategy from ~/.testcontainers.properties, will try it first
+15:53:59.717 [main] INFO org.testcontainers.dockerclient.DockerClientProviderStrategy -- Found Docker environment with local Unix socket (unix:///var/run/docker.sock)
+15:53:59.720 [main] INFO org.testcontainers.DockerClientFactory -- Docker host IP address is localhost
+15:53:59.750 [main] INFO org.testcontainers.DockerClientFactory -- Connected to docker: 
+  Server Version: 29.8.2
+  API Version: 1.56
+  Operating System: Ubuntu 24.04.5 LTS
+  Total Memory: 16093 MB
+15:53:59.753 [main] WARN org.testcontainers.utility.ResourceReaper -- 
+********************************************************************************
+Ryuk has been disabled. This can cause unexpected behavior in your environment.
+********************************************************************************
+15:53:59.776 [main] INFO org.testcontainers.DockerClientFactory -- Checking the system...
+15:53:59.786 [main] INFO org.testcontainers.DockerClientFactory -- ✔︎ Docker server version should be at least 1.6.0
+15:53:59.957 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.persistence.RankingPersistenceIT]: RankingPersistenceIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+15:54:00.114 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.persistence.RankingPersistenceIT
+15:54:00.193 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.persistence.RankingPersistenceIT]: RankingPersistenceIT does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+15:54:00.199 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.persistence.RankingPersistenceIT
+15:54:00.229 [main] INFO org.testcontainers.images.PullPolicy -- Image pull policy will be performed by: DefaultPullPolicy()
+15:54:00.232 [main] INFO org.testcontainers.utility.ImageNameSubstitutor -- Image name substitution will be performed by: DefaultImageNameSubstitutor (composite of 'ConfigurationFileImageNameSubstitutor' and 'PrefixingImageNameSubstitutor')
+15:54:00.419 [main] INFO tc.postgis/postgis:15-3.4 -- Creating container for image: postgis/postgis:15-3.4
+15:54:00.427 [main] INFO org.testcontainers.utility.RegistryAuthLocator -- Failure when attempting to lookup auth config. Please ignore if you don't have images in an authenticated registry. Details: (dockerImageName: postgis/postgis:15-3.4, configFile: [home]/.docker/config.json, configEnv: DOCKER_AUTH_CONFIG). Falling back to docker-java default behaviour. Exception message: Status 404: No config supplied. Checked in order: [home]/.docker/config.json (file not found), DOCKER_AUTH_CONFIG (not set)
+15:54:00.626 [main] INFO tc.postgis/postgis:15-3.4 -- Container postgis/postgis:15-3.4 is starting: 723a4ed8796e6fc7e3264ef7cd353da3def99fe74ea69b37b689de49e20b0020
+15:54:03.924 [main] INFO tc.postgis/postgis:15-3.4 -- Container postgis/postgis:15-3.4 started in PT3.504670407S
+15:54:03.925 [main] INFO tc.postgis/postgis:15-3.4 -- Container is started (JDBC URL: jdbc:postgresql://localhost:32769/sapi?loggerLevel=OFF)
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T15:54:04.298Z  INFO 2731 --- [sapi-backend] [           main] c.s.b.r.p.RankingPersistenceIT           : Starting RankingPersistenceIT using Java 21.0.12.1 with PID 2731 (started by root in [clean-clone]/services/backend)
+2026-10-10T15:54:04.300Z  INFO 2731 --- [sapi-backend] [           main] c.s.b.r.p.RankingPersistenceIT           : The following 1 profile is active: "it"
+2026-10-10T15:54:05.701Z  INFO 2731 --- [sapi-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-10-10T15:54:05.876Z  INFO 2731 --- [sapi-backend] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@6dd2e453
+2026-10-10T15:54:05.878Z  INFO 2731 --- [sapi-backend] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-10-10T15:54:05.906Z  INFO 2731 --- [sapi-backend] [           main] org.flywaydb.core.FlywayExecutor         : Database: jdbc:postgresql://localhost:32769/sapi?loggerLevel=OFF (PostgreSQL 15.8)
+2026-10-10T15:54:05.980Z  INFO 2731 --- [sapi-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Schema history table "public"."flyway_schema_history" does not exist yet
+2026-10-10T15:54:05.985Z  INFO 2731 --- [sapi-backend] [           main] o.f.core.internal.command.DbValidate     : Successfully validated 3 migrations (execution time 00:00.022s)
+2026-10-10T15:54:06.015Z  INFO 2731 --- [sapi-backend] [           main] o.f.c.i.s.JdbcTableSchemaHistory         : Creating Schema History table "public"."flyway_schema_history" ...
+2026-10-10T15:54:06.082Z  INFO 2731 --- [sapi-backend] [           main] o.f.core.internal.command.DbMigrate      : Current version of schema "public": << Empty Schema >>
+2026-10-10T15:54:06.095Z  INFO 2731 --- [sapi-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "001 - enable postgis"
+2026-10-10T15:54:06.103Z  WARN 2731 --- [sapi-backend] [           main] o.f.c.i.s.DefaultSqlScriptExecutor       : DB: extension "postgis" already exists, skipping (SQL State: 42710 - Error Code: 0)
+2026-10-10T15:54:06.131Z  INFO 2731 --- [sapi-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "002 - create sapi v2 schema"
+2026-10-10T15:54:06.183Z  INFO 2731 --- [sapi-backend] [           main] o.f.core.internal.command.DbMigrate      : Migrating schema "public" to version "003 - seed celdas geom"
+2026-10-10T15:54:06.205Z  INFO 2731 --- [sapi-backend] [           main] o.f.core.internal.command.DbMigrate      : Successfully applied 3 migrations to schema "public", now at version v003 (execution time 00:00.055s)
+2026-10-10T15:54:06.703Z  INFO 2731 --- [sapi-backend] [           main] c.s.b.r.p.RankingPersistenceIT           : Started RankingPersistenceIT in 2.73 seconds (process running for 8.828)
+]]></system-out>
+    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically ([m2]/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+  <testcase name="ca2GeometriesPreserved" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.047"/>
+  <testcase name="rejectsDivergentReplay" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.034"/>
+  <testcase name="ca4SameTwice" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.037"/>
+  <testcase name="ca5FlywayAndPersistenceRoundTrip" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.026"/>
+  <testcase name="ca4DifferentFingerprint" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.024"/>
+  <testcase name="ca1PersistsMetadataAndFiftyScores" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.022"/>
+  <testcase name="ca3LatestTiesBreakByIdDesc" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.024"/>
+  <testcase name="ca3LatestByCreatedAt" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.058">
+    <system-out><![CDATA[SAPI59_CA3_LATENCY_MS samples=[2,2,2,1,1,1,1,1,1,1] min=1 median=1 max=2 threshold=1000 result=PASS
+]]></system-out>
+  </testcase>
+  <testcase name="rejectsDivergentExecutionMetadataOnReplay" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.024"/>
+  <testcase name="rollsBackExecutionWhenPredictionsFail" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceIT" time="0.026"/>
+</testsuite>
