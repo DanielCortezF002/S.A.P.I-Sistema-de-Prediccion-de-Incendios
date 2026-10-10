@@ -80,8 +80,16 @@ def utc_now() -> str:
 
 
 def redaction_pairs() -> list[tuple[str, str]]:
-    """Valores locales que nunca deben quedar en la evidencia."""
-    pairs = [(str(REPO_ROOT), "[repo]"), (str(Path.home()), "[home]")]
+    """Valores locales que nunca deben quedar en la evidencia.
+
+    Incluye la carpeta padre del checkout: Docker trunca algunas rutas
+    (`/ruta/al/repo…`) y entonces el reemplazo exacto del repo no las alcanza.
+    """
+    pairs = [
+        (str(REPO_ROOT), "[repo]"),
+        (str(REPO_ROOT.parent), "[repo-parent]"),
+        (str(Path.home()), "[home]"),
+    ]
     for value, marker in ((socket.gethostname(), "[host]"), (_user(), "[user]")):
         if value and len(value) >= 3 and value != "localhost":
             pairs.append((value, marker))
@@ -345,7 +353,18 @@ class Preflight:
     def ps(self, check_id: str) -> None:
         code, out, err = self.compose_run("ps", "--format", "json")
         rows = parse_ps(out) if code == 0 else {}
-        self.write(f"{check_id}.json", out or err)
+        # Solo lo que verifica el check: el JSON completo trae etiquetas y
+        # montajes con rutas locales.
+        projection = {
+            service: {
+                key: row.get(key) for key in ("Image", "State", "Health", "Publishers")
+            }
+            for service, row in rows.items()
+        }
+        self.write(
+            f"{check_id}.json",
+            json.dumps(projection, indent=2) + "\n" if rows else (out or err),
+        )
         for service in V2_SERVICES:
             row = rows.get(service, {})
             observed = {"state": row.get("State"), "health": row.get("Health")}
