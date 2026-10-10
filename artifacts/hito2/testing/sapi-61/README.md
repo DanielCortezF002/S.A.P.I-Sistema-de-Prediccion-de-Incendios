@@ -4,7 +4,7 @@
 |---|---|
 | HU | SAPI-61 (S2-08) Adaptar Streamlit para consumir el backend REST |
 | Rama | `feat/SAPI-61-streamlit-backend-rest` (base `main` @ `736e5b45c07e4104d3ba841d6a11c1a12c47d7fa`) |
-| SHA de código | `6f62c1ab169a8995d917e72c66317d7d53c5c4ab`; los commits posteriores son solo documentación y evidencia |
+| SHA de código | `6f62c1ab169a8995d917e72c66317d7d53c5c4ab` (Etapa A) → `4745b07` (delta correctivo Astra, ver sección al final) |
 | Fecha | 2026-10-10 (UTC) |
 | Entorno | Sandbox Linux (host `cursor`); Python 3.12.3; pytest 9.1.1; Streamlit 1.63.0; requests 2.34.2; folium 0.20.0. CI usa Python 3.14 (misma `requirements-dev.txt`) |
 | Etapa | **A** (paralela a SAPI-60, sin tocar `contracts/`, `services/`, Compose, README, `.env.example`, `merge_gate.py`, `requerimientos-sprint2.md`). Etapa B = extensión aditiva del contrato + validación contra Spring/FastAPI reales |
@@ -68,6 +68,36 @@ Cobertura de los módulos nuevos: `backend_client.py` 99 %,
 | `freeze_check_6f62c1a.txt`, `freeze_check_6f62c1a.json` | `python -B scripts/freeze_check.py` en `6f62c1a`: PASS |
 
 Saneamiento: sin rutas personales, usuarios, tokens ni dominios; host = `cursor`.
+
+## Delta correctivo Astra (STAGE_A_FIX_REQUIRED)
+
+Base del delta `fb3dd05a685015a3b4bcefec54b639b5afa1d6cb`; código corregido en
+`580bd5b` (producto) + `4745b07` (tests). Sin cambios en contratos, servicios,
+Compose, README, `.env.example`, `prototype_view.py`, `score_contract.py`,
+`merge_gate.py`, requerimientos, Flyway ni modelos.
+
+| Hallazgo | Corrección | Tests discriminantes |
+|---|---|---|
+| MAJOR 1 — límite de cuerpo aplicado tarde | `fetch_ranking()` usa `stream=True`; `Content-Length > 2 MiB` falla antes de leer; sin/mal `Content-Length` se lee por chunks de 64 KiB (`iter_content`) y se aborta al cruzar el límite, para **todos** los status; nunca `response.content` ni `response.json()`; JSON desde los bytes acotados; `response.close()` en `finally`; `Timeout`→`timeout`, otras `RequestException` durante el stream→`connection`; en status de error, cuerpo grande/ilegible→`http_backend` sin `error_type` | UNIT: fake cuyo `.content`/`.json()` lanzan `AssertionError`; >2 MiB con/sin CL (200 y 500/503), cruce en `iter_content`, CL falso/inválido, fallo a mitad (4 excepciones), frontera exacta y +1, `close()` contado en 7 caminos. HTTP_STUB: CL real, sin CL (HTTP/1.0), chunked (200 y 503), CL pequeño/enorme que miente, transferencia incompleta, frontera exacta y +1, `raw.closed` y `_content_consumed is False` |
+| MAJOR 2 — `message` remoto en la UI | `BackendError` ya no tiene `backend_message`; `error_type` solo si ∈ `KNOWN_ERROR_TYPES` (enum del contrato); `_render_backend_error` muestra solo texto local + ese `error_type` (re-filtrado) | 8 mensajes maliciosos (ruta Windows, ruta Unix, host interno, DSN con credencial, markdown, HTML/script, controles, traceback) × {objeto de error, `st.*` mockeado, AppTest real}; `error_type` fuera del contrato no se renderiza; no hashable no rompe |
+| MINOR 1 — `window_end` desborda | `forecast_time + timedelta(hours=h)` con `except (OverflowError, ValueError) → None`; vista: "ventana no representable" (sin recorte) | 6 h normal; 10**18 (timedelta no construible); 10**8 y 70M h (datetime fuera de rango); 69M h aún representable; render de header/panel/tech sin excepción |
+| MINOR 2 — `_env_float` acepta `inf` | `math.isfinite(value) and value > 0`, si no default | `nan`, `inf`, `+inf`, `-inf`, `Infinity`, `0`, `0.0`, negativos, texto, vacío → default; `0.5`, `7`, `12.25`, `1e2` aceptados |
+
+Corrida discriminante (`discriminating_run_fb3dd05.txt`): los tests de
+`4745b07` contra el producto de `fb3dd05` (con shim de dos constantes para
+que importen) → **96 failed, 189 passed**. Con `580bd5b`: **298 passed**.
+
+| Archivo | Contenido |
+|---|---|
+| `pytest_sapi61_delta.xml`, `pytest_sapi61_delta_console.txt` | 5 suites SAPI-61 tras el delta: 298 passed |
+| `discriminating_run_fb3dd05.txt` | Prueba de que los tests nuevos fallan en fb3dd05 |
+| `regression_summary_delta.txt` | Regresión completa: 1987 passed, 137 skipped, cobertura 85,12 % |
+| `lint_delta.txt` | black/flake8 de los 6 archivos del delta |
+| `freeze_check_4745b07.txt/.json` | FREEZE CHECK PASS |
+
+Los nombres de parámetros en la consola (`/home/internal/service/key`,
+`postgresql://user:password@db/internal`, …) son fixtures sintéticas de los
+tests, no rutas ni credenciales reales.
 
 ## Reproducir
 

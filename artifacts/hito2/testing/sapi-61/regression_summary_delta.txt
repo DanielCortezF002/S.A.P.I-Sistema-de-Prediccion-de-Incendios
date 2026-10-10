@@ -1,0 +1,21 @@
+sha: 4745b0769ea92d352407c2c5c9cf7b6abc9b67ac
+branch: feat/SAPI-61-streamlit-backend-rest
+utc: 2026-10-10T20:38:02Z
+host: cursor
+python: Python 3.12.3
+pytest: pytest 9.1.1
+requests: 2.34.2
+label: REGRESION COMPLETA tras el delta (pytest.ini: --cov=app --cov=src --cov-fail-under=80); ejecutada sobre el arbol de trabajo identico a 580bd5b+4745b07
+command: python -m pytest -q -p no:cacheprovider
+
+app/app.py                                                    193     13    93%   94, 114-115, 281-283, 305-306, 374, 401-402, 413-416
+app/components/ranking_backend_view.py                        229      8    97%   108-110, 123, 443-444, 640-641
+app/utils/backend_client.py                                   339      5    99%   275, 385, 489-490, 509
+app/utils/reference_topography.py                              49      3    94%   43, 49-50
+src/config.py                                                  55      3    95%   186-198
+TOTAL                                                       11896   1770    85%
+Required test coverage of 80% reached. Total coverage: 85.12%
+1987 passed, 137 skipped, 6256 warnings in 230.28s (0:03:50)
+FULL_EXIT=0
+
+nota: src/config.py 186-198 'sin cubrir' en la corrida completa es un artefacto de trazado por orden de import (lineas preexistentes, lejos del cambio); en aislamiento (tests/test_config.py + tests/test_backend_client.py --cov=src.config) esas lineas si se cubren.

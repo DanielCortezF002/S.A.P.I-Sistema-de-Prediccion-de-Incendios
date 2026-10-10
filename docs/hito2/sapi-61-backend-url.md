@@ -77,8 +77,12 @@ congelado, F4c) y se muestra como "no disponible en la respuesta del backend".
 ## Errores (CA4)
 
 Conexión rechazada, timeout, HTTP 422/500/502/503/504, cuerpo vacío, JSON
-inválido o ranking que no cumple el contrato terminan en un `st.error` con
-mensaje genérico (sin host, ruta ni stack trace) más el `error_type` y el
-`message` del cuerpo `Error` del contrato cuando existen. No se muestran datos
-cacheados como actuales: la cache (5 min) solo guarda rankings validados y el
-instante de obtención se muestra en el encabezado.
+inválido, cuerpo mayor a 2 MiB o ranking que no cumple el contrato terminan en
+un `st.error` con mensaje genérico local (sin host, ruta ni stack trace). Del
+cuerpo `Error` del contrato solo se muestra el `error_type` cuando pertenece
+al enum conocido; el `message` remoto se trata como detalle operativo no
+confiable y nunca se conserva ni se renderiza. La respuesta se lee en
+streaming con el límite de tamaño aplicado durante la lectura, para cualquier
+status. No se muestran datos cacheados como actuales: la cache (5 min) solo
+guarda rankings validados y el instante de obtención se muestra en el
+encabezado.

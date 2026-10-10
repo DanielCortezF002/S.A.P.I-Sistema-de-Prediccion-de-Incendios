@@ -1,0 +1,102 @@
+sha_tests: 4745b0769ea92d352407c2c5c9cf7b6abc9b67ac
+sha_producto_evaluado: fb3dd05a685015a3b4bcefec54b639b5afa1d6cb
+label: corrida DISCRIMINANTE — tests nuevos contra el código de producto de fb3dd05 (backend_client.py / config.py / ranking_backend_view.py) con shim de 2 constantes (BODY_CHUNK_BYTES, KNOWN_ERROR_TYPES) solo para que importen
+utc: 2026-10-10T20:31:04Z
+
+FAILED tests/test_backend_client.py::test_window_end_out_of_range_is_none_not_a_crash[1000000000000000000]
+FAILED tests/test_backend_client.py::test_window_end_out_of_range_is_none_not_a_crash[100000000]
+FAILED tests/test_backend_client.py::test_window_end_out_of_range_is_none_not_a_crash[70000000]
+FAILED tests/test_backend_client.py::test_env_float_rejects_non_finite_zero_negative_and_text[inf]
+FAILED tests/test_backend_client.py::test_env_float_rejects_non_finite_zero_negative_and_text[+inf]
+FAILED tests/test_backend_client.py::test_env_float_rejects_non_finite_zero_negative_and_text[Infinity]
+FAILED tests/test_backend_client.py::test_fetch_ranking_hits_the_contract_path_with_accept_timeout_and_stream
+FAILED tests/test_backend_client.py::test_fetch_ranking_forwards_forecast_time_as_query
+FAILED tests/test_backend_client.py::test_client_never_touches_content_or_json_on_success_or_error
+FAILED tests/test_backend_client.py::test_200_oversized_with_content_length_fails_before_reading
+FAILED tests/test_backend_client.py::test_200_oversized_without_content_length_is_cut_during_streaming
+FAILED tests/test_backend_client.py::test_503_oversized_without_content_length_is_still_controlled
+FAILED tests/test_backend_client.py::test_503_oversized_with_content_length_fails_early
+FAILED tests/test_backend_client.py::test_stream_crossing_limit_mid_iteration_stops_immediately
+FAILED tests/test_backend_client.py::test_exact_limit_is_accepted_as_body_and_fails_only_on_contract
+FAILED tests/test_backend_client.py::test_exact_limit_with_declared_length_is_accepted
+FAILED tests/test_backend_client.py::test_limit_plus_one_is_rejected_for_size_without_and_with_declared_length
+FAILED tests/test_backend_client.py::test_failure_mid_stream_closes_response_and_is_controlled[exc0-connection]
+FAILED tests/test_backend_client.py::test_failure_mid_stream_closes_response_and_is_controlled[exc1-connection]
+FAILED tests/test_backend_client.py::test_failure_mid_stream_closes_response_and_is_controlled[exc2-timeout]
+FAILED tests/test_backend_client.py::test_failure_mid_stream_closes_response_and_is_controlled[exc3-connection]
+FAILED tests/test_backend_client.py::test_failure_mid_stream_on_error_status_keeps_http_classification
+FAILED tests/test_backend_client.py::test_bogus_content_length_header_does_not_bypass_the_limit
+FAILED tests/test_backend_client.py::test_response_is_closed_on_success_and_on_every_error_path
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[422-invalid_request]
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[500-internal_error]
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[502-upstream_invalid_response]
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[503-upstream_unavailable]
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[503-prototype_unavailable]
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[503-data_unavailable]
+FAILED tests/test_backend_client.py::test_http_errors_expose_status_and_contract_error_type_only[504-upstream_timeout]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[C:\\Users\\private\\secret]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[/home/internal/service/key]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[http://internal-backend:8080/private]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[postgresql://user:password@db/internal]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[`**markdown**`]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[<script>alert('x')</script><img src=x onerror=alert(1)>]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[l\xednea 1\nl\xednea 2\r\n\x1b[31mrojo\x00]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[Traceback (most recent call last):\n  File "/srv/app.py", line 1]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[tipo_503]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[] - A...
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[42]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[None]
+FAILED tests/test_backend_client.py::test_unknown_error_type_is_dropped[bad_type12]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[C:\\Users\\private\\secret]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[/home/internal/service/key]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[http://internal-backend:8080/private]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[postgresql://user:password@db/internal]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[`**markdown**`]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[<script>alert('x')</script><img src=x onerror=alert(1)>]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[l\xednea 1\nl\xednea 2\r\n\x1b[31mrojo\x00]
+FAILED tests/test_backend_client.py::test_remote_message_never_persists_in_the_error_object[Traceback (most recent call last):\n  File "/srv/app.py", line 1]
+FAILED tests/test_backend_client.py::test_http_error_without_json_body_still_typed
+FAILED tests/test_backend_client.py::test_http_error_with_non_object_json_body
+FAILED tests/test_backend_client.py::test_unknown_http_status_has_generic_message
+FAILED tests/test_backend_client.py::test_empty_body_is_invalid_json[] - Asse...
+FAILED tests/test_backend_client.py::test_empty_body_is_invalid_json[   \n]
+FAILED tests/test_backend_client.py::test_invalid_json_body[{not json] - Asse...
+FAILED tests/test_backend_client.py::test_invalid_json_body[\xff\xfe\x00] - A...
+FAILED tests/test_backend_client.py::test_invalid_json_body[nulo] - Assertion...
+FAILED tests/test_backend_client.py::test_200_with_invalid_ranking_fails_closed
+FAILED tests/test_backend_client.py::test_200_with_json_array_fails_closed - ...
+FAILED tests/test_ranking_backend_view.py::test_absurd_horizon_never_crashes_presentation[100000000]
+FAILED tests/test_ranking_backend_view.py::test_absurd_horizon_never_crashes_presentation[1000000000000000000]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[C:\\Users\\private\\secret]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[/home/internal/service/key]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[http://internal-backend:8080/private]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[postgresql://user:password@db/internal]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[`**markdown**`]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[<script>alert('x')</script><img src=x onerror=alert(1)>]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[l\xednea 1\nl\xednea 2\r\n\x1b[31mrojo\x00]
+FAILED tests/test_ranking_backend_view.py::test_remote_message_never_reaches_streamlit_output[Traceback (most recent call last):\n  File "/srv/app.py", line 1]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[C:\\Users\\private\\secret]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[/home/internal/service/key]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[http://internal-backend:8080/private]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[postgresql://user:password@db/internal]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[`**markdown**`]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[<script>alert('x')</script><img src=x onerror=alert(1)>]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[l\xednea 1\nl\xednea 2\r\n\x1b[31mrojo\x00]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[Traceback (most recent call last):\n  File "/srv/app.py", line 1]
+FAILED tests/test_ranking_backend_view.py::test_non_contract_error_type_is_not_rendered[tipo_503]
+FAILED tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[422-invalid_request]
+FAILED tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[500-internal_error]
+FAILED tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[502-upstream_invalid_response]
+FAILED tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[503-upstream_unavailable]
+FAILED tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[504-upstream_timeout]
+FAILED tests/test_sapi61_http_stub.py::test_200_oversized_with_content_length_over_the_wire
+FAILED tests/test_sapi61_http_stub.py::test_200_oversized_without_content_length_over_the_wire
+FAILED tests/test_sapi61_http_stub.py::test_200_oversized_chunked_over_the_wire
+FAILED tests/test_sapi61_http_stub.py::test_503_oversized_chunked_error_body_is_controlled
+FAILED tests/test_sapi61_http_stub.py::test_lying_huge_content_length_with_small_body_fails_early
+FAILED tests/test_sapi61_http_stub.py::test_incomplete_transfer_is_a_controlled_connection_error
+FAILED tests/test_sapi61_http_stub.py::test_limit_plus_one_over_the_wire_is_rejected_for_size
+FAILED tests/test_sapi61_http_stub.py::test_apptest_backend_http_error_shows_controlled_message[503]
+FAILED tests/test_sapi61_http_stub.py::test_apptest_backend_http_error_shows_controlled_message[504]
+FAILED tests/test_sapi61_http_stub.py::test_apptest_malicious_remote_message_never_reaches_the_ui
+96 failed, 189 passed in 21.05s

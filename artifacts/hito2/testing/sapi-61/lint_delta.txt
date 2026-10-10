@@ -1,0 +1,18 @@
+sha: 4745b0769ea92d352407c2c5c9cf7b6abc9b67ac
+branch: feat/SAPI-61-streamlit-backend-rest
+utc: 2026-10-10T20:38:02Z
+host: cursor
+python: Python 3.12.3
+pytest: pytest 9.1.1
+requests: 2.34.2
+label: LINT de los 6 archivos del delta
+command: black --check --line-length 100 app/utils/backend_client.py app/components/ranking_backend_view.py src/config.py tests/test_backend_client.py tests/test_ranking_backend_view.py tests/test_sapi61_http_stub.py
+would reformat src/config.py
+
+Oh no! 💥 💔 💥
+1 file would be reformatted, 5 files would be left unchanged.
+black_exit: 1
+command: flake8 --max-line-length=100 --extend-ignore=E203,W503 app/utils/backend_client.py app/components/ranking_backend_view.py src/config.py tests/test_backend_client.py tests/test_ranking_backend_view.py tests/test_sapi61_http_stub.py
+src/config.py:59:101: E501 line too long (104 > 100 characters)
+src/config.py:143:101: E501 line too long (101 > 100 characters)
+flake8_exit: 1 (solo E501 preexistentes en src/config.py lineas 59 y 143 — identicas a Stage A en 58 y 137, desplazadas por el "import math"; fuera del cambio, sin reformateo para no alterar el diff)
