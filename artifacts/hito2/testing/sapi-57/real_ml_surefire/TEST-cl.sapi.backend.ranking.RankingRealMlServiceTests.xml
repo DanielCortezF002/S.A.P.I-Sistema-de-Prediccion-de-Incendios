@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.RankingRealMlServiceTests" time="29.202" tests="4" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="futureForecastTimePropagates503" classname="cl.sapi.backend.ranking.RankingRealMlServiceTests" time="3.142">
+    <system-out><![CDATA[01:28:03.717 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingRealMlServiceTests]: RankingRealMlServiceTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+01:28:03.892 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingRealMlServiceTests
+01:28:03.998 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingRealMlServiceTests]: RankingRealMlServiceTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+01:28:04.002 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingRealMlServiceTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T01:28:04.483Z  INFO 13830 --- [sapi-backend] [           main] c.s.b.ranking.RankingRealMlServiceTests  : Starting RankingRealMlServiceTests using Java 21.0.12.1 with PID 13830 (started by root in [fresh-clone]/services/backend)
+2026-10-10T01:28:04.485Z  INFO 13830 --- [sapi-backend] [           main] c.s.b.ranking.RankingRealMlServiceTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T01:28:05.708Z  INFO 13830 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-10T01:28:05.729Z  INFO 13830 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-10T01:28:05.730Z  INFO 13830 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-10T01:28:05.781Z  INFO 13830 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1258 ms
+2026-10-10T01:28:06.567Z  INFO 13830 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 41131 (http) with context path '/'
+2026-10-10T01:28:06.575Z  INFO 13830 --- [sapi-backend] [           main] c.s.b.ranking.RankingRealMlServiceTests  : Started RankingRealMlServiceTests in 2.503 seconds (process running for 3.978)
+2026-10-10T01:28:07.503Z  INFO 13830 --- [sapi-backend] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-10T01:28:07.503Z  INFO 13830 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-10T01:28:07.506Z  INFO 13830 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 3 ms
+2026-10-10T01:28:09.418Z  WARN 13830 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=bb6d8622-d76d-4362-98d8-c3f270f32229 forecast_time_requested=2099-01-01T00:00:00Z ml_responded=true ml_http_status=503 ml_latency_ms=1827 outcome=prototype_unavailable backend_http_status=503
+2026-10-10T01:28:09.650Z  WARN 13830 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword openapi - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:28:09.651Z  WARN 13830 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword info - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:28:09.651Z  WARN 13830 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword servers - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:28:09.652Z  WARN 13830 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword tags - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:28:09.652Z  WARN 13830 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword paths - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:28:09.652Z  WARN 13830 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword components - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+]]></system-out>
+    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically ([m2]/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+  <testcase name="explicitEarlierForecastTimeRoundTrips" classname="cl.sapi.backend.ranking.RankingRealMlServiceTests" time="8.888">
+    <system-out><![CDATA[2026-10-10T01:28:18.611Z  INFO 13830 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ml_predict request_id=3d815ecf-2f51-45ed-8b94-08a83d7c4c51 forecast_time_requested=2026-08-31T18:00:00Z ml_responded=true ml_http_status=200 ml_latency_ms=2879 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-08-31T18:00:00Z inputs_fingerprint=6ae168b9f60f9d813d7d439d5faf92edb263d8be62185ce37febfb64d9e5d3ac
+]]></system-out>
+  </testcase>
+  <testcase name="backendReturnsSameBytesAsMlService" classname="cl.sapi.backend.ranking.RankingRealMlServiceTests" time="5.631">
+    <system-out><![CDATA[2026-10-10T01:28:24.195Z  INFO 13830 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ml_predict request_id=0549e719-0483-419f-bcec-d65340283304 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=2716 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="positiveOffsetRoundTrips" classname="cl.sapi.backend.ranking.RankingRealMlServiceTests" time="8.404">
+    <system-out><![CDATA[2026-10-10T01:28:32.658Z  INFO 13830 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=66d1842d-7564-4bd0-afb9-3974bcbf1321 forecast_time_requested=2026-08-31T21:00:00+03:00 ml_responded=true ml_http_status=200 ml_latency_ms=2698 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-08-31T18:00:00Z inputs_fingerprint=6ae168b9f60f9d813d7d439d5faf92edb263d8be62185ce37febfb64d9e5d3ac
+]]></system-out>
+  </testcase>
+</testsuite>

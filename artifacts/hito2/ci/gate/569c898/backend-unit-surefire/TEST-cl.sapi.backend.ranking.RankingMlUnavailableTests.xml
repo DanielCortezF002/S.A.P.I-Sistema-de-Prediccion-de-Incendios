@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.RankingMlUnavailableTests" time="0.459" tests="1" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="mlDownIs503" classname="cl.sapi.backend.ranking.RankingMlUnavailableTests" time="0.029">
+    <system-out><![CDATA[2026-10-10T01:27:30.400Z  INFO 13240 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingMlUnavailableTests]: RankingMlUnavailableTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T01:27:30.402Z  INFO 13240 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingMlUnavailableTests
+2026-10-10T01:27:30.404Z  INFO 13240 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingMlUnavailableTests]: RankingMlUnavailableTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T01:27:30.405Z  INFO 13240 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingMlUnavailableTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T01:27:30.475Z  INFO 13240 --- [sapi-backend] [           main] c.s.b.ranking.RankingMlUnavailableTests  : Starting RankingMlUnavailableTests using Java 21.0.12.1 with PID 13240 (started by root in [fresh-clone]/services/backend)
+2026-10-10T01:27:30.475Z  INFO 13240 --- [sapi-backend] [           main] c.s.b.ranking.RankingMlUnavailableTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T01:27:30.691Z  INFO 13240 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-10T01:27:30.693Z  INFO 13240 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-10T01:27:30.693Z  INFO 13240 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-10T01:27:30.705Z  INFO 13240 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 228 ms
+2026-10-10T01:27:30.820Z  INFO 13240 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 42655 (http) with context path '/'
+2026-10-10T01:27:30.823Z  INFO 13240 --- [sapi-backend] [           main] c.s.b.ranking.RankingMlUnavailableTests  : Started RankingMlUnavailableTests in 0.41 seconds (process running for 11.295)
+2026-10-10T01:27:30.836Z  INFO 13240 --- [sapi-backend] [o-auto-2-exec-1] o.a.c.c.C.[Tomcat-1].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-10T01:27:30.836Z  INFO 13240 --- [sapi-backend] [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-10T01:27:30.838Z  INFO 13240 --- [sapi-backend] [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-10-10T01:27:30.846Z  WARN 13240 --- [sapi-backend] [o-auto-2-exec-1] sapi.backend.ml                          : ml_predict request_id=83d47948-e4c1-49e4-acca-7bb5b260ee96 forecast_time_requested=latest ml_responded=false ml_latency_ms=5 outcome=upstream_unavailable backend_http_status=503
+]]></system-out>
+  </testcase>
+</testsuite>

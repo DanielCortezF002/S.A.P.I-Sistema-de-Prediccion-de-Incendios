@@ -1,0 +1,15 @@
+M9 KILLED 2 clean
+M10 KILLED 2 clean
+M10b KILLED 1 clean
+N1 KILLED 2 clean
+N2 KILLED 1 clean
+N3 KILLED 1 clean
+N4 KILLED 2 clean
+N5 KILLED 2 clean
+N5b KILLED 1 clean
+N6 KILLED 1 clean
+N7 KILLED 2 clean
+N8 KILLED 1 clean
+N9 KILLED 2 clean
+N10 KILLED 1 clean
+exit=0
