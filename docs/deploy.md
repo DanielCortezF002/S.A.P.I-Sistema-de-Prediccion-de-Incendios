@@ -27,8 +27,13 @@ python -m venv .venv
 .venv/Scripts/pip install -r requirements-dev.txt   # incluye requirements.txt
 pytest                                                # 442 passed, 29 skipped desde un clon limpio
                                                        # (471 passed si ya tienes data/ y models/*.pkl generados localmente)
-docker compose up --build                              # Dashboard: http://localhost:8501
+docker compose up --build web-presentation             # Dashboard Hito 1: http://localhost:8501
 ```
+
+Desde SAPI-60, `docker compose up --build` sin nombrar servicios levanta la
+arquitectura v2 (Spring Boot, FastAPI y PostGIS v2; ver README). Los servicios
+de Hito 1 quedan detrás de los profiles `legacy` y `ops` y se levantan
+nombrándolos.
 
 **Mecanismo de despliegue real hoy:** Docker Compose local (`docker-compose.yml`)
 — verificado con un contenedor real activo en esta máquina el 09-09-2026. No hay
@@ -262,7 +267,7 @@ usado y verificado para el incremento de Hito 1.
 
 ```bash
 copy .env.example .env
-docker compose up --build
+docker compose up --build analytics-backend web-presentation   # servicios Hito 1 (profile legacy) + db-postgis
 # Dashboard: http://localhost:8501
 ```
 
