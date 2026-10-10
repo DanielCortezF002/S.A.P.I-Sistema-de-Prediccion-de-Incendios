@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -19,9 +19,12 @@ import org.springframework.stereotype.Repository;
  * Acceso JDBC al esquema v2 ({@code ejecuciones}, {@code predicciones_celda}, {@code celdas_geom}).
  *
  * <p>No inserta ni actualiza geometrías: {@code celdas_geom} queda a cargo de V003.
+ *
+ * <p>Activación por {@code sapi.persistence.enabled} (true por defecto); no usa
+ * {@code @ConditionalOnBean(JdbcTemplate)} porque se evalúa antes del auto-config JDBC.
  */
 @Repository
-@ConditionalOnBean(JdbcTemplate.class)
+@ConditionalOnProperty(prefix = "sapi.persistence", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RankingRepository {
 
     static final int CELL_COUNT = 50;

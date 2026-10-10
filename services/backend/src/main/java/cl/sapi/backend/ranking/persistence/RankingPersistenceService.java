@@ -8,8 +8,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 import org.jspecify.annotations.Nullable;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +20,12 @@ import tools.jackson.databind.JsonNode;
  * <p>Idempotencia por clave natural {@code (forecast_time, model_version, inputs_fingerprint)}:
  * {@code INSERT … ON CONFLICT DO NOTHING}, luego inserción de exactamente 50 filas o reutilización
  * de las ya existentes. No recalcula scores ni reordena celdas. No toca {@code celdas_geom}.
+ *
+ * <p>Activación por {@code sapi.persistence.enabled} (true por defecto); no usa
+ * {@code @ConditionalOnBean(JdbcTemplate)} porque se evalúa antes del auto-config JDBC.
  */
 @Service
-@ConditionalOnBean(JdbcTemplate.class)
+@ConditionalOnProperty(prefix = "sapi.persistence", name = "enabled", havingValue = "true", matchIfMissing = true)
 public class RankingPersistenceService {
 
     private final RankingRepository repository;

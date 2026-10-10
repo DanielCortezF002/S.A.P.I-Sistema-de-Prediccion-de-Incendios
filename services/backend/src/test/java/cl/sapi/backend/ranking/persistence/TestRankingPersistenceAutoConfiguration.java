@@ -2,22 +2,22 @@ package cl.sapi.backend.ranking.persistence;
 
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Profile;
-import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * Solo para Surefire (perfil distinto de {@code it}): sin DataSource/JdbcTemplate, suministra un
- * {@link RankingPersistenceService} no-op para que el contexto Spring de SAPI-57 cargue.
+ * Solo Surefire: cuando {@code sapi.persistence.enabled=false} (y no perfil {@code it}),
+ * registra un {@link RankingPersistenceService} no-op para que el contexto Spring cargue
+ * sin DataSource.
  *
- * <p>Con {@code @ActiveProfiles("it")} (failsafe / Testcontainers) esta auto-configuración
- * <strong>no</strong> se registra: el contexto usa DataSource real → JdbcTemplate →
- * {@link RankingRepository} → {@link RankingPersistenceService} de producción. No usar el no-op
- * en ITs (evita CGLIB sobre la clase final y prueba el servicio real).
+ * <p>Producción y failsafe ({@code it} + {@code sapi.persistence.enabled=true}) usan los
+ * beans reales; esta auto-configuración no interviene.
  */
 @AutoConfiguration
 @Profile("!it")
-@ConditionalOnMissingBean(JdbcTemplate.class)
+@ConditionalOnProperty(prefix = "sapi.persistence", name = "enabled", havingValue = "false")
+@ConditionalOnMissingBean(RankingPersistenceService.class)
 public class TestRankingPersistenceAutoConfiguration {
 
     @Bean
