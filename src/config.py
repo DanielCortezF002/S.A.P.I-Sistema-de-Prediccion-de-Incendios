@@ -81,6 +81,56 @@ MODELS_DIR: Path = BASE_DIR / os.getenv("MODELS_DIR", "models")
 # web usar http://host.docker.internal:8600/score.
 SAPI_SCORE_URL: str = os.getenv("SAPI_SCORE_URL", "http://127.0.0.1:8600/score")
 
+# Backend Spring Boot (SAPI-61): única fuente del ranking para la vista v2 del
+# dashboard (`app/components/ranking_backend_view.py`), que consume solo
+# `GET {SAPI_BACKEND_BASE_URL}/api/v1/ranking` (contracts/openapi/backend.v0.yaml).
+# Desde el contenedor `web-presentation` el valor debe inyectarse por
+# `environment:` en Compose (ver docs/hito2/sapi-61-backend-url.md).
+# Los timeouts son explícitos: conexión corta, lectura larga porque el backend
+# espera al servicio ML (scoring de la grilla completa).
+SAPI_BACKEND_BASE_URL_DEFAULT = "http://localhost:8080"
+SAPI_BACKEND_BASE_URL: str = (
+    os.getenv("SAPI_BACKEND_BASE_URL", SAPI_BACKEND_BASE_URL_DEFAULT).strip()
+    or SAPI_BACKEND_BASE_URL_DEFAULT
+)
+SAPI_BACKEND_CONNECT_TIMEOUT_DEFAULT = 3.0
+SAPI_BACKEND_READ_TIMEOUT_DEFAULT = 90.0
+# Modos legacy del dashboard (decisión H7): la vista Hito 1 que puntúa en
+# proceso (`prototype_view.py`) solo aparece en el selector con "1".
+SAPI_UI_LEGACY_MODES_DEFAULT = "0"
+
+
+def _env_float(name: str, default: float) -> float:
+    """Lee un float de entorno; un valor vacío o no numérico usa el default."""
+    raw = os.getenv(name, "").strip()
+    if not raw:
+        return default
+    try:
+        value = float(raw)
+    except ValueError:
+        return default
+    return value if value > 0 else default
+
+
+def get_backend_base_url() -> str:
+    """URL base del backend, leída en cada llamada (inyectable desde tests)."""
+    return os.getenv("SAPI_BACKEND_BASE_URL", "").strip() or SAPI_BACKEND_BASE_URL
+
+
+def get_backend_timeouts() -> tuple[float, float]:
+    """(connect_timeout, read_timeout) en segundos, leídos en cada llamada."""
+    return (
+        _env_float("SAPI_BACKEND_CONNECT_TIMEOUT", SAPI_BACKEND_CONNECT_TIMEOUT_DEFAULT),
+        _env_float("SAPI_BACKEND_READ_TIMEOUT", SAPI_BACKEND_READ_TIMEOUT_DEFAULT),
+    )
+
+
+def legacy_ui_modes_enabled() -> bool:
+    """`SAPI_UI_LEGACY_MODES=1` habilita los modos legacy del dashboard (H7)."""
+    raw = os.getenv("SAPI_UI_LEGACY_MODES", SAPI_UI_LEGACY_MODES_DEFAULT).strip().lower()
+    return raw in {"1", "true", "yes", "on"}
+
+
 CACHE_CONTINGENCY_DAYS: int = int(os.getenv("CACHE_CONTINGENCY_DAYS", "7"))
 GRID_CELL_SIZE_KM: float = float(os.getenv("GRID_CELL_SIZE_KM", "1.0"))
 GRID_MAX_CELLS: int = int(os.getenv("GRID_MAX_CELLS", "50") or "50")
