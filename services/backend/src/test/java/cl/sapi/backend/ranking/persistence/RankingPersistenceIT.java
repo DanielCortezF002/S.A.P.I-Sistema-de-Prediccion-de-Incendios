@@ -7,10 +7,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -140,7 +140,7 @@ class RankingPersistenceIT {
     }
 
     @Test
-    @DisplayName("SAPI-59.CA3 — latest = created_at DESC, id DESC; 1 ejecución + 50 ranks; mide latencia (sin PASS <1s)")
+    @DisplayName("SAPI-59.CA3 — latest = created_at DESC, id DESC; max de 10 lecturas medidas < 1000 ms")
     void ca3LatestByCreatedAt() {
         long older = persistence.persist(ranking);
 
@@ -154,17 +154,42 @@ class RankingPersistenceIT {
         jdbc.update("UPDATE ejecuciones SET created_at = now() - interval '1 hour' WHERE id = ?", newer);
         jdbc.update("UPDATE ejecuciones SET created_at = now() WHERE id = ?", older);
 
-        Instant start = Instant.now();
-        Optional<PersistedRanking> latest = persistence.findLatestRanking();
-        Duration elapsed = Duration.between(start, Instant.now());
+        // Warm-up: fuera de la ventana oficial (no incluye Docker/Flyway/fixtures/INSERTs).
+        for (int i = 0; i < 2; i++) {
+            assertLatestRanking(persistence.findLatestRanking(), older);
+        }
 
+        long[] samplesMs = new long[10];
+        for (int i = 0; i < samplesMs.length; i++) {
+            long startNs = System.nanoTime();
+            Optional<PersistedRanking> latest = persistence.findLatestRanking();
+            long elapsedNs = System.nanoTime() - startNs;
+            samplesMs[i] = elapsedNs / 1_000_000L;
+            assertLatestRanking(latest, older);
+        }
+
+        long[] sorted = Arrays.copyOf(samplesMs, samplesMs.length);
+        Arrays.sort(sorted);
+        long minMs = sorted[0];
+        long medianMs = (sorted[4] + sorted[5]) / 2L;
+        long maxMs = sorted[sorted.length - 1];
+        String samples = Arrays.toString(samplesMs).replace(" ", "");
+        String result = maxMs < 1000L ? "PASS" : "FAIL";
+        System.out.printf(Locale.ROOT,
+                "SAPI59_CA3_LATENCY_MS samples=%s min=%d median=%d max=%d threshold=1000 result=%s%n",
+                samples, minMs, medianMs, maxMs, result);
+
+        assertThat(maxMs)
+                .as("CA3 max latency across 10 measured reads of findLatestRanking()")
+                .isLessThan(1000L);
+    }
+
+    private static void assertLatestRanking(Optional<PersistedRanking> latest, long expectedExecutionId) {
         assertThat(latest).isPresent();
-        assertThat(latest.get().execution().id()).isEqualTo(older);
+        assertThat(latest.get().execution().id()).isEqualTo(expectedExecutionId);
         assertThat(latest.get().cells()).hasSize(50);
         assertThat(latest.get().cells().get(0).rank()).isEqualTo(1);
         assertThat(latest.get().cells().get(49).rank()).isEqualTo(50);
-        // Medición registrada para Omen; NO declarar PASS de <1s aquí como criterio cerrado.
-        assertThat(elapsed.toMillis()).as("latencia latest (ms, informativa)").isNotNegative();
     }
 
     @Test
