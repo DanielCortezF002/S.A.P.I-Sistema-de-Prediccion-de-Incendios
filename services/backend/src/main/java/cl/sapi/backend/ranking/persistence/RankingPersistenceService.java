@@ -20,6 +20,8 @@ import tools.jackson.databind.JsonNode;
  * <p>Idempotencia por clave natural {@code (forecast_time, model_version, inputs_fingerprint)}:
  * {@code INSERT … ON CONFLICT DO NOTHING}, luego inserción de exactamente 50 filas o reutilización
  * de las ya existentes. No recalcula scores ni reordena celdas. No toca {@code celdas_geom}.
+ * En replay, la metadata de {@code ejecuciones} (salvo {@code id}/{@code created_at}) debe coincidir;
+ * nunca se sobrescribe.
  *
  * <p>Activación por {@code sapi.persistence.enabled} (true por defecto); no usa
  * {@code @ConditionalOnBean(JdbcTemplate)} porque se evalúa antes del auto-config JDBC.
@@ -65,10 +67,22 @@ public class RankingPersistenceService {
             Optional<Long> inserted = repository.insertExecution(
                     forecastTime, modelVersion, fingerprint, schemaVersion,
                     scoreSemantics, scientificValidation, horizonHours);
-            long executionId = inserted.orElseGet(() -> repository
-                    .findExecutionId(forecastTime, modelVersion, fingerprint)
-                    .orElseThrow(() -> new RankingPersistenceException(
-                            "conflicto de clave natural sin fila de ejecuciones visible")));
+            long executionId;
+            if (inserted.isPresent()) {
+                executionId = inserted.get();
+            }
+            else {
+                executionId = repository
+                        .findExecutionId(forecastTime, modelVersion, fingerprint)
+                        .orElseThrow(() -> new RankingPersistenceException(
+                                "conflicto de clave natural sin fila de ejecuciones visible"));
+                ExecutionRecord stored = repository.findExecutionById(executionId)
+                        .orElseThrow(() -> new RankingPersistenceException(
+                                "ejecución existente no legible tras conflicto de clave natural"));
+                assertSameExecutionMetadata(
+                        stored, forecastTime, modelVersion, fingerprint, schemaVersion,
+                        scoreSemantics, scientificValidation, horizonHours);
+            }
 
             int existing = repository.countPredictions(executionId);
             if (existing == 0) {
@@ -133,6 +147,32 @@ public class RankingPersistenceService {
         return repository.countValidCeldasGeomSrid4326();
     }
 
+    /**
+     * Compara metadata de {@code ejecuciones} con el ranking entrante (sin id/created_at).
+     * {@code forecast_time} se compara por instante UTC, no por texto de offset.
+     */
+    private static void assertSameExecutionMetadata(
+            ExecutionRecord stored,
+            OffsetDateTime forecastTime,
+            String modelVersion,
+            String fingerprint,
+            String schemaVersion,
+            String scoreSemantics,
+            boolean scientificValidation,
+            @Nullable Integer horizonHours) {
+        boolean same = stored.forecastTime().toInstant().equals(forecastTime.toInstant())
+                && stored.modelVersion().equals(modelVersion)
+                && stored.inputsFingerprint().equals(fingerprint)
+                && stored.schemaVersion().equals(schemaVersion)
+                && stored.scoreSemantics().equals(scoreSemantics)
+                && stored.scientificModelValidation() == scientificValidation
+                && Objects.equals(stored.horizonHours(), horizonHours);
+        if (!same) {
+            throw new RankingPersistenceException(
+                    "idempotencia: metadata de ejecución divergente; no se sobrescribe");
+        }
+    }
+
     private void assertSamePredictions(long executionId, List<CellPredictionRow> expected) {
         List<CellPredictionRow> stored = repository.findPredictionsByExecutionId(executionId);
         if (stored.size() != expected.size()) {
@@ -181,11 +221,23 @@ public class RankingPersistenceService {
         }
     }
 
-    private static @Nullable Integer horizonHours(JsonNode ranking) {
+    /**
+     * Lee {@code horizon_hours} como {@code Integer} positivo exacto, o null si ausente.
+     * Rechaza valores que no caben en {@code int} (sin truncar con {@code intValue()}).
+     */
+    static @Nullable Integer horizonHours(JsonNode ranking) {
         if (!ranking.has("horizon_hours") || ranking.get("horizon_hours").isNull()) {
             return null;
         }
-        return ranking.get("horizon_hours").intValue();
+        JsonNode node = ranking.get("horizon_hours");
+        if (!node.isIntegralNumber() || !node.canConvertToInt()) {
+            throw new RankingPersistenceException("horizon_hours fuera del rango int positivo");
+        }
+        int value = node.intValue();
+        if (value < 1) {
+            throw new RankingPersistenceException("horizon_hours fuera del rango int positivo");
+        }
+        return value;
     }
 
     /** Implementación que no escribe ni lee; solo para surefire sin DataSource. */

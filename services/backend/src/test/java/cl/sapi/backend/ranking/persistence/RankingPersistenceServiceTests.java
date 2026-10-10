@@ -74,6 +74,7 @@ class RankingPersistenceServiceTests {
 
         assertThat(id).isEqualTo(7L);
         verify(repository).insertPredictions(eq(7L), any(OffsetDateTime.class), anyList());
+        verify(repository, never()).findExecutionById(anyLong());
     }
 
     @Test
@@ -83,6 +84,7 @@ class RankingPersistenceServiceTests {
                 .thenReturn(Optional.of(3L))
                 .thenReturn(Optional.empty());
         when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(3L));
+        when(repository.findExecutionById(3L)).thenReturn(Optional.of(matchingExecution(3L)));
         when(repository.countPredictions(3L)).thenReturn(0).thenReturn(50);
         when(repository.findPredictionsByExecutionId(3L)).thenReturn(cellsFrom(ranking));
 
@@ -92,6 +94,45 @@ class RankingPersistenceServiceTests {
         assertThat(first).isEqualTo(3L);
         assertThat(second).isEqualTo(3L);
         verify(repository, times(1)).insertPredictions(eq(3L), any(), anyList());
+        verify(repository).findExecutionById(3L);
+    }
+
+    @Test
+    @DisplayName("SAPI-59 — replay con metadata divergente falla sin sobrescribir")
+    void divergentMetadataOnReplayIsRejected() {
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
+                .thenReturn(Optional.empty());
+        when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(3L));
+        ExecutionRecord divergent = new ExecutionRecord(
+                3L,
+                OffsetDateTime.parse(ranking.get("forecast_time").stringValue()),
+                ranking.get("model_version").stringValue(),
+                ranking.get("inputs_fingerprint").stringValue(),
+                ranking.get("schema_version").stringValue(),
+                ranking.get("score_semantics").stringValue(),
+                false,
+                5,
+                OffsetDateTime.parse("2026-09-01T01:00:00Z"));
+        when(repository.findExecutionById(3L)).thenReturn(Optional.of(divergent));
+
+        assertThatThrownBy(() -> service.persist(ranking))
+                .isInstanceOf(RankingPersistenceException.class)
+                .hasMessageContaining("metadata");
+        verify(repository, never()).insertPredictions(anyLong(), any(), anyList());
+        verify(repository, never()).countPredictions(anyLong());
+    }
+
+    @Test
+    @DisplayName("SAPI-59 — horizon_hours fuera del rango int no se trunca silenciosamente")
+    void horizonHoursOutsideIntRangeIsRejected() {
+        ObjectNode bad = (ObjectNode) ranking.deepCopy();
+        bad.put("horizon_hours", 2_147_483_648L);
+
+        assertThatThrownBy(() -> service.persist(bad))
+                .isInstanceOf(RankingPersistenceException.class)
+                .hasMessageContaining("horizon_hours");
+        verify(repository, never()).insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any());
     }
 
     @Test
@@ -139,12 +180,26 @@ class RankingPersistenceServiceTests {
         when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
                 .thenReturn(Optional.empty());
         when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(5L));
+        when(repository.findExecutionById(5L)).thenReturn(Optional.of(matchingExecution(5L)));
         when(repository.countPredictions(5L)).thenReturn(12);
 
         assertThatThrownBy(() -> service.persist(ranking))
                 .isInstanceOf(RankingPersistenceException.class)
                 .hasMessageContaining("12");
         verify(repository, never()).insertPredictions(anyLong(), any(), anyList());
+    }
+
+    private ExecutionRecord matchingExecution(long id) {
+        return new ExecutionRecord(
+                id,
+                OffsetDateTime.parse(ranking.get("forecast_time").stringValue()),
+                ranking.get("model_version").stringValue(),
+                ranking.get("inputs_fingerprint").stringValue(),
+                ranking.get("schema_version").stringValue(),
+                ranking.get("score_semantics").stringValue(),
+                ranking.get("scientific_model_validation").booleanValue(),
+                ranking.get("horizon_hours").intValue(),
+                OffsetDateTime.parse("2026-09-01T01:00:00Z"));
     }
 
     private static List<CellPredictionRow> cellsFrom(JsonNode ranking) {

@@ -5,7 +5,8 @@
 -- created_at  = instante en que el sistema persistió la corrida
 -- forecast_time = instante evaluado por el modelo (NO define "última")
 --
--- Medición <1s: pendiente de ejecución real en Omen (PostGIS). No inventar tiempos.
+-- Latencia <1s: medida en RankingPersistenceIT.ca3LatestByCreatedAt
+-- (warm-up 2 + 10 lecturas; max < 1000 ms) sobre PostGIS real (Omen / failsafe).
 
 SELECT e.id AS ejecucion_id,
        e.forecast_time,

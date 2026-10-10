@@ -40,7 +40,7 @@ import tools.jackson.databind.node.ObjectNode;
 /**
  * ITs reales SAPI-59 (CA1–CA5) con Testcontainers PostgreSQL/PostGIS y Flyway V001–V003.
  *
- * <p>Ejecutar en Omen: {@code ./mvnw -B -pl services/backend verify} (failsafe / backend-it).
+ * <p>Desde {@code services/backend} en Omen: {@code .\mvnw.cmd -B verify} (failsafe).
  * En Cursor sin Docker: no declarar PASS; surefire los excluye ({@code *IT.java}).
  */
 @SpringBootTest
@@ -140,23 +140,25 @@ class RankingPersistenceIT {
     }
 
     @Test
-    @DisplayName("SAPI-59.CA3 — latest = created_at DESC, id DESC; max de 10 lecturas medidas < 1000 ms")
+    @DisplayName("SAPI-59.CA3 — latest discrimina forecast_time; max de 10 lecturas medidas < 1000 ms")
     void ca3LatestByCreatedAt() {
-        long older = persistence.persist(ranking);
+        // forecast_time MÁS NUEVO (2026-09-01), pero created_at quedará MÁS ANTIGUO.
+        long newerForecastOlderPersist = persistence.persist(ranking);
 
-        ObjectNode newerNode = (ObjectNode) ranking.deepCopy();
-        newerNode.put("forecast_time", "2026-08-01T00:00:00Z");
-        newerNode.put("inputs_fingerprint", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
-        long newer = persistence.persist(newerNode);
-        assertThat(newer).isNotEqualTo(older);
+        // forecast_time MÁS ANTIGUO (2026-08-01), pero created_at quedará MÁS NUEVO.
+        ObjectNode olderForecastNode = (ObjectNode) ranking.deepCopy();
+        olderForecastNode.put("forecast_time", "2026-08-01T00:00:00Z");
+        olderForecastNode.put("inputs_fingerprint", "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb");
+        long olderForecastNewerPersist = persistence.persist(olderForecastNode);
+        assertThat(olderForecastNewerPersist).isNotEqualTo(newerForecastOlderPersist);
 
-        // Fuerza created_at del "más reciente por forecast_time" a ser más antiguo.
-        jdbc.update("UPDATE ejecuciones SET created_at = now() - interval '1 hour' WHERE id = ?", newer);
-        jdbc.update("UPDATE ejecuciones SET created_at = now() WHERE id = ?", older);
+        jdbc.update("UPDATE ejecuciones SET created_at = now() - interval '1 hour' WHERE id = ?",
+                newerForecastOlderPersist);
+        jdbc.update("UPDATE ejecuciones SET created_at = now() WHERE id = ?", olderForecastNewerPersist);
 
-        // Warm-up: fuera de la ventana oficial (no incluye Docker/Flyway/fixtures/INSERTs).
+        // Si alguien ordenara por forecast_time DESC, elegiría newerForecastOlderPersist (incorrecto).
         for (int i = 0; i < 2; i++) {
-            assertLatestRanking(persistence.findLatestRanking(), older);
+            assertLatestRanking(persistence.findLatestRanking(), olderForecastNewerPersist);
         }
 
         long[] samplesMs = new long[10];
@@ -165,7 +167,9 @@ class RankingPersistenceIT {
             Optional<PersistedRanking> latest = persistence.findLatestRanking();
             long elapsedNs = System.nanoTime() - startNs;
             samplesMs[i] = elapsedNs / 1_000_000L;
-            assertLatestRanking(latest, older);
+            assertLatestRanking(latest, olderForecastNewerPersist);
+            assertThat(latest.get().execution().forecastTime().toInstant().toString())
+                    .isEqualTo("2026-08-01T00:00:00Z");
         }
 
         long[] sorted = Arrays.copyOf(samplesMs, samplesMs.length);
@@ -182,6 +186,21 @@ class RankingPersistenceIT {
         assertThat(maxMs)
                 .as("CA3 max latency across 10 measured reads of findLatestRanking()")
                 .isLessThan(1000L);
+    }
+
+    @Test
+    @DisplayName("SAPI-59.CA3 — con el mismo created_at, gana el id mayor")
+    void ca3LatestTiesBreakByIdDesc() {
+        long first = persistence.persist(ranking);
+        ObjectNode other = (ObjectNode) ranking.deepCopy();
+        other.put("inputs_fingerprint", "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
+        long second = persistence.persist(other);
+        assertThat(second).isGreaterThan(first);
+
+        jdbc.update("UPDATE ejecuciones SET created_at = timestamptz '2026-09-01T12:00:00Z'");
+
+        Optional<PersistedRanking> latest = persistence.findLatestRanking();
+        assertLatestRanking(latest, second);
     }
 
     private static void assertLatestRanking(Optional<PersistedRanking> latest, long expectedExecutionId) {
@@ -277,6 +296,38 @@ class RankingPersistenceIT {
         assertThatThrownBy(() -> persistence.persist(ranking))
                 .isInstanceOf(RankingPersistenceException.class)
                 .hasMessageContaining("distintas");
+    }
+
+    @Test
+    @DisplayName("SAPI-59 — replay con metadata de ejecución divergente falla y no sobrescribe")
+    void rejectsDivergentExecutionMetadataOnReplay() {
+        long id = persistence.persist(ranking);
+        jdbc.update("UPDATE ejecuciones SET horizon_hours = 5 WHERE id = ?", id);
+        Integer storedHorizon = jdbc.queryForObject(
+                "SELECT horizon_hours FROM ejecuciones WHERE id = ?", Integer.class, id);
+        assertThat(storedHorizon).isEqualTo(5);
+
+        assertThatThrownBy(() -> persistence.persist(ranking))
+                .isInstanceOf(RankingPersistenceException.class)
+                .hasMessageContaining("metadata");
+
+        assertThat(jdbc.queryForObject(
+                "SELECT horizon_hours FROM ejecuciones WHERE id = ?", Integer.class, id)).isEqualTo(5);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ejecuciones", Integer.class)).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM predicciones_celda", Integer.class)).isEqualTo(50);
+    }
+
+    @Test
+    @DisplayName("SAPI-59 — fallo en predicciones tras insertar ejecución hace ROLLBACK completo")
+    void rollsBackExecutionWhenPredictionsFail() {
+        ObjectNode bad = (ObjectNode) ranking.deepCopy();
+        ((ObjectNode) bad.get("cells").get(0)).put("cell_id", "VP-999");
+
+        assertThatThrownBy(() -> persistence.persist(bad))
+                .isInstanceOf(RankingPersistenceException.class);
+
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM ejecuciones", Integer.class)).isEqualTo(0);
+        assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM predicciones_celda", Integer.class)).isEqualTo(0);
     }
 
     private static byte[] realRankingBytes() {
