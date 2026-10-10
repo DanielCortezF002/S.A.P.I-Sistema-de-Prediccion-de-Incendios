@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -18,12 +19,14 @@ import requests
 
 from app.utils.backend_client import (
     ADDITIVE_FIELDS,
+    BODY_CHUNK_BYTES,
     ERROR_KIND_CONNECTION,
     ERROR_KIND_HTTP_BACKEND,
     ERROR_KIND_INVALID_JSON,
     ERROR_KIND_INVALID_RANKING,
     ERROR_KIND_TIMEOUT,
     EXPECTED_CELL_IDS,
+    KNOWN_ERROR_TYPES,
     MAX_BODY_BYTES,
     RANKING_PATH,
     BackendError,
@@ -428,19 +431,116 @@ def test_cell_set_must_cover_the_whole_grid() -> None:
     assert EXPECTED_CELL_IDS == {c["cell_id"] for c in all_cells()}
 
 
+# ── window_end (Astra MINOR 1) ───────────────────────────────────────────────
+
+
+def test_window_end_normal_six_hours() -> None:
+    view = parse_ranking(synthetic_payload())  # forecast 2026-10-01T18:00-03:00, h=6
+    assert view.window_end == datetime(2026, 10, 2, 3, tzinfo=timezone.utc)
+
+
+@pytest.mark.parametrize(
+    "horizon",
+    [
+        10**18,  # timedelta no construible (OverflowError en días)
+        10**8,  # construible, pero T+h cae fuera del rango de datetime (año > 9999)
+        70_000_000,  # ~7 990 años: justo por encima del máximo representable
+    ],
+)
+def test_window_end_out_of_range_is_none_not_a_crash(horizon: int) -> None:
+    payload = synthetic_payload()
+    payload["horizon_hours"] = horizon
+    view = parse_ranking(payload)
+    assert view.horizon_hours == horizon  # no se recorta ni se corrige
+    assert view.window_end is None
+
+
+def test_window_end_largest_representable_is_still_computed() -> None:
+    payload = synthetic_payload()
+    payload["horizon_hours"] = 69_000_000  # ≈ año 9897: representable
+    assert parse_ranking(payload).window_end is not None
+
+
+# ── timeouts finitos (Astra MINOR 2) ─────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "raw",
+    ["nan", "inf", "+inf", "-inf", "Infinity", "0", "0.0", "-3", "-0.5", "rápido", "", "  "],
+)
+def test_env_float_rejects_non_finite_zero_negative_and_text(
+    monkeypatch: pytest.MonkeyPatch, raw: str
+) -> None:
+    monkeypatch.setenv("SAPI_BACKEND_CONNECT_TIMEOUT", raw)
+    monkeypatch.setenv("SAPI_BACKEND_READ_TIMEOUT", raw)
+    assert BackendRankingClient.from_env().timeout == (3.0, 90.0)
+    for value in BackendRankingClient.from_env().timeout:
+        assert math.isfinite(value) and value > 0
+
+
+@pytest.mark.parametrize(
+    "raw, expected", [("0.5", 0.5), ("7", 7.0), (" 12.25 ", 12.25), ("1e2", 100.0)]
+)
+def test_env_float_accepts_finite_positive(
+    monkeypatch: pytest.MonkeyPatch, raw: str, expected: float
+) -> None:
+    monkeypatch.setenv("SAPI_BACKEND_CONNECT_TIMEOUT", raw)
+    monkeypatch.setenv("SAPI_BACKEND_READ_TIMEOUT", raw)
+    assert BackendRankingClient.from_env().timeout == (expected, expected)
+
+
 # ── cliente HTTP con sesión falsa ────────────────────────────────────────────
 
 
 class _FakeResponse:
-    def __init__(self, status: int, body: bytes | str = b"", json_error: bool = False) -> None:
+    """Respuesta en streaming. `.content` y `.json()` están prohibidos: si el
+    cliente los toca, materializaría el cuerpo completo (Astra MAJOR 1)."""
+
+    def __init__(
+        self,
+        status: int,
+        body: bytes | str = b"",
+        *,
+        content_length: int | None | str = "auto",
+        chunk_size: int | None = None,
+        fail_after: int | None = None,
+        fail_with: BaseException | None = None,
+    ) -> None:
         self.status_code = status
-        self.content = body.encode("utf-8") if isinstance(body, str) else body
-        self._json_error = json_error
+        self._body = body.encode("utf-8") if isinstance(body, str) else body
+        self.headers: dict[str, str] = {}
+        if content_length == "auto":
+            self.headers["Content-Length"] = str(len(self._body))
+        elif content_length is not None:
+            self.headers["Content-Length"] = str(content_length)
+        self._chunk_size = chunk_size
+        self._fail_after = fail_after
+        self._fail_with = fail_with or requests.exceptions.ChunkedEncodingError("cut")
+        self.closed = 0
+        self.bytes_served = 0
+        self.chunks_requested: list[int] = []
+
+    @property
+    def content(self) -> bytes:
+        raise AssertionError("el cliente no debe materializar response.content")
 
     def json(self) -> Any:
-        if self._json_error:
-            raise ValueError("no json")
-        return json.loads(self.content.decode("utf-8"))
+        raise AssertionError("el cliente no debe usar response.json()")
+
+    def iter_content(self, chunk_size: int = 1) -> Any:
+        self.chunks_requested.append(chunk_size)
+        size = self._chunk_size or chunk_size
+        offset = 0
+        while offset < len(self._body):
+            if self._fail_after is not None and offset >= self._fail_after:
+                raise self._fail_with
+            chunk = self._body[offset : offset + size]
+            offset += len(chunk)
+            self.bytes_served += len(chunk)
+            yield chunk
+
+    def close(self) -> None:
+        self.closed += 1
 
 
 class _FakeSession:
@@ -460,8 +560,16 @@ def _client(session: _FakeSession, base: str = "http://backend.test:8080/") -> B
     return BackendRankingClient(base, connect_timeout=1.5, read_timeout=2.5, session=session)
 
 
-def test_fetch_ranking_hits_the_contract_path_with_accept_and_timeout() -> None:
-    session = _FakeSession(_FakeResponse(200, json.dumps(synthetic_payload())))
+def _fetch_error(response: _FakeResponse) -> BackendError:
+    with pytest.raises(BackendError) as info:
+        _client(_FakeSession(response)).fetch_ranking()
+    assert response.closed == 1, "response.close() debe ocurrir exactamente una vez"
+    return info.value
+
+
+def test_fetch_ranking_hits_the_contract_path_with_accept_timeout_and_stream() -> None:
+    response = _FakeResponse(200, json.dumps(synthetic_payload()))
+    session = _FakeSession(response)
     view = _client(session).fetch_ranking()
     assert len(view.cells) == 50
     call = session.calls[0]
@@ -469,12 +577,24 @@ def test_fetch_ranking_hits_the_contract_path_with_accept_and_timeout() -> None:
     assert call["headers"]["Accept"] == "application/json"
     assert call["timeout"] == (1.5, 2.5)
     assert call["params"] is None
+    assert call["stream"] is True
+    assert response.closed == 1
+    assert response.chunks_requested == [BODY_CHUNK_BYTES]
 
 
 def test_fetch_ranking_forwards_forecast_time_as_query() -> None:
     session = _FakeSession(_FakeResponse(200, json.dumps(synthetic_payload())))
     _client(session).fetch_ranking(forecast_time="2026-10-01T18:00:00-03:00")
     assert session.calls[0]["params"] == {"forecast_time": "2026-10-01T18:00:00-03:00"}
+
+
+def test_client_never_touches_content_or_json_on_success_or_error() -> None:
+    # Las propiedades falsas lanzan AssertionError: si el cliente las usara,
+    # el AssertionError saldría por fuera de BackendError y rompería el test.
+    ok = _FakeResponse(200, json.dumps(synthetic_payload()), content_length=None)
+    assert len(_client(_FakeSession(ok)).fetch_ranking().cells) == 50
+    err = _FakeResponse(503, json.dumps(error_body("upstream_unavailable")), content_length=None)
+    assert _fetch_error(err).error_type == "upstream_unavailable"
 
 
 def test_base_url_is_configurable_by_environment(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -496,12 +616,6 @@ def test_default_base_url_is_localhost_8080(monkeypatch: pytest.MonkeyPatch) -> 
     client = BackendRankingClient.from_env()
     assert client.ranking_url == "http://localhost:8080/api/v1/ranking"
     assert client.timeout == (3.0, 90.0)
-
-
-def test_invalid_timeout_env_falls_back_to_default(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("SAPI_BACKEND_CONNECT_TIMEOUT", "rápido")
-    monkeypatch.setenv("SAPI_BACKEND_READ_TIMEOUT", "-3")
-    assert BackendRankingClient.from_env().timeout == (3.0, 90.0)
 
 
 def test_empty_base_url_is_rejected() -> None:
@@ -526,86 +640,275 @@ def test_network_errors_map_to_typed_backend_errors(exc: BaseException, kind: st
     assert info.value.http_status is None
 
 
-@pytest.mark.parametrize("status", [422, 500, 502, 503, 504])
-def test_http_errors_expose_status_error_type_and_sanitised_message(status: int) -> None:
-    body = {
-        "status": "error",
-        "error_type": f"tipo_{status}",
-        "message": "Mensaje\x00 \x1bdel backend",
-    }
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(status, json.dumps(body)))).fetch_ranking()
-    err = info.value
+# ── límite de cuerpo en streaming (Astra MAJOR 1) ────────────────────────────
+
+
+def _oversized_json(extra: int = 1) -> bytes:
+    """JSON sintácticamente válido de MAX_BODY_BYTES + extra bytes."""
+    return b"{" + b" " * (MAX_BODY_BYTES + extra - 2) + b"}"
+
+
+def _exact_limit_json() -> bytes:
+    body = b"{" + b" " * (MAX_BODY_BYTES - 2) + b"}"
+    assert len(body) == MAX_BODY_BYTES
+    return body
+
+
+def test_200_oversized_with_content_length_fails_before_reading() -> None:
+    response = _FakeResponse(200, _oversized_json())  # Content-Length real
+    err = _fetch_error(response)
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    assert response.bytes_served == 0, "con Content-Length > límite no se lee nada"
+
+
+def test_200_oversized_without_content_length_is_cut_during_streaming() -> None:
+    response = _FakeResponse(200, _oversized_json(512 * 1024), content_length=None)
+    err = _fetch_error(response)
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    # Se leyó como mucho el límite más el chunk que lo cruzó; nunca el cuerpo entero.
+    assert MAX_BODY_BYTES < response.bytes_served <= MAX_BODY_BYTES + BODY_CHUNK_BYTES
+    assert response.bytes_served < len(_oversized_json(512 * 1024))
+
+
+def test_503_oversized_without_content_length_is_still_controlled() -> None:
+    response = _FakeResponse(503, b"x" * (MAX_BODY_BYTES + 4096), content_length=None)
+    err = _fetch_error(response)
+    assert err.kind == ERROR_KIND_HTTP_BACKEND
+    assert err.http_status == 503
+    assert err.error_type is None
+    assert response.bytes_served <= MAX_BODY_BYTES + BODY_CHUNK_BYTES
+
+
+def test_503_oversized_with_content_length_fails_early() -> None:
+    response = _FakeResponse(500, b"x" * (MAX_BODY_BYTES + 1))
+    err = _fetch_error(response)
+    assert err.kind == ERROR_KIND_HTTP_BACKEND and err.http_status == 500
+    assert response.bytes_served == 0
+
+
+def test_stream_crossing_limit_mid_iteration_stops_immediately() -> None:
+    # Content-Length miente (pequeño); el flujo real cruza el límite en un chunk.
+    body = _oversized_json(10 * BODY_CHUNK_BYTES)
+    response = _FakeResponse(200, body, content_length=10, chunk_size=BODY_CHUNK_BYTES)
+    err = _fetch_error(response)
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    served_chunks = response.bytes_served // BODY_CHUNK_BYTES
+    assert served_chunks == MAX_BODY_BYTES // BODY_CHUNK_BYTES + 1
+
+
+def test_exact_limit_is_accepted_as_body_and_fails_only_on_contract() -> None:
+    response = _FakeResponse(200, _exact_limit_json(), content_length=None)
+    err = _fetch_error(response)
+    # Pasó el límite de tamaño: se parseó el JSON ({} sin campos) y falló el contrato.
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    assert "requeridos" in err.detail
+    assert response.bytes_served == MAX_BODY_BYTES
+
+
+def test_exact_limit_with_declared_length_is_accepted() -> None:
+    response = _FakeResponse(200, _exact_limit_json())
+    err = _fetch_error(response)
+    assert "requeridos" in err.detail and response.bytes_served == MAX_BODY_BYTES
+
+
+def test_limit_plus_one_is_rejected_for_size_without_and_with_declared_length() -> None:
+    no_cl = _FakeResponse(200, _oversized_json(1), content_length=None)
+    assert "mayor a" in _fetch_error(no_cl).detail
+    with_cl = _FakeResponse(200, _oversized_json(1))
+    assert "supera" in _fetch_error(with_cl).detail
+
+
+@pytest.mark.parametrize(
+    "exc, kind",
+    [
+        (requests.exceptions.ChunkedEncodingError("cut"), ERROR_KIND_CONNECTION),
+        (requests.exceptions.ConnectionError("reset"), ERROR_KIND_CONNECTION),
+        (requests.exceptions.ReadTimeout("slow"), ERROR_KIND_TIMEOUT),
+        (requests.exceptions.ContentDecodingError("gzip"), ERROR_KIND_CONNECTION),
+    ],
+)
+def test_failure_mid_stream_closes_response_and_is_controlled(
+    exc: BaseException, kind: str
+) -> None:
+    response = _FakeResponse(
+        200,
+        json.dumps(synthetic_payload()),
+        content_length=None,
+        chunk_size=1024,
+        fail_after=4096,
+        fail_with=exc,
+    )
+    err = _fetch_error(response)
+    assert err.kind == kind
+    assert err.http_status is None
+
+
+def test_failure_mid_stream_on_error_status_keeps_http_classification() -> None:
+    response = _FakeResponse(
+        503,
+        json.dumps(error_body("upstream_unavailable")),
+        content_length=None,
+        chunk_size=8,
+        fail_after=8,
+    )
+    err = _fetch_error(response)
+    assert err.kind == ERROR_KIND_HTTP_BACKEND and err.http_status == 503
+    assert err.error_type is None
+
+
+def test_bogus_content_length_header_does_not_bypass_the_limit() -> None:
+    for bogus in ("abc", "-5", ""):
+        response = _FakeResponse(200, _oversized_json(4096), content_length=bogus)
+        assert _fetch_error(response).kind == ERROR_KIND_INVALID_RANKING
+        assert response.bytes_served <= MAX_BODY_BYTES + BODY_CHUNK_BYTES
+
+
+def test_response_is_closed_on_success_and_on_every_error_path() -> None:
+    paths = [
+        _FakeResponse(200, json.dumps(synthetic_payload())),
+        _FakeResponse(200, b""),
+        _FakeResponse(200, b"{not json"),
+        _FakeResponse(200, b"[1, 2]"),
+        _FakeResponse(200, _oversized_json()),
+        _FakeResponse(503, json.dumps(error_body("upstream_unavailable"))),
+        _FakeResponse(418, b"<html>"),
+    ]
+    for response in paths:
+        try:
+            _client(_FakeSession(response)).fetch_ranking()
+        except BackendError:
+            pass
+        assert response.closed == 1, f"close() faltó para status {response.status_code}"
+
+
+# ── errores HTTP y frontera de presentación (Astra MAJOR 2) ──────────────────
+
+MALICIOUS_MESSAGES = [
+    r"C:\Users\private\secret",
+    "/home/internal/service/key",
+    "http://internal-backend:8080/private",
+    "postgresql://user:password@db/internal",
+    "`**markdown**`",
+    "<script>alert('x')</script><img src=x onerror=alert(1)>",
+    "línea 1\nlínea 2\r\n\x1b[31mrojo\x00",
+    'Traceback (most recent call last):\n  File "/srv/app.py", line 1',
+]
+
+
+def error_body(error_type: str, message: str = "mensaje remoto") -> dict:
+    return {"status": "error", "error_type": error_type, "message": message}
+
+
+@pytest.mark.parametrize(
+    "status, error_type",
+    [
+        (422, "invalid_request"),
+        (500, "internal_error"),
+        (502, "upstream_invalid_response"),
+        (503, "upstream_unavailable"),
+        (503, "prototype_unavailable"),
+        (503, "data_unavailable"),
+        (504, "upstream_timeout"),
+    ],
+)
+def test_http_errors_expose_status_and_contract_error_type_only(
+    status: int, error_type: str
+) -> None:
+    err = _fetch_error(_FakeResponse(status, json.dumps(error_body(error_type))))
     assert err.kind == ERROR_KIND_HTTP_BACKEND
     assert err.http_status == status
-    assert err.error_type == f"tipo_{status}"
-    assert err.backend_message == "Mensaje del backend"
-    assert f"HTTP {status}" in err.user_message or f"({status})" in err.user_message
+    assert err.error_type == error_type
+    assert str(status) in err.user_message
+    assert not hasattr(err, "backend_message")
+
+
+def test_known_error_types_match_the_contract_enum() -> None:
+    assert KNOWN_ERROR_TYPES == {
+        "invalid_request",
+        "internal_error",
+        "upstream_invalid_response",
+        "upstream_unavailable",
+        "prototype_unavailable",
+        "data_unavailable",
+        "upstream_timeout",
+    }
+
+
+@pytest.mark.parametrize("bad_type", MALICIOUS_MESSAGES + ["tipo_503", "", 42, None, ["x"]])
+def test_unknown_error_type_is_dropped(bad_type: Any) -> None:
+    err = _fetch_error(_FakeResponse(503, json.dumps(error_body(bad_type))))
+    assert err.error_type is None
+    assert (
+        BackendError(ERROR_KIND_HTTP_BACKEND, http_status=503, error_type=bad_type).error_type
+        is None
+    )
+
+
+@pytest.mark.parametrize("message", MALICIOUS_MESSAGES)
+def test_remote_message_never_persists_in_the_error_object(message: str) -> None:
+    err = _fetch_error(_FakeResponse(503, json.dumps(error_body("upstream_unavailable", message))))
+    assert not hasattr(err, "backend_message")
+    surface = " ".join(
+        [err.user_message, str(err), repr(err), err.detail] + [str(v) for v in vars(err).values()]
+    )
+    for fragment in (
+        "secret",
+        "internal",
+        "password",
+        "**markdown**",
+        "<script",
+        "Traceback",
+        "\n",
+        "\x1b",
+        "\x00",
+        "C:\\",
+    ):
+        assert fragment not in surface, f"{fragment!r} se filtró en {surface!r}"
 
 
 def test_http_error_without_json_body_still_typed() -> None:
-    with pytest.raises(BackendError) as info:
-        _client(
-            _FakeSession(_FakeResponse(503, "<html>gateway</html>", json_error=True))
-        ).fetch_ranking()
-    assert info.value.kind == ERROR_KIND_HTTP_BACKEND
-    assert info.value.http_status == 503
-    assert info.value.error_type is None and info.value.backend_message is None
+    err = _fetch_error(_FakeResponse(503, "<html>gateway</html>"))
+    assert err.kind == ERROR_KIND_HTTP_BACKEND
+    assert err.http_status == 503
+    assert err.error_type is None
+
+
+def test_http_error_with_non_object_json_body() -> None:
+    err = _fetch_error(_FakeResponse(503, '["upstream_unavailable"]'))
+    assert err.error_type is None
 
 
 def test_unknown_http_status_has_generic_message() -> None:
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(418, "{}"))).fetch_ranking()
-    assert info.value.http_status == 418
-    assert "418" in info.value.user_message
-
-
-def test_remote_message_is_truncated() -> None:
-    body = {"status": "error", "error_type": "x", "message": "m" * 1000}
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(500, json.dumps(body)))).fetch_ranking()
-    assert len(info.value.backend_message) == 200
+    err = _fetch_error(_FakeResponse(418, "{}"))
+    assert err.http_status == 418
+    assert "418" in err.user_message
 
 
 @pytest.mark.parametrize("body", [b"", b"   \n"])
 def test_empty_body_is_invalid_json(body: bytes) -> None:
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(200, body))).fetch_ranking()
-    assert info.value.kind == ERROR_KIND_INVALID_JSON
+    assert _fetch_error(_FakeResponse(200, body)).kind == ERROR_KIND_INVALID_JSON
 
 
-def test_invalid_json_body() -> None:
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(200, "{not json", json_error=True))).fetch_ranking()
-    assert info.value.kind == ERROR_KIND_INVALID_JSON
+@pytest.mark.parametrize("body", [b"{not json", b"\xff\xfe\x00", b"nulo"])
+def test_invalid_json_body(body: bytes) -> None:
+    assert _fetch_error(_FakeResponse(200, body)).kind == ERROR_KIND_INVALID_JSON
 
 
 def test_200_with_invalid_ranking_fails_closed() -> None:
     payload = synthetic_payload()
     payload["cells"].pop()
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(200, json.dumps(payload)))).fetch_ranking()
-    assert info.value.kind == ERROR_KIND_INVALID_RANKING
+    assert _fetch_error(_FakeResponse(200, json.dumps(payload))).kind == ERROR_KIND_INVALID_RANKING
 
 
 def test_200_with_json_array_fails_closed() -> None:
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(200, "[1, 2]"))).fetch_ranking()
-    assert info.value.kind == ERROR_KIND_INVALID_RANKING
-
-
-def test_oversized_body_is_rejected() -> None:
-    big = b"{" + b" " * MAX_BODY_BYTES + b"}"
-    with pytest.raises(BackendError) as info:
-        _client(_FakeSession(_FakeResponse(200, big))).fetch_ranking()
-    assert info.value.kind == ERROR_KIND_INVALID_RANKING
+    assert _fetch_error(_FakeResponse(200, "[1, 2]")).kind == ERROR_KIND_INVALID_RANKING
 
 
 def test_user_messages_never_leak_host_path_or_stack() -> None:
     session = _FakeSession(raise_exc=requests.exceptions.ConnectionError("http://secreto:8080/x"))
     with pytest.raises(BackendError) as info:
         _client(session, base="http://secreto:8080").fetch_ranking()
-    for text in (info.value.user_message, str(info.value)):
+    for text in (info.value.user_message, str(info.value), info.value.detail):
         assert "secreto" not in text
         assert "8080" not in text
         assert RANKING_PATH not in text

@@ -8,6 +8,7 @@ y mapa Folium real. La integración completa con AppTest vive en
 from __future__ import annotations
 
 import copy
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -28,6 +29,7 @@ from app.utils.backend_client import (
     ERROR_KIND_CONNECTION,
     ERROR_KIND_HTTP_BACKEND,
     BackendError,
+    BackendRankingClient,
     RankingView,
     parse_ranking,
 )
@@ -38,7 +40,13 @@ from app.utils.reference_topography import (
     reference_topography,
 )
 from src.geo.grid import all_cells
-from tests.test_backend_client import EXTENDED_FIELDS, real_payload
+from tests.test_backend_client import (
+    EXTENDED_FIELDS,
+    MALICIOUS_MESSAGES,
+    _FakeResponse,
+    _FakeSession,
+    real_payload,
+)
 
 FETCHED_AT = datetime(2026, 10, 10, 15, 30, tzinfo=timezone.utc)
 
@@ -168,6 +176,24 @@ def test_v0_header_declares_station_and_horizon_without_inventing(mock_st: Magic
     assert f"horizonte {NOT_PROVIDED}" in text
     assert "Obtenido del backend: 15:30 UTC" in text
     assert "DMC Rodelillo" not in text
+
+
+@pytest.mark.parametrize("horizon", [10**8, 10**18])
+@patch("app.components.ranking_backend_view.st")
+def test_absurd_horizon_never_crashes_presentation(mock_st: MagicMock, horizon: int) -> None:
+    """Astra MINOR 1: T+h no representable → ausencia explícita, sin fecha inventada."""
+    _mock_expander(mock_st)
+    payload = real_payload()
+    payload["horizon_hours"] = horizon
+    view = parse_ranking(payload, fetched_at=FETCHED_AT)
+    assert view.window_end is None
+    view_mod._render_header(view)
+    view_mod._render_selected_panel(view, "VP-001")
+    view_mod._render_tech_expander(view)
+    text = _markdown_blob(mock_st)
+    assert "ventana no representable" in text
+    assert "9999" not in text and "0001" not in text  # sin recorte a fechas límite
+    assert "Horizonte</span><b>" in text  # el panel muestra la ausencia, no un valor
 
 
 @patch("app.components.ranking_backend_view.st")
@@ -393,19 +419,68 @@ def test_error_state_is_visible_generic_and_without_internals(mock_st: MagicMock
     assert "SAPI_BACKEND_BASE_URL" in captions and "inferencia local" in captions
 
 
+def _all_streamlit_output(mock_st: MagicMock) -> str:
+    """Todo texto entregado a cualquier función de `st` (posicional o keyword)."""
+    parts: list[str] = []
+    for call in mock_st.mock_calls:
+        parts.extend(str(a) for a in call.args)
+        parts.extend(str(v) for v in call.kwargs.values())
+    return "\n".join(parts)
+
+
 @patch("app.components.ranking_backend_view.st")
-def test_error_state_shows_backend_error_type_and_message(mock_st: MagicMock) -> None:
-    exc = BackendError(
-        ERROR_KIND_HTTP_BACKEND,
-        http_status=503,
-        error_type="upstream_unavailable",
-        backend_message="El servicio ML no está disponible.",
-    )
+def test_error_state_shows_only_contract_error_type(mock_st: MagicMock) -> None:
+    exc = BackendError(ERROR_KIND_HTTP_BACKEND, http_status=503, error_type="upstream_unavailable")
     view_mod._render_backend_error(exc)
     assert "503" in mock_st.error.call_args[0][0]
     captions = " ".join(c.args[0] for c in mock_st.caption.call_args_list)
     assert "upstream_unavailable" in captions
-    assert "El servicio ML no está disponible." in captions
+    assert "mensaje del backend" not in _all_streamlit_output(mock_st)
+
+
+@pytest.mark.parametrize("message", MALICIOUS_MESSAGES)
+@patch("app.components.ranking_backend_view.st")
+def test_remote_message_never_reaches_streamlit_output(mock_st: MagicMock, message: str) -> None:
+    """Astra MAJOR 2: el `message` remoto no cruza la frontera de presentación.
+
+    Se simula el cuerpo `Error` completo a través del cliente real (sesión
+    falsa) y se inspecciona todo lo entregado a `st`."""
+    response = _FakeResponse(
+        503,
+        json.dumps({"status": "error", "error_type": "upstream_unavailable", "message": message}),
+    )
+    with pytest.raises(BackendError) as info:
+        BackendRankingClient("http://b", session=_FakeSession(response)).fetch_ranking()
+    view_mod._render_backend_error(info.value)
+    output = _all_streamlit_output(mock_st)
+    assert "503" in output and "upstream_unavailable" in output
+    for fragment in (
+        message,
+        "secret",
+        "internal",
+        "password",
+        "**markdown**",
+        "<script",
+        "onerror",
+        "Traceback",
+        "\x1b",
+        "\x00",
+        "C:\\",
+        "/home/",
+        "8080",
+    ):
+        assert fragment not in output, f"{fragment!r} se filtró a Streamlit"
+
+
+@pytest.mark.parametrize("error_type", MALICIOUS_MESSAGES + ["tipo_503"])
+@patch("app.components.ranking_backend_view.st")
+def test_non_contract_error_type_is_not_rendered(mock_st: MagicMock, error_type: str) -> None:
+    # Construcción directa (defensa en profundidad, aunque el cliente ya filtra).
+    exc = BackendError(ERROR_KIND_HTTP_BACKEND, http_status=503, error_type=error_type)
+    view_mod._render_backend_error(exc)
+    output = _all_streamlit_output(mock_st)
+    assert "tipo reportado" not in output
+    assert error_type not in output
 
 
 @patch("app.components.ranking_backend_view.st")

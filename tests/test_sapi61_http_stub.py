@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Callable, Iterator
 
 import pytest
+import requests
 from streamlit.testing.v1 import AppTest
 
 from app.components.ranking_backend_view import NOT_PROVIDED, refresh_ranking_cache
@@ -28,10 +29,16 @@ from app.utils.backend_client import (
     ERROR_KIND_INVALID_JSON,
     ERROR_KIND_INVALID_RANKING,
     ERROR_KIND_TIMEOUT,
+    MAX_BODY_BYTES,
     BackendError,
     BackendRankingClient,
 )
-from tests.test_backend_client import EXTENDED_FIELDS, real_payload, synthetic_payload
+from tests.test_backend_client import (
+    EXTENDED_FIELDS,
+    MALICIOUS_MESSAGES,
+    real_payload,
+    synthetic_payload,
+)
 
 APP_PATH = Path(__file__).resolve().parent.parent / "app" / "app.py"
 PROTOTYPE_MODE = "Prototipo (datos reales)"
@@ -61,7 +68,17 @@ class StubBackend:
             def log_message(self, *_: Any) -> None:
                 return
 
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+            def handle_error(self, *_: Any) -> None:
+                return
+
+        class Server(ThreadingHTTPServer):
+            def handle_error(self, request: Any, client_address: Any) -> None:
+                # El cliente aborta a propósito (límite de tamaño): el reset
+                # resultante en el servidor es esperado y no debe ensuciar la salida.
+                stub.server_side_errors += 1
+
+        self.server_side_errors = 0
+        self.server = Server(("127.0.0.1", 0), Handler)
         self.server.daemon_threads = True
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
@@ -102,12 +119,104 @@ class StubBackend:
         return responder
 
     @staticmethod
+    def respond_raw_declared(status: int, body: bytes, *, declared_length: int | None) -> Responder:
+        """Cuerpo completo con un Content-Length que miente (o ausente)."""
+
+        def responder(handler: BaseHTTPRequestHandler) -> None:
+            handler.send_response(status)
+            handler.send_header("Content-Type", "application/json")
+            if declared_length is not None:
+                handler.send_header("Content-Length", str(declared_length))
+            handler.end_headers()
+            try:
+                handler.wfile.write(body)
+            except (BrokenPipeError, ConnectionResetError):
+                return
+
+        return responder
+
+    @staticmethod
     def respond_slow(delay_seconds: float) -> Responder:
         def responder(handler: BaseHTTPRequestHandler) -> None:
             time.sleep(delay_seconds)
             StubBackend.respond_json(200, real_payload())(handler)
 
         return responder
+
+    @staticmethod
+    def respond_stream(
+        status: int,
+        total_bytes: int,
+        *,
+        declared_length: int | None | str = "real",
+        chunked: bool = False,
+        piece: int = 64 * 1024,
+        fill: bytes = b" ",
+    ) -> Responder:
+        """Cuerpo grande emitido por piezas.
+
+        `declared_length="real"` envía el Content-Length verdadero; `None` lo
+        omite (HTTP/1.0: delimitado por cierre); un entero envía un valor que
+        miente; `chunked=True` usa Transfer-Encoding: chunked (HTTP/1.1).
+        """
+
+        def responder(handler: BaseHTTPRequestHandler) -> None:
+            if chunked:
+                handler.protocol_version = "HTTP/1.1"
+            handler.send_response(status)
+            handler.send_header("Content-Type", "application/json")
+            if chunked:
+                handler.send_header("Transfer-Encoding", "chunked")
+                handler.send_header("Connection", "close")
+            elif declared_length == "real":
+                handler.send_header("Content-Length", str(total_bytes))
+            elif declared_length is not None:
+                handler.send_header("Content-Length", str(declared_length))
+            handler.end_headers()
+            remaining = total_bytes
+            try:
+                while remaining > 0:
+                    data = fill * min(piece, remaining)
+                    remaining -= len(data)
+                    if chunked:
+                        handler.wfile.write(b"%x\r\n%s\r\n" % (len(data), data))
+                    else:
+                        handler.wfile.write(data)
+                if chunked:
+                    handler.wfile.write(b"0\r\n\r\n")
+            except (BrokenPipeError, ConnectionResetError):
+                return  # el cliente cortó: comportamiento esperado
+
+        return responder
+
+    @staticmethod
+    def respond_incomplete(declared_length: int, actual: bytes) -> Responder:
+        """Declara más bytes de los que envía y cierra la conexión."""
+
+        def responder(handler: BaseHTTPRequestHandler) -> None:
+            handler.send_response(200)
+            handler.send_header("Content-Type", "application/json")
+            handler.send_header("Content-Length", str(declared_length))
+            handler.end_headers()
+            handler.wfile.write(actual)
+            handler.wfile.flush()
+            handler.connection.shutdown(socket.SHUT_RDWR)
+            handler.connection.close()
+
+        return responder
+
+
+class RecordingSession(requests.Session):
+    """Sesión real que recuerda la última respuesta para probar `close()`."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.last_response: requests.Response | None = None
+
+    def get(self, *args: Any, **kwargs: Any) -> requests.Response:
+        response = super().get(*args, **kwargs)
+        self.last_response = response
+        return response
 
 
 @pytest.fixture
@@ -229,7 +338,7 @@ def test_backend_error_statuses_are_mapped(stub: StubBackend, status: int, error
     assert info.value.kind == ERROR_KIND_HTTP_BACKEND
     assert info.value.http_status == status
     assert info.value.error_type == error_type
-    assert info.value.backend_message == "mensaje"
+    assert not hasattr(info.value, "backend_message")
 
 
 def test_empty_body_over_the_wire(stub: StubBackend) -> None:
@@ -253,6 +362,118 @@ def test_semantically_invalid_ranking_over_the_wire(stub: StubBackend) -> None:
     with pytest.raises(BackendError) as info:
         client_for(stub).fetch_ranking()
     assert info.value.kind == ERROR_KIND_INVALID_RANKING
+
+
+# ── HTTP_STUB: límite de cuerpo en streaming (Astra MAJOR 1) ─────────────────
+
+OVERSIZED = MAX_BODY_BYTES + 256 * 1024
+
+
+def _fetch_recorded(
+    stub: StubBackend, read_timeout: float = 10.0
+) -> tuple[BackendError, RecordingSession]:
+    session = RecordingSession()
+    client = BackendRankingClient(
+        stub.base_url, connect_timeout=2.0, read_timeout=read_timeout, session=session
+    )
+    started = time.monotonic()
+    with pytest.raises(BackendError) as info:
+        client.fetch_ranking()
+    assert time.monotonic() - started < 5.0, "el aborto por tamaño debe ser inmediato"
+    assert session.last_response is not None
+    assert session.last_response.raw.closed, "response.close() debe liberar la conexión"
+    return info.value, session
+
+
+def test_200_oversized_with_content_length_over_the_wire(stub: StubBackend) -> None:
+    stub.responder = StubBackend.respond_stream(200, OVERSIZED)
+    err, session = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    assert "supera" in err.detail  # falló temprano por Content-Length
+    assert session.last_response._content_consumed is False  # nunca se materializó
+
+
+def test_200_oversized_without_content_length_over_the_wire(stub: StubBackend) -> None:
+    stub.responder = StubBackend.respond_stream(200, OVERSIZED, declared_length=None)
+    err, session = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    assert "mayor a" in err.detail  # cortado durante la lectura
+    assert session.last_response._content_consumed is False
+
+
+def test_200_oversized_chunked_over_the_wire(stub: StubBackend) -> None:
+    stub.responder = StubBackend.respond_stream(200, OVERSIZED, chunked=True)
+    err, session = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING
+    assert session.last_response.headers.get("Transfer-Encoding") == "chunked"
+    assert session.last_response._content_consumed is False
+
+
+def test_503_oversized_chunked_error_body_is_controlled(stub: StubBackend) -> None:
+    stub.responder = StubBackend.respond_stream(503, OVERSIZED, chunked=True, fill=b"x")
+    err, session = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_HTTP_BACKEND
+    assert err.http_status == 503
+    assert err.error_type is None
+    assert session.last_response._content_consumed is False
+
+
+def test_503_oversized_without_content_length_is_controlled(stub: StubBackend) -> None:
+    stub.responder = StubBackend.respond_stream(503, OVERSIZED, declared_length=None, fill=b"x")
+    err, _ = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_HTTP_BACKEND and err.http_status == 503
+
+
+def test_lying_small_content_length_fails_closed(stub: StubBackend) -> None:
+    # Declara 40 bytes y envía el ranking completo: el cliente lee 40 → JSON truncado.
+    body = json.dumps(real_payload()).encode("utf-8")
+    stub.responder = StubBackend.respond_raw_declared(200, body, declared_length=40)
+    err, _ = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_JSON
+
+
+def test_lying_huge_content_length_with_small_body_fails_early(stub: StubBackend) -> None:
+    body = json.dumps(real_payload()).encode("utf-8")
+    stub.responder = StubBackend.respond_raw_declared(200, body, declared_length=OVERSIZED)
+    err, session = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING and "supera" in err.detail
+    assert session.last_response._content_consumed is False
+
+
+def test_incomplete_transfer_is_a_controlled_connection_error(stub: StubBackend) -> None:
+    body = json.dumps(real_payload()).encode("utf-8")
+    stub.responder = StubBackend.respond_incomplete(len(body) * 3, body)
+    err, _ = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_CONNECTION
+
+
+def test_exact_limit_body_over_the_wire_is_read_and_fails_only_on_contract(
+    stub: StubBackend,
+) -> None:
+    body = b"{" + b" " * (MAX_BODY_BYTES - 2) + b"}"
+    stub.responder = StubBackend.respond_raw(200, body)
+    err, _ = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING and "requeridos" in err.detail
+
+
+def test_limit_plus_one_over_the_wire_is_rejected_for_size(stub: StubBackend) -> None:
+    body = b"{" + b" " * (MAX_BODY_BYTES - 1) + b"}"
+    assert len(body) == MAX_BODY_BYTES + 1
+    stub.responder = StubBackend.respond_raw(200, body)
+    err, _ = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING and "supera" in err.detail
+    stub.responder = StubBackend.respond_raw_declared(200, body, declared_length=None)
+    err, _ = _fetch_recorded(stub)
+    assert err.kind == ERROR_KIND_INVALID_RANKING and "mayor a" in err.detail
+
+
+def test_successful_response_is_closed_too(stub: StubBackend) -> None:
+    session = RecordingSession()
+    client = BackendRankingClient(
+        stub.base_url, connect_timeout=2.0, read_timeout=10.0, session=session
+    )
+    assert len(client.fetch_ranking().cells) == 50
+    assert session.last_response is not None and session.last_response.raw.closed
 
 
 # ── STREAMLIT_INTEGRATION: app completa con AppTest ──────────────────────────
@@ -354,7 +575,57 @@ def test_apptest_backend_http_error_shows_controlled_message(
     assert at.error and str(status) in at.error[0].value
     captions = " ".join(c.value for c in at.caption)
     assert "upstream_unavailable" in captions
+    assert "El servicio ML no está disponible." not in " ".join(
+        e.value for e in list(at.error) + list(at.caption) + list(at.markdown)
+    )
     assert "Grupo prioritario" not in markdown_blob(at)
+
+
+def _everything_rendered(at: AppTest) -> str:
+    parts: list[str] = []
+    for collection in (at.error, at.warning, at.info, at.success, at.caption, at.markdown):
+        parts.extend(str(e.value) for e in collection)
+    parts.extend(str(t.value) for t in at.title)
+    parts.extend(str(h.value) for h in at.header)
+    parts.extend(str(s.value) for s in at.subheader)
+    parts.extend(str(t.value) for t in at.text)
+    return "\n".join(parts)
+
+
+def test_apptest_malicious_remote_message_never_reaches_the_ui(
+    stub: StubBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Astra MAJOR 2 en la app real: ningún fragmento del `message` remoto
+    (rutas, hosts, credenciales, markdown, HTML, controles) llega al render."""
+    combined = " | ".join(MALICIOUS_MESSAGES)
+    stub.responder = StubBackend.respond_json(
+        503, {"status": "error", "error_type": "C:\\Users\\private\\secret", "message": combined}
+    )
+    at = run_app(monkeypatch, stub.base_url)
+    assert at.error and "503" in at.error[0].value
+    rendered = _everything_rendered(at)
+    assert "tipo reportado" not in rendered  # error_type fuera del contrato → no se muestra
+    for fragment in (
+        "secret",
+        "private",
+        "internal",
+        "password",
+        "postgresql",
+        "**markdown**",
+        "<script",
+        "onerror",
+        "Traceback",
+        "/home/",
+        "C:\\",
+        "\x1b",
+        "\x00",
+        "127.0.0.1",
+        str(stub.server.server_port),
+        "/api/v1/ranking?",
+    ):
+        assert fragment not in rendered, f"{fragment!r} se filtró al render de Streamlit"
+    for message in MALICIOUS_MESSAGES:
+        assert message not in rendered
 
 
 def test_apptest_invalid_ranking_fails_closed_in_the_ui(
