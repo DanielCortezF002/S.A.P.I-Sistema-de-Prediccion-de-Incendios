@@ -2,21 +2,26 @@ package cl.sapi.backend.ranking.ml;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Objects;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.convert.DurationUnit;
 
 /**
  * Conexión con el servicio ML (SAPI-57, ADR-010). Se configura por variables de entorno en
  * {@code application.properties}: {@code SAPI_ML_BASE_URL}, {@code SAPI_ML_CONNECT_TIMEOUT} y
- * {@code SAPI_ML_READ_TIMEOUT}.
+ * {@code SAPI_ML_READ_TIMEOUT}. Un timeout sin unidad se lee en segundos ({@code 60} = 60 s).
  *
  * @param baseUrl URL base del servicio ML, sin {@code /predict}
  * @param connectTimeout tiempo máximo para abrir la conexión
- * @param readTimeout tiempo máximo de espera de la respuesta; debe superar la duración del scoring
+ * @param readTimeout plazo total para recibir la respuesta completa; debe superar la duración del scoring
  */
 @ConfigurationProperties("sapi.ml")
-public record MlServiceProperties(URI baseUrl, Duration connectTimeout, Duration readTimeout) {
+public record MlServiceProperties(
+        URI baseUrl,
+        @DurationUnit(ChronoUnit.SECONDS) Duration connectTimeout,
+        @DurationUnit(ChronoUnit.SECONDS) Duration readTimeout) {
 
     public MlServiceProperties {
         Objects.requireNonNull(baseUrl, "sapi.ml.base-url es obligatorio");

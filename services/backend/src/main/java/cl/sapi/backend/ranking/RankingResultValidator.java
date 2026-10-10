@@ -1,13 +1,12 @@
 package cl.sapi.backend.ranking;
 
-import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Pattern;
+
+import org.jspecify.annotations.Nullable;
 
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
@@ -19,61 +18,78 @@ import tools.jackson.databind.json.JsonMapper;
  * reenviarlo: campos obligatorios y sus formatos, y las invariantes de la grilla que JSON Schema no
  * expresa (RN-02, RN-03, RN-04). Nunca modifica el cuerpo: el backend reenvía los mismos bytes.
  *
- * <p>Los campos desconocidos se ignoran, porque el contrato solo admite cambios aditivos.
+ * <p>Solo acepta JSON en UTF-8 que empieza con {@code {}: sin BOM y sin bytes nulos (UTF-16/32). Los
+ * campos desconocidos se ignoran, porque el contrato solo admite cambios aditivos.
  */
 public final class RankingResultValidator {
 
     static final int CELL_COUNT = 50;
 
-    private static final Pattern FINGERPRINT = Pattern.compile("^[0-9a-f]{64}$");
-    private static final Pattern CELL_ID = Pattern.compile("^VP-\\d{3}$");
+    private static final Pattern FINGERPRINT = Pattern.compile("[0-9a-f]{64}");
+    private static final Pattern CELL_ID = Pattern.compile("VP-\\d{3}");
     private static final Set<String> EXPECTED_CELL_IDS = expectedCellIds();
 
     private static final JsonMapper MAPPER = JsonMapper.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .build();
 
+    /**
+     * Resultado de la validación.
+     *
+     * @param violation la primera violación encontrada (solo para el log), o vacío si el cuerpo es válido
+     * @param ranking el árbol ya validado, o null si el cuerpo no es válido
+     */
+    public record Validation(Optional<String> violation, @Nullable JsonNode ranking) {
+
+        static Validation invalid(String violation) {
+            return new Validation(Optional.of(violation), null);
+        }
+    }
+
     private RankingResultValidator() {
     }
 
-    /**
-     * Valida un cuerpo {@code RankingResult}.
-     *
-     * @return la primera violación encontrada (solo para el log), o vacío si el cuerpo es válido
-     */
-    public static Optional<String> violation(byte[] body) {
+    /** Valida un cuerpo {@code RankingResult} y, si es válido, devuelve su árbol JSON. */
+    public static Validation validate(byte[] body) {
         JsonNode root = parse(body);
         if (root == null || !root.isObject()) {
-            return Optional.of("el cuerpo no es un objeto JSON");
+            return Validation.invalid("el cuerpo no es un objeto JSON en UTF-8");
         }
         if (!isString(root, "schema_version", "sapi-ranking-v0")) {
-            return Optional.of("schema_version distinto de sapi-ranking-v0");
+            return Validation.invalid("schema_version distinto de sapi-ranking-v0");
         }
         JsonNode modelVersion = root.get("model_version");
         if (modelVersion == null || !modelVersion.isString() || modelVersion.stringValue().isEmpty()) {
-            return Optional.of("model_version ausente o vacío");
+            return Validation.invalid("model_version ausente o vacío");
         }
-        if (!isOffsetDateTime(root.get("forecast_time"))) {
-            return Optional.of("forecast_time no es una fecha-hora ISO 8601 con zona horaria");
+        JsonNode forecastTime = root.get("forecast_time");
+        if (forecastTime == null || !forecastTime.isString() || !ForecastTime.isValid(forecastTime.stringValue())) {
+            return Validation.invalid("forecast_time no es una fecha-hora RFC 3339");
         }
         JsonNode fingerprint = root.get("inputs_fingerprint");
         if (fingerprint == null || !fingerprint.isString() || !FINGERPRINT.matcher(fingerprint.stringValue()).matches()) {
-            return Optional.of("inputs_fingerprint no es un sha256 hexadecimal");
+            return Validation.invalid("inputs_fingerprint no es un sha256 hexadecimal");
         }
         if (!isString(root, "score_semantics", "relative_rank")) {
-            return Optional.of("score_semantics distinto de relative_rank");
+            return Validation.invalid("score_semantics distinto de relative_rank");
         }
         JsonNode validation = root.get("scientific_model_validation");
         if (validation == null || !validation.isBoolean() || validation.booleanValue()) {
-            return Optional.of("scientific_model_validation distinto de false");
+            return Validation.invalid("scientific_model_validation distinto de false");
         }
-        if (root.has("horizon_hours") && !isIntegerInRange(root.get("horizon_hours"), 1, Integer.MAX_VALUE)) {
-            return Optional.of("horizon_hours no es un entero >= 1");
+        if (root.has("horizon_hours") && !isPositiveInteger(root.get("horizon_hours"))) {
+            return Validation.invalid("horizon_hours no es un entero >= 1");
         }
         if (root.has("disclaimer") && !root.get("disclaimer").isString()) {
-            return Optional.of("disclaimer no es un string");
+            return Validation.invalid("disclaimer no es un string");
         }
-        return cellsViolation(root.get("cells"));
+        Optional<String> cells = cellsViolation(root.get("cells"));
+        return cells.isPresent() ? new Validation(cells, null) : new Validation(Optional.empty(), root);
+    }
+
+    /** Atajo de {@link #validate(byte[])}: solo la violación. */
+    public static Optional<String> violation(byte[] body) {
+        return validate(body).violation();
     }
 
     /**
@@ -94,7 +110,7 @@ public final class RankingResultValidator {
         return Optional.of(type.stringValue());
     }
 
-    private static Optional<String> cellsViolation(JsonNode cells) {
+    private static Optional<String> cellsViolation(@Nullable JsonNode cells) {
         if (cells == null || !cells.isArray() || cells.size() != CELL_COUNT) {
             return Optional.of("cells no es un arreglo de exactamente 50 celdas");
         }
@@ -153,8 +169,9 @@ public final class RankingResultValidator {
         return Optional.empty();
     }
 
-    private static JsonNode parse(byte[] body) {
-        if (body == null || body.length == 0) {
+    /** Parsea un objeto JSON en UTF-8; null si el cuerpo está vacío, no empieza con '{' o no es JSON. */
+    private static @Nullable JsonNode parse(byte @Nullable [] body) {
+        if (body == null || !startsAsUtf8Object(body)) {
             return null;
         }
         try {
@@ -165,27 +182,36 @@ public final class RankingResultValidator {
         }
     }
 
+    /**
+     * El primer byte no blanco es '{' y no hay bytes nulos: descarta BOM y UTF-16/32, que Jackson
+     * detectaría por su cuenta, para que solo pase JSON en UTF-8 (RFC 8259 §8.1).
+     */
+    private static boolean startsAsUtf8Object(byte[] body) {
+        int first = -1;
+        for (int i = 0; i < body.length; i++) {
+            byte b = body[i];
+            if (b == 0) {
+                return false;
+            }
+            if (first < 0 && b != ' ' && b != '\t' && b != '\n' && b != '\r') {
+                first = i;
+            }
+        }
+        return first >= 0 && body[first] == '{';
+    }
+
     private static boolean isString(JsonNode root, String field, String expected) {
         JsonNode node = root.get(field);
         return node != null && node.isString() && expected.equals(node.stringValue());
     }
 
-    private static boolean isIntegerInRange(JsonNode node, int min, int max) {
+    private static boolean isIntegerInRange(@Nullable JsonNode node, int min, int max) {
         return node != null && node.isIntegralNumber() && node.canConvertToInt()
                 && node.intValue() >= min && node.intValue() <= max;
     }
 
-    private static boolean isOffsetDateTime(JsonNode node) {
-        if (node == null || !node.isString()) {
-            return false;
-        }
-        try {
-            OffsetDateTime.parse(node.stringValue(), DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-            return true;
-        }
-        catch (DateTimeParseException ex) {
-            return false;
-        }
+    private static boolean isPositiveInteger(@Nullable JsonNode node) {
+        return node != null && node.isIntegralNumber() && node.bigIntegerValue().signum() > 0;
     }
 
     private static Set<String> expectedCellIds() {

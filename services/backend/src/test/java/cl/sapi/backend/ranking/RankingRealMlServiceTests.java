@@ -8,6 +8,9 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -57,14 +60,38 @@ class RankingRealMlServiceTests {
     }
 
     @Test
-    @DisplayName("SAPI-57.CA4 — Spring ↔ FastAPI real: forecast_time explícito llega al ML y vuelve igual")
-    void explicitForecastTimeRoundTrips() throws Exception {
-        String forecastTime = Fixtures.MAPPER.readTree(postPredict("{}")).get("forecast_time").stringValue();
+    @DisplayName("SAPI-57.CA1, CA4 — Spring ↔ FastAPI real: un forecast_time anterior llega al ML y vuelve evaluado")
+    void explicitEarlierForecastTimeRoundTrips() throws Exception {
+        byte[] latest = postPredict("{}");
+        OffsetDateTime earlier = OffsetDateTime.parse(
+                Fixtures.MAPPER.readTree(latest).get("forecast_time").stringValue()).minusHours(6);
+        String forecastTime = earlier.withOffsetSameInstant(ZoneOffset.UTC)
+                .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
         byte[] direct = postPredict("{\"forecast_time\":\"" + forecastTime + "\"}");
 
         HttpResponse<byte[]> response = get("/api/v1/ranking?forecast_time="
                 + URLEncoder.encode(forecastTime, StandardCharsets.UTF_8));
 
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEqualTo(direct).isNotEqualTo(latest);
+        assertThat(OffsetDateTime.parse(Fixtures.MAPPER.readTree(response.body()).get("forecast_time").stringValue())
+                .toInstant()).isEqualTo(earlier.toInstant());
+    }
+
+    @Test
+    @DisplayName("SAPI-57.CA1, CA4 — Spring ↔ FastAPI real: un offset +HH:MM (enviado como %2B) se respeta")
+    void positiveOffsetRoundTrips() throws Exception {
+        byte[] latest = postPredict("{}");
+        OffsetDateTime earlier = OffsetDateTime.parse(
+                Fixtures.MAPPER.readTree(latest).get("forecast_time").stringValue()).minusHours(6);
+        String withOffset = earlier.withOffsetSameInstant(ZoneOffset.ofHours(3))
+                .format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
+        byte[] direct = postPredict("{\"forecast_time\":\"" + withOffset + "\"}");
+
+        HttpResponse<byte[]> response = get("/api/v1/ranking?forecast_time="
+                + URLEncoder.encode(withOffset, StandardCharsets.UTF_8));
+
+        assertThat(withOffset).contains("+03:00");
         assertThat(response.statusCode()).isEqualTo(200);
         assertThat(response.body()).isEqualTo(direct);
     }

@@ -210,13 +210,18 @@ El backend se configura por variables de entorno (sin secretos):
 | `SERVER_PORT` | `8080` | Puerto del backend |
 | `SAPI_ML_BASE_URL` | `http://localhost:8000` | URL del servicio ML |
 | `SAPI_ML_CONNECT_TIMEOUT` | `2s` | Timeout de conexión al servicio ML |
-| `SAPI_ML_READ_TIMEOUT` | `60s` | Timeout de respuesta del servicio ML; debe superar la duración del scoring |
+| `SAPI_ML_READ_TIMEOUT` | `60s` | Plazo total para recibir la respuesta del servicio ML; debe superar la duración del scoring |
 
-`GET /api/v1/ranking` acepta `forecast_time` (ISO 8601 con zona horaria; un
-`+` del offset va codificado como `%2B`) y devuelve el ranking del servicio ML
-sin reordenarlo. Los errores siguen `contracts/openapi/backend.v0.yaml`
-(422, 500, 502, 503, 504), y cada respuesta lleva `X-Request-Id`. Para logs en
-JSON, usar `LOGGING_STRUCTURED_FORMAT_CONSOLE=logstash`.
+Un timeout sin unidad se lee en segundos (`60` = 60 s).
+
+`GET /api/v1/ranking`:
+- acepta `forecast_time` en RFC 3339 con zona horaria; un `+` del offset va
+  codificado como `%2B`;
+- devuelve el ranking del servicio ML sin reordenarlo;
+- sus errores siguen `contracts/openapi/backend.v0.yaml` (422, 500, 502, 503,
+  504), y cada respuesta lleva `X-Request-Id`.
+
+Para logs en JSON, usar `LOGGING_STRUCTURED_FORMAT_CONSOLE=logstash`.
 
 ---
 

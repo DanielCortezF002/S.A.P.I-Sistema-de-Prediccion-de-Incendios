@@ -8,7 +8,7 @@ package cl.sapi.backend.ranking;
 public enum RankingError {
 
     INVALID_REQUEST(422, "invalid_request",
-            "La petición no cumple el contrato: forecast_time debe ser una fecha-hora ISO 8601 con zona horaria."),
+            "La petición no cumple el contrato: forecast_time debe ser una fecha-hora RFC 3339 con zona horaria."),
     INTERNAL_ERROR(500, "internal_error", "Error interno al generar el ranking."),
     UPSTREAM_INVALID_RESPONSE(502, "upstream_invalid_response", "El servicio ML devolvió una respuesta inválida."),
     UPSTREAM_UNAVAILABLE(503, "upstream_unavailable", "El servicio ML no está disponible."),

@@ -58,6 +58,12 @@ final class BackendContract {
         }
     }
 
+    /** true si el validador del contrato acepta {@code value} como {@code type: string, format: date-time}. */
+    static boolean isDateTime(String value) {
+        JsonSchema schema = FACTORY.getSchema("{\"type\":\"string\",\"format\":\"date-time\"}", CONFIG);
+        return schema.validate(JSON.getNodeFactory().textNode(value)).isEmpty();
+    }
+
     /** Schema de la respuesta {@code status}, resolviendo un {@code $ref} de respuesta entre archivos. */
     @SuppressWarnings("unchecked")
     static JsonSchema schemaFor(int status) {

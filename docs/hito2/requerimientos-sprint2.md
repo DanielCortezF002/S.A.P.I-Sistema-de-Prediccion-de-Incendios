@@ -129,17 +129,20 @@ congelados hasta después de la presentación del Hito 2 por decisión del
 
 | ID | Criterio (Jira, literal) | RN | Verificación | Evidencia | Estado |
 |---|---|---|---|---|---|
-| SAPI-57.CA1 | Spring Boot consume FastAPI con WebClient o RestTemplate | — | `RankingEndpointIntegrationTests`: `POST /predict` por HTTP real con `RestClient`, cuerpo `{}` o `{"forecast_time": …}` sin modificar | `artifacts/hito2/testing/sapi-57/` | Implementado con `RestClient` (ver nota); en revisión (PR-2) |
-| SAPI-57.CA2 | Maneja timeout y error (FastAPI caído) con respuesta controlada | RN-09 | 15 respuestas del ML mapeadas (502/503/422/500), timeout → 504, cuerpo > 1 MiB → 502, `forecast_time` inválido → 422 sin llamar al ML, ML caído → 503 (`RankingMlUnavailableTests`); cada cuerpo de error se valida contra `backend.v0.yaml` | idem | Implementado; en revisión (PR-2) |
-| SAPI-57.CA3 | Expone `GET /api/v1/ranking` que devuelve las 50 celdas ordenadas por score | RN-02, RN-03 | `RankingResultValidatorTests` (invariantes de la grilla); la respuesta 200 son los mismos bytes del ML y cumple `backend.v0.yaml` → `RankingResult` (validador JSON Schema en dialecto OpenAPI 3.0, siguiendo `$ref`) | idem | Implementado; en revisión (PR-2) |
-| SAPI-57.CA4 | Test de integración Spring ↔ FastAPI PASS (mock o real) | — | Mock: `RankingEndpointIntegrationTests` (stub HTTP en 127.0.0.1). Real: `RankingRealMlServiceTests` contra el servicio FastAPI con `SAPI_IT_ML_BASE_URL` (los mismos bytes que `POST /predict`); E2E completo en SAPI-66 | idem | Implementado; en revisión (PR-2). Ver nota |
-| SAPI-57.CA5 | Logs estructurados de cada llamada | — | Un evento `ml_predict` por llamada con `request_id`, `ml_http_status`, `ml_latency_ms`, `outcome` y trazabilidad, como pares clave-valor SLF4J y en JSON con `logging.structured.format.console=logstash` | muestra de log en idem | Implementado; en revisión (PR-2) |
+| SAPI-57.CA1 | Spring Boot consume FastAPI con WebClient o RestTemplate | — | `RankingEndpointIntegrationTests` y `RankingRealMlServiceTests`: `POST /predict` por HTTP real con `RestClient`; el cuerpo `{}` o `{"forecast_time": …}` llega sin modificar | `artifacts/hito2/testing/sapi-57/` | CUMPLIDO en PR-2, con `RestClient` aprobado por Daniel (ver nota); la HU sigue abierta hasta la revisión y el merge |
+| SAPI-57.CA2 | Maneja timeout y error (FastAPI caído) con respuesta controlada | RN-09 | Cada respuesta del ML se mapea a 502/503/422/500. Timeouts → 504, antes o después de los headers. Corte a mitad del cuerpo → 503. Cuerpo > 1 MiB → 502. `forecast_time` que no es RFC 3339, o `%ZZ`, → 422 sin llamar al ML. ML caído → 503. Cada cuerpo de error se valida contra `backend.v0.yaml`, y hay un timeout real contra el ML | idem | CUMPLIDO en PR-2; la HU sigue abierta hasta la revisión y el merge |
+| SAPI-57.CA3 | Expone `GET /api/v1/ranking` que devuelve las 50 celdas ordenadas por score | RN-02, RN-03 | `RankingResultValidatorTests`: cada invariante de la grilla con su motivo. La respuesta 200 son los mismos bytes del ML (test con un cuerpo que una re-serialización cambiaría) y cumple `backend.v0.yaml` → `RankingResult`, validado con JSON Schema en dialecto OpenAPI 3.0 siguiendo `$ref` | idem | CUMPLIDO en PR-2; la HU sigue abierta hasta la revisión y el merge |
+| SAPI-57.CA4 | Test de integración Spring ↔ FastAPI PASS (mock o real) | — | Mock: `RankingEndpointIntegrationTests` (stub HTTP en 127.0.0.1). Real: `RankingRealMlServiceTests` contra el servicio FastAPI con `SAPI_IT_ML_BASE_URL`, que devuelve los mismos bytes que `POST /predict`. E2E completo en SAPI-66 | idem | CUMPLIDO en PR-2 (mock y real); la HU sigue abierta hasta la revisión y el merge. Ver nota |
+| SAPI-57.CA5 | Logs estructurados de cada llamada | — | Exactamente un evento `ml_predict` por llamada, en toda ruta (éxito, cada error, error inesperado), con `request_id`, `ml_responded`, `ml_http_status`, `ml_latency_ms`, `outcome` y trazabilidad. Se emiten como pares clave-valor SLF4J y en JSON con `logging.structured.format.console=logstash` | muestra de log en idem | CUMPLIDO en PR-2; la HU sigue abierta hasta la revisión y el merge |
 
-**Nota de coherencia (CA1):** el plan usa `RestClient`, la API síncrona que en
-Spring Framework 6+/Boot 4 sucede a `RestTemplate`. Cumple la intención del CA
-(cliente HTTP síncrono), pero el texto literal nombra otras dos APIs. Requiere
-la aceptación de Daniel o un ajuste de redacción en Jira. La implementación de
-SAPI-57 usa `RestClient` (ADR-010) y no cambia de API por la redacción.
+**Nota de coherencia (CA1):** el texto literal de Jira nombra WebClient o
+RestTemplate; la implementación usa `RestClient`, la API síncrona que en
+Spring Framework 6+/Boot 4 sucede a `RestTemplate`. **Daniel aprobó
+`RestClient` como implementación del cliente HTTP (2026-10-10).** Cumple el
+mismo objetivo arquitectónico: Spring consume FastAPI mediante HTTP, con
+desacoplamiento, manejo de timeouts y errores, contrato y pruebas
+reproducibles. No se reemplaza por otra API solo por la redacción histórica, y
+Jira no se modifica por ahora (ADR-010).
 
 **Nota de verificación (CA4):** el plan preveía un `*IT` en failsafe. El CA
 admite "mock o real" y los tests de integración de SAPI-57 no necesitan Docker,
@@ -231,14 +234,14 @@ como corrida diaria real.
 | RN | Regla | Dónde se aplica hoy |
 |---|---|---|
 | RN-01 | El score es un ranking relativo dentro de una evaluación; no es una probabilidad y el modelo no tiene validación científica | V002 L30-31 (defaults), L38-39 (CHECK); `services/ml_api/main.py:101-102`; `contracts/openapi/ml-service.v0.yaml` (`score_semantics`, `scientific_model_validation`) |
-| RN-02 | La grilla es cerrada: exactamente 50 celdas, VP-001..VP-050 | `src/geo/grid.py:134` (`all_cells`); `tools/n8n_bridge/contract.py:41,83-85,103-106`; `main.py:89`; V002 L15 (formato), L66-67 (FK); V003 (50 filas) |
-| RN-03 | `rank` único 1..50; el score no crece al avanzar el rank; los empates comparten `display_rank` (método min) y declaran `tie_group_size` | `src/inference/prototype_service.py:474-486`; `tools/n8n_bridge/contract.py:108-127`; V002 L63, L69-73 |
-| RN-04 | El score es finito y está en [0, 1] | `tools/n8n_bridge/contract.py:93`; `main.py:90`; V002 L68 |
+| RN-02 | La grilla es cerrada: exactamente 50 celdas, VP-001..VP-050 | `src/geo/grid.py:134` (`all_cells`); `tools/n8n_bridge/contract.py:41,83-85,103-106`; `main.py:89`; V002 L15 (formato), L66-67 (FK); V003 (50 filas); backend: `RankingResultValidator` (SAPI-57) |
+| RN-03 | `rank` único 1..50; el score no crece al avanzar el rank; los empates comparten `display_rank` (método min) y declaran `tie_group_size` | `src/inference/prototype_service.py:474-486`; `tools/n8n_bridge/contract.py:108-127`; V002 L63, L69-73; backend: `RankingResultValidator` (SAPI-57) |
+| RN-04 | El score es finito y está en [0, 1] | `tools/n8n_bridge/contract.py:93`; `main.py:90`; V002 L68; backend: `RankingResultValidator` (SAPI-57) |
 | RN-05 | No se inventa meteorología futura: un `forecast_time` posterior a la última lectura real responde "no disponible" (503) | `src/inference/prototype_service.py:244-248`; `main.py` (mapeo a 503) |
 | RN-06 | Gate de desfase FIRMS: ≤3 días al día, 4–7 desactualizado con aviso, >7 no se puntúa | `src/inference/prototype_service.py:140-141` (constantes), `188-199` |
 | RN-07 | Trazabilidad e idempotencia: cada evaluación se identifica por `(forecast_time, model_version, inputs_fingerprint)` y no se guarda dos veces | V002 L35 (formato del fingerprint), L41-43 (clave natural); `main.py` (`inputs_fingerprint`) |
 | RN-08 | Entrada mínima: el cliente solo envía `forecast_time` ISO 8601 con zona horaria; las features se resuelven en el servidor | `services/ml_api/main.py:73-85` (`extra="forbid"` L76) |
-| RN-09 | Nunca se responde 200 con un resultado inválido; los errores son genéricos y no exponen rutas internas | `services/ml_api/main.py:58-70`, `221-232` |
+| RN-09 | Nunca se responde 200 con un resultado inválido; los errores son genéricos y no exponen rutas internas | `services/ml_api/main.py:58-70`, `221-232`; backend: `RankingService` y `RankingError` (SAPI-57) |
 | RN-10 | Las 50 filas de una ejecución se escriben juntas | Aún no se aplica: V002 L79 lo delega a SAPI-59 |
 
 ## 5. Dependencias (verificadas en el código, plan aprobado 2026-10-08)

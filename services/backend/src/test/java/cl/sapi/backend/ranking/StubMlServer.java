@@ -21,15 +21,27 @@ import com.sun.net.httpserver.HttpServer;
  */
 final class StubMlServer implements AutoCloseable {
 
-    /** Respuesta programada: código, cuerpo, headers extra y demora antes de responder. */
-    record Reply(int status, byte[] body, Map<String, String> headers, long delayMillis) {
+    /**
+     * Respuesta programada.
+     *
+     * @param delayMillis pausa antes de enviar los headers; o, si {@code stallAfterBytes >= 0}, pausa a mitad
+     *     del cuerpo
+     * @param stallAfterBytes bytes del cuerpo que se envían antes de la pausa; -1 = sin pausa a mitad del cuerpo
+     */
+    record Reply(int status, byte[] body, Map<String, String> headers, long delayMillis, int stallAfterBytes) {
 
         static Reply json(int status, byte[] body) {
-            return new Reply(status, body, Map.of("Content-Type", "application/json"), 0);
+            return new Reply(status, body, Map.of("Content-Type", "application/json"), 0, -1);
         }
 
+        /** Demora antes de enviar los headers. */
         Reply delayed(long millis) {
-            return new Reply(status, body, headers, millis);
+            return new Reply(status, body, headers, millis, -1);
+        }
+
+        /** Envía los headers y {@code bytes} bytes del cuerpo, y se detiene {@code millis} antes del resto. */
+        Reply stalledAfter(int bytes, long millis) {
+            return new Reply(status, body, headers, millis, bytes);
         }
     }
 
@@ -63,7 +75,7 @@ final class StubMlServer implements AutoCloseable {
                 received.add(new Received(exchange.getRequestMethod(), exchange.getRequestURI().getPath(),
                         Map.copyOf(exchange.getRequestHeaders()), in.readAllBytes()));
                 Reply current = reply.get();
-                if (current.delayMillis() > 0) {
+                if (current.delayMillis() > 0 && current.stallAfterBytes() < 0) {
                     Thread.sleep(current.delayMillis());
                 }
                 current.headers().forEach((name, value) -> exchange.getResponseHeaders().add(name, value));
@@ -71,7 +83,13 @@ final class StubMlServer implements AutoCloseable {
                 exchange.sendResponseHeaders(current.status(), length == 0 ? -1 : length);
                 if (length > 0) {
                     try (OutputStream out = exchange.getResponseBody()) {
-                        out.write(current.body());
+                        int first = current.stallAfterBytes() < 0 ? length : Math.min(current.stallAfterBytes(), length);
+                        out.write(current.body(), 0, first);
+                        out.flush();
+                        if (current.stallAfterBytes() >= 0) {
+                            Thread.sleep(current.delayMillis());
+                        }
+                        out.write(current.body(), first, length - first);
                     }
                 }
             }
