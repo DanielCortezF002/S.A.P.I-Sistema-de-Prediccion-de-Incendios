@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="9.666" tests="47" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="replacesUnsafeRequestId" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="1.279">
+    <system-out><![CDATA[01:27:20.672 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingEndpointIntegrationTests]: RankingEndpointIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+01:27:20.817 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+01:27:20.918 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingEndpointIntegrationTests]: RankingEndpointIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+01:27:20.920 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T01:27:21.393Z  INFO 13240 --- [sapi-backend] [           main] c.s.b.r.RankingEndpointIntegrationTests  : Starting RankingEndpointIntegrationTests using Java 21.0.12.1 with PID 13240 (started by root in [fresh-clone]/services/backend)
+2026-10-10T01:27:21.405Z  INFO 13240 --- [sapi-backend] [           main] c.s.b.r.RankingEndpointIntegrationTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T01:27:22.415Z  INFO 13240 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-10T01:27:22.432Z  INFO 13240 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-10T01:27:22.433Z  INFO 13240 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-10T01:27:22.479Z  INFO 13240 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1033 ms
+2026-10-10T01:27:23.211Z  INFO 13240 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 40363 (http) with context path '/'
+2026-10-10T01:27:23.219Z  INFO 13240 --- [sapi-backend] [           main] c.s.b.r.RankingEndpointIntegrationTests  : Started RankingEndpointIntegrationTests in 2.213 seconds (process running for 3.691)
+2026-10-10T01:27:24.152Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-10T01:27:24.152Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-10T01:27:24.154Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-10-10T01:27:24.401Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=c6fa0902-e526-4d8c-8178-ececcf04d7dc forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=142 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+    <system-err><![CDATA[Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically ([m2]/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+]]></system-err>
+  </testcase>
+  <testcase name="logsEachMlCall" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.055">
+    <system-out><![CDATA[2026-10-10T01:27:24.543Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=b06f33bf-69ca-4b3f-9f32-90e6b48463bf forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=9 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[1]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.284">
+    <system-out><![CDATA[2026-10-10T01:27:24.692Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=6df375b7-90ad-4ea9-89d7-2236b99a5a98 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=8 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo no es un objeto JSON en UTF-8"
+2026-10-10T01:27:24.879Z  WARN 13240 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword openapi - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:27:24.881Z  WARN 13240 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword info - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:27:24.881Z  WARN 13240 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword servers - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:27:24.881Z  WARN 13240 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword tags - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:27:24.881Z  WARN 13240 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword paths - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T01:27:24.881Z  WARN 13240 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword components - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[2]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.045">
+    <system-out><![CDATA[2026-10-10T01:27:24.968Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=cb1e9521-952b-4fb3-8786-1afe8dcce174 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=7 outcome=upstream_invalid_response backend_http_status=502 violation="cells no es un arreglo de exactamente 50 celdas"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[3]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.035">
+    <system-out><![CDATA[2026-10-10T01:27:25.012Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=95ec3ce6-f0ac-4e70-bbbb-ad6e31ab8a63 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=5 outcome=upstream_invalid_response backend_http_status=502 violation="cells[0].score no es un número en [0, 1]"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[4]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.072">
+    <system-out><![CDATA[2026-10-10T01:27:25.091Z  WARN 13240 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ml_predict request_id=a143acc3-e619-47e2-a077-c2d7b2fb0957 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=46 outcome=upstream_invalid_response backend_http_status=502 violation="scientific_model_validation distinto de false"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[5]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.025">
+    <system-out><![CDATA[2026-10-10T01:27:25.121Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ml_predict request_id=526d605a-6f68-4416-a369-39bf345161e8 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=5 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo no es un objeto JSON en UTF-8"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[6]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.069">
+    <system-out><![CDATA[2026-10-10T01:27:25.193Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ml_predict request_id=685d8d39-9241-4406-8dc2-3533a8321d22 forecast_time_requested=latest ml_responded=true ml_http_status=201 ml_latency_ms=47 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 201"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[7]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.025">
+    <system-out><![CDATA[2026-10-10T01:27:25.222Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=76622fc3-ed8c-475c-a6ae-5971ab056c9d forecast_time_requested=latest ml_responded=true ml_http_status=302 ml_latency_ms=5 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 302"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[8]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.075">
+    <system-out><![CDATA[2026-10-10T01:27:25.301Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=01487985-74c0-470e-aa80-5b121784cc73 forecast_time_requested=latest ml_responded=true ml_http_status=404 ml_latency_ms=51 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 404"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[9]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.077">
+    <system-out><![CDATA[2026-10-10T01:27:25.373Z  WARN 13240 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ml_predict request_id=d9afa084-7384-44ff-bd38-9d68d60ca298 forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=422 ml_latency_ms=48 outcome=invalid_request backend_http_status=422
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[10]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.069">
+    <system-out><![CDATA[2026-10-10T01:27:25.453Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ml_predict request_id=d33023c3-26ae-44a9-9fa8-a379b2729a10 forecast_time_requested=latest ml_responded=true ml_http_status=422 ml_latency_ms=48 outcome=upstream_invalid_response backend_http_status=502 violation="el ML respondió 422 a una petición sin forecast_time"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[11]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.073">
+    <system-out><![CDATA[2026-10-10T01:27:25.529Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ml_predict request_id=a53de1ff-87c4-4f0f-a4d4-c016e07f8b08 forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=422 ml_latency_ms=54 outcome=upstream_invalid_response backend_http_status=502 violation="422 sin cuerpo Error invalid_request"
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[12]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.084">
+    <system-out><![CDATA[2026-10-10T01:27:25.605Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=1480f616-8203-4806-90af-fa12eb1f26ac forecast_time_requested=latest ml_responded=true ml_http_status=500 ml_latency_ms=51 outcome=internal_error backend_http_status=500
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[13]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.034">
+    <system-out><![CDATA[2026-10-10T01:27:25.650Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=0f54d422-5480-4808-b44f-9b4ac63b812f forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=503 ml_latency_ms=4 outcome=prototype_unavailable backend_http_status=503
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[14]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.078">
+    <system-out><![CDATA[2026-10-10T01:27:25.729Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=d1881687-6dba-402b-9aa3-f73758a38a54 forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=48 outcome=data_unavailable backend_http_status=503
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[15]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.031">
+    <system-out><![CDATA[2026-10-10T01:27:25.776Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=9749322d-be87-4803-9dbd-84fe0b198f14 forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=10 outcome=upstream_unavailable backend_http_status=503
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[16]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.074">
+    <system-out><![CDATA[2026-10-10T01:27:25.852Z  WARN 13240 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ml_predict request_id=756e9edb-b0e4-4fd6-be6e-f45ca4014c3b forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=53 outcome=upstream_unavailable backend_http_status=503
+]]></system-out>
+  </testcase>
+  <testcase name="mapsMlFailures(String, String, Reply, int, String)[17]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.03">
+    <system-out><![CDATA[2026-10-10T01:27:25.881Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=9c2ef2f1-60ef-4422-9fd1-20ab0955da69 forecast_time_requested=latest ml_responded=true ml_http_status=502 ml_latency_ms=6 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 502"
+]]></system-out>
+  </testcase>
+  <testcase name="logsRejectedRequestWithoutValue" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.015">
+    <system-out><![CDATA[2026-10-10T01:27:25.908Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ranking_request_rejected request_id=f29d7f37-ff1e-4f73-8441-9cc7a6be906d outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="keepsValidRequestId" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.038">
+    <system-out><![CDATA[2026-10-10T01:27:25.948Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=streamlit-42.a:b forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=14 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="callsPredictWithEmptyBody" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.069">
+    <system-out><![CDATA[2026-10-10T01:27:26.019Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=d954cf94-b7c5-4401-94ee-fb53c25ae963 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=48 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="bodyOverTheMaximumIs502" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.057">
+    <system-out><![CDATA[2026-10-10T01:27:26.073Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=39201b6b-84ac-41a5-a5d6-088593679323 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=28 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo supera 1048576 bytes"
+]]></system-out>
+  </testcase>
+  <testcase name="fieldsRenderAsJsonWithStructuredLogging" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.123">
+    <system-out><![CDATA[2026-10-10T01:27:26.151Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=7faa3eb7-8bcd-4c05-8cfe-c599e1c0f7c4 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=51 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="returnsFiftyCellsOrderedByScore" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.029">
+    <system-out><![CDATA[2026-10-10T01:27:26.231Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=650c4eb2-6375-476c-aad8-29bfc5dba3d0 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=5 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="forwardsExactBytes" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.08">
+    <system-out><![CDATA[2026-10-10T01:27:26.312Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=0e67f936-4e05-4665-a80f-ebc124c2361d forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=50 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="timeoutBeforeHeadersIs504" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="1.029">
+    <system-out><![CDATA[2026-10-10T01:27:27.346Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=23d015aa-a1b9-4ee0-ade8-97918b2939ea forecast_time_requested=latest ml_responded=false ml_latency_ms=1005 outcome=upstream_timeout backend_http_status=504
+]]></system-out>
+  </testcase>
+  <testcase name="logsTimeouts" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="1.02">
+    <system-out><![CDATA[2026-10-10T01:27:28.376Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=db79839f-2c1b-4eb1-ba56-2b063dea22aa forecast_time_requested=latest ml_responded=false ml_latency_ms=1002 outcome=upstream_timeout backend_http_status=504
+]]></system-out>
+  </testcase>
+  <testcase name="forwardsForecastTime(String)[1]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.029">
+    <system-out><![CDATA[2026-10-10T01:27:28.413Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=e1d5d734-b168-4240-85a5-9e7ef1ba876b forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=200 ml_latency_ms=7 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="forwardsForecastTime(String)[2]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.062">
+    <system-out><![CDATA[2026-10-10T01:27:28.479Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=6354f77b-027c-435e-8b7b-0fa1e7994805 forecast_time_requested=2026-10-01T18:00:00-03:00 ml_responded=true ml_http_status=200 ml_latency_ms=46 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="forwardsForecastTime(String)[3]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.063">
+    <system-out><![CDATA[2026-10-10T01:27:28.542Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=75bc1d99-2dbc-4a18-a069-356910ee7282 forecast_time_requested=2026-10-01T21:00:00+00:00 ml_responded=true ml_http_status=200 ml_latency_ms=45 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="forwardsForecastTime(String)[4]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.058">
+    <system-out><![CDATA[2026-10-10T01:27:28.605Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=e74be9d9-462f-4ae8-9eca-fba9071f1d6d forecast_time_requested=2026-10-01T21:00:00.5+00:00 ml_responded=true ml_http_status=200 ml_latency_ms=46 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[1]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.02">
+    <system-out><![CDATA[2026-10-10T01:27:28.621Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ranking_request_rejected request_id=8772298b-e9f7-4d7b-8210-8c647d2bd5ba outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[2]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.014">
+    <system-out><![CDATA[2026-10-10T01:27:28.644Z  WARN 13240 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ranking_request_rejected request_id=00f5c9f9-a974-42e2-9fa7-8a15e197a623 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[3]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.013">
+    <system-out><![CDATA[2026-10-10T01:27:28.659Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ranking_request_rejected request_id=5afd73db-8487-49ad-87e4-2eaa5485b5d0 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[4]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.018">
+    <system-out><![CDATA[2026-10-10T01:27:28.677Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ranking_request_rejected request_id=0e04088b-93ac-4963-ae12-2fe865a9b817 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[5]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.015">
+    <system-out><![CDATA[2026-10-10T01:27:28.697Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ranking_request_rejected request_id=fbd016a9-ab72-40ed-951f-19a946e86fc9 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[6]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.013">
+    <system-out><![CDATA[2026-10-10T01:27:28.712Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ranking_request_rejected request_id=c7c097e8-f43e-41a3-84ee-5d54189de6c6 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[7]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.015">
+    <system-out><![CDATA[2026-10-10T01:27:28.728Z  WARN 13240 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ranking_request_rejected request_id=55031e84-69fe-4034-a1e6-e7a98171f2cf outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[8]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.017">
+    <system-out><![CDATA[2026-10-10T01:27:28.747Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ranking_request_rejected request_id=cdb3ac08-78f3-45f8-98f5-e8324cb0f938 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="invalidForecastTimeIs422WithoutCallingMl(String)[9]" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.021">
+    <system-out><![CDATA[2026-10-10T01:27:28.770Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ranking_request_rejected request_id=8daad4b5-ce49-4ac8-b611-a860a76c0a1e outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+]]></system-out>
+  </testcase>
+  <testcase name="contractValidatorIsNotVacuous" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.121"/>
+  <testcase name="undecodableParameterIs422" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.048">
+    <system-out><![CDATA[2026-10-10T01:27:28.954Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ranking_request_rejected request_id=zz-request-1 outcome=invalid_request backend_http_status=422 reason=parametros_no_decodificables
+]]></system-out>
+  </testcase>
+  <testcase name="bodyOfExactlyTheMaximumIsAccepted" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.062">
+    <system-out><![CDATA[2026-10-10T01:27:29.021Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=b19c52db-9584-444e-aa26-5d87b2964686 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=21 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+  <testcase name="oversizedErrorBodyIs502" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.033">
+    <system-out><![CDATA[2026-10-10T01:27:29.062Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=b463911a-cb5b-45c2-9fc8-5a95934d04f6 forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=16 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo supera 1048576 bytes"
+]]></system-out>
+  </testcase>
+  <testcase name="timeoutAfterHeadersIs504" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="1.017">
+    <system-out><![CDATA[2026-10-10T01:27:30.080Z  WARN 13240 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=3148f3f6-ce43-4f74-b4db-be99fd23ee48 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=1002 outcome=upstream_timeout backend_http_status=504
+]]></system-out>
+  </testcase>
+  <testcase name="successResponseConformsToContract" classname="cl.sapi.backend.ranking.RankingEndpointIntegrationTests" time="0.023">
+    <system-out><![CDATA[2026-10-10T01:27:30.101Z  INFO 13240 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=1a6c24d9-cf39-4957-a501-01353d8fd879 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=4 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+]]></system-out>
+  </testcase>
+</testsuite>

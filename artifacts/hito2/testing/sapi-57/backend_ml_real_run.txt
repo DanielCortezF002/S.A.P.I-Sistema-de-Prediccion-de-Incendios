@@ -1,0 +1,47 @@
+# SAPI-57 — ejecución real backend (jar de 569c898) ↔ servicio ML FastAPI (SAPI_REPRODUCIBILITY_MODE=1)
+utc: 2026-10-10T01:29:10Z
+jar_sha256: 2502ec8e1774313214126ad150d927e67cfa186025f8bbc868bd2ba20b46baa9
+
+## 1. GET /health
+HTTP/1.1 200 
+Content-Type: application/json
+{"status":"UP"}
+
+## 2. GET /api/v1/ranking (sin forecast_time) frente a POST /predict directo
+HTTP/1.1 200 
+X-Request-Id: evidencia-sapi57-001
+Content-Type: application/json
+backend: bytes=5333 sha256=f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f
+ML directo: bytes=5333 sha256=f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f
+resultado: cuerpos IDENTICOS (bytes)
+forecast_time 2026-09-01T00:00:00Z | celdas 50 | score_semantics relative_rank | scientific_model_validation False
+
+## 3. forecast_time=2026-08-31T21:00:00+03:00 (offset enviado como %2B)
+HTTP 200
+resultado: igual a POST /predict con el mismo forecast_time
+forecast_time evaluado 2026-08-31T18:00:00Z
+
+## 4. forecast_time futuro (2099) → 503 propagado
+{"status":"error","error_type":"prototype_unavailable","message":"No se puede puntuar con los insumos disponibles para el forecast_time solicitado."}
+HTTP 503
+
+## 5. forecast_time sin zona horaria → 422 sin llamar al ML
+{"status":"error","error_type":"invalid_request","message":"La petición no cumple el contrato: forecast_time debe ser una fecha-hora RFC 3339 con zona horaria."}
+HTTP 422
+
+## 6. forecast_time sin segundos (no es RFC 3339) → 422
+{"status":"error","error_type":"invalid_request","message":"La petición no cumple el contrato: forecast_time debe ser una fecha-hora RFC 3339 con zona horaria."}
+HTTP 422
+
+## 7. parámetro no decodificable (%ZZ) → 422 con X-Request-Id
+{"status":"error","error_type":"invalid_request","message":"La petición no cumple el contrato: forecast_time debe ser una fecha-hora RFC 3339 con zona horaria."}
+HTTP 422
+X-Request-Id: evidencia-sapi57-zz
+
+## 8. ML caído (nadie escucha en el puerto configurado) → 503 upstream_unavailable
+{"status":"error","error_type":"upstream_unavailable","message":"El servicio ML no está disponible."}
+HTTP 503
+
+## 9. Timeout real: SAPI_ML_READ_TIMEOUT=1 (sin unidad = 1 s) frente a un scoring de ~2 s → 504
+{"status":"error","error_type":"upstream_timeout","message":"El servicio ML no respondió a tiempo."}
+HTTP 504 tiempo_total_s=1.083555

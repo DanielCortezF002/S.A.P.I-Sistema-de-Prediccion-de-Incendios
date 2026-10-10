@@ -1,0 +1,4 @@
+# flyway-integration - REAL FLYWAY INTEGRATION VALIDATION (Flyway CLI 12.4.0)
+# utc=2026-10-10T01:27:33Z
+
+NOT_VERIFIABLE_IN_THIS_ENVIRONMENT: falta PowerShell, Docker

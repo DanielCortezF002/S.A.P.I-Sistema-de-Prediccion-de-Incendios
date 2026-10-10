@@ -1,0 +1,288 @@
+# python - lint v2 + pytest completo (cobertura >= 80 %)
+# utc=2026-10-10T01:22:28Z
+
+$ [venv]/bin/python -m black --check services/ml_api scripts/freeze_check.py scripts/merge_gate.py tests/test_openapi_contracts.py tests/test_ml_api.py tests/test_merge_gate.py tests/test_w0_host_checks.py tests/test_w0_host_checks_evidence.py   (cwd=[fresh-clone])
+All done! ✨ 🍰 ✨
+9 files would be left unchanged.
+exit=0
+
+$ [venv]/bin/python -m flake8 --max-line-length=100 --extend-ignore=E203,W503 services/ml_api scripts/freeze_check.py scripts/merge_gate.py tests/test_openapi_contracts.py tests/test_ml_api.py tests/test_merge_gate.py tests/test_w0_host_checks.py tests/test_w0_host_checks_evidence.py   (cwd=[fresh-clone])
+exit=0
+
+$ [venv]/bin/python -B -m pytest -q --junitxml=[gate-out]/pytest-junit.xml   (cwd=[fresh-clone])
+........................................................................ [  3%]
+........................................................................ [  7%]
+........................................................................ [ 11%]
+........................................................................ [ 15%]
+....................................................sssssssss........... [ 19%]
+.s......ssssssssssssssssssssssssssssssssssssssssssssssssss...ssssss..... [ 23%]
+........................ss....................................s......... [ 27%]
+.......s...s....sssss................................................... [ 31%]
+........................................................................ [ 35%]
+........................................................................ [ 39%]
+........................................................................ [ 43%]
+..........................ss......................................s..... [ 47%]
+........................................................................ [ 51%]
+........................................................................ [ 54%]
+......................................................................ss [ 58%]
+........................................................................ [ 62%]
+........................................................................ [ 66%]
+...........................s............................................ [ 70%]
+........ss.............................................................. [ 74%]
+........................................................................ [ 78%]
+...................sss.................................................. [ 82%]
+............s...................sss.ssssss.............................. [ 86%]
+.......................................................s.s.............. [ 90%]
+........................................sssssssss....................... [ 94%]
+........................................................................ [ 98%]
+ssss..........s.s.................                                       [100%]
+=============================== warnings summary ===============================
+../../../../../../venv314/lib/python3.14/site-packages/fastapi/testclient.py:1
+  [venv]/lib/python3.14/site-packages/fastapi/testclient.py:1: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient as TestClient  # noqa
+
+tests/test_app_integration.py: 495 warnings
+tests/test_convergence_cross_plane.py: 792 warnings
+tests/test_data_readiness.py: 198 warnings
+tests/test_dmc_format_guard.py: 99 warnings
+tests/test_firms_lag_gate.py: 99 warnings
+tests/test_firms_schema.py: 99 warnings
+tests/test_firms_source.py: 198 warnings
+tests/test_ml_api.py: 891 warnings
+tests/test_n8n_bridge.py: 198 warnings
+tests/test_openapi_contracts.py: 198 warnings
+tests/test_prototype_service.py: 396 warnings
+tests/test_scoring_inputs.py: 1881 warnings
+  [venv]/lib/python3.14/site-packages/joblib/numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    array.shape = self.shape
+
+tests/test_dem_features.py: 9 warnings
+tests/test_dem_ingester.py: 3 warnings
+tests/test_dem_terrain.py: 3 warnings
+tests/test_procesamiento.py: 3 warnings
+  [venv]/lib/python3.14/site-packages/rasterio/transform.py:178: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(west, north) * Affine.scale(xsize, -ysize)
+
+tests/test_dem_features.py: 90 warnings
+tests/test_procesamiento.py: 750 warnings
+  [venv]/lib/python3.14/site-packages/rasterio/features.py:420: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return _bounds(geom, north_up=north_up, transform=transform)
+
+tests/test_dem_features.py: 12 warnings
+tests/test_procesamiento.py: 150 warnings
+  [venv]/lib/python3.14/site-packages/rasterio/windows.py:360: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    x, y = transform * (window.col_off or 0.0, window.row_off or 0.0)
+
+tests/test_dem_features.py: 12 warnings
+tests/test_procesamiento.py: 150 warnings
+  [venv]/lib/python3.14/site-packages/rasterio/windows.py:361: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(
+
+tests/test_dem_features.py::test_sample_grid_topography_returns_nan_for_cell_outside_raster_coverage
+  [venv]/lib/python3.14/site-packages/rasterio/__init__.py:366: NotGeoreferencedWarning: The given matrix is equal to Affine.identity or its flipped counterpart. GDAL may ignore this matrix and save no geotransform without raising an error. This behavior is somewhat driver-specific.
+    dataset = writer(
+
+tests/test_dem_ingester.py::test_fetch_downloads_reads_and_writes_manifest
+tests/test_dem_ingester.py::test_fetch_reuses_cache_without_calling_api
+tests/test_dem_ingester.py::test_fetch_reuses_cache_without_calling_api
+tests/test_dem_ingester.py::test_fetch_force_true_bypasses_cache
+tests/test_dem_ingester.py::test_fetch_force_true_bypasses_cache
+  [fresh-clone]/src/ingesta/dem_ingester.py:183: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    band = dataset.read(1)
+
+tests/test_dem_terrain.py::test_reproject_produces_near_isotropic_metric_pixels
+tests/test_dem_terrain.py::test_processor_end_to_end_on_synthetic_hill
+  [venv]/lib/python3.14/site-packages/rasterio/transform.py:189: PendingDeprecationWarning: Use `@` matmul instead of `*` mul operator for matrix multiplication
+    return Affine.translation(west, north) * Affine.scale(
+
+tests/test_dem_terrain.py::test_reproject_rejects_dem_without_crs
+  [venv]/lib/python3.14/site-packages/rasterio/__init__.py:366: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
+    dataset = writer(
+
+tests/test_dem_terrain.py::test_reproject_rejects_dem_without_crs
+  [venv]/lib/python3.14/site-packages/rasterio/__init__.py:356: NotGeoreferencedWarning: Dataset has no geotransform, gcps, or rpcs. The identity matrix will be returned.
+    dataset = DatasetReader(path, driver=driver, sharing=sharing, **kwargs)
+
+tests/test_firms_baseline_guard.py::test_parallel_ingester_firms_rejects_frozen_output_before_network
+tests/test_ingesta.py::test_ingest_nasa_missing_api_key_degrades
+tests/test_ingesta.py::test_ingest_nasa_success_writes_daily_csv
+tests/test_ingesta_degradation.py::test_ingester_fails_when_fallback_empty
+  [fresh-clone]/src/ingesta/parallel_ingester.py:158: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    end_date = datetime.utcnow().date()
+
+tests/test_ingesta.py::test_ingest_dmc_keeps_stations_without_data_in_payload
+tests/test_ingesta.py::test_ingest_dmc_missing_credentials_degrades
+tests/test_ingesta.py::test_ingest_dmc_empty_station_catalog_degrades
+tests/test_ingesta_degradation.py::test_ingester_degrades_to_postgis_on_dmc_failure
+  [fresh-clone]/src/ingesta/parallel_ingester.py:200: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    out_path = self.raw_dir / f"dmc_meteo_{datetime.utcnow().date().isoformat()}.json"
+
+tests/test_ingesta.py::test_ingest_conaf_success_when_api_reachable_without_seed
+tests/test_ingesta.py::test_ingest_conaf_falls_back_to_institutional_seed_when_degrade_fails
+tests/test_ingesta_degradation.py::test_conaf_loads_institutional_seed_on_failure
+  [fresh-clone]/src/ingesta/parallel_ingester.py:230: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    out_path = self.raw_dir / f"conaf_incendios_{datetime.utcnow().date().isoformat()}.json"
+
+tests/test_procesamiento.py::test_process_all_with_sample_raw
+  [fresh-clone]/src/procesamiento/data_processor.py:152: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "fecha": row.get("acq_date", datetime.utcnow().date()),
+
+tests/test_procesamiento.py::test_process_all_with_sample_raw
+tests/test_procesamiento.py::test_process_all_with_sample_raw
+  [fresh-clone]/src/procesamiento/data_processor.py:304: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    "fecha": row.get("fecha", datetime.utcnow()),
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.14.6-final-0 ________________
+
+Name                                                        Stmts   Miss  Cover   Missing
+-----------------------------------------------------------------------------------------
+app/__init__.py                                                 0      0   100%
+app/app.py                                                    183      9    95%   94, 114-115, 355, 382-383, 394-397
+app/components/__init__.py                                      0      0   100%
+app/components/banner.py                                       13      0   100%
+app/components/controls.py                                     63     10    84%   28, 30, 52-53, 55-56, 73-79
+app/components/day_alerts.py                                   34      2    94%   32-33
+app/components/ops_dashboard.py                               273      3    99%   383-384, 459
+app/components/ops_layout.py                                  189     38    80%   84, 128-129, 134-135, 155-161, 237, 274-280, 329-345, 384-390, 396, 421-422, 425-426, 464-469, 485, 496, 608, 611, 614, 619
+app/components/prototype_view.py                              203    122    40%   91-92, 100-101, 105, 110-113, 133, 142, 149, 277-280, 329-347, 351-352, 359-368, 381-464, 468-482, 497-511, 544-557, 566, 570-571, 614-650
+app/components/risk_level.py                                    9      0   100%
+app/components/risk_map.py                                      9      0   100%
+app/components/risk_sparkline.py                               21      1    95%   22
+app/control_center.py                                          71     25    65%   67-75, 114, 125-142, 146
+app/data/__init__.py                                            0      0   100%
+app/data/cell_firms.py                                         27      2    93%   28, 40
+app/data/cell_terrain.py                                       24      2    92%   32, 50
+app/data/dmc_live.py                                           83     45    46%   43-50, 54-61, 66, 92-165
+app/data/firms_detections.py                                   18      2    89%   32, 45
+app/pages/dashboard.py                                        113     13    88%   30, 63, 75, 93, 95, 101-110, 122-123, 181
+app/state.py                                                   55      0   100%
+app/theme/__init__.py                                           0      0   100%
+app/theme/contrast.py                                          27      0   100%
+app/theme/css.py                                               12      0   100%
+app/theme/tokens.py                                            68      0   100%
+app/utils/__init__.py                                           0      0   100%
+app/utils/cell_table.py                                        84      0   100%
+app/utils/cell_zones.py                                        27      5    81%   49, 71-74
+app/utils/date_helpers.py                                      59      2    97%   87-88
+app/utils/demo_seed.py                                         89      2    98%   57, 160
+app/utils/grid.py                                               3      0   100%
+app/utils/map_renderer.py                                     101      0   100%
+app/utils/metrics_loader.py                                    25      0   100%
+app/utils/risk_colors.py                                       11      0   100%
+app/utils/score_contract.py                                   347     20    94%   212, 243-244, 263-264, 289-290, 298, 305, 332, 336, 346, 365-366, 376, 435, 456-457, 504, 577
+src/__init__.py                                                 0      0   100%
+src/config.py                                                  33      0   100%
+src/convergence/__init__.py                                     0      0   100%
+src/convergence/data_handshake.py                              95     36    62%   73, 87-99, 110-139, 162-163, 173-181, 218-227, 231
+src/convergence/landing.py                                    292     79    73%   161, 166, 179, 228, 274, 329-344, 421, 506, 508, 540-618, 622
+src/convergence/output_acceptance.py                          211     26    88%   122, 134-135, 137, 172, 176-177, 240-241, 243, 288, 290, 306, 312-313, 327, 334-336, 397-402, 415
+src/db.py                                                      26      0   100%
+src/geo/__init__.py                                             0      0   100%
+src/geo/grid.py                                                53      0   100%
+src/inference/__init__.py                                       0      0   100%
+src/inference/prototype_service.py                            202      8    96%   230, 243, 285, 287, 324-325, 442, 454
+src/inference/scoring_inputs.py                               151      1    99%   146
+src/ingesta/__init__.py                                         0      0   100%
+src/ingesta/dem_ingester.py                                    96      0   100%
+src/ingesta/firms_schema.py                                   103      8    92%   57, 93, 124, 153, 168, 179, 186, 189
+src/ingesta/nasa_firms_backfill.py                            191      0   100%
+src/ingesta/parallel_ingester.py                              150      8    95%   183-190, 224-226, 244
+src/modelo/__init__.py                                          0      0   100%
+src/modelo/baseline.py                                         50      1    98%   68
+src/modelo/inference_engine.py                                 71     37    48%   28-36, 62-138
+src/modelo/optimizer.py                                        80      8    90%   53, 130, 149-160
+src/modelo/serializer.py                                       38      1    97%   74
+src/notifications/__init__.py                                   0      0   100%
+src/notifications/alert_payload.py                            255      8    97%   213-214, 259-261, 297-298, 311
+src/notifications/alert_preview.py                             37      3    92%   77, 81, 93
+src/ops/__init__.py                                             0      0   100%
+src/ops/attempt2_operator/__init__.py                           3      0   100%
+src/ops/attempt2_operator/__main__.py                           3      3     0%   3-6
+src/ops/attempt2_operator/canonical.py                         33      3    91%   19, 68, 84
+src/ops/attempt2_operator/cli.py                              118    118     0%   3-254
+src/ops/attempt2_operator/collectors/__init__.py                8      0   100%
+src/ops/attempt2_operator/collectors/artifacts.py              63      7    89%   29-30, 46, 78, 105-106, 131
+src/ops/attempt2_operator/collectors/credentials.py            12      0   100%
+src/ops/attempt2_operator/collectors/dmc_current.py            27      6    78%   30, 42-43, 55-56, 67
+src/ops/attempt2_operator/collectors/firms_current.py          30      5    83%   28-29, 50-51, 74
+src/ops/attempt2_operator/collectors/git_state.py              46      9    80%   26-29, 68, 76, 80, 84, 86
+src/ops/attempt2_operator/collectors/preflight_collect.py     113     38    66%   124-140, 169, 178, 180, 184, 186, 188, 191-192, 194, 197-198, 201-204, 209, 212-213, 233-270
+src/ops/attempt2_operator/collectors/runtime.py               123     32    74%   45, 48-49, 82-90, 101, 116-117, 120-129, 156-161, 199, 213-214, 231-232, 254
+src/ops/attempt2_operator/collectors/store_state.py            39     11    72%   25-26, 58-63, 77, 97-98
+src/ops/attempt2_operator/data_plane_manifest.py              169     14    92%   181-185, 231-233, 371, 399-400, 487-489, 500, 548, 601
+src/ops/attempt2_operator/events.py                            44      1    98%   61
+src/ops/attempt2_operator/operator.py                         414     75    82%   105-108, 123-126, 221, 227, 265-266, 274, 291, 308, 320, 329, 346, 358, 367, 382, 397, 413, 430-443, 462-469, 471-481, 499, 501, 511, 514, 566-577, 583, 603-610, 615-620, 625, 665-666, 700, 710-715, 746-761, 828, 842-845, 862-863, 876, 919, 925, 942, 946, 958, 1121
+src/ops/attempt2_operator/output_plane_manifest.py             54      8    85%   61, 80, 83, 103-104, 138, 183-184
+src/ops/attempt2_operator/paths.py                             60      4    93%   70, 92, 97, 102
+src/ops/attempt2_operator/quiescence/__init__.py                4      0   100%
+src/ops/attempt2_operator/quiescence/collect.py                37      2    95%   43, 54
+src/ops/attempt2_operator/quiescence/findings.py               19      0   100%
+src/ops/attempt2_operator/quiescence/locks.py                  98     46    53%   25-59, 78-81, 84-86, 102-103, 115-120, 136
+src/ops/attempt2_operator/quiescence/n8n_inspect.py           199    148    26%   46, 59-65, 76-92, 96-97, 106-150, 161-182, 186-187, 194-262, 302-324, 327-353, 378-386, 396-510
+src/ops/attempt2_operator/quiescence/policy.py                 16      0   100%
+src/ops/attempt2_operator/quiescence/processes.py             104     47    55%   46-83, 91, 98-99, 116, 125, 140-143, 148, 155, 170-186
+src/ops/attempt2_operator/quiescence/result.py                138     21    85%   128-132, 203-214, 225-226, 238-239, 271, 283-288, 292, 301
+src/ops/attempt2_operator/quiescence/writers.py                35      5    86%   28, 34, 46, 54, 65
+src/ops/attempt2_operator/rc_context.py                        26      3    88%   44-52, 58
+src/ops/attempt2_operator/rc_status.py                         68     68     0%   13-299
+src/ops/attempt2_operator/redaction.py                         21      4    81%   23, 41-44
+src/ops/attempt2_operator/run_store.py                        120      4    97%   45-46, 91, 145
+src/ops/attempt2_operator/states.py                            33      0   100%
+src/ops/attempt2_operator/subprocess_adapter.py                82     19    77%   56-67, 100-101, 136, 153-156
+src/ops/attempt2_operator/tooling_paths.py                     19      7    63%   20-22, 26-32, 36
+src/ops/attempt2_operator/validator_hooks.py                   73     56    23%   16-20, 42-96, 117-181
+src/ops/attempt2_operator/validator_result.py                  25      0   100%
+src/ops/attempt2_operator/validators.py                       200     10    95%   38, 52, 61, 67, 83, 98, 100, 192, 250, 436
+src/ops/attempt2_operator/workspace_manifest.py                87     31    64%   34-43, 63, 67, 88-89, 110, 121, 135-143, 163-172, 249, 258, 271-289, 301, 311-312
+src/ops/attempt2_operator/workspace_safety.py                  44      9    80%   23, 41, 96-97, 121, 128-129, 135-136
+src/ops/data_readiness.py                                     235     45    81%   46, 49, 58-59, 113, 117, 133, 146, 157, 168, 186, 206, 217, 231, 237, 239-246, 252, 282, 285, 342, 402, 422, 429-431, 523-555, 559
+src/ops/dmc_live_probe.py                                     126     12    90%   117-118, 135, 196-197, 213, 223, 278-280, 286-287, 304
+src/ops/operational_workspace.py                              562     69    88%   124, 159-164, 167, 191-193, 204-209, 253, 261, 279, 301-302, 435-441, 443, 453, 461, 476-477, 502, 506, 532-533, 551, 616, 620, 673, 695-696, 706, 729, 753, 859-860, 892, 907, 930, 967, 975-976, 1024-1025, 1050-1051, 1065, 1080, 1160, 1163, 1192-1193, 1198, 1268, 1272-1273, 1297-1309, 1325
+src/ops/workspace_safety.py                                   354     30    92%   184-185, 239-240, 268-269, 271, 328-329, 381, 392-394, 398, 403, 459, 487, 530, 627-639, 693, 718-723, 729, 786, 877
+src/output/__init__.py                                          0      0   100%
+src/output/accepted_run.py                                    308     36    88%   153, 164, 166, 170, 174, 189, 191, 237, 260, 266-267, 275, 293, 298, 306, 376-378, 394, 401-402, 409, 501, 504, 547-548, 624-628, 642-644, 657-659, 665
+src/output/contract.py                                         45      3    93%   93, 95, 97
+src/output/readiness.py                                       216      5    98%   77, 103-104, 314, 461
+src/output/synthetic.py                                        17      0   100%
+src/pipeline/__init__.py                                        0      0   100%
+src/pipeline/run_daily.py                                      32      2    94%   70-71
+src/procesamiento/__init__.py                                   0      0   100%
+src/procesamiento/causality_validator.py                       28      0   100%
+src/procesamiento/data_processor.py                           129      5    96%   100, 190, 200, 209, 225
+src/procesamiento/dataset_cleaner.py                          131      8    94%   59, 68, 70, 109, 127, 131, 172, 175
+src/procesamiento/dem_features.py                              70      7    90%   80-81, 136-140
+src/procesamiento/dem_terrain.py                               68      0   100%
+src/procesamiento/episode_evaluation.py                        59      0   100%
+src/procesamiento/episodes.py                                  54      8    85%   110, 128-153
+src/procesamiento/features.py                                  61      0   100%
+src/procesamiento/firms_source.py                             114      6    95%   130-131, 227, 229, 238, 248
+src/procesamiento/meteo_fire_joiner.py                         77      0   100%
+src/procesamiento/persister.py                                 40     40     0%   3-96
+src/procesamiento/pipeline_validators.py                      109     12    89%   63, 149, 189-190, 196, 206, 223, 234-238
+src/procesamiento/raw_parser.py                                62      1    98%   51
+src/procesamiento/regional_meteo.py                            63      2    97%   141, 146
+src/procesamiento/row_explainer.py                             31     18    42%   86-94, 98-109
+src/procesamiento/shared_thresholds.py                          4      0   100%
+src/procesamiento/spatial_joiner.py                            46     18    61%   81-112
+src/procesamiento/station_catalog.py                           38      0   100%
+src/procesamiento/target_builder.py                            34      0   100%
+src/procesamiento/temporal_features.py                         38      0   100%
+src/query/__init__.py                                           0      0   100%
+src/query/prediction_query.py                                  94      5    95%   199-206, 209-210
+src/query/risk_map_query.py                                     3      0   100%
+src/refresh/__init__.py                                         0      0   100%
+src/refresh/atomic.py                                          62      5    92%   33, 50, 67-68, 85
+src/refresh/dmc_refresh.py                                    366     12    97%   428, 432-433, 437, 486, 556, 675, 783, 793, 803-804, 808
+src/refresh/firms_refresh.py                                  253     28    89%   139-140, 145-146, 184-185, 191, 217, 231, 244, 255, 317, 327, 404, 409, 470-471, 483-484, 499, 533-538, 552-553, 557
+src/refresh/firms_validation.py                                74     14    81%   27, 35, 38, 44, 53, 56, 59, 70, 74, 79, 89, 99, 108, 118
+src/refresh/lock.py                                            43      4    91%   30-31, 37-38
+src/refresh/redact.py                                          19      0   100%
+-----------------------------------------------------------------------------------------
+TOTAL                                                       11247   1736    85%
+Required test coverage of 80% reached. Total coverage: 84.56%
+1720 passed, 114 skipped, 6751 warnings in 273.48s (0:04:33)
+exit=0

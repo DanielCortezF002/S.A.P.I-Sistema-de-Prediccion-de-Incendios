@@ -47,7 +47,7 @@ implementado de lo planificado:
 | Componente | Estado | Evidencia |
 |---|---|---|
 | Servicio ML FastAPI (`GET /health`, `POST /predict`) | Implementado (SAPI-55) | `services/ml_api/`, `tests/test_ml_api.py` |
-| Backend Spring Boot | Solo `GET /health` (SAPI-54); integración con el servicio ML pendiente (SAPI-57) | `services/backend/` |
+| Backend Spring Boot | `GET /health` (SAPI-54) y `GET /api/v1/ranking`, que consulta al servicio ML (SAPI-57, en revisión); registro de ejecuciones pendiente (SAPI-59) | `services/backend/` |
 | Contratos OpenAPI v0 | Definidos (SAPI-56) | `contracts/openapi/` |
 | Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V003 definidas (SAPI-58); persistencia de resultados pendiente (SAPI-59) | `db/migration/`, `db/README.md` |
 | Streamlit | Implementado; hoy puntúa en el mismo proceso con `score_current_grid()`; consumo del backend pendiente (SAPI-61) | `app/` |
@@ -127,7 +127,7 @@ S.A.P.I-Sistema-de-Prediccion-de-Incendios/
 ├── app/                 # Streamlit (presentación); vista Prototipo y Centro de Control
 ├── services/
 │   ├── ml_api/          # Servicio ML FastAPI (SAPI-55): /health, /predict
-│   └── backend/         # Backend Spring Boot (SAPI-54): /health
+│   └── backend/         # Backend Spring Boot (SAPI-54, SAPI-57): /health, /api/v1/ranking
 ├── contracts/openapi/   # Contratos OpenAPI v0 (SAPI-56)
 ├── db/migration/        # Esquema PostgreSQL/PostGIS v2 (SAPI-58)
 ├── src/
@@ -198,8 +198,30 @@ Servicios v2 por separado:
 
 ```bash
 SAPI_REPRODUCIBILITY_MODE=1 uvicorn services.ml_api.main:app --port 8000   # servicio ML
-cd services/backend && ./mvnw verify                                        # backend
+cd services/backend && ./mvnw verify                                        # backend: tests
+cd services/backend && ./mvnw spring-boot:run                               # backend en :8080
+curl http://localhost:8080/api/v1/ranking                                   # ranking vía backend
 ```
+
+El backend se configura por variables de entorno (sin secretos):
+
+| Variable | Default | Uso |
+|---|---|---|
+| `SERVER_PORT` | `8080` | Puerto del backend |
+| `SAPI_ML_BASE_URL` | `http://localhost:8000` | URL del servicio ML |
+| `SAPI_ML_CONNECT_TIMEOUT` | `2s` | Timeout de conexión al servicio ML |
+| `SAPI_ML_READ_TIMEOUT` | `60s` | Plazo total para recibir la respuesta del servicio ML; debe superar la duración del scoring |
+
+Un timeout sin unidad se lee en segundos (`60` = 60 s).
+
+`GET /api/v1/ranking`:
+- acepta `forecast_time` en RFC 3339 con zona horaria; un `+` del offset va
+  codificado como `%2B`;
+- devuelve el ranking del servicio ML sin reordenarlo;
+- sus errores siguen `contracts/openapi/backend.v0.yaml` (422, 500, 502, 503,
+  504), y cada respuesta lleva `X-Request-Id`.
+
+Para logs en JSON, usar `LOGGING_STRUCTURED_FORMAT_CONSOLE=logstash`.
 
 ---
 

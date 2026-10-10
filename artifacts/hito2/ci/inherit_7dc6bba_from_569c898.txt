@@ -1,0 +1,2 @@
+$ python scripts/merge_gate.py --inherit 569c8988ed648d7185a98d70fc123715f2eab5fd   (HEAD 7dc6bba)
+INHERIT PASS: 569c8988ed64..7dc6bbad2328

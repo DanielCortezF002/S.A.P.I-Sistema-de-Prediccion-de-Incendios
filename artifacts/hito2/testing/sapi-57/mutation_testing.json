@@ -1,0 +1,163 @@
+[
+ {
+  "id": "M9",
+  "mutation": "RankingOutcome.ranking re-serializa el cuerpo con Jackson",
+  "file": "RankingOutcome.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingEndpointIntegrationTests.bodyOfExactlyTheMaximumIsAccepted",
+   "RankingEndpointIntegrationTests.forwardsExactBytes"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "M10",
+  "mutation": "sin límite superior del score (score > 1)",
+  "file": "RankingResultValidator.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingEndpointIntegrationTests.mapsMlFailures(String, String, Reply, int, String)[3]",
+   "RankingResultValidatorTests.invalidBodiesAreRejected(String, byte[], String)[24]"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "M10b",
+  "mutation": "sin límite inferior del score (score < 0)",
+  "file": "RankingResultValidator.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingResultValidatorTests.invalidBodiesAreRejected(String, byte[], String)[25]"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ },
+ {
+  "id": "N1",
+  "mutation": "sin la regla del plazo vencido (corte del cuerpo siempre UNAVAILABLE)",
+  "file": "MlServiceClient.java",
+  "result": "KILLED",
+  "killed_by": [
+   "MlServiceClientTests.stalledBodyIsTimeoutWithStatus",
+   "RankingEndpointIntegrationTests.timeoutAfterHeadersIs504"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "N2",
+  "mutation": "sin cerrar el stream del cuerpo demasiado grande",
+  "file": "MlServiceClient.java",
+  "result": "KILLED",
+  "killed_by": [
+   "MlServiceClientTests.oversizedBodyDoesNotWaitForTheRest"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ },
+ {
+  "id": "N3",
+  "mutation": "ignora si se envió forecast_time (422 sin forecast_time → 422)",
+  "file": "RankingService.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingEndpointIntegrationTests.mapsMlFailures(String, String, Reply, int, String)[10]"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ },
+ {
+  "id": "N4",
+  "mutation": "RFC 3339 con find() en vez de matches()",
+  "file": "ForecastTime.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingResultValidatorTests.invalidBodiesAreRejected(String, byte[], String)[8]",
+   "RankingResultValidatorTests.invalidBodiesAreRejected(String, byte[], String)[9]"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "N5",
+  "mutation": "sin rechazar bytes nulos (UTF-16/32 sin BOM)",
+  "file": "RankingResultValidator.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingResultValidatorTests.malformedBodiesAreRejected(String, byte[])[10]",
+   "RankingResultValidatorTests.malformedBodiesAreRejected(String, byte[])[8]"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "N5b",
+  "mutation": "sin exigir '{' como primer byte (BOM)",
+  "file": "RankingResultValidator.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingResultValidatorTests.malformedBodiesAreRejected(String, byte[])[7]"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ },
+ {
+  "id": "N6",
+  "mutation": "sin @ExceptionHandler de InvalidParameterException (%ZZ)",
+  "file": "RankingController.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingEndpointIntegrationTests.undecodableParameterIs422"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ },
+ {
+  "id": "N7",
+  "mutation": "sin @DurationUnit (un número sin unidad = milisegundos)",
+  "file": "MlServiceProperties.java",
+  "result": "KILLED",
+  "killed_by": [
+   "MlServicePropertiesTests.timeoutsBind(String, long)[1]",
+   "MlServicePropertiesTests.timeoutsBind(String, long)[2]"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "N8",
+  "mutation": "sin capturar RuntimeException en rank() (sin ml_predict ni internal_error)",
+  "file": "RankingService.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingServiceTests.unexpectedErrorIsInternalError"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ },
+ {
+  "id": "N9",
+  "mutation": "ml_http_status siempre presente (null si no hubo respuesta)",
+  "file": "RankingService.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingEndpointIntegrationTests.logsTimeouts",
+   "RankingMlUnavailableTests.mlDownIs503"
+  ],
+  "n_failing": 2,
+  "reverted_clean": true
+ },
+ {
+  "id": "N10",
+  "mutation": "cuerpo > 1 MiB solo se revisa en el 200",
+  "file": "RankingService.java",
+  "result": "KILLED",
+  "killed_by": [
+   "RankingEndpointIntegrationTests.oversizedErrorBodyIs502"
+  ],
+  "n_failing": 1,
+  "reverted_clean": true
+ }
+]
