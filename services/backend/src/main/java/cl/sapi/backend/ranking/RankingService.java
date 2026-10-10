@@ -16,13 +16,16 @@ import org.springframework.stereotype.Service;
 import cl.sapi.backend.ranking.ml.MlCallException;
 import cl.sapi.backend.ranking.ml.MlResponse;
 import cl.sapi.backend.ranking.ml.MlServiceClient;
+import cl.sapi.backend.ranking.persistence.RankingPersistenceService;
 import tools.jackson.databind.JsonNode;
 
 /**
- * Obtiene el ranking del servicio ML y decide la respuesta del backend (SAPI-57, ADR-010).
+ * Obtiene el ranking del servicio ML, lo valida (SAPI-57) y lo persiste (SAPI-59, ADR-007).
  *
- * <p>Un 200 del ML se reenvía solo si cumple el contrato; nunca se responde 200 con un resultado
- * inválido (RN-09). Cada llamada deja exactamente un evento de log estructurado {@code ml_predict}
+ * <p>Un 200 del ML se reenvía solo si cumple el contrato y la persistencia write-through
+ * termina bien; nunca se responde 200 con un resultado inválido (RN-09) ni sin traza en
+ * {@code ejecuciones}/{@code predicciones_celda} cuando la base está configurada.
+ * Cada llamada deja exactamente un evento de log estructurado {@code ml_predict}
  * (SAPI-57.CA5) con el {@code request_id}, la latencia del ML y el resultado, sin scores ni celdas.
  */
 @Service
@@ -41,9 +44,11 @@ public class RankingService {
             RankingError.DATA_UNAVAILABLE.type(), RankingError.DATA_UNAVAILABLE);
 
     private final MlServiceClient client;
+    private final RankingPersistenceService persistence;
 
-    public RankingService(MlServiceClient client) {
+    public RankingService(MlServiceClient client, RankingPersistenceService persistence) {
         this.client = client;
+        this.persistence = persistence;
     }
 
     /**
@@ -115,7 +120,7 @@ public class RankingService {
         return outcome;
     }
 
-    private static RankingOutcome interpret(MlResponse response, boolean forecastTimeSent, Map<String, Object> details) {
+    private RankingOutcome interpret(MlResponse response, boolean forecastTimeSent, Map<String, Object> details) {
         if (response.bodyTooLarge()) {
             details.put("violation", "el cuerpo supera " + MlServiceClient.MAX_BODY_BYTES + " bytes");
             return RankingOutcome.error(RankingError.UPSTREAM_INVALID_RESPONSE);
@@ -133,6 +138,11 @@ public class RankingService {
                         SAFE_MODEL_VERSION.matcher(modelVersion).matches() ? modelVersion : "[omitido]");
                 details.put("forecast_time", ranking.get("forecast_time").stringValue());
                 details.put("inputs_fingerprint", ranking.get("inputs_fingerprint").stringValue());
+                // SAPI-59: write-through tras validación SAPI-57 y antes de RankingOutcome.ranking.
+                long executionId = persistence.persist(ranking);
+                if (executionId >= 0) {
+                    details.put("ejecucion_id", executionId);
+                }
                 return RankingOutcome.ranking(response.body());
             }
             case 422 -> {

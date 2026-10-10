@@ -25,6 +25,7 @@ import cl.sapi.backend.ranking.ml.MlCallException;
 import cl.sapi.backend.ranking.ml.MlResponse;
 import cl.sapi.backend.ranking.ml.MlServiceClient;
 import cl.sapi.backend.ranking.ml.MlServiceProperties;
+import cl.sapi.backend.ranking.persistence.RankingPersistenceService;
 
 /** {@link RankingService} con un cliente ML falso: rutas que no se provocan por HTTP (SAPI-57.CA2, CA5). */
 class RankingServiceTests {
@@ -108,7 +109,31 @@ class RankingServiceTests {
                 .isEqualTo("\"a b\\\"c\\\\d\\u000ae\\u2028f\\u202eg\\ud800\"");
     }
 
+    @Test
+    @DisplayName("SAPI-59 — tras validación 200, write-through llama a persistencia antes del ranking")
+    void successfulRankingPersistsWriteThrough() {
+        java.util.concurrent.atomic.AtomicInteger persists = new java.util.concurrent.atomic.AtomicInteger();
+        RankingPersistenceService tracking = new RankingPersistenceService(null) {
+            @Override
+            public long persist(tools.jackson.databind.JsonNode ranking) {
+                persists.incrementAndGet();
+                return 42L;
+            }
+        };
+        RankingOutcome outcome = service(() -> new MlResponse(200, Fixtures.realRanking(), false), tracking)
+                .rank(null, "req-persist");
+
+        assertThat(outcome.status()).isEqualTo(200);
+        assertThat(outcome.body()).isEqualTo(Fixtures.realRanking());
+        assertThat(persists.get()).isEqualTo(1);
+        assertThat(fields(singleMlPredict())).containsEntry("ejecucion_id", 42L);
+    }
+
     private static RankingService service(Supplier<MlResponse> behavior) {
+        return service(behavior, RankingPersistenceService.noOp());
+    }
+
+    private static RankingService service(Supplier<MlResponse> behavior, RankingPersistenceService persistence) {
         MlServiceClient client = new MlServiceClient(RestClient.builder(), new MlServiceProperties(
                 URI.create("http://127.0.0.1:9"), Duration.ofSeconds(1), Duration.ofSeconds(1))) {
             @Override
@@ -116,7 +141,7 @@ class RankingServiceTests {
                 return behavior.get();
             }
         };
-        return new RankingService(client);
+        return new RankingService(client, persistence);
     }
 
     private ILoggingEvent singleMlPredict() {
