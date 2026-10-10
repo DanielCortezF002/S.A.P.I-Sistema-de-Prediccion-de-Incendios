@@ -1,0 +1,25 @@
+sha: 6f62c1ab169a8995d917e72c66317d7d53c5c4ab
+branch: feat/SAPI-61-streamlit-backend-rest
+utc: 2026-10-10T19:13:14Z
+host: cursor
+python: Python 3.12.3
+pytest: pytest 9.1.1
+label: HTTP_STUB (http.server real en 127.0.0.1, puerto efimero; sin Spring ni FastAPI)
+command: python -m pytest tests/test_sapi61_http_stub.py -k 'not apptest' -p no:cacheprovider --no-cov -v
+
+tests/test_sapi61_http_stub.py::test_client_issues_get_on_the_contract_path PASSED [  6%]
+tests/test_sapi61_http_stub.py::test_client_forwards_forecast_time_query PASSED [ 13%]
+tests/test_sapi61_http_stub.py::test_client_reads_base_url_from_environment PASSED [ 20%]
+tests/test_sapi61_http_stub.py::test_client_preserves_scores_ranks_and_ties_over_the_wire PASSED [ 26%]
+tests/test_sapi61_http_stub.py::test_client_accepts_extended_payload_over_the_wire PASSED [ 33%]
+tests/test_sapi61_http_stub.py::test_connection_refused_is_a_controlled_error PASSED [ 40%]
+tests/test_sapi61_http_stub.py::test_read_timeout_is_a_controlled_error PASSED [ 46%]
+tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[422-invalid_request] PASSED [ 53%]
+tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[500-internal_error] PASSED [ 60%]
+tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[502-upstream_invalid_response] PASSED [ 66%]
+tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[503-upstream_unavailable] PASSED [ 73%]
+tests/test_sapi61_http_stub.py::test_backend_error_statuses_are_mapped[504-upstream_timeout] PASSED [ 80%]
+tests/test_sapi61_http_stub.py::test_empty_body_over_the_wire PASSED     [ 86%]
+tests/test_sapi61_http_stub.py::test_invalid_json_over_the_wire PASSED   [ 93%]
+tests/test_sapi61_http_stub.py::test_semantically_invalid_ranking_over_the_wire PASSED [100%]
+====================== 15 passed, 10 deselected in 6.55s =======================
