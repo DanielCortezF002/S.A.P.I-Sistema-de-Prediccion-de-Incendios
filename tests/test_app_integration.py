@@ -9,11 +9,29 @@ dejado pasar un `NameError` o un `st.columns` mal anidado hasta producción.
 
 from __future__ import annotations
 
+import socket
 from pathlib import Path
 
+import pytest
 from streamlit.testing.v1 import AppTest
 
 APP_PATH = Path(__file__).resolve().parent.parent / "app" / "app.py"
+
+
+@pytest.fixture(autouse=True)
+def _backend_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Desde SAPI-61 el modo Prototipo (default) consulta el backend REST.
+    Aquí no hay backend: se apunta a un puerto local recién cerrado para que
+    la conexión sea rechazada de inmediato y de forma determinista (nunca al
+    8080 real de la máquina). La integración con backend simulado vive en
+    `tests/test_sapi61_http_stub.py`."""
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    monkeypatch.setenv("SAPI_BACKEND_BASE_URL", f"http://127.0.0.1:{port}")
+    monkeypatch.setenv("SAPI_BACKEND_CONNECT_TIMEOUT", "1")
+    monkeypatch.setenv("SAPI_BACKEND_READ_TIMEOUT", "1")
 
 
 def _run(*, mode: str = "Demo (escenario sembrado)") -> AppTest:
@@ -36,13 +54,15 @@ def test_main_runs_without_exceptions() -> None:
 
 def test_prototype_mode_is_the_default_and_runs_without_exceptions() -> None:
     """El modo por defecto (sin tocar el radio) debe ser Prototipo, y debe
-    correr sin excepciones incluso si faltan artefactos reales — el manejo
-    de errores vive en `render_prototype_dashboard`, no en `main()`."""
+    correr sin excepciones aunque el backend REST esté caído (SAPI-61.CA4):
+    el manejo de errores vive en `render_ranking_backend_dashboard`, no en
+    `main()`, y el usuario ve un mensaje controlado."""
     at = AppTest.from_file(str(APP_PATH), default_timeout=60)
     at.run()
     assert not at.exception
     radios = at.sidebar.radio
     assert radios and radios[0].value == "Prototipo (datos reales)"
+    assert at.error and "No se pudo obtener el ranking del backend" in at.error[0].value
 
 
 def test_priority_zones_and_trend_sections_are_present() -> None:
