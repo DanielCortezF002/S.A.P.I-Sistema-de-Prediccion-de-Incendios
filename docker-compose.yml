@@ -2,7 +2,8 @@
 # solo db-v2 (PostGIS, 5432), ml-api (FastAPI + Modelo D, 8000) y backend
 # (Spring Boot, 8080). Los servicios de Hito 1 quedan fuera de la ruta v2 con
 # profiles: `legacy` (db-postgis, analytics-backend, web-presentation) y `ops`
-# (n8n-bridge). Configuración en .env (copiar .env.example); ver README.
+# (n8n-bridge). Configuración en .env (ver .env.example y README). La ruta v2
+# usa su propia red (sapi-v2-net): los servicios legacy no llegan a db-v2.
 services:
   db-v2:
     # Base v2 aislada del legacy (H4, ADR-008): volumen propio, sin
@@ -10,7 +11,7 @@ services:
     image: postgis/postgis:15-3.4
     environment:
       POSTGRES_USER: ${SAPI_DB_USER:-sapi}
-      POSTGRES_PASSWORD: ${SAPI_DB_PASSWORD:?Definir SAPI_DB_PASSWORD en .env (copiar .env.example)}
+      POSTGRES_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
       POSTGRES_DB: ${SAPI_DB_NAME:-sapi_v2}
     ports:
       - "127.0.0.1:${SAPI_DB_PORT:-5432}:5432"
@@ -26,7 +27,7 @@ services:
       retries: 12
       start_period: 20s
     networks:
-      - sapi-net
+      - sapi-v2-net
 
   ml-api:
     # Modo reproducible por defecto (ADR-009): puntúa con el Modelo D
@@ -42,19 +43,21 @@ services:
       - "127.0.0.1:${SAPI_ML_PORT:-8000}:8000"
     healthcheck:
       # GET /health devuelve 200 solo si el modelo y su metadata se leen
-      # (503 si no); urlopen falla con cualquier código >= 400.
-      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=4).status == 200 else 1)"]
+      # (503 si no); open() falla con cualquier código >= 400. Sin proxy: un
+      # HTTP_PROXY inyectado por Docker no debe desviar la consulta local.
+      test: ["CMD", "python", "-c", "import sys, urllib.request as u; r = u.build_opener(u.ProxyHandler({})).open('http://127.0.0.1:8000/health', timeout=4); sys.exit(0 if r.status == 200 else 1)"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 30s
     networks:
-      - sapi-net
+      - sapi-v2-net
 
   backend:
     # Llega al ML y a la base por nombre de servicio, nunca por localhost.
     # Flyway corre al arrancar sobre db/migration montado en solo lectura
-    # (ADR-008); el servidor HTTP abre solo si las migraciones terminan bien.
+    # (ADR-008); el servidor HTTP abre solo si las migraciones terminan bien, y
+    # el arranque falla si la carpeta montada no existe o no se puede leer.
     build:
       context: ./services/backend
     environment:
@@ -63,9 +66,10 @@ services:
       SAPI_ML_READ_TIMEOUT: ${SAPI_ML_READ_TIMEOUT:-60s}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-v2:5432/${SAPI_DB_NAME:-sapi_v2}
       SPRING_DATASOURCE_USERNAME: ${SAPI_DB_USER:-sapi}
-      SPRING_DATASOURCE_PASSWORD: ${SAPI_DB_PASSWORD:?Definir SAPI_DB_PASSWORD en .env (copiar .env.example)}
+      SPRING_DATASOURCE_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
       SAPI_PERSISTENCE_ENABLED: "true"
       SAPI_FLYWAY_LOCATIONS: filesystem:/app/db/migration
+      SPRING_FLYWAY_FAILONMISSINGLOCATIONS: "true"
     volumes:
       - ./db/migration:/app/db/migration:ro
     ports:
@@ -79,13 +83,13 @@ services:
         # el ML no responde, devuelve 503/504 controlados (SAPI-57).
         condition: service_started
     healthcheck:
-      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:8080/health"]
+      test: ["CMD", "curl", "-fsS", "--noproxy", "*", "-o", "/dev/null", "http://127.0.0.1:8080/health"]
       interval: 10s
       timeout: 5s
       retries: 6
       start_period: 60s
     networks:
-      - sapi-net
+      - sapi-v2-net
 
   db-postgis:
     profiles: ["legacy"]
@@ -199,4 +203,6 @@ volumes:
 
 networks:
   sapi-net:
+    driver: bridge
+  sapi-v2-net:
     driver: bridge

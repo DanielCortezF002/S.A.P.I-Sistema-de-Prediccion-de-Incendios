@@ -33,7 +33,9 @@ docker compose up --build web-presentation             # Dashboard Hito 1: http:
 Desde SAPI-60, `docker compose up --build` sin nombrar servicios levanta la
 arquitectura v2 (Spring Boot, FastAPI y PostGIS v2; ver README). Los servicios
 de Hito 1 quedan detrás de los profiles `legacy` y `ops` y se levantan
-nombrándolos.
+nombrándolos. Compose interpola todo el archivo, así que también estos comandos
+necesitan `SAPI_DB_PASSWORD` en `.env`: si ya existe un `.env`, agregar el
+bloque SAPI-60 de `.env.example` en vez de reemplazarlo.
 
 **Mecanismo de despliegue real hoy:** Docker Compose local (`docker-compose.yml`)
 — verificado con un contenedor real activo en esta máquina el 09-09-2026. No hay
@@ -266,7 +268,7 @@ Ver sección **CURRENT** al inicio de este documento — es el entorno realmente
 usado y verificado para el incremento de Hito 1.
 
 ```bash
-copy .env.example .env
+copy .env.example .env   # solo si no existe; si existe, agregar el bloque SAPI-60
 docker compose up --build analytics-backend web-presentation   # servicios Hito 1 (profile legacy) + db-postgis
 # Dashboard: http://localhost:8501
 ```

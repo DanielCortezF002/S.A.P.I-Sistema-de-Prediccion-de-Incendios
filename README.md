@@ -51,7 +51,7 @@ implementado de lo planificado:
 | Contratos OpenAPI v0 | Definidos (SAPI-56) | `contracts/openapi/` |
 | Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V003 definidas (SAPI-58); persistencia de resultados pendiente (SAPI-59) | `db/migration/`, `db/README.md` |
 | Streamlit | Implementado; hoy puntúa en el mismo proceso con `score_current_grid()`; consumo del backend pendiente (SAPI-61) | `app/` |
-| Docker Compose de la arquitectura v2 | Pendiente (SAPI-60). El `docker-compose.yml` actual levanta los servicios de Hito 1 | `docker-compose.yml` |
+| Docker Compose de la arquitectura v2 | Pendiente al checkpoint (SAPI-60); ver la nota bajo la tabla | `docker-compose.yml` |
 | Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
 
 Desde SAPI-60, `docker compose up --build` levanta la arquitectura v2
@@ -178,7 +178,11 @@ docker compose up --build       # con -d --wait queda en segundo plano y espera 
 `.env` nunca se versiona. `SAPI_DB_PASSWORD` no tiene valor por defecto en
 `docker-compose.yml` (sin `.env`, Compose no arranca); el valor de
 `.env.example` es solo para desarrollo local y conviene cambiarlo antes del
-primer arranque, porque después queda fijado en el volumen.
+primer arranque, porque después queda fijado en el volumen. **Si ya existe un
+`.env` de Hito 1** (por ejemplo con credenciales reales de NASA FIRMS u
+OpenTopography), no lo reemplaces: agrega el bloque SAPI-60 de `.env.example`.
+Compose interpola todo el archivo, así que desde SAPI-60 también los comandos
+de los servicios de Hito 1 necesitan `SAPI_DB_PASSWORD`.
 
 | Servicio | Dirección en el equipo | Health check |
 |---|---|---|
@@ -222,7 +226,7 @@ docker compose exec -T db-v2 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' 
 Detener y reiniciar:
 
 ```bash
-docker compose down             # detiene y elimina los contenedores; los datos quedan en el volumen
+docker compose down             # detiene y elimina todos los contenedores del proyecto (también los de Hito 1); los volúmenes quedan
 docker compose up -d --wait     # vuelve a levantar con los mismos datos
 ```
 
@@ -246,7 +250,9 @@ Compose y no se levantan por defecto: `legacy` (`db-postgis`,
 servicio lo levanta junto con sus dependencias, por ejemplo
 `docker compose up --build web-presentation` para el dashboard Streamlit de
 Hito 1 en `http://localhost:8501`. Ese dashboard todavía no consume el
-backend (SAPI-61). `db-postgis` también publica el puerto 5432: para usar la
+backend (SAPI-61), y sin datos locales en `data/` su modo Prototipo no puede
+puntuar; para una corrida sin datos locales, usar la Opción B con
+`SAPI_REPRODUCIBILITY_MODE=1`. `db-postgis` también publica el puerto 5432: para usar la
 base legacy y la v2 a la vez, cambiar `SAPI_DB_PORT`.
 
 ### Opción B — Entorno local

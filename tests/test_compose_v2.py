@@ -33,7 +33,8 @@ CA1_PORTS = {
     "ml-api": ("SAPI_ML_PORT", 8000),
     "db-v2": ("SAPI_DB_PORT", 5432),
 }
-INTERPOLATION = re.compile(r"\$\{([A-Z0-9_]+)")
+# `${VAR}` de .env; `$${VAR}` es una variable del contenedor (escapada), no de .env.
+INTERPOLATION = re.compile(r"(?<!\$)\$\{([A-Z0-9_]+)")
 
 
 def _strings(node) -> list[str]:
@@ -84,6 +85,11 @@ def test_healthchecks_probe_the_real_endpoints() -> None:
     assert "http://127.0.0.1:8080/health" in _healthcheck_command("backend")
 
 
+def test_http_healthchecks_bypass_any_injected_proxy() -> None:
+    assert "--noproxy *" in _healthcheck_command("backend")
+    assert "ProxyHandler({})" in _healthcheck_command("ml-api")
+
+
 def test_ca3_database_password_has_no_default() -> None:
     required = re.compile(r"^\$\{SAPI_DB_PASSWORD:\?")
     assert required.match(SERVICES["db-v2"]["environment"]["POSTGRES_PASSWORD"])
@@ -106,6 +112,14 @@ def test_ca3_env_example_defines_every_variable_of_the_v2_services() -> None:
     }
     assert used, "los servicios v2 deberían leer su configuración de .env"
     assert sorted(used - defined) == []
+
+
+def test_ca3_env_example_password_is_a_non_empty_placeholder() -> None:
+    values = dict(
+        line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line
+    )
+    assert values["SAPI_DB_PASSWORD"].strip()
+    assert values["SAPI_DB_PASSWORD"] != "sapi_secret"
 
 
 def test_ca3_real_env_file_is_ignored_by_git() -> None:
@@ -158,6 +172,16 @@ def test_backend_runs_flyway_on_the_canonical_migrations_read_only() -> None:
         == "filesystem:/app/db/migration"
     )
     assert backend["environment"]["SAPI_PERSISTENCE_ENABLED"] == "true"
+    # Sin la carpeta montada (o ilegible) el arranque falla en vez de quedar sin esquema.
+    assert backend["environment"]["SPRING_FLYWAY_FAILONMISSINGLOCATIONS"] == "true"
+
+
+def test_v2_route_has_its_own_network() -> None:
+    assert "sapi-v2-net" in COMPOSE["networks"]
+    for service in V2_SERVICES:
+        assert SERVICES[service]["networks"] == ["sapi-v2-net"]
+    for service in HITO1_PROFILES:
+        assert "sapi-v2-net" not in SERVICES[service].get("networks", [])
 
 
 def test_backend_waits_for_a_healthy_database() -> None:

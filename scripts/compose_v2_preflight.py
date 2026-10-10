@@ -45,6 +45,7 @@ import hashlib
 import json
 import os
 import platform
+import re
 import socket
 import subprocess
 import sys
@@ -82,18 +83,41 @@ def utc_now() -> str:
 def redaction_pairs() -> list[tuple[str, str]]:
     """Valores locales que nunca deben quedar en la evidencia.
 
-    Incluye la carpeta padre del checkout: Docker trunca algunas rutas
-    (`/ruta/al/repo…`) y entonces el reemplazo exacto del repo no las alcanza.
+    Incluye la carpeta padre del checkout (Docker trunca algunas rutas a
+    `/ruta/al/repo…` y el reemplazo exacto del repo no las alcanza), salvo que
+    sea la raíz del disco, y los valores secretos de `.env`: un error de
+    Compose al leerlo puede repetirlos.
     """
-    pairs = [
-        (str(REPO_ROOT), "[repo]"),
-        (str(REPO_ROOT.parent), "[repo-parent]"),
-        (str(Path.home()), "[home]"),
-    ]
+    pairs = [(str(REPO_ROOT), "[repo]"), (str(Path.home()), "[home]")]
+    if len(REPO_ROOT.parent.parts) >= 2:
+        pairs.append((str(REPO_ROOT.parent), "[repo-parent]"))
     for value, marker in ((socket.gethostname(), "[host]"), (_user(), "[user]")):
         if value and len(value) >= 3 and value != "localhost":
             pairs.append((value, marker))
+    pairs += [(value, "[secret]") for value in secret_values()]
     return sorted(pairs, key=lambda pair: len(pair[0]), reverse=True)
+
+
+SECRET_NAME = re.compile(r"PASSWORD|SECRET|TOKEN|KEY|DATABASE_URL", re.IGNORECASE)
+
+
+def secret_values(env_file: Path = REPO_ROOT / ".env") -> list[str]:
+    """Valores de variables con nombre de secreto en `.env`, más las contraseñas
+    del Compose que vengan del entorno."""
+    candidates = []
+    try:
+        lines = env_file.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        lines = []
+    for line in lines:
+        name, sep, value = line.strip().partition("=")
+        if sep and not name.startswith("#") and SECRET_NAME.search(name):
+            candidates.append(value.strip().strip("'\""))
+    # Del entorno, solo las contraseñas que interpola docker-compose.yml.
+    candidates += [
+        os.environ.get(name, "") for name in ("SAPI_DB_PASSWORD", "POSTGRES_PASSWORD")
+    ]
+    return sorted({value for value in candidates if len(value) >= 4})
 
 
 def _user() -> str:
@@ -181,6 +205,9 @@ class Preflight:
             "compose",
             "--project-directory",
             str(REPO_ROOT),
+            # Explícito: Compose no debe sumar un docker-compose.override.yml local.
+            "-f",
+            str(REPO_ROOT / "docker-compose.yml"),
             "-p",
             args.project_name,
         ]
@@ -264,10 +291,10 @@ class Preflight:
             headers={"X-Request-Id": REQUEST_ID, "Content-Type": "application/json"},
         )
         started = time.monotonic()
+        # Sin proxy: un HTTP_PROXY del equipo no debe desviar las consultas locales.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         try:
-            with urllib.request.urlopen(
-                request, timeout=self.args.http_timeout
-            ) as response:
+            with opener.open(request, timeout=self.args.http_timeout) as response:
                 status, headers, payload = (
                     response.status,
                     dict(response.headers),
@@ -301,6 +328,36 @@ class Preflight:
             "platform": f"{platform.system()} {platform.machine()}",
             "project": self.args.project_name,
         }
+
+    def clean_checkout(self) -> None:
+        ignored = [entry for entry in self.facts["ignored_entries"] if entry != ".env"]
+        override = [
+            name
+            for name in ("docker-compose.override.yml", "compose.override.yaml")
+            if (REPO_ROOT / name).exists()
+        ]
+        observed = {
+            "cambios_sin_commit": self.facts["worktree_changes"],
+            "ignorados_aparte_de_.env": ignored,
+            "override_local": override,
+        }
+        self.check(
+            "checkout.clean",
+            "CA6",
+            "git status --porcelain --ignored + override de Compose",
+            {"cambios_sin_commit": 0, "ignorados_aparte_de_.env": [], "override": []},
+            observed,
+            observed["cambios_sin_commit"] == 0 and not ignored and not override,
+        )
+
+    def fresh_project(self) -> None:
+        """Arranca de cero: borra contenedores y volúmenes previos de ESTE proyecto."""
+        code, _, _ = self.compose_run(
+            "down", "-v", "--remove-orphans", log="fresh_start.log"
+        )
+        self.facts["fresh_start"] = (
+            f"docker compose down -v (solo {self.args.project_name}): exit {code}"
+        )
 
     def config(self) -> None:
         command = "docker compose config --services"
@@ -573,9 +630,15 @@ class Preflight:
                 "ejecucion": "existe",
                 "predicciones": "50",
                 "orden": "igual a la respuesta",
+                "ejecuciones_antes_despues": ["0", "1"],
+                "predicciones_antes_despues": ["0", "50"],
             },
             observed,
-            ejecucion_id.isdigit() and rows == "50" and order == expected_order,
+            ejecucion_id.isdigit()
+            and rows == "50"
+            and order == expected_order
+            and before == ("0", "0")
+            and after == ("1", "50"),
         )
         return ejecucion_id if ejecucion_id.isdigit() else None
 
@@ -661,9 +724,17 @@ class Preflight:
             "ca4.data_survives_down_up",
             "CA4",
             "docker compose down (sin -v) + up -d --wait + conteos",
-            {"ejecuciones": before[0], "predicciones": before[1]},
-            {"down_exit": code_down, "ejecuciones": after[0], "predicciones": after[1]},
-            code_down == 0 and after == before and history_after == history,
+            {"ejecuciones": "1", "predicciones": "50", "flyway": "sin cambios"},
+            {
+                "down_exit": code_down,
+                "ejecuciones": after[0],
+                "predicciones": after[1],
+                "flyway": history_after,
+            },
+            code_down == 0
+            and before == ("1", "50")
+            and after == before
+            and history_after == history,
         )
         self.health("ca4.health")
 
@@ -684,8 +755,10 @@ class Preflight:
     def execute(self) -> int:
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self.environment()
+        self.clean_checkout()
         self.config()
         try:
+            self.fresh_project()
             if self.build() and self.up("compose.up"):
                 self.ps("compose.ps")
                 self.health("health")
