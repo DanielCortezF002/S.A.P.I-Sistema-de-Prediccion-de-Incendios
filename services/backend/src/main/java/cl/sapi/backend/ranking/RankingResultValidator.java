@@ -1,5 +1,7 @@
 package cl.sapi.backend.ranking;
 
+import java.time.DateTimeException;
+import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.Locale;
 import java.util.Optional;
@@ -27,6 +29,11 @@ public final class RankingResultValidator {
 
     private static final Pattern FINGERPRINT = Pattern.compile("[0-9a-f]{64}");
     private static final Pattern CELL_ID = Pattern.compile("VP-\\d{3}");
+    private static final Pattern ISO_DATE = Pattern.compile("\\d{4}-\\d{2}-\\d{2}");
+    private static final Set<String> FRESHNESS = Set.of(
+            "DATOS RECIENTES", "DATOS CON RETRASO", "DATOS HISTÓRICOS / DESACTUALIZADOS");
+    private static final Set<String> FIRMS_ORIGIN = Set.of("baseline", "current", "reproducibility");
+    private static final Set<String> FIRMS_STATUS = Set.of("FIRMS AL DÍA", "FIRMS DESACTUALIZADO");
     private static final Set<String> EXPECTED_CELL_IDS = expectedCellIds();
 
     private static final JsonMapper MAPPER = JsonMapper.builder()
@@ -83,6 +90,10 @@ public final class RankingResultValidator {
         if (root.has("disclaimer") && !root.get("disclaimer").isString()) {
             return Validation.invalid("disclaimer no es un string");
         }
+        Optional<String> metadata = metadataViolation(root);
+        if (metadata.isPresent()) {
+            return Validation.invalid(metadata.get());
+        }
         Optional<String> cells = cellsViolation(root.get("cells"));
         return cells.isPresent() ? new Validation(cells, null) : new Validation(Optional.empty(), root);
     }
@@ -108,6 +119,42 @@ public final class RankingResultValidator {
             return Optional.empty();
         }
         return Optional.of(type.stringValue());
+    }
+
+    /**
+     * Los nueve campos de metadata son opcionales. Si faltan, el cuerpo sigue siendo válido
+     * (respuestas anteriores a la extensión). Si están, el tipo debe coincidir con el contrato;
+     * un valor mal formado no se reenvía.
+     */
+    private static Optional<String> metadataViolation(JsonNode root) {
+        if (root.has("weather_timestamp") && !isRfc3339(root.get("weather_timestamp"))) {
+            return Optional.of("weather_timestamp no es una fecha-hora RFC 3339");
+        }
+        if (root.has("age_hours") && !isNonNegativeFinite(root.get("age_hours"))) {
+            return Optional.of("age_hours no es un número finito >= 0");
+        }
+        if (root.has("freshness") && !isOneOf(root.get("freshness"), FRESHNESS)) {
+            return Optional.of("freshness no es un valor del contrato");
+        }
+        if (root.has("station_id") && !isNonEmptyString(root.get("station_id"))) {
+            return Optional.of("station_id ausente o vacío");
+        }
+        if (root.has("station_name") && !isNonEmptyString(root.get("station_name"))) {
+            return Optional.of("station_name ausente o vacío");
+        }
+        if (root.has("firms_origin") && !isOneOf(root.get("firms_origin"), FIRMS_ORIGIN)) {
+            return Optional.of("firms_origin no es un valor del contrato");
+        }
+        if (root.has("firms_coverage_end") && !isIsoDate(root.get("firms_coverage_end"))) {
+            return Optional.of("firms_coverage_end no es una fecha ISO");
+        }
+        if (root.has("firms_lag_days") && !isNonNegativeInteger(root.get("firms_lag_days"))) {
+            return Optional.of("firms_lag_days no es un entero >= 0");
+        }
+        if (root.has("firms_status") && !isOneOf(root.get("firms_status"), FIRMS_STATUS)) {
+            return Optional.of("firms_status no es un valor del contrato");
+        }
+        return Optional.empty();
     }
 
     private static Optional<String> cellsViolation(@Nullable JsonNode cells) {
@@ -212,6 +259,43 @@ public final class RankingResultValidator {
 
     private static boolean isPositiveInteger(@Nullable JsonNode node) {
         return node != null && node.isIntegralNumber() && node.bigIntegerValue().signum() > 0;
+    }
+
+    private static boolean isRfc3339(@Nullable JsonNode node) {
+        return node != null && node.isString() && ForecastTime.isValid(node.stringValue());
+    }
+
+    private static boolean isNonNegativeFinite(@Nullable JsonNode node) {
+        if (node == null || !node.isNumber()) {
+            return false;
+        }
+        double value = node.doubleValue();
+        return Double.isFinite(value) && value >= 0;
+    }
+
+    private static boolean isNonNegativeInteger(@Nullable JsonNode node) {
+        return node != null && node.isIntegralNumber() && node.bigIntegerValue().signum() >= 0;
+    }
+
+    private static boolean isNonEmptyString(@Nullable JsonNode node) {
+        return node != null && node.isString() && !node.stringValue().isEmpty();
+    }
+
+    private static boolean isOneOf(@Nullable JsonNode node, Set<String> allowed) {
+        return node != null && node.isString() && allowed.contains(node.stringValue());
+    }
+
+    private static boolean isIsoDate(@Nullable JsonNode node) {
+        if (node == null || !node.isString() || !ISO_DATE.matcher(node.stringValue()).matches()) {
+            return false;
+        }
+        try {
+            LocalDate.parse(node.stringValue());
+            return true;
+        }
+        catch (DateTimeException ex) {
+            return false;
+        }
     }
 
     private static Set<String> expectedCellIds() {

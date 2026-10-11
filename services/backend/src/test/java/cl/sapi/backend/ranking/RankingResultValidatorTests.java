@@ -38,6 +38,23 @@ class RankingResultValidatorTests {
     }
 
     @Test
+    @DisplayName("SAPI-61 — la metadata opcional bien formada se acepta y no es obligatoria")
+    void optionalMetadataIsAcceptedWhenWellFormed() {
+        byte[] body = Fixtures.realRankingWith(root -> {
+            root.put("weather_timestamp", "2026-08-31T21:00:00Z");
+            root.put("age_hours", 960.5);
+            root.put("freshness", "DATOS HISTÓRICOS / DESACTUALIZADOS");
+            root.put("station_id", "330007");
+            root.put("station_name", "Rodelillo");
+            root.put("firms_origin", "reproducibility");
+            root.put("firms_coverage_end", "2026-08-31");
+            root.put("firms_lag_days", 1);
+            root.put("firms_status", "FIRMS AL DÍA");
+        });
+        assertThat(RankingResultValidator.violation(body)).isEmpty();
+    }
+
+    @Test
     @DisplayName("SAPI-57.CA3 — el ejemplo sintético del contrato cumple el contrato")
     void contractExampleIsValid() {
         assertThat(RankingResultValidator.violation(Fixtures.contractSyntheticExample())).isEmpty();
@@ -47,7 +64,7 @@ class RankingResultValidatorTests {
     @DisplayName("SAPI-57.CA3 — los campos aditivos desconocidos y un horizon_hours grande se aceptan")
     void additiveFieldsAndLargeHorizonAreAccepted() {
         byte[] body = Fixtures.realRankingWith(root -> {
-            root.put("firms_status", "ok");
+            root.put("trace_note", "ok");
             root.put("horizon_hours", new BigInteger("1099511627776"));
             ((ObjectNode) root.get("cells").get(0)).put("campo_nuevo", 1);
         });
@@ -81,6 +98,20 @@ class RankingResultValidatorTests {
                 change("horizon_hours null", "horizon_hours", root -> root.putNull("horizon_hours")),
                 change("horizon_hours decimal", "horizon_hours", root -> root.put("horizon_hours", 6.0)),
                 change("disclaimer no string", "disclaimer", root -> root.put("disclaimer", 1)),
+                change("weather_timestamp sin zona", "weather_timestamp",
+                        root -> root.put("weather_timestamp", "2026-09-01T00:00:00")),
+                change("weather_timestamp null", "weather_timestamp", root -> root.putNull("weather_timestamp")),
+                change("age_hours negativo", "age_hours", root -> root.put("age_hours", -0.1)),
+                change("age_hours string", "age_hours", root -> root.put("age_hours", "12")),
+                change("age_hours null", "age_hours", root -> root.putNull("age_hours")),
+                change("freshness desconocida", "freshness", root -> root.put("freshness", "VIGENTE")),
+                change("station_id vacío", "station_id", root -> root.put("station_id", "")),
+                change("station_name null", "station_name", root -> root.putNull("station_name")),
+                change("firms_origin desconocido", "firms_origin", root -> root.put("firms_origin", "legacy")),
+                change("firms_coverage_end con hora", "firms_coverage_end",
+                        root -> root.put("firms_coverage_end", "2026-08-31T00:00:00Z")),
+                change("firms_lag_days negativo", "firms_lag_days", root -> root.put("firms_lag_days", -1)),
+                change("firms_status ajeno al contrato", "firms_status", root -> root.put("firms_status", "ok")),
                 change("49 celdas", "exactamente 50 celdas", root -> cells(root).remove(49)),
                 change("51 celdas", "exactamente 50 celdas", root -> cells(root).add(cells(root).get(49).deepCopy())),
                 change("cell_id duplicado", "VP-001..VP-050",

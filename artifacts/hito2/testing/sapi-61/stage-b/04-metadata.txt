@@ -1,0 +1,108 @@
+50 options available.
+14 options available.
+1 option available.
+
+Modo de datos
+
+Prototipo (datos reales)
+
+Demo (escenario sembrado)
+
+Actualizar ranking
+
+keyboard_double_arrow_right
+S.A.P.I.
+Sistema de Alerta y Priorización de Riesgo de Incendios
+PROTOTIPO EXPLORATORIO
+BACKEND REST
+DATOS HISTÓRICOS
+01 sep 2026
+00:00 → 06:00 UTC
+DMC Rodelillo · 330007
+Obtenido del backend: 03:32 UTC
+⚠
+
+DATOS HISTÓRICOS · última observación hace 964 h (antigüedad medida por el servicio al evaluar)
+
+El ranking corresponde al instante indicado y NO representa el riesgo actual.
+
+no informado por el backend
+Temperatura
+no informado por el backend
+Humedad
+no informado por el backend
+Viento
+no informado por el backend
+Regla 30-30-30
+50
+Celdas evaluadas
+
+PROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, NO una probabilidad calibrada de incendio. No usar para decisiones operacionales. Ver docs/auditoria-consistencia-2026-09-06.md para el estado metodológico completo.
+
+El score corresponde a un ranking relativo exploratorio y no a una probabilidad calibrada de incendio.
+
+Vista del mapa
+
+Prioridades
+
+Todas las celdas
+
+PRIORIDAD RELATIVA
+Grupo 1
+Grupo 2
+Grupo 3
+Basado en score relativo.
+No representa niveles oficiales de alerta.
+GRUPO PRIORITARIO
+#1
+7 celdas empatadas
+Score relativo: 0.131293
+VP-001VP-002VP-016VP-013VP-012VP-011VP-033
+Empate real del modelo · 7 celdas con score idéntico
+
+Celda
+
+CELDA SELECCIONADA
+VP-038
+Prioridad #49 · Score relativo: 0.102103 · empate ×2
+TERRITORIO (REFERENCIA)
+Elevación
+N/D
+Pendiente
+N/D
+Historial FIRMS
+no disponible en la respuesta del backend
+Sin cobertura DEM de referencia en esta celda
+Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1)
+METEOROLOGÍA REGIONAL
+Meteorología usada
+no informado por el backend
+VENTANA
+T
+01 sep 2026 00:00 UTC
+T+6h
+01 sep 2026 06:00 UTC
+keyboard_arrow_down
+
+Ver ranking completo
+
+Orden y empates tal como los emitió el backend: celdas con score idéntico comparten el mismo número de prioridad.
+
+keyboard_arrow_down
+
+Información técnica y fuentes
+
+Origen del ranking: backend Spring Boot, GET /api/v1/ranking (obtenido 2026-10-11 03:32:02 UTC; cache de 5 min)
+Schema: sapi-ranking-v0 · semántica relative_rank · validación científica: false
+Modelo: prototype_model_d_v1 — no informado por el backend
+Inputs fingerprint: 09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+Forecast time: 2026-09-01 00:00:00 UTC
+Ventana evaluada: 2026-09-01 00:00:00 UTC → 2026-09-01 06:00:00 UTC (h=6h)
+Estación DMC: Rodelillo 330007
+Weather timestamp usado: 2026-09-01 00:00:00 UTC
+Antigüedad de la observación (al evaluar): 963.5 h — DATOS HISTÓRICOS / DESACTUALIZADOS
+Fuente de detecciones: NASA FIRMS
+Procedencia FIRMS: origen reproducibility · cobertura hasta 2026-08-30 · lag 2 · estado FIRMS AL DÍA
+Topografía: Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1)
+
+El score corresponde a un ranking relativo exploratorio y no a una probabilidad calibrada de incendio.

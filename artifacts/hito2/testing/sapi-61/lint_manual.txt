@@ -1,0 +1,20 @@
+sha: 6f62c1ab169a8995d917e72c66317d7d53c5c4ab
+branch: feat/SAPI-61-streamlit-backend-rest
+utc: 2026-10-10T19:13:14Z
+host: cursor
+python: Python 3.12.3
+pytest: pytest 9.1.1
+label: LINT MANUAL de archivos nuevos (merge_gate.py V2_LINT_PATHS se amplia en Etapa B)
+command: black --check --line-length 100 app/utils/backend_client.py app/utils/reference_topography.py app/components/ranking_backend_view.py tests/test_backend_client.py tests/test_ranking_backend_view.py tests/test_sapi61_http_stub.py
+All done! ✨ 🍰 ✨
+6 files would be left unchanged.
+black_exit: 0
+command: flake8 --max-line-length=100 --extend-ignore=E203,W503 app/utils/backend_client.py app/utils/reference_topography.py app/components/ranking_backend_view.py tests/test_backend_client.py tests/test_ranking_backend_view.py tests/test_sapi61_http_stub.py
+flake8_exit: 0
+
+Archivos legacy modificados (deuda flake8 preexistente, identica antes y despues del cambio; no se reformatean para no alterar el diff):
+command: flake8 --max-line-length=100 --extend-ignore=E203,W503 app/app.py src/config.py tests/test_architecture.py tests/test_app_integration.py | grep -v E402
+app/app.py:216:101: E501 line too long (113 > 100 characters)
+src/config.py:58:101: E501 line too long (104 > 100 characters)
+src/config.py:137:101: E501 line too long (101 > 100 characters)
+(E402 en app/app.py: sys.path se ajusta antes de los imports; preexistente)

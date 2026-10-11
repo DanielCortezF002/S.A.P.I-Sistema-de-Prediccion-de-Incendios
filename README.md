@@ -50,7 +50,7 @@ implementado de lo planificado:
 | Backend Spring Boot | `GET /health` (SAPI-54) y `GET /api/v1/ranking`, que consulta al servicio ML (SAPI-57, en revisión); registro de ejecuciones pendiente (SAPI-59) | `services/backend/` |
 | Contratos OpenAPI v0 | Definidos (SAPI-56) | `contracts/openapi/` |
 | Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V003 definidas (SAPI-58); persistencia de resultados pendiente (SAPI-59) | `db/migration/`, `db/README.md` |
-| Streamlit | Implementado; hoy puntúa en el mismo proceso con `score_current_grid()`; consumo del backend pendiente (SAPI-61) | `app/` |
+| Streamlit | Implementado. El modo Prototipo consume `GET /api/v1/ranking` del backend (SAPI-61). El scoring en proceso queda solo en el modo legacy (`SAPI_UI_LEGACY_MODES=1`) | `app/` |
 | Docker Compose de la arquitectura v2 | Pendiente al checkpoint (SAPI-60); ver la nota bajo la tabla | `docker-compose.yml` |
 | Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
 
@@ -244,16 +244,29 @@ docker volume rm <proyecto>_sapi_v2_pgdata
 aunque su profile no esté activo. Usarlo solo si también se quiere perder esa
 base.
 
+**Dashboard v2 (SAPI-61).** No forma parte de `docker compose up`. El profile
+`presentation` levanta Streamlit contra el backend ya definido:
+
+```bash
+docker compose --profile presentation up --build web-v2
+```
+
+Queda en `http://127.0.0.1:8501` y consulta `http://backend:8080/api/v1/ranking`.
+No activa el profile `legacy` ni ejecuta el Modelo D dentro de Streamlit.
+Desde el host, con el backend publicado en el 8080, basta
+`streamlit run app/app.py` (`SAPI_BACKEND_BASE_URL` default
+`http://localhost:8080`).
+
 **Servicios de Hito 1.** Quedan fuera de la arquitectura v2 con profiles de
 Compose y no se levantan por defecto: `legacy` (`db-postgis`,
 `analytics-backend`, `web-presentation`) y `ops` (`n8n-bridge`). Nombrar un
 servicio lo levanta junto con sus dependencias, por ejemplo
-`docker compose up --build web-presentation` para el dashboard Streamlit de
-Hito 1 en `http://localhost:8501`. Ese dashboard todavía no consume el
-backend (SAPI-61), y sin datos locales en `data/` su modo Prototipo no puede
-puntuar; para una corrida sin datos locales, usar la Opción B con
-`SAPI_REPRODUCIBILITY_MODE=1`. `db-postgis` también publica el puerto 5432: para usar la
-base legacy y la v2 a la vez, cambiar `SAPI_DB_PORT`.
+`docker compose --profile legacy up --build web-presentation` para el
+dashboard Streamlit de Hito 1. Ese servicio no es la ruta v2: no recibe
+`SAPI_BACKEND_BASE_URL` y sigue dependiendo de `db-postgis`. `db-postgis`
+también publica el puerto 5432: para usar la base legacy y la v2 a la vez,
+cambiar `SAPI_DB_PORT`. `web-v2` publica `127.0.0.1:8501`; no levantarlo
+junto con `web-presentation`.
 
 ### Opción B — Entorno local
 

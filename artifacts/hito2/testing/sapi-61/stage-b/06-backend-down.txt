@@ -1,0 +1,14 @@
+Modo de datos
+
+Prototipo (datos reales)
+
+Demo (escenario sembrado)
+
+Actualizar ranking
+
+keyboard_double_arrow_right
+S.A.P.I. — PROTOTIPO EXPLORATORIO
+
+No se pudo obtener el ranking del backend: No se pudo conectar con el backend de ranking. Verifica que el servicio esté en ejecución.
+
+La vista consume únicamente GET /api/v1/ranking del backend Spring Boot (SAPI_BACKEND_BASE_URL). No se ejecuta inferencia local ni se muestran datos cacheados como actuales.

@@ -1,0 +1,25 @@
+sha: 6f62c1ab169a8995d917e72c66317d7d53c5c4ab
+branch: feat/SAPI-61-streamlit-backend-rest
+utc: 2026-10-10T19:13:14Z
+host: cursor
+python: Python 3.12.3
+pytest: pytest 9.1.1
+label: STREAMLIT_INTEGRATION (AppTest de app/app.py contra el stub HTTP y contra un puerto cerrado)
+command: python -m pytest tests/test_sapi61_http_stub.py -k apptest tests/test_app_integration.py -p no:cacheprovider --no-cov -v
+
+tests/test_sapi61_http_stub.py::test_apptest_prototype_default_renders_ranking_from_backend PASSED [  6%]
+tests/test_sapi61_http_stub.py::test_apptest_v0_payload_never_invents_freshness_station_or_meteo PASSED [ 13%]
+tests/test_sapi61_http_stub.py::test_apptest_extended_payload_renders_freshness_and_traceability PASSED [ 20%]
+tests/test_sapi61_http_stub.py::test_apptest_selecting_a_cell_updates_the_detail_panel PASSED [ 26%]
+tests/test_sapi61_http_stub.py::test_apptest_map_mode_toggle_does_not_refetch_or_break PASSED [ 33%]
+tests/test_sapi61_http_stub.py::test_apptest_backend_down_shows_controlled_message PASSED [ 40%]
+tests/test_sapi61_http_stub.py::test_apptest_backend_http_error_shows_controlled_message[503] PASSED [ 46%]
+tests/test_sapi61_http_stub.py::test_apptest_backend_http_error_shows_controlled_message[504] PASSED [ 53%]
+tests/test_sapi61_http_stub.py::test_apptest_invalid_ranking_fails_closed_in_the_ui PASSED [ 60%]
+tests/test_sapi61_http_stub.py::test_apptest_legacy_mode_only_appears_behind_the_flag PASSED [ 66%]
+tests/test_app_integration.py::test_main_runs_without_exceptions PASSED  [ 73%]
+tests/test_app_integration.py::test_prototype_mode_is_the_default_and_runs_without_exceptions PASSED [ 80%]
+tests/test_app_integration.py::test_priority_zones_and_trend_sections_are_present PASSED [ 86%]
+tests/test_app_integration.py::test_default_demo_day_has_two_priority_alerts PASSED [ 93%]
+tests/test_app_integration.py::test_selecting_a_priority_alert_updates_the_selected_cell PASSED [100%]
+====================== 15 passed, 15 deselected in 8.08s =======================

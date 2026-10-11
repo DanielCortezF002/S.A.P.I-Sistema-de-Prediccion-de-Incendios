@@ -1,0 +1,18 @@
+sha: 6f62c1ab169a8995d917e72c66317d7d53c5c4ab
+branch: feat/SAPI-61-streamlit-backend-rest
+utc: 2026-10-10T19:13:14Z
+host: cursor
+python: Python 3.12.3
+pytest: pytest 9.1.1
+label: REGRESION COMPLETA (pytest.ini: --cov=app --cov=src --cov-fail-under=80)
+command: python -m pytest -q -p no:cacheprovider --junitxml=pytest_full.xml
+
+app/app.py                                                    193     13    93%   94, 114-115, 281-283, 305-306, 374, 401-402, 413-416
+app/components/ranking_backend_view.py                        228      8    96%   107-109, 122, 439-440, 633-634
+app/utils/backend_client.py                                   296      3    99%   247, 357, 458
+app/utils/reference_topography.py                              49      3    94%   43, 49-50
+src/config.py                                                  54      0   100%
+TOTAL                                                       11851   1766    85%
+Required test coverage of 80% reached. Total coverage: 85.10%
+1895 passed, 137 skipped, 6256 warnings in 227.30s (0:03:47)
+FULL_EXIT=0

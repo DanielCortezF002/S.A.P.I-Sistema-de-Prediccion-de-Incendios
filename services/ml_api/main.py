@@ -62,8 +62,7 @@ MESSAGES = {
         "como fecha-hora ISO 8601 con zona horaria."
     ),
     "prototype_unavailable": (
-        "No se puede puntuar con los insumos disponibles para el forecast_time "
-        "solicitado."
+        "No se puede puntuar con los insumos disponibles para el forecast_time " "solicitado."
     ),
     "data_unavailable": "Insumo de datos no disponible o ilegible.",
     "internal_error": "Error interno al generar el ranking.",
@@ -102,6 +101,24 @@ class RankingResult(BaseModel):
     scientific_model_validation: Literal[False]
     horizon_hours: Optional[Annotated[int, Field(ge=1)]] = None
     disclaimer: Optional[str] = None
+    # Metadata opcional de la evaluación (sapi-ranking-v0). Ausente en
+    # respuestas anteriores; si está, sale del GridScoreResult ya calculado.
+    # No incluye model_status, meteo_actual ni historical_count.
+    weather_timestamp: Optional[AwareDatetime] = None
+    age_hours: Optional[Annotated[float, Field(ge=0)]] = None
+    freshness: Optional[
+        Literal[
+            "DATOS RECIENTES",
+            "DATOS CON RETRASO",
+            "DATOS HISTÓRICOS / DESACTUALIZADOS",
+        ]
+    ] = None
+    station_id: Optional[Annotated[str, Field(min_length=1)]] = None
+    station_name: Optional[Annotated[str, Field(min_length=1)]] = None
+    firms_origin: Optional[Literal["baseline", "current", "reproducibility"]] = None
+    firms_coverage_end: Optional[Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]] = None
+    firms_lag_days: Optional[Annotated[int, Field(ge=0)]] = None
+    firms_status: Optional[Literal["FIRMS AL DÍA", "FIRMS DESACTUALIZADO"]] = None
     cells: Annotated[list[CellRanking], Field(min_length=50, max_length=50)]
 
 
@@ -128,9 +145,7 @@ app = FastAPI(
 
 
 def _error(status_code: int, error_type: str) -> JSONResponse:
-    body = ErrorBody(
-        status="error", error_type=error_type, message=MESSAGES[error_type]
-    )
+    body = ErrorBody(status="error", error_type=error_type, message=MESSAGES[error_type])
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
 
@@ -164,15 +179,38 @@ def health():
 
 
 def _ranking(result, disclaimer: str) -> RankingResult:
+    # age_hours y freshness ya vienen de la evaluación (captured_at −
+    # weather_timestamp). Este servicio no los recalcula.
+    def aware(value):
+        ts = pd.Timestamp(value)
+        if ts.tzinfo is None:
+            raise ValueError("timestamp sin zona horaria")
+        return ts.to_pydatetime()
+
+    coverage = result.firms_coverage_end
+    coverage_text = coverage.isoformat() if hasattr(coverage, "isoformat") else None
+    if not isinstance(coverage_text, str) or len(coverage_text) < 10:
+        raise ValueError("firms_coverage_end no es una fecha")
+    coverage_text = coverage_text[:10]
+
     return RankingResult(
         schema_version=SCHEMA_VERSION,
         model_version=result.model_version,
-        forecast_time=pd.Timestamp(result.forecast_time).to_pydatetime(),
+        forecast_time=aware(result.forecast_time),
         inputs_fingerprint=result.inputs_fingerprint,
         score_semantics="relative_rank",
         scientific_model_validation=False,
         horizon_hours=result.horizon_hours,
         disclaimer=disclaimer,
+        weather_timestamp=aware(result.weather_timestamp),
+        age_hours=float(result.age_hours),
+        freshness=result.freshness,
+        station_id=result.station_id,
+        station_name=result.station_name,
+        firms_origin=result.firms_origin,
+        firms_coverage_end=coverage_text,
+        firms_lag_days=int(result.firms_lag_days),
+        firms_status=result.firms_status,
         cells=[
             CellRanking(
                 cell_id=c.cell_id,

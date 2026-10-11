@@ -104,6 +104,12 @@ V2_LINT_PATHS = (
     "tests/test_w0_host_checks_evidence.py",
     "scripts/compose_v2_preflight.py",
     "tests/test_compose_v2.py",
+    "app/utils/backend_client.py",
+    "app/utils/reference_topography.py",
+    "app/components/ranking_backend_view.py",
+    "tests/test_backend_client.py",
+    "tests/test_ranking_backend_view.py",
+    "tests/test_sapi61_http_stub.py",
 )
 LEGACY_LINT_SCOPE = ("src", "app", "tests")
 FLAKE8_ARGS = ("--max-line-length=100", "--extend-ignore=E203,W503")
@@ -114,9 +120,7 @@ HOST_CHECKS_SCRIPT = "scripts/w0_host_checks.ps1"
 # recomendado por la Revisión 3 (H14); si Daniel elige otro, se cambia aquí
 # antes de mergear PR-W0. Un tag nunca se mueve: un fix crea rcN+1.
 TAG_PREFIX = "hito2-sprint2"
-ALLOWED_TAGS = tuple(f"{TAG_PREFIX}-rc{n}" for n in range(1, 6)) + (
-    f"{TAG_PREFIX}-final",
-)
+ALLOWED_TAGS = tuple(f"{TAG_PREFIX}-rc{n}" for n in range(1, 6)) + (f"{TAG_PREFIX}-final",)
 
 # Herencia de gate: un commit que solo toca estas rutas conserva el resultado
 # del SHA validado (commits de evidencia; docs después de CODE FREEZE).
@@ -150,9 +154,7 @@ def utc_now() -> str:
 
 
 def git(*args: str, cwd: Path = REPO_ROOT) -> str:
-    result = subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=True
-    )
+    result = subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=True)
     return result.stdout.strip()
 
 
@@ -350,9 +352,7 @@ def job_docker(run: JobRun, out_dir: Path) -> str:
         return NOT_VERIFIABLE
     checks_dir = out_dir / run.name
     checks = ",".join(JOBS[run.name]["checks"])
-    code = run.run(
-        [*shell, HOST_CHECKS_SCRIPT, "-Check", checks, "-OutDir", str(checks_dir)]
-    )
+    code = run.run([*shell, HOST_CHECKS_SCRIPT, "-Check", checks, "-OutDir", str(checks_dir)])
     summary = checks_dir / "summary.json"
     if summary.exists():
         run.details = json.loads(summary.read_text("utf-8-sig"))
@@ -381,9 +381,7 @@ def environment(cwd: Path) -> dict:
         "platform": platform.platform(),
         "python": platform.python_version(),
         "java": tool_version(["java", "-version"]),
-        "docker": tool_version(
-            ["docker", "version", "--format", "{{.Server.Version}}"]
-        ),
+        "docker": tool_version(["docker", "version", "--format", "{{.Server.Version}}"]),
         "git_core_autocrlf": autocrlf,
         "github_actions": os.environ.get("GITHUB_ACTIONS") == "true",
         "runner_os": os.environ.get("RUNNER_OS", ""),
@@ -401,11 +399,7 @@ def branch_name(cwd: Path) -> str:
     branch = git("rev-parse", "--abbrev-ref", "HEAD", cwd=cwd)
     if branch != "HEAD":
         return branch
-    return (
-        os.environ.get("SAPI_GATE_BRANCH")
-        or os.environ.get("GITHUB_REF_NAME")
-        or "HEAD"
-    )
+    return os.environ.get("SAPI_GATE_BRANCH") or os.environ.get("GITHUB_REF_NAME") or "HEAD"
 
 
 def run_jobs(jobs: list[str], out_dir: Path, cwd: Path, allowed_tags) -> dict:
@@ -471,9 +465,7 @@ def exit_code(verdict: str) -> int:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--job", action="append", default=[], help="job o 'all'")
-    parser.add_argument(
-        "--out", type=Path, help="carpeta de evidencia (fuera del repo)"
-    )
+    parser.add_argument("--out", type=Path, help="carpeta de evidencia (fuera del repo)")
     parser.add_argument(
         "--fresh-clone",
         action="store_true",
@@ -502,9 +494,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.evidence_valid:
         docker_jobs = [job for job in ordered_jobs(args.job) if JOBS[job]["docker"]]
-        changed = git(
-            "diff", "--name-only", f"{args.evidence_valid}..HEAD"
-        ).splitlines()
+        changed = git("diff", "--name-only", f"{args.evidence_valid}..HEAD").splitlines()
         stale = {job: stale_evidence_paths(job, changed) for job in docker_jobs}
         for job, paths in stale.items():
             print(f"{job}: {'CADUCA' if paths else 'VIGENTE'} {', '.join(paths)}")

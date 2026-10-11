@@ -48,7 +48,7 @@ from app.components.ops_layout import (
     render_ops_header,
     render_variable_strip,
 )
-from app.components.prototype_view import render_prototype_dashboard
+from app.components.ranking_backend_view import render_ranking_backend_dashboard
 from app.components.risk_map import render_risk_map
 from app.components.risk_sparkline import render_risk_sparkline
 from app.state import (
@@ -67,7 +67,7 @@ from app.utils.demo_seed import get_all_demo_dates, get_demo_gdf
 from app.utils.grid import cell_step_meters
 from app.utils.map_renderer import render_folium_map
 from app.utils.metrics_loader import load_ml_metrics
-from src.config import SAPI_DATA_MODE
+from src.config import SAPI_DATA_MODE, legacy_ui_modes_enabled
 from src.query.prediction_query import PredictionQuery
 
 QUERY_ENGINE_VERSION = "exact-date-v1"
@@ -246,6 +246,9 @@ class SapiDashboard:
 
 _MODE_PROTOTIPO = "Prototipo (datos reales)"
 _MODE_DEMO = "Demo (escenario sembrado)"
+# Vista Hito 1 que puntúa en proceso (`prototype_view.py`, congelada). Solo
+# aparece con SAPI_UI_LEGACY_MODES=1 (decisión H7); nunca es el default.
+_MODE_PROTOTIPO_LEGACY = "Prototipo local (legacy Hito 1)"
 
 
 def _resolve_dashboard_mode() -> str:
@@ -253,18 +256,31 @@ def _resolve_dashboard_mode() -> str:
     mezclan en una sola vista (instrucción explícita de la iteración del
     prototipo, 2026-09-07). Preselección: PROTOTIPO si `SAPI_DATA_MODE` no
     pide demo explícitamente; el usuario puede cambiar a Demo en cualquier
-    momento sin reiniciar la app."""
+    momento sin reiniciar la app. Desde SAPI-61 el modo Prototipo consume el
+    backend REST; la vista local legacy queda detrás de un flag (H7)."""
     default_index = 1 if SAPI_DATA_MODE == "demo_seed" else 0
+    options = [_MODE_PROTOTIPO, _MODE_DEMO]
+    if legacy_ui_modes_enabled():
+        options.append(_MODE_PROTOTIPO_LEGACY)
     return st.sidebar.radio(
         "Modo de datos",
-        options=[_MODE_PROTOTIPO, _MODE_DEMO],
+        options=options,
         index=default_index,
         help=(
-            "Prototipo: pipeline temporal nuevo + Modelo D sobre datos reales. "
+            "Prototipo: ranking del Modelo D servido por el backend Spring Boot "
+            "(GET /api/v1/ranking) sobre datos reales. "
             "Demo: escenario sembrado en memoria, solo para presentación — "
             "nunca se combinan en la misma pantalla."
         ),
     )
+
+
+def _render_legacy_prototype_dashboard() -> None:
+    """Vista Hito 1 (scoring en proceso). Import perezoso: el flujo por
+    defecto nunca carga `src.inference` ni el stack del Modelo D."""
+    from app.components.prototype_view import render_prototype_dashboard
+
+    render_prototype_dashboard()
 
 
 def main() -> None:
@@ -283,7 +299,10 @@ def main() -> None:
 
     mode = _resolve_dashboard_mode()
     if mode == _MODE_PROTOTIPO:
-        render_prototype_dashboard()
+        render_ranking_backend_dashboard()
+        return
+    if mode == _MODE_PROTOTIPO_LEGACY:
+        _render_legacy_prototype_dashboard()
         return
 
     if not cache_is_warm():

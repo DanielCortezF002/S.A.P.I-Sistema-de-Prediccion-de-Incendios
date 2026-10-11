@@ -122,27 +122,19 @@ def _contract_drift(frozen: dict, generated: dict) -> list[str]:
             if method not in generated_ops:
                 drift.append(f"método ausente: {method.upper()} {path}")
                 continue
-            missing = set(operation["responses"]) - set(
-                generated_ops[method]["responses"]
-            )
+            missing = set(operation["responses"]) - set(generated_ops[method]["responses"])
             if missing:
-                drift.append(
-                    f"códigos ausentes en {method.upper()} {path}: {sorted(missing)}"
-                )
+                drift.append(f"códigos ausentes en {method.upper()} {path}: {sorted(missing)}")
     for frozen_name, generated_name in GENERATED_SCHEMA_NAMES.items():
         expected = _schema_shape(frozen["components"]["schemas"][frozen_name])
         actual = _schema_shape(generated["components"]["schemas"][generated_name])
         for key in ("properties", "required"):
             if expected[key] != actual[key]:
-                drift.append(
-                    f"{frozen_name}.{key}: YAML={expected[key]} FastAPI={actual[key]}"
-                )
+                drift.append(f"{frozen_name}.{key}: YAML={expected[key]} FastAPI={actual[key]}")
         for name, values in expected["allowed"].items():
             implemented = actual["allowed"].get(name)
             if implemented != values:
-                drift.append(
-                    f"{frozen_name}.{name} valores: YAML={values} FastAPI={implemented}"
-                )
+                drift.append(f"{frozen_name}.{name} valores: YAML={values} FastAPI={implemented}")
     return drift
 
 
@@ -182,9 +174,7 @@ def _example_error_types(node) -> set[str]:
 # --- Validez de los documentos ------------------------------------------------
 
 
-@pytest.mark.parametrize(
-    "path", [ML_SPEC_PATH, BACKEND_SPEC_PATH], ids=lambda p: p.name
-)
+@pytest.mark.parametrize("path", [ML_SPEC_PATH, BACKEND_SPEC_PATH], ids=lambda p: p.name)
 def test_contracts_are_valid_openapi_303(path):
     """SAPI-56.CA1, SAPI-56.CA5: cada contrato es OpenAPI 3.0.3 válido."""
     spec = _load(path)
@@ -194,9 +184,7 @@ def test_contracts_are_valid_openapi_303(path):
 
 def test_backend_cross_file_refs_resolve(ml_spec, backend_spec):
     """SAPI-56.CA2: el backend reutiliza los schemas del servicio ML."""
-    refs = re.findall(
-        r"'?\./ml-service\.v0\.yaml#/([^'\s]+)", BACKEND_SPEC_PATH.read_text()
-    )
+    refs = re.findall(r"'?\./ml-service\.v0\.yaml#/([^'\s]+)", BACKEND_SPEC_PATH.read_text())
     assert refs, "backend.v0.yaml debería referenciar ml-service.v0.yaml"
     for ref in refs:
         target = ml_spec
@@ -246,15 +234,44 @@ def test_no_contract_property_is_named_as_a_probability(ml_spec, backend_spec):
     assert not [n for n in names if "probab" in n.lower()]
 
 
+def test_optional_metadata_is_additive_and_excludes_undeclared_fields(ml_spec):
+    """SAPI-61: nueve campos opcionales; schema_version y required no cambian."""
+    schema = ml_spec["components"]["schemas"]["RankingResult"]
+    nine = {
+        "weather_timestamp",
+        "age_hours",
+        "freshness",
+        "station_id",
+        "station_name",
+        "firms_origin",
+        "firms_coverage_end",
+        "firms_lag_days",
+        "firms_status",
+    }
+    assert nine <= set(schema["properties"])
+    assert nine.isdisjoint(schema["required"])
+    assert set(schema["required"]) == {
+        "schema_version",
+        "model_version",
+        "forecast_time",
+        "inputs_fingerprint",
+        "score_semantics",
+        "scientific_model_validation",
+        "cells",
+    }
+    assert schema["properties"]["schema_version"]["enum"] == ["sapi-ranking-v0"]
+    forbidden = {"model_status", "meteo_actual", "historical_count"}
+    assert forbidden.isdisjoint(schema["properties"])
+    cell_props = set(ml_spec["components"]["schemas"]["CellRanking"]["properties"])
+    assert "historical_count" not in cell_props
+
+
 def test_ranking_semantics_are_pinned_in_the_contract(ml_spec):
     """RN-01: el contrato fija score relativo y ausencia de validación científica."""
     props = ml_spec["components"]["schemas"]["RankingResult"]["properties"]
     assert props["score_semantics"]["enum"] == ["relative_rank"]
     assert props["scientific_model_validation"]["enum"] == [False]
-    assert (
-        ml_spec["components"]["schemas"]["PredictRequest"]["additionalProperties"]
-        is False
-    )
+    assert ml_spec["components"]["schemas"]["PredictRequest"]["additionalProperties"] is False
 
 
 def test_example_error_types_are_documented(ml_spec, backend_spec):
@@ -277,12 +294,8 @@ def test_fastapi_spec_matches_frozen_contract(ml_spec):
 def test_drift_detector_catches_a_removed_required_field(ml_spec):
     """Control negativo: quitar un campo requerido se reporta como deriva."""
     generated = copy.deepcopy(ml_api.app.openapi())
-    generated["components"]["schemas"]["RankingResult"]["required"].remove(
-        "inputs_fingerprint"
-    )
-    assert any(
-        "RankingResult.required" in d for d in _contract_drift(ml_spec, generated)
-    )
+    generated["components"]["schemas"]["RankingResult"]["required"].remove("inputs_fingerprint")
+    assert any("RankingResult.required" in d for d in _contract_drift(ml_spec, generated))
 
 
 def test_real_model_response_validates_against_contract(ml_spec, reproducible):
@@ -297,9 +310,7 @@ def test_real_model_response_validates_against_contract(ml_spec, reproducible):
     [({"features": [1, 2, 3]}, 422), ({"forecast_time": "2026-09-02T00:00:00Z"}, 503)],
     ids=["campo-no-admitido", "forecast-futuro"],
 )
-def test_real_error_responses_validate_against_contract(
-    ml_spec, reproducible, body, status
-):
+def test_real_error_responses_validate_against_contract(ml_spec, reproducible, body, status):
     """SAPI-56.CA3, RN-05, RN-08: los errores reales cumplen el schema Error."""
     response = client.post("/predict", json=body)
     assert response.status_code == status
