@@ -1,0 +1,389 @@
+{
+  "tool": "scripts/compose_v2_preflight.py",
+  "verdict": "PASS",
+  "head_at_compose_run": "8cf48a219d3ebfdb9392e8d63673bb1b27686343",
+  "utc": "2026-10-11T03:29:13Z",
+  "docker_server": "29.1.3",
+  "docker_compose": "2.40.3",
+  "note": "La revisión de paquete de Compose que contiene el nombre de la cuenta local fue omitida. El proyecto Compose de la corrida fue sapi60-preflight, con --keep, sobre un clon limpio.",
+  "checks": [
+    {
+      "id": "checkout.clean",
+      "ca": "CA6",
+      "status": "PASS",
+      "expected": {
+        "cambios_sin_commit": 0,
+        "ignorados_aparte_de_.env": [],
+        "override": []
+      },
+      "observed": {
+        "cambios_sin_commit": 0,
+        "ignorados_aparte_de_.env": [],
+        "override_local": []
+      }
+    },
+    {
+      "id": "compose.config.default_services",
+      "ca": "CA1",
+      "status": "PASS",
+      "expected": [
+        "backend",
+        "db-v2",
+        "ml-api"
+      ],
+      "observed": [
+        "backend",
+        "db-v2",
+        "ml-api"
+      ]
+    },
+    {
+      "id": "compose.build",
+      "ca": "CA6",
+      "status": "PASS",
+      "expected": "exit 0",
+      "observed": "exit 0"
+    },
+    {
+      "id": "compose.up",
+      "ca": "CA1, CA2",
+      "status": "PASS",
+      "expected": "exit 0 (todos los servicios healthy)",
+      "observed": "exit 0"
+    },
+    {
+      "id": "compose.ps.db-v2.healthy",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "observed": {
+        "state": "running",
+        "health": "healthy"
+      }
+    },
+    {
+      "id": "compose.ps.db-v2.port",
+      "ca": "CA1",
+      "status": "PASS",
+      "expected": "127.0.0.1:5432 -> 5432",
+      "observed": "127.0.0.1:5432 -> 5432"
+    },
+    {
+      "id": "compose.ps.ml-api.healthy",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "observed": {
+        "state": "running",
+        "health": "healthy"
+      }
+    },
+    {
+      "id": "compose.ps.ml-api.port",
+      "ca": "CA1",
+      "status": "PASS",
+      "expected": "127.0.0.1:8000 -> 8000",
+      "observed": "127.0.0.1:8000 -> 8000"
+    },
+    {
+      "id": "compose.ps.backend.healthy",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "observed": {
+        "state": "running",
+        "health": "healthy"
+      }
+    },
+    {
+      "id": "compose.ps.backend.port",
+      "ca": "CA1",
+      "status": "PASS",
+      "expected": "127.0.0.1:8080 -> 8080",
+      "observed": "127.0.0.1:8080 -> 8080"
+    },
+    {
+      "id": "health.backend",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      }
+    },
+    {
+      "id": "health.ml",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "status": "ok",
+        "model_version": "no vacío"
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "ok",
+          "model_version": "prototype_model_d_v1"
+        }
+      }
+    },
+    {
+      "id": "health.db",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": "exit 0, accepting connections",
+      "observed": "exit 0: 127.0.0.1:5432 - accepting connections"
+    },
+    {
+      "id": "flyway.migrations",
+      "ca": "CA6 (Flyway del backend, ADR-008)",
+      "status": "PASS",
+      "expected": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ],
+      "observed": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ]
+    },
+    {
+      "id": "db.celdas_geom",
+      "ca": "SAPI-59.CA2 (V003)",
+      "status": "PASS",
+      "expected": "50|true|4326|4326",
+      "observed": "50|true|4326|4326"
+    },
+    {
+      "id": "ranking.backend",
+      "ca": "CA1 (Spring Boot -> FastAPI)",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "cells": 50,
+        "ranks": "1..50",
+        "score_semantics": "relative_rank",
+        "scientific_model_validation": false
+      },
+      "observed": {
+        "status_code": 200,
+        "x_request_id": "sapi60-preflight-1",
+        "cells": 50,
+        "ranks": true,
+        "score_semantics": "relative_rank",
+        "scientific_model_validation": false,
+        "forecast_time": "2026-09-01T00:00:00Z",
+        "model_version": "prototype_model_d_v1",
+        "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+        "body_sha256": "98ec24bc5cdd46edfe1e238d2077c397dec22a3f2a7bae7fc07ed0d8ea220774",
+        "seconds": 2.47
+      }
+    },
+    {
+      "id": "ranking.passthrough",
+      "ca": "SAPI-57 (identidad estable; age_hours puede diferir)",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "identidad_estable": true
+      },
+      "observed": {
+        "status_code": 200,
+        "identidad_estable": true,
+        "body_sha256_backend": "98ec24bc5cdd46edfe1e238d2077c397dec22a3f2a7bae7fc07ed0d8ea220774",
+        "body_sha256_ml": "cb51312d2e35efde3e82c4ae611f2ba47ed7c75a174e32f7057936da4dec8d41",
+        "seconds": 1.68
+      }
+    },
+    {
+      "id": "ranking.reproducible_fixture",
+      "ca": "ADR-009 (celdas y cabecera estable; metadata dinámica aparte)",
+      "status": "PASS",
+      "expected": {
+        "delta": [],
+        "metadata_opcional": "presente y tipada"
+      },
+      "observed": {
+        "delta": [],
+        "metadata": true,
+        "body_sha256": "98ec24bc5cdd46edfe1e238d2077c397dec22a3f2a7bae7fc07ed0d8ea220774"
+      }
+    },
+    {
+      "id": "persistence.write_through",
+      "ca": "SAPI-59 en Compose (Spring Boot -> PostGIS)",
+      "status": "PASS",
+      "expected": {
+        "ejecucion": "existe",
+        "predicciones": "50",
+        "orden": "igual a la respuesta",
+        "ejecuciones_antes_despues": [
+          "0",
+          "1"
+        ],
+        "predicciones_antes_despues": [
+          "0",
+          "50"
+        ]
+      },
+      "observed": {
+        "ejecucion_id": "1",
+        "predicciones_de_la_ejecucion": "50",
+        "orden_igual_a_la_respuesta": true,
+        "ejecuciones_antes_despues": [
+          "0",
+          "1"
+        ],
+        "predicciones_antes_despues": [
+          "0",
+          "50"
+        ]
+      }
+    },
+    {
+      "id": "persistence.idempotent_replay",
+      "ca": "SAPI-59.CA4 (no duplica; age_hours puede diferir)",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "misma_identidad": true,
+        "conteos": "sin cambio"
+      },
+      "observed": {
+        "status_code": 200,
+        "misma_identidad": true,
+        "ejecuciones_antes_despues": [
+          "1",
+          "1"
+        ],
+        "predicciones_antes_despues": [
+          "50",
+          "50"
+        ]
+      }
+    },
+    {
+      "id": "sapi59.latest_ranking_psql",
+      "ca": "SAPI-59 evidencia (psql)",
+      "status": "PASS",
+      "expected": "50 filas de la última ejecución, rank 1..50, mismo orden que la respuesta",
+      "observed": {
+        "filas": 50,
+        "problemas": []
+      }
+    },
+    {
+      "id": "backend.logs",
+      "ca": "CA6 (Flyway) + SAPI-57.CA5",
+      "status": "PASS",
+      "expected": "Flyway aplicó 3 migraciones; ml_predict outcome=ok ml_http_status=200",
+      "observed": {
+        "flyway_3_migrations": true,
+        "ml_predict_events": 2
+      }
+    },
+    {
+      "id": "ca4.up_again",
+      "ca": "CA1, CA2",
+      "status": "PASS",
+      "expected": "exit 0 (todos los servicios healthy)",
+      "observed": "exit 0"
+    },
+    {
+      "id": "ca4.flyway_unchanged",
+      "ca": "CA6 (Flyway del backend, ADR-008)",
+      "status": "PASS",
+      "expected": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ],
+      "observed": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ]
+    },
+    {
+      "id": "ca4.data_survives_down_up",
+      "ca": "CA4",
+      "status": "PASS",
+      "expected": {
+        "ejecuciones": "1",
+        "predicciones": "50",
+        "flyway": "sin cambios"
+      },
+      "observed": {
+        "down_exit": 0,
+        "ejecuciones": "1",
+        "predicciones": "50",
+        "flyway": [
+          "001:true",
+          "002:true",
+          "003:true"
+        ]
+      }
+    },
+    {
+      "id": "ca4.health.backend",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      }
+    },
+    {
+      "id": "ca4.health.ml",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": {
+        "status_code": 200,
+        "status": "ok",
+        "model_version": "no vacío"
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "ok",
+          "model_version": "prototype_model_d_v1"
+        }
+      }
+    },
+    {
+      "id": "ca4.health.db",
+      "ca": "CA2",
+      "status": "PASS",
+      "expected": "exit 0, accepting connections",
+      "observed": "exit 0: 127.0.0.1:5432 - accepting connections"
+    }
+  ]
+}

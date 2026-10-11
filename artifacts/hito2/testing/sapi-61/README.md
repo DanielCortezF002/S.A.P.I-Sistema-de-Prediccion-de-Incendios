@@ -111,7 +111,7 @@ python -B scripts/freeze_check.py        # F1–F9
 SAPI_BACKEND_BASE_URL=http://localhost:8080 streamlit run app/app.py   # con Spring Boot levantado
 ```
 
-La HU sigue abierta: faltan la Etapa B (contrato aditivo, Compose, backend
-real), la revisión independiente (Codex), el merge y Jira (no integrado en
-este entorno: JIRA_NOT_AVAILABLE). El score es un ranking relativo entre las
-50 celdas, no una probabilidad calibrada.
+La Etapa B está en `stage-b/` (metadata opcional, Compose real y navegador).
+La HU sigue abierta: falta la revisión independiente de ese delta, el merge
+y Jira (no integrado en este entorno: JIRA_NOT_AVAILABLE). El score es un
+ranking relativo entre las 50 celdas, no una probabilidad calibrada.
