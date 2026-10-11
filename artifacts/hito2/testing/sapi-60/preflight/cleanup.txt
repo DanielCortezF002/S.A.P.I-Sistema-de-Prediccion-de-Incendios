@@ -1,0 +1,18 @@
+$ docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight down -v --remove-orphans
+(exit 0)
+ Container sapi60-preflight-backend-1 Stopping 
+ Container sapi60-preflight-backend-1 Stopped 
+ Container sapi60-preflight-backend-1 Removing 
+ Container sapi60-preflight-backend-1 Removed 
+ Container sapi60-preflight-db-v2-1 Stopping 
+ Container sapi60-preflight-ml-api-1 Stopping 
+ Container sapi60-preflight-db-v2-1 Stopped 
+ Container sapi60-preflight-db-v2-1 Removing 
+ Container sapi60-preflight-db-v2-1 Removed 
+ Container sapi60-preflight-ml-api-1 Stopped 
+ Container sapi60-preflight-ml-api-1 Removing 
+ Container sapi60-preflight-ml-api-1 Removed 
+ Volume sapi60-preflight_sapi_v2_pgdata Removing 
+ Network sapi60-preflight_sapi-v2-net Removing 
+ Network sapi60-preflight_sapi-v2-net Removed 
+ Volume sapi60-preflight_sapi_v2_pgdata Removed 

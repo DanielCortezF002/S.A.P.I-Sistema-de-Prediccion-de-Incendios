@@ -163,18 +163,51 @@ con SAPI-59 (PR-3).
 | SAPI-59.CA4 | Script de inserción idempotente (no duplica si se corre dos veces) | RN-07 | IT de repetición y de carrera | PR-3 |
 | SAPI-59.CA5 | Test de persistencia PASS | — | ITs | PR-3 |
 
+**Nota de coherencia (CA4, registrada en SAPI-60):** el texto de Jira dice
+"script de inserción idempotente". La intención del criterio es que una misma
+ejecución no se duplique al persistirse otra vez. Esa propiedad se implementa
+y se prueba en el servicio de persistencia JDBC transaccional de Spring Boot,
+no en un script aparte. La clave natural es
+`(forecast_time, model_version, inputs_fingerprint)`, y la cubren
+`RankingPersistenceServiceTests` y `RankingPersistenceIT`. El texto de Jira no
+se modifica.
+
+**Evidencia complementaria (obtenida en SAPI-60, no reabre SAPI-59):**
+`db/queries/latest_ranking.sql` se ejecutó con psql dentro del contenedor
+`db-v2` del Compose, sobre una ejecución que persistió el backend. Devuelve 50
+filas en orden de rank, con el mismo orden de celdas que la respuesta de
+`GET /api/v1/ranking`. Además, repetir el ranking no duplica filas. Ver
+`artifacts/hito2/testing/sapi-60/` (`latest_ranking_psql.txt` y
+`preflight.json`).
+
 ### SAPI-60 — S2-07 Entorno reproducible con Docker Compose (Por hacer)
 
 > **Como** desarrollador, **quiero** un Docker Compose que levante toda la arquitectura S.A.P.I. v2 con un solo comando, **para** garantizar reproducibilidad y facilitar la demo.
 
-| ID | Criterio (Jira, literal) | RN | Verificación planificada | Evidencia planificada |
-|---|---|---|---|---|
-| SAPI-60.CA1 | `docker-compose up` levanta: Spring Boot (8080), FastAPI (8000), PostgreSQL/PostGIS (5432) | — | `docker compose up -d --wait` + preflight | `artifacts/hito2/…/preflight_*.json` |
-| SAPI-60.CA2 | Health checks configurados en todos los servicios | — | `docker compose ps` (healthy) | preflight |
-| SAPI-60.CA3 | Variables de entorno en .env.example, sin secretos hardcodeados | — | Revisión + `test_docker_build_hygiene` | PR-4 |
-| SAPI-60.CA4 | Volumen persistente para PostgreSQL | — | down/up conserva los datos | preflight |
-| SAPI-60.CA5 | README con instrucciones de ejecución actualizadas | — | Lectura | README (PR-4) |
-| SAPI-60.CA6 | Funciona en entorno limpio (sin dependencias locales instaladas) | — | Clon limpio verificado por un no autor (Codex) y en Windows | preflight Linux + Windows |
+| ID | Criterio (Jira, literal) | RN | Verificación | Evidencia | Estado |
+|---|---|---|---|---|---|
+| SAPI-60.CA1 | `docker-compose up` levanta: Spring Boot (8080), FastAPI (8000), PostgreSQL/PostGIS (5432) | — | `tests/test_compose_v2.py` (ruta por defecto = `db-v2`, `ml-api`, `backend`; puertos en `127.0.0.1`). `scripts/compose_v2_preflight.py`: `config --services`, `up -d --wait`, `ps` con los puertos publicados, y `GET /api/v1/ranking` = 200 con 50 celdas y los mismos bytes que `POST /predict` | `artifacts/hito2/testing/sapi-60/` | CUMPLIDO en PR-4, verificado en el sandbox con una imagen ML sustituta (ver nota); falta la confirmación en el host |
+| SAPI-60.CA2 | Health checks configurados en todos los servicios | — | `pg_isready` por TCP, `GET /health` del ML y `curl -f /health` del backend; el preflight exige `healthy` en `ps` y 200 en cada `/health` | idem | CUMPLIDO en PR-4 (sandbox, ver nota) |
+| SAPI-60.CA3 | Variables de entorno en .env.example, sin secretos hardcodeados | — | `tests/test_compose_v2.py`: `SAPI_DB_PASSWORD` sin valor por defecto (`:?`), cada variable de los servicios v2 definida en `.env.example`, `.env` ignorado por git; `test_docker_build_hygiene` | PR-4 | CUMPLIDO en PR-4 para la ruta v2. Los bloques legacy (profile `legacy`) conservan sin cambios su default histórico `POSTGRES_PASSWORD:-sapi_secret` (H4) |
+| SAPI-60.CA4 | Volumen persistente para PostgreSQL | — | Volumen `sapi_v2_pgdata`; el preflight hace `down` sin `-v` y `up`, y las ejecuciones persistidas y el historial de Flyway se conservan | `preflight.json` | CUMPLIDO en PR-4 (sandbox, ver nota) |
+| SAPI-60.CA5 | README con instrucciones de ejecución actualizadas | — | README, Opción A: requisitos, `.env`, comando, URLs, health, ranking, psql, `down` y reset (solo v2 o total) | README (PR-4) | CUMPLIDO en PR-4 |
+| SAPI-60.CA6 | Funciona en entorno limpio (sin dependencias locales instaladas) | — | Clon limpio + `cp .env.example .env` + build + preflight. El plan pide además un no autor (Codex) y Windows | preflight Linux (sandbox) + host | PARCIAL: el sandbox lo verifica desde un clon limpio, pero no puede construir `Dockerfile.ml-api` (ver nota). Pendiente: el build completo y el preflight en el host |
+
+**Nota de verificación (sandbox, PR-4):**
+- **Imagen ML sustituta.** La política de red del entorno cloud bloquea los
+  mirrors de Debian, así que no se puede construir `Dockerfile.ml-api` (su
+  `apt-get` de GDAL falla). Con autorización de Daniel, la validación en
+  ejecución usa una imagen ML sustituta, que no se versiona: el mismo código,
+  el mismo Modelo D, el mismo snapshot y los mismos requirements como wheels,
+  más `libexpat` copiada de la imagen PostGIS.
+- **Imagen del backend.** Sale del `services/backend/Dockerfile` versionado. Su
+  etapa de build usó una imagen Maven local con la CA del proxy de egress y un
+  mirror de Maven Central; la etapa final es `eclipse-temurin:21-jre` sin
+  cambios.
+- **Por qué la sustituta no afecta el resultado.** El ranking del Compose
+  coincide byte a byte con el fixture reproducible de SAPI-57.
+- **Pendiente en el host.** El build de `Dockerfile.ml-api` y el preflight en
+  un equipo con acceso normal a internet, para cerrar CA6.
 
 ### SAPI-61 — S2-08 Adaptar Streamlit para consumir el backend REST (Por hacer)
 

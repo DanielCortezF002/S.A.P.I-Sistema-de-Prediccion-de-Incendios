@@ -1,0 +1,26 @@
+$ docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight up -d --wait --wait-timeout 600
+(exit 0)
+ Network sapi60-preflight_sapi-v2-net Creating 
+ Network sapi60-preflight_sapi-v2-net Creating 
+ Network sapi60-preflight_sapi-v2-net Created 
+ Network sapi60-preflight_sapi-v2-net Created 
+ Container sapi60-preflight-db-v2-1 Creating 
+ Container sapi60-preflight-ml-api-1 Creating 
+ Container sapi60-preflight-db-v2-1 Created 
+ Container sapi60-preflight-ml-api-1 Created 
+ Container sapi60-preflight-backend-1 Creating 
+ Container sapi60-preflight-backend-1 Created 
+ Container sapi60-preflight-ml-api-1 Starting 
+ Container sapi60-preflight-db-v2-1 Starting 
+ Container sapi60-preflight-ml-api-1 Started 
+ Container sapi60-preflight-db-v2-1 Started 
+ Container sapi60-preflight-db-v2-1 Waiting 
+ Container sapi60-preflight-db-v2-1 Healthy 
+ Container sapi60-preflight-backend-1 Starting 
+ Container sapi60-preflight-backend-1 Started 
+ Container sapi60-preflight-backend-1 Waiting 
+ Container sapi60-preflight-db-v2-1 Waiting 
+ Container sapi60-preflight-ml-api-1 Waiting 
+ Container sapi60-preflight-ml-api-1 Healthy 
+ Container sapi60-preflight-db-v2-1 Healthy 
+ Container sapi60-preflight-backend-1 Healthy 
