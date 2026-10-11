@@ -1,5 +1,10 @@
 # Evidencia SAPI-60 — Entorno reproducible con Docker Compose (PR-4)
 
+> Actualización 2026-10-11: el build **oficial** (sin shim, sin `--skip-build`)
+> pasó 28/28 en un host Linux con mirrors Debian alcanzables. CA6 de esa
+> corrida es PASS. No es el Omen. Ver `official-dockerfiles/`. Lo de abajo es
+> el registro histórico del sandbox (CA6 parcial por el Dockerfile sustituto).
+
 | Campo | Valor |
 |---|---|
 | HU | SAPI-60 · S2-07 — Entorno reproducible con Docker Compose (Spring Boot + FastAPI + PostgreSQL) |
