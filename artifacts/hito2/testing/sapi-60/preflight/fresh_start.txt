@@ -1,0 +1,2 @@
+$ docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight down -v --remove-orphans
+(exit 0)

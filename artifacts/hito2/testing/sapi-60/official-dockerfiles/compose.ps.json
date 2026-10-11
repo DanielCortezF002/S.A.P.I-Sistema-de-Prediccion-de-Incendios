@@ -1,0 +1,41 @@
+{
+  "backend": {
+    "Image": "sapi60-preflight-backend",
+    "State": "running",
+    "Health": "healthy",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8080,
+        "PublishedPort": 8080,
+        "Protocol": "tcp"
+      }
+    ]
+  },
+  "db-v2": {
+    "Image": "postgis/postgis:15-3.4",
+    "State": "running",
+    "Health": "healthy",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 5432,
+        "PublishedPort": 5432,
+        "Protocol": "tcp"
+      }
+    ]
+  },
+  "ml-api": {
+    "Image": "sapi60-preflight-ml-api",
+    "State": "running",
+    "Health": "healthy",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8000,
+        "PublishedPort": 8000,
+        "Protocol": "tcp"
+      }
+    ]
+  }
+}

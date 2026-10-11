@@ -1,0 +1,28 @@
+[INFO] Running cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.338 s -- in cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+[INFO] Running cl.sapi.backend.ranking.RankingServiceTests
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.059 s -- in cl.sapi.backend.ranking.RankingServiceTests
+[INFO] Running cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.435 s -- in cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests
+[INFO] Running cl.sapi.backend.ranking.RankingResultValidatorTests
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.320 s -- in cl.sapi.backend.ranking.RankingResultValidatorTests
+[INFO] Running cl.sapi.backend.ranking.RankingMlUnavailableTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.653 s -- in cl.sapi.backend.ranking.RankingMlUnavailableTests
+[INFO] Running cl.sapi.backend.ranking.RankingRealMlServiceTests
+[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0.001 s -- in cl.sapi.backend.ranking.RankingRealMlServiceTests
+[INFO] Running cl.sapi.backend.ranking.ml.MlServiceClientTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.160 s -- in cl.sapi.backend.ranking.ml.MlServiceClientTests
+[INFO] Running cl.sapi.backend.ranking.ml.MlServicePropertiesTests
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.172 s -- in cl.sapi.backend.ranking.ml.MlServicePropertiesTests
+[INFO] Running cl.sapi.backend.HealthControllerTests
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.403 s -- in cl.sapi.backend.HealthControllerTests
+[INFO] Running cl.sapi.backend.BackendApplicationTests
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.268 s -- in cl.sapi.backend.BackendApplicationTests
+[INFO] Tests run: 127, Failures: 0, Errors: 0, Skipped: 4
+15:53:58.824 [main] INFO org.testcontainers.DockerClientFactory -- Testcontainers version: 2.0.5
+[INFO] Running cl.sapi.backend.ranking.persistence.RankingPersistenceIT
+15:54:03.924 [main] INFO tc.postgis/postgis:15-3.4 -- Container postgis/postgis:15-3.4 started in PT3.504670407S
+SAPI59_CA3_LATENCY_MS samples=[2,2,2,1,1,1,1,1,1,1] min=1 median=1 max=2 threshold=1000 result=PASS
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 8.927 s -- in cl.sapi.backend.ranking.persistence.RankingPersistenceIT
+[INFO] Tests run: 11, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS

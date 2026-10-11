@@ -1,0 +1,22 @@
+{
+  "schema": "sapi-w0-host-checks-v1",
+  "sha": "150837ed2b98b1bcd1e87492def1bc5c614337b4",
+  "started_utc": "2026-10-10T15:53:02Z",
+  "finished_utc": "2026-10-10T15:53:17Z",
+  "machine": "[host]",
+  "powershell": "7.4.6",
+  "checks": [
+    {
+      "check": "flyway-integration",
+      "kind": "W0.4 REAL FLYWAY INTEGRATION VALIDATION",
+      "status": "PASS",
+      "failures": []
+    }
+  ],
+  "overall": "PASS",
+  "harness_evidence": {
+    "status": "PASS",
+    "write_errors": [],
+    "outdir_cloud_synced": false
+  }
+}

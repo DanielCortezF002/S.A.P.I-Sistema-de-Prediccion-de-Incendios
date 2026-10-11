@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.36" tests="47" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="contractExampleIsValid" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.057"/>
+  <testcase name="errorTypeIsReadFromErrorBody" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="realMlResponseIsValid" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.004"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[1]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.006"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[2]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[3]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[4]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[5]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[6]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[7]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[8]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[9]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[10]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[11]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[12]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[13]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[14]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[15]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[16]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.004"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[17]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[18]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[19]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[20]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[21]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[22]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[23]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[24]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[25]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[26]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[27]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[28]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[29]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.005"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[30]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[31]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.003"/>
+  <testcase name="invalidBodiesAreRejected(String, byte[], String)[32]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.004"/>
+  <testcase name="additiveFieldsAndLargeHorizonAreAccepted" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.005"/>
+  <testcase name="forecastTimeRuleIsNoLooserThanTheContract" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.007"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[1]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.004"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[2]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[3]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[4]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.005"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[5]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[6]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.002"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[7]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[8]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[9]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+  <testcase name="malformedBodiesAreRejected(String, byte[])[10]" classname="cl.sapi.backend.ranking.RankingResultValidatorTests" time="0.001"/>
+</testsuite>

@@ -1,0 +1,88 @@
+# flyway-integration - W0.4 REAL FLYWAY INTEGRATION VALIDATION
+# sha=150837ed2b98b1bcd1e87492def1bc5c614337b4 utc=2026-10-10T15:53:02Z
+$ docker version --format {{.Server.Version}}
+29.8.2
+exit=0
+$ docker network create sapi-w0-net-da7bd9df
+4b90434e862bc7d79ab0a1caf269c767e8208897da95d80918443c4313f3b9ff
+exit=0
+$ docker run -d --name sapi-w0-pg-da7bd9df --network sapi-w0-net-da7bd9df --tmpfs /var/lib/postgresql/data -e POSTGRES_USER=sapiw0 -e POSTGRES_PASSWORD=*** -e POSTGRES_DB=sapiw0 postgis/postgis:15-3.4
+a1d425752c9a3d82944988505d70a9cdb81e85c2aa13cb8ad6dce8a9fa62cb71
+exit=0
+$ docker exec sapi-w0-pg-da7bd9df pg_isready -h 127.0.0.1 -U sapiw0 -d sapiw0
+127.0.0.1:5432 - no response
+exit=2
+$ docker exec sapi-w0-pg-da7bd9df pg_isready -h 127.0.0.1 -U sapiw0 -d sapiw0
+127.0.0.1:5432 - no response
+exit=2
+$ docker exec sapi-w0-pg-da7bd9df pg_isready -h 127.0.0.1 -U sapiw0 -d sapiw0
+127.0.0.1:5432 - accepting connections
+exit=0
+$ docker exec sapi-w0-pg-da7bd9df psql -X -q -v ON_ERROR_STOP=1 -At -U sapiw0 -d sapiw0 -h 127.0.0.1 -c SELECT 1
+1
+exit=0
+$ docker run --rm flyway/flyway:12.4.0 -locations=filesystem:/flyway/sql migrate
+Flyway OSS Edition 12.4.0 by Redgate
+
+See release notes here: https://help.red-gate.com/help/flyway-cli12/help_4.aspx?topic=release-notes-and-older-versions/release-notes-for-flyway-engine
+Database: jdbc:postgresql://sapi-w0-pg-da7bd9df:5432/sapiw0 (PostgreSQL 15.8)
+Schema history table "public"."flyway_schema_history" does not exist yet
+Successfully validated 3 migrations (execution time 00:00.026s)
+Creating Schema History table "public"."flyway_schema_history" ...
+Current version of schema "public": << Empty Schema >>
+Migrating schema "public" to version "001 - enable postgis"
+WARNING: DB: extension "postgis" already exists, skipping (SQL State: 42710 - Error Code: 0)
+Migrating schema "public" to version "002 - create sapi v2 schema"
+Migrating schema "public" to version "003 - seed celdas geom"
+Successfully applied 3 migrations to schema "public", now at version v003 (execution time 00:00.048s)
+exit=0
+$ docker run --rm flyway/flyway:12.4.0 -locations=filesystem:/flyway/sql validate
+Flyway OSS Edition 12.4.0 by Redgate
+
+See release notes here: https://help.red-gate.com/help/flyway-cli12/help_4.aspx?topic=release-notes-and-older-versions/release-notes-for-flyway-engine
+Database: jdbc:postgresql://sapi-w0-pg-da7bd9df:5432/sapiw0 (PostgreSQL 15.8)
+Successfully validated 3 migrations (execution time 00:00.052s)
+exit=0
+$ docker run --rm flyway/flyway:12.4.0 -locations=filesystem:/flyway/sql info
+Flyway OSS Edition 12.4.0 by Redgate
+
+See release notes here: https://help.red-gate.com/help/flyway-cli12/help_4.aspx?topic=release-notes-and-older-versions/release-notes-for-flyway-engine
+Database: jdbc:postgresql://sapi-w0-pg-da7bd9df:5432/sapiw0 (PostgreSQL 15.8)
+Schema version: 003
+
++-----------+---------+-----------------------+------+---------------------+---------+----------+
+| Category  | Version | Description           | Type | Installed On        | State   | Undoable |
++-----------+---------+-----------------------+------+---------------------+---------+----------+
+| Versioned | 001     | enable postgis        | SQL  | 2026-10-10 15:53:08 | Success | No       |
+| Versioned | 002     | create sapi v2 schema | SQL  | 2026-10-10 15:53:08 | Success | No       |
+| Versioned | 003     | seed celdas geom      | SQL  | 2026-10-10 15:53:08 | Success | No       |
++-----------+---------+-----------------------+------+---------------------+---------+----------+
+
+exit=0
+$ docker run --rm flyway/flyway:12.4.0 -locations=filesystem:/flyway/sql migrate
+Flyway OSS Edition 12.4.0 by Redgate
+
+See release notes here: https://help.red-gate.com/help/flyway-cli12/help_4.aspx?topic=release-notes-and-older-versions/release-notes-for-flyway-engine
+Database: jdbc:postgresql://sapi-w0-pg-da7bd9df:5432/sapiw0 (PostgreSQL 15.8)
+Successfully validated 3 migrations (execution time 00:00.048s)
+Current version of schema "public": 003
+Schema "public" is up to date. No migration necessary.
+exit=0
+$ docker exec sapi-w0-pg-da7bd9df psql -X -q -v ON_ERROR_STOP=1 -At -U sapiw0 -d sapiw0 -h 127.0.0.1 -c SELECT string_agg(version || ':' || success, ',' ORDER BY installed_rank) FROM flyway_schema_history WHERE version IS NOT NULL
+001:true,002:true,003:true
+exit=0
+$ docker exec sapi-w0-pg-da7bd9df psql -X -q -v ON_ERROR_STOP=1 -At -U sapiw0 -d sapiw0 -h 127.0.0.1 -c SELECT string_agg(tablename, ',' ORDER BY tablename) FROM pg_tables WHERE schemaname='public' AND tablename IN ('celdas_geom','ejecuciones','predicciones_celda')
+celdas_geom,ejecuciones,predicciones_celda
+exit=0
+$ docker exec sapi-w0-pg-da7bd9df psql -X -q -v ON_ERROR_STOP=1 -At -U sapiw0 -d sapiw0 -h 127.0.0.1 -c SELECT count(*) FROM celdas_geom
+50
+exit=0
+$ docker exec sapi-w0-pg-da7bd9df psql -X -q -v ON_ERROR_STOP=1 -At -U sapiw0 -d sapiw0 -h 127.0.0.1 -c SELECT count(*) FROM celdas_geom WHERE NOT ST_IsValid(geom) OR ST_SRID(geom) <> 4326
+0
+exit=0
+$ docker rm -f sapi-w0-pg-da7bd9df
+sapi-w0-pg-da7bd9df
+exit=0
+$ docker network rm sapi-w0-net-da7bd9df
+sapi-w0-net-da7bd9df
+exit=0

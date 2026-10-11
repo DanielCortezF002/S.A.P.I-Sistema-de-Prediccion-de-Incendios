@@ -1,0 +1,16 @@
+{
+  "check": "sql-migration-validation",
+  "kind": "SQL MIGRATION VALIDATION (psql, not Flyway)",
+  "status": "PASS",
+  "started_utc": "2026-10-10T15:52:52Z",
+  "finished_utc": "2026-10-10T15:53:01Z",
+  "expected": {
+    "sapi58_migration_integration": "exit 0 (PASS)"
+  },
+  "observed": {
+    "sapi58_migration_integration": "exit 0",
+    "detail_log": "sql-migration-validation.detail.txt"
+  },
+  "failures": [],
+  "log": "sql-migration-validation.txt"
+}

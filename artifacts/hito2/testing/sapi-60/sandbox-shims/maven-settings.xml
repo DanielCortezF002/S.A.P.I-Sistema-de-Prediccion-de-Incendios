@@ -1,0 +1,13 @@
+<settings>
+  <proxies>
+    <proxy><id>sandbox-https</id><active>true</active><protocol>https</protocol><host>[proxy-sandbox]</host><port>[puerto]</port></proxy>
+    <proxy><id>sandbox-http</id><active>true</active><protocol>http</protocol><host>[proxy-sandbox]</host><port>[puerto]</port></proxy>
+  </proxies>
+  <mirrors>
+    <mirror>
+      <id>central-gcs-mirror</id>
+      <mirrorOf>central</mirrorOf>
+      <url>https://maven-central.storage-download.googleapis.com/maven2</url>
+    </mirror>
+  </mirrors>
+</settings>

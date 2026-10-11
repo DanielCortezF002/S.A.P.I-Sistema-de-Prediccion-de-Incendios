@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.BackendApplicationTests" time="0.384" tests="1" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="contextLoads" classname="cl.sapi.backend.BackendApplicationTests" time="0.005">
+    <system-out><![CDATA[2026-10-10T15:52:49.813Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:49.816Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+2026-10-10T15:52:49.817Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:49.819Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T15:52:49.850Z  INFO 32127 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Starting BackendApplicationTests using Java 21.0.12.1 with PID 32127 (started by root in [gate-out]/src-799s5a62/services/backend)
+2026-10-10T15:52:49.850Z  INFO 32127 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T15:52:50.181Z  INFO 32127 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Started BackendApplicationTests in 0.35 seconds (process running for 14.048)
+]]></system-out>
+  </testcase>
+</testsuite>

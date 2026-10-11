@@ -1,0 +1,22 @@
+{
+  "schema": "sapi-w0-host-checks-v1",
+  "sha": "150837ed2b98b1bcd1e87492def1bc5c614337b4",
+  "started_utc": "2026-10-10T15:52:52Z",
+  "finished_utc": "2026-10-10T15:53:01Z",
+  "machine": "[host]",
+  "powershell": "7.4.6",
+  "checks": [
+    {
+      "check": "sql-migration-validation",
+      "kind": "SQL MIGRATION VALIDATION (psql, not Flyway)",
+      "status": "PASS",
+      "failures": []
+    }
+  ],
+  "overall": "PASS",
+  "harness_evidence": {
+    "status": "PASS",
+    "write_errors": [],
+    "outdir_cloud_synced": false
+  }
+}

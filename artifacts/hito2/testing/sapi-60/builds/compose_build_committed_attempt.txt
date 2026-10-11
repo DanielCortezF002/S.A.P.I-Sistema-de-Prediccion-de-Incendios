@@ -1,0 +1,107 @@
+ Image sapi60-preflight-backend Building 
+ Image sapi60-preflight-ml-api Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.58kB done
+#1 DONE 0.0s
+
+#2 [ml-api internal] load build definition from Dockerfile.ml-api
+#2 transferring dockerfile: 1.42kB done
+#2 DONE 0.0s
+
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 888B done
+#3 DONE 0.0s
+
+#4 [ml-api internal] load metadata for docker.io/library/python:3.14-slim
+#4 DONE 0.0s
+
+#5 [backend internal] load metadata for docker.io/library/maven:3.9-eclipse-temurin-21
+#5 DONE 0.0s
+
+#6 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre
+#6 DONE 0.0s
+
+#7 [ml-api internal] load .dockerignore
+#7 transferring context: 3.33kB done
+#7 DONE 0.0s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 70B done
+#8 DONE 0.0s
+
+#9 [ml-api 1/7] FROM docker.io/library/python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170
+#9 resolve docker.io/library/python:3.14-slim@sha256:a2b82f3c48559aa0a8446d9af49826b6e2b2016f4cd2afabfe6013ec53729170 0.0s done
+#9 DONE 0.0s
+
+#10 [ml-api 2/7] WORKDIR /app
+#10 CACHED
+
+#11 [backend build 1/7] FROM docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320
+#11 resolve docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 0.0s done
+#11 CACHED
+
+#12 [backend stage-1 1/4] FROM docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5
+#12 resolve docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5 0.0s done
+#12 CACHED
+
+#13 [ml-api internal] load build context
+#13 ...
+
+#14 [backend build 2/7] WORKDIR /build
+#14 DONE 0.1s
+
+#15 [backend internal] load build context
+#15 transferring context: 201.54kB 0.1s done
+#15 DONE 0.1s
+
+#13 [ml-api internal] load build context
+#13 ...
+
+#16 [backend build 3/7] COPY .mvn .mvn
+#16 DONE 0.1s
+
+#17 [backend build 4/7] COPY mvnw pom.xml ./
+#17 DONE 0.1s
+
+#13 [ml-api internal] load build context
+#13 transferring context: 15.83MB 0.4s done
+#13 DONE 0.4s
+
+#18 [backend stage-1 2/4] RUN useradd --system --uid 10001 --no-create-home sapi
+#18 0.386 useradd warning: sapi's uid 10001 is greater than SYS_UID_MAX 999
+#18 DONE 0.4s
+
+#19 [backend stage-1 3/4] WORKDIR /app
+#19 DONE 0.1s
+
+#20 [backend build 5/7] RUN sh ./mvnw -B -q dependency:go-offline
+#20 0.453 wget: Failed to fetch https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+#20 ERROR: process "/bin/sh -c sh ./mvnw -B -q dependency:go-offline" did not complete successfully: exit code: 1
+
+#21 [ml-api 3/7] RUN apt-get update && apt-get install -y --no-install-recommends     gdal-bin libgdal-dev libgeos-dev libproj-dev gcc g++     && rm -rf /var/lib/apt/lists/*
+#21 0.543 Ign:1 http://deb.debian.org/debian trixie InRelease
+#21 0.544 Ign:2 http://deb.debian.org/debian trixie-updates InRelease
+#21 0.544 Ign:3 http://deb.debian.org/debian-security trixie-security InRelease
+#21 CANCELED
+------
+ > [backend build 5/7] RUN sh ./mvnw -B -q dependency:go-offline:
+0.453 wget: Failed to fetch https://repo.maven.apache.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz
+------
+Dockerfile:9
+
+--------------------
+
+   7 |     COPY .mvn .mvn
+
+   8 |     COPY mvnw pom.xml ./
+
+   9 | >>> RUN sh ./mvnw -B -q dependency:go-offline
+
+  10 |     COPY src src
+
+  11 |     # Los tests se ejecutan con `mvnw verify` desde el repositorio (necesitan el
+
+--------------------
+
+target backend: failed to solve: process "/bin/sh -c sh ./mvnw -B -q dependency:go-offline" did not complete successfully: exit code: 1
+
