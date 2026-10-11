@@ -51,8 +51,13 @@ implementado de lo planificado:
 | Contratos OpenAPI v0 | Definidos (SAPI-56) | `contracts/openapi/` |
 | Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V003 definidas (SAPI-58); persistencia de resultados pendiente (SAPI-59) | `db/migration/`, `db/README.md` |
 | Streamlit | Implementado; hoy puntúa en el mismo proceso con `score_current_grid()`; consumo del backend pendiente (SAPI-61) | `app/` |
-| Docker Compose de la arquitectura v2 | Pendiente (SAPI-60). El `docker-compose.yml` actual levanta los servicios de Hito 1 | `docker-compose.yml` |
+| Docker Compose de la arquitectura v2 | Pendiente al checkpoint (SAPI-60); ver la nota bajo la tabla | `docker-compose.yml` |
 | Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
+
+Desde SAPI-60, `docker compose up --build` levanta la arquitectura v2
+(Spring Boot, FastAPI y PostgreSQL/PostGIS v2); ver
+[Instalación](#opción-a--docker-compose-arquitectura-v2-sapi-60). Los
+servicios de Hito 1 quedan detrás de profiles de Compose.
 
 ### Stack tecnológico
 
@@ -153,29 +158,102 @@ S.A.P.I-Sistema-de-Prediccion-de-Incendios/
 
 ### Requisitos previos
 
-- Python 3.14
-- Docker y Docker Compose
-- Java 21 (solo para el backend Spring Boot; el wrapper `mvnw` descarga Maven)
+- Opción A: solo Docker y Docker Compose v2 (`docker compose`). Las imágenes se
+  construyen dentro de Docker; no hace falta Python, Java ni Maven en el equipo.
+- Opción B: Python 3.14 y, para el backend, Java 21 (el wrapper `mvnw`
+  descarga Maven).
 
-### Opción A — Docker Compose (estado actual)
+### Opción A — Docker Compose: arquitectura v2 (SAPI-60)
 
-> El `docker-compose.yml` actual levanta los servicios de Hito 1 (PostGIS
-> legacy, loop analytics legacy, Streamlit y puente n8n). La composición de la
-> arquitectura v2 (Spring Boot + FastAPI + PostGIS v2) es el entregable SAPI-60
-> y todavía no está implementada.
+Levanta Spring Boot, el servicio ML FastAPI (Modelo D) y PostgreSQL/PostGIS v2
+con un solo comando:
 
 ```bash
 git clone https://github.com/DanielCortezF002/S.A.P.I-Sistema-de-Prediccion-de-Incendios.git
 cd S.A.P.I-Sistema-de-Prediccion-de-Incendios
-cp .env.example .env            # completar valores locales; nunca versionar .env
-docker compose up --build
+cp .env.example .env            # Windows (PowerShell): Copy-Item .env.example .env
+docker compose up --build       # con -d --wait queda en segundo plano y espera a que todo esté healthy
 ```
 
-La interfaz Streamlit queda en `http://localhost:8501`. Sin datos locales en
-`data/`, el modo Prototipo del contenedor no puede puntuar (no hay
-meteorología ni FIRMS recientes); para una corrida sin datos locales usar la
-Opción B con `SAPI_REPRODUCIBILITY_MODE=1` (snapshot versionado de Hito 1,
-`forecast_time` 2026-09-01T00:00Z).
+`.env` nunca se versiona. `SAPI_DB_PASSWORD` no tiene valor por defecto en
+`docker-compose.yml` (sin `.env`, Compose no arranca); el valor de
+`.env.example` es solo para desarrollo local y conviene cambiarlo antes del
+primer arranque, porque después queda fijado en el volumen. **Si ya existe un
+`.env` de Hito 1** (por ejemplo con credenciales reales de NASA FIRMS u
+OpenTopography), no lo reemplaces: agrega el bloque SAPI-60 de `.env.example`.
+Compose interpola todo el archivo, así que desde SAPI-60 también los comandos
+de los servicios de Hito 1 necesitan `SAPI_DB_PASSWORD`.
+
+| Servicio | Dirección en el equipo | Health check |
+|---|---|---|
+| Backend Spring Boot | `http://localhost:8080` | `GET /health` → 200 `{"status":"UP"}` |
+| Servicio ML (FastAPI, Modelo D) | `http://localhost:8000` | `GET /health` → 200 `{"status":"ok", "model_version": ...}` |
+| PostgreSQL/PostGIS v2 | `localhost:5432` (base `sapi_v2`, usuario `sapi`) | `pg_isready` por TCP dentro del contenedor |
+
+`docker compose ps` muestra cada servicio como `healthy`. Los puertos se
+publican solo en `127.0.0.1`; si alguno está ocupado, cambiar
+`SAPI_BACKEND_PORT`, `SAPI_ML_PORT` o `SAPI_DB_PORT` en `.env`.
+
+```bash
+curl http://localhost:8080/health
+curl http://localhost:8000/health
+curl http://localhost:8080/api/v1/ranking
+```
+
+`GET /api/v1/ranking` pide el ranking al servicio ML, lo valida y lo guarda en
+PostgreSQL (una fila en `ejecuciones` y 50 en `predicciones_celda`) antes de
+responder 200; repetir la misma evaluación no la duplica. El esquema lo crea
+Flyway al arrancar el backend, desde `db/migration` (V001–V003).
+
+**Modo de datos: reproducible (ADR-009).** El servicio ML puntúa con el
+Modelo D versionado y el snapshot real congelado de Hito 1
+(`artifacts/hito1/reproducibility`, incluido en la imagen). Por eso el
+ranking corresponde siempre a `forecast_time` 2026-09-01T00:00Z y es idéntico
+en cualquier equipo: no es una corrida diaria operacional. El score es un
+ranking relativo entre las 50 celdas (`score_semantics=relative_rank`,
+`scientific_model_validation=false`), no una probabilidad calibrada de
+incendio ni una alerta oficial.
+
+Último ranking persistido, con la consulta versionada
+`db/queries/latest_ranking.sql`:
+
+```bash
+docker compose exec -T db-v2 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"' < db/queries/latest_ranking.sql
+# Windows (PowerShell):
+# Get-Content db/queries/latest_ranking.sql | docker compose exec -T db-v2 sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
+```
+
+Detener y reiniciar:
+
+```bash
+docker compose down             # detiene y elimina todos los contenedores del proyecto (también los de Hito 1); los volúmenes quedan
+docker compose up -d --wait     # vuelve a levantar con los mismos datos
+```
+
+Para borrar **solo** la base v2 (se pierde la persistencia local de
+ejecuciones):
+
+```bash
+docker compose down
+docker volume ls --filter name=sapi_v2_pgdata   # nombre real: <proyecto>_sapi_v2_pgdata
+docker volume rm <proyecto>_sapi_v2_pgdata
+```
+
+`docker compose down -v` es un reset total: borra **todos** los volúmenes de
+`docker-compose.yml`, incluida la base legacy de Hito 1 (`sapi_pgdata`),
+aunque su profile no esté activo. Usarlo solo si también se quiere perder esa
+base.
+
+**Servicios de Hito 1.** Quedan fuera de la arquitectura v2 con profiles de
+Compose y no se levantan por defecto: `legacy` (`db-postgis`,
+`analytics-backend`, `web-presentation`) y `ops` (`n8n-bridge`). Nombrar un
+servicio lo levanta junto con sus dependencias, por ejemplo
+`docker compose up --build web-presentation` para el dashboard Streamlit de
+Hito 1 en `http://localhost:8501`. Ese dashboard todavía no consume el
+backend (SAPI-61), y sin datos locales en `data/` su modo Prototipo no puede
+puntuar; para una corrida sin datos locales, usar la Opción B con
+`SAPI_REPRODUCIBILITY_MODE=1`. `db-postgis` también publica el puerto 5432: para usar la
+base legacy y la v2 a la vez, cambiar `SAPI_DB_PORT`.
 
 ### Opción B — Entorno local
 

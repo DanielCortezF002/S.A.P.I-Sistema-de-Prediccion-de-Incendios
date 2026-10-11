@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report.xsd" version="3.0.2" name="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.424" tests="7" errors="0" skipped="0" failures="0" flakes="0">
+  <properties/>
+  <testcase name="differentFingerprintCreatesNewExecution" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.308"/>
+  <testcase name="partialExecutionIsRejected" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.024"/>
+  <testcase name="sameRunTwiceIsIdempotent" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.015"/>
+  <testcase name="firstPersistInsertsExecutionAndFiftyCells" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.012"/>
+  <testcase name="findLatestReadsViaCreatedAtOrder" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.01"/>
+  <testcase name="horizonHoursOutsideIntRangeIsRejected" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.02"/>
+  <testcase name="divergentMetadataOnReplayIsRejected" classname="cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests" time="0.014"/>
+</testsuite>

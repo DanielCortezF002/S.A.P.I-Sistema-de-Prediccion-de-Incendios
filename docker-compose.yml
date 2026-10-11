@@ -1,5 +1,98 @@
+# Arquitectura v2 (SAPI-60, ADR-004/008/009). `docker compose up --build` levanta
+# solo db-v2 (PostGIS, 5432), ml-api (FastAPI + Modelo D, 8000) y backend
+# (Spring Boot, 8080). Los servicios de Hito 1 quedan fuera de la ruta v2 con
+# profiles: `legacy` (db-postgis, analytics-backend, web-presentation) y `ops`
+# (n8n-bridge). Configuración en .env (ver .env.example y README). La ruta v2
+# usa su propia red (sapi-v2-net): los servicios legacy no llegan a db-v2.
 services:
+  db-v2:
+    # Base v2 aislada del legacy (H4, ADR-008): volumen propio, sin
+    # docker/initdb. El esquema lo crea Flyway desde el backend (V001-V003).
+    image: postgis/postgis:15-3.4
+    environment:
+      POSTGRES_USER: ${SAPI_DB_USER:-sapi}
+      POSTGRES_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
+      POSTGRES_DB: ${SAPI_DB_NAME:-sapi_v2}
+    ports:
+      - "127.0.0.1:${SAPI_DB_PORT:-5432}:5432"
+    volumes:
+      - sapi_v2_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # Por TCP: el servidor temporal que usa la imagen durante la
+      # inicialización solo escucha en el socket Unix, así que este check no
+      # pasa hasta que la base acepta conexiones de red de verdad.
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 5432 -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - sapi-v2-net
+
+  ml-api:
+    # Modo reproducible por defecto (ADR-009): puntúa con el Modelo D
+    # versionado y el snapshot real congelado de Hito 1
+    # (artifacts/hito1/reproducibility, dentro de la imagen), forecast_time
+    # 2026-09-01T00:00Z. No es una corrida diaria operacional.
+    build:
+      context: .
+      dockerfile: Dockerfile.ml-api
+    environment:
+      SAPI_REPRODUCIBILITY_MODE: "1"
+    ports:
+      - "127.0.0.1:${SAPI_ML_PORT:-8000}:8000"
+    healthcheck:
+      # GET /health devuelve 200 solo si el modelo y su metadata se leen
+      # (503 si no); open() falla con cualquier código >= 400. Sin proxy: un
+      # HTTP_PROXY inyectado por Docker no debe desviar la consulta local.
+      test: ["CMD", "python", "-c", "import sys, urllib.request as u; r = u.build_opener(u.ProxyHandler({})).open('http://127.0.0.1:8000/health', timeout=4); sys.exit(0 if r.status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
+    networks:
+      - sapi-v2-net
+
+  backend:
+    # Llega al ML y a la base por nombre de servicio, nunca por localhost.
+    # Flyway corre al arrancar sobre db/migration montado en solo lectura
+    # (ADR-008); el servidor HTTP abre solo si las migraciones terminan bien, y
+    # el arranque falla si la carpeta montada no existe o no se puede leer.
+    build:
+      context: ./services/backend
+    environment:
+      SAPI_ML_BASE_URL: http://ml-api:8000
+      SAPI_ML_CONNECT_TIMEOUT: ${SAPI_ML_CONNECT_TIMEOUT:-2s}
+      SAPI_ML_READ_TIMEOUT: ${SAPI_ML_READ_TIMEOUT:-60s}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-v2:5432/${SAPI_DB_NAME:-sapi_v2}
+      SPRING_DATASOURCE_USERNAME: ${SAPI_DB_USER:-sapi}
+      SPRING_DATASOURCE_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
+      SAPI_PERSISTENCE_ENABLED: "true"
+      SAPI_FLYWAY_LOCATIONS: filesystem:/app/db/migration
+      SPRING_FLYWAY_FAILONMISSINGLOCATIONS: "true"
+    volumes:
+      - ./db/migration:/app/db/migration:ro
+    ports:
+      - "127.0.0.1:${SAPI_BACKEND_PORT:-8080}:8080"
+    depends_on:
+      db-v2:
+        # Flyway necesita la base al arrancar.
+        condition: service_healthy
+      ml-api:
+        # Solo orden de arranque: el backend no llama al ML al iniciar y, si
+        # el ML no responde, devuelve 503/504 controlados (SAPI-57).
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "--noproxy", "*", "-o", "/dev/null", "http://127.0.0.1:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    networks:
+      - sapi-v2-net
+
   db-postgis:
+    profiles: ["legacy"]
     image: postgis/postgis:15-3.4
     container_name: sapi-db-postgis
     environment:
@@ -20,6 +113,7 @@ services:
       - sapi-net
 
   analytics-backend:
+    profiles: ["legacy"]
     build:
       context: .
       dockerfile: Dockerfile.analytics
@@ -41,6 +135,7 @@ services:
       - sapi-net
 
   web-presentation:
+    profiles: ["legacy"]
     build:
       context: .
       dockerfile: Dockerfile.web
@@ -83,6 +178,7 @@ services:
     # Sin env_file (SAPI-70/SAPI-71): no necesita credenciales. Sin
     # /var/run/docker.sock ni DOCKER_HOST: el puente nunca controla Docker.
     # data/ y models/ en solo lectura: solo puntua, no ingiere ni reentrena.
+    profiles: ["ops"]
     build:
       context: .
       dockerfile: Dockerfile.n8n-bridge
@@ -97,8 +193,16 @@ services:
       - sapi-net
 
 volumes:
+  # Base legacy de Hito 1 (profile legacy). La ruta v2 no la usa (H4).
   sapi_pgdata:
+  # Base v2 (SAPI-60). Ojo: `docker compose down -v` borra TODOS los volúmenes
+  # de este archivo (también sapi_pgdata, aunque su profile no esté activo).
+  # Para reiniciar solo la base v2: `docker compose down` y luego
+  # `docker volume rm <proyecto>_sapi_v2_pgdata` (ver README).
+  sapi_v2_pgdata:
 
 networks:
   sapi-net:
+    driver: bridge
+  sapi-v2-net:
     driver: bridge

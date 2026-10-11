@@ -1,6 +1,6 @@
 # Notebooks de exploración S.A.P.I.
 
-Ejecutar tras `docker compose up` con PostGIS poblado:
+Ejecutar tras `docker compose up -d db-postgis` (base legacy de Hito 1, profile `legacy`) con PostGIS poblado:
 
 1. `01_exploracion.ipynb` — Exploración dataset Valparaíso
 2. `02_features.ipynb` — Feature engineering y Regla 30-30-30

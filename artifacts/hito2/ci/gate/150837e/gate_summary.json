@@ -1,0 +1,259 @@
+{
+  "schema": "sapi-merge-gate-v1",
+  "sha": "150837ed2b98b1bcd1e87492def1bc5c614337b4",
+  "branch": "feat/SAPI-60-docker-compose-v2",
+  "started_utc": "2026-10-10T15:48:15Z",
+  "environment": {
+    "platform": "Linux-6.18.44-fc-v114-x86_64-with-glibc2.39",
+    "python": "3.14.6",
+    "java": "openjdk version \"21.0.12.1\" 2026-08-18",
+    "docker": "29.8.2",
+    "git_core_autocrlf": "unset",
+    "github_actions": false,
+    "runner_os": "",
+    "github_run_url": ""
+  },
+  "jobs": [
+    {
+      "job": "freeze",
+      "kind": "freeze_check F1-F9 (SKIP = FAIL en modo gate)",
+      "status": "PASS",
+      "duration_s": 6.4,
+      "commands": [
+        {
+          "command": [
+            "[venv]/bin/python",
+            "-B",
+            "scripts/freeze_check.py",
+            "--json",
+            "[gate-out]/freeze_check.json",
+            "--allow-tag",
+            "hito2-sprint2-rc1",
+            "--allow-tag",
+            "hito2-sprint2-rc2",
+            "--allow-tag",
+            "hito2-sprint2-rc3",
+            "--allow-tag",
+            "hito2-sprint2-rc4",
+            "--allow-tag",
+            "hito2-sprint2-rc5",
+            "--allow-tag",
+            "hito2-sprint2-final"
+          ],
+          "cwd": "[gate-out]/src-799s5a62",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "problems": []
+      },
+      "log": "freeze.txt"
+    },
+    {
+      "job": "python",
+      "kind": "lint v2 + pytest completo (cobertura >= 80 %)",
+      "status": "PASS",
+      "duration_s": 246.7,
+      "commands": [
+        {
+          "command": [
+            "[venv]/bin/python",
+            "-m",
+            "black",
+            "--check",
+            "services/ml_api",
+            "scripts/freeze_check.py",
+            "scripts/merge_gate.py",
+            "tests/test_openapi_contracts.py",
+            "tests/test_ml_api.py",
+            "tests/test_merge_gate.py",
+            "tests/test_w0_host_checks.py",
+            "tests/test_w0_host_checks_evidence.py",
+            "scripts/compose_v2_preflight.py",
+            "tests/test_compose_v2.py"
+          ],
+          "cwd": "[gate-out]/src-799s5a62",
+          "exit": 0
+        },
+        {
+          "command": [
+            "[venv]/bin/python",
+            "-m",
+            "flake8",
+            "--max-line-length=100",
+            "--extend-ignore=E203,W503",
+            "services/ml_api",
+            "scripts/freeze_check.py",
+            "scripts/merge_gate.py",
+            "tests/test_openapi_contracts.py",
+            "tests/test_ml_api.py",
+            "tests/test_merge_gate.py",
+            "tests/test_w0_host_checks.py",
+            "tests/test_w0_host_checks_evidence.py",
+            "scripts/compose_v2_preflight.py",
+            "tests/test_compose_v2.py"
+          ],
+          "cwd": "[gate-out]/src-799s5a62",
+          "exit": 0
+        },
+        {
+          "command": [
+            "[venv]/bin/python",
+            "-B",
+            "-m",
+            "pytest",
+            "-q",
+            "--junitxml=[gate-out]/pytest-junit.xml"
+          ],
+          "cwd": "[gate-out]/src-799s5a62",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "v2_lint_paths": [
+          "services/ml_api",
+          "scripts/freeze_check.py",
+          "scripts/merge_gate.py",
+          "tests/test_openapi_contracts.py",
+          "tests/test_ml_api.py",
+          "tests/test_merge_gate.py",
+          "tests/test_w0_host_checks.py",
+          "tests/test_w0_host_checks_evidence.py",
+          "scripts/compose_v2_preflight.py",
+          "tests/test_compose_v2.py"
+        ],
+        "black_v2_exit": 0,
+        "flake8_v2_exit": 0,
+        "pytest_exit": 0,
+        "legacy_flake8_violations_informative": 231
+      },
+      "log": "python.txt"
+    },
+    {
+      "job": "backend-unit",
+      "kind": "mvnw -B verify -DskipITs (JDK 21)",
+      "status": "PASS",
+      "duration_s": 22.2,
+      "commands": [
+        {
+          "command": [
+            "sh",
+            "mvnw",
+            "-B",
+            "verify",
+            "-DskipITs"
+          ],
+          "cwd": "[gate-out]/src-799s5a62/services/backend",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "surefire_reports": [
+          "TEST-cl.sapi.backend.BackendApplicationTests.xml",
+          "TEST-cl.sapi.backend.HealthControllerTests.xml",
+          "TEST-cl.sapi.backend.ranking.RankingEndpointIntegrationTests.xml",
+          "TEST-cl.sapi.backend.ranking.RankingMlUnavailableTests.xml",
+          "TEST-cl.sapi.backend.ranking.RankingRealMlServiceTests.xml",
+          "TEST-cl.sapi.backend.ranking.RankingResultValidatorTests.xml",
+          "TEST-cl.sapi.backend.ranking.RankingServiceTests.xml",
+          "TEST-cl.sapi.backend.ranking.ml.MlServiceClientTests.xml",
+          "TEST-cl.sapi.backend.ranking.ml.MlServicePropertiesTests.xml",
+          "TEST-cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests.xml"
+        ]
+      },
+      "log": "backend-unit.txt"
+    },
+    {
+      "job": "sql-migration-validation",
+      "kind": "SQL MIGRATION VALIDATION (psql, no Flyway)",
+      "status": "PASS",
+      "duration_s": 10.0,
+      "commands": [
+        {
+          "command": [
+            "pwsh",
+            "-NoProfile",
+            "-File",
+            "scripts/w0_host_checks.ps1",
+            "-Check",
+            "sql-migration-validation",
+            "-OutDir",
+            "[gate-out]/sql-migration-validation"
+          ],
+          "cwd": "[gate-out]/src-799s5a62",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "schema": "sapi-w0-host-checks-v1",
+        "sha": "150837ed2b98b1bcd1e87492def1bc5c614337b4",
+        "started_utc": "2026-10-10T15:52:52Z",
+        "finished_utc": "2026-10-10T15:53:01Z",
+        "machine": "[host]",
+        "powershell": "7.4.6",
+        "checks": [
+          {
+            "check": "sql-migration-validation",
+            "kind": "SQL MIGRATION VALIDATION (psql, not Flyway)",
+            "status": "PASS",
+            "failures": []
+          }
+        ],
+        "overall": "PASS",
+        "harness_evidence": {
+          "status": "PASS",
+          "write_errors": [],
+          "outdir_cloud_synced": false
+        }
+      },
+      "log": "sql-migration-validation.txt"
+    },
+    {
+      "job": "flyway-integration",
+      "kind": "REAL FLYWAY INTEGRATION VALIDATION (Flyway CLI 12.4.0)",
+      "status": "PASS",
+      "duration_s": 16.2,
+      "commands": [
+        {
+          "command": [
+            "pwsh",
+            "-NoProfile",
+            "-File",
+            "scripts/w0_host_checks.ps1",
+            "-Check",
+            "flyway-integration",
+            "-OutDir",
+            "[gate-out]/flyway-integration"
+          ],
+          "cwd": "[gate-out]/src-799s5a62",
+          "exit": 0
+        }
+      ],
+      "details": {
+        "schema": "sapi-w0-host-checks-v1",
+        "sha": "150837ed2b98b1bcd1e87492def1bc5c614337b4",
+        "started_utc": "2026-10-10T15:53:02Z",
+        "finished_utc": "2026-10-10T15:53:17Z",
+        "machine": "[host]",
+        "powershell": "7.4.6",
+        "checks": [
+          {
+            "check": "flyway-integration",
+            "kind": "W0.4 REAL FLYWAY INTEGRATION VALIDATION",
+            "status": "PASS",
+            "failures": []
+          }
+        ],
+        "overall": "PASS",
+        "harness_evidence": {
+          "status": "PASS",
+          "write_errors": [],
+          "outdir_cloud_synced": false
+        }
+      },
+      "log": "flyway-integration.txt"
+    }
+  ],
+  "finished_utc": "2026-10-10T15:53:17Z",
+  "verdict": "PASS"
+}

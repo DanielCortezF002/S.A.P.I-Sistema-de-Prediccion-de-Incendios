@@ -1,0 +1,587 @@
+{
+  "tool": "scripts/compose_v2_preflight.py",
+  "facts": {
+    "utc": "2026-10-10T15:47:05Z",
+    "head": "150837ed2b98b1bcd1e87492def1bc5c614337b4",
+    "worktree_changes": 0,
+    "ignored_entries": [
+      ".env"
+    ],
+    "docker_server": "29.8.2",
+    "docker_compose": "5.6.0",
+    "platform": "Linux x86_64",
+    "project": "sapi60-preflight",
+    "fresh_start": "docker compose down -v (solo sapi60-preflight): exit 0",
+    "build": "omitido (--skip-build): se usan las imágenes ya construidas",
+    "cleanup": "docker compose down -v (solo sapi60-preflight): exit 0"
+  },
+  "verdict": "PASS",
+  "checks": [
+    {
+      "id": "checkout.clean",
+      "ca": "CA6",
+      "command": "git status --porcelain --ignored + override de Compose",
+      "expected": {
+        "cambios_sin_commit": 0,
+        "ignorados_aparte_de_.env": [],
+        "override": []
+      },
+      "observed": {
+        "cambios_sin_commit": 0,
+        "ignorados_aparte_de_.env": [],
+        "override_local": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "compose.config.default_services",
+      "ca": "CA1",
+      "command": "docker compose config --services",
+      "expected": [
+        "backend",
+        "db-v2",
+        "ml-api"
+      ],
+      "observed": [
+        "backend",
+        "db-v2",
+        "ml-api"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "compose.up",
+      "ca": "CA1, CA2",
+      "command": "docker compose up -d --wait --wait-timeout 600",
+      "expected": "exit 0 (todos los servicios healthy)",
+      "observed": "exit 0",
+      "status": "PASS"
+    },
+    {
+      "id": "compose.ps.db-v2.healthy",
+      "ca": "CA2",
+      "command": "docker compose ps --format json",
+      "expected": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "observed": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "compose.ps.db-v2.port",
+      "ca": "CA1",
+      "command": "docker compose ps --format json (Publishers)",
+      "expected": "127.0.0.1:5432 -> 5432",
+      "observed": "127.0.0.1:5432 -> 5432",
+      "status": "PASS"
+    },
+    {
+      "id": "compose.ps.ml-api.healthy",
+      "ca": "CA2",
+      "command": "docker compose ps --format json",
+      "expected": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "observed": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "compose.ps.ml-api.port",
+      "ca": "CA1",
+      "command": "docker compose ps --format json (Publishers)",
+      "expected": "127.0.0.1:8000 -> 8000",
+      "observed": "127.0.0.1:8000 -> 8000",
+      "status": "PASS"
+    },
+    {
+      "id": "compose.ps.backend.healthy",
+      "ca": "CA2",
+      "command": "docker compose ps --format json",
+      "expected": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "observed": {
+        "state": "running",
+        "health": "healthy"
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "compose.ps.backend.port",
+      "ca": "CA1",
+      "command": "docker compose ps --format json (Publishers)",
+      "expected": "127.0.0.1:8080 -> 8080",
+      "observed": "127.0.0.1:8080 -> 8080",
+      "status": "PASS"
+    },
+    {
+      "id": "health.backend",
+      "ca": "CA2",
+      "command": "GET http://127.0.0.1:8080/health",
+      "expected": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "health.ml",
+      "ca": "CA2",
+      "command": "GET http://127.0.0.1:8000/health",
+      "expected": {
+        "status_code": 200,
+        "status": "ok",
+        "model_version": "no vacío"
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "ok",
+          "model_version": "prototype_model_d_v1"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "health.db",
+      "ca": "CA2",
+      "command": "docker compose exec -T db-v2 pg_isready -h 127.0.0.1 -p 5432",
+      "expected": "exit 0, accepting connections",
+      "observed": "exit 0: 127.0.0.1:5432 - accepting connections",
+      "status": "PASS"
+    },
+    {
+      "id": "flyway.migrations",
+      "ca": "CA6 (Flyway del backend, ADR-008)",
+      "command": "psql: flyway_schema_history",
+      "expected": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ],
+      "observed": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "db.celdas_geom",
+      "ca": "SAPI-59.CA2 (V003)",
+      "command": "psql: count, ST_IsValid y SRID de celdas_geom",
+      "expected": "50|true|4326|4326",
+      "observed": "50|true|4326|4326",
+      "status": "PASS"
+    },
+    {
+      "id": "ranking.backend",
+      "ca": "CA1 (Spring Boot -> FastAPI)",
+      "command": "GET http://127.0.0.1:8080/api/v1/ranking",
+      "expected": {
+        "status_code": 200,
+        "cells": 50,
+        "ranks": "1..50",
+        "score_semantics": "relative_rank",
+        "scientific_model_validation": false
+      },
+      "observed": {
+        "status_code": 200,
+        "x_request_id": "sapi60-preflight-1",
+        "cells": 50,
+        "ranks": true,
+        "score_semantics": "relative_rank",
+        "scientific_model_validation": false,
+        "forecast_time": "2026-09-01T00:00:00Z",
+        "model_version": "prototype_model_d_v1",
+        "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+        "body_sha256": "f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f",
+        "seconds": 4.67
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ranking.passthrough",
+      "ca": "SAPI-57 (mismos bytes)",
+      "command": "POST http://127.0.0.1:8000/predict {}",
+      "expected": {
+        "status_code": 200,
+        "body_sha256": "f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f"
+      },
+      "observed": {
+        "status_code": 200,
+        "body_sha256": "f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f",
+        "seconds": 3.04
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ranking.reproducible_fixture",
+      "ca": "ADR-009 (modo reproducible determinista)",
+      "command": "sha256 de la respuesta vs services/backend/src/test/resources/ml/predict-reproducible-2026-09-01.json",
+      "expected": "f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f",
+      "observed": "f55de2c47d55cc5ad34ed0dd504cdcf66592efed0ff4f365feac8331022d3a2f",
+      "status": "PASS"
+    },
+    {
+      "id": "persistence.write_through",
+      "ca": "SAPI-59 en Compose (Spring Boot -> PostGIS)",
+      "command": "psql: ejecuciones / predicciones_celda por la clave natural",
+      "expected": {
+        "ejecucion": "existe",
+        "predicciones": "50",
+        "orden": "igual a la respuesta",
+        "ejecuciones_antes_despues": [
+          "0",
+          "1"
+        ],
+        "predicciones_antes_despues": [
+          "0",
+          "50"
+        ]
+      },
+      "observed": {
+        "ejecucion_id": "1",
+        "predicciones_de_la_ejecucion": "50",
+        "orden_igual_a_la_respuesta": true,
+        "ejecuciones_antes_despues": [
+          "0",
+          "1"
+        ],
+        "predicciones_antes_despues": [
+          "0",
+          "50"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "persistence.idempotent_replay",
+      "ca": "SAPI-59.CA4 (no duplica)",
+      "command": "GET /api/v1/ranking por segunda vez + conteos",
+      "expected": {
+        "status_code": 200,
+        "misma_respuesta": true,
+        "conteos": "sin cambio"
+      },
+      "observed": {
+        "status_code": 200,
+        "misma_respuesta": true,
+        "ejecuciones_antes_despues": [
+          "1",
+          "1"
+        ],
+        "predicciones_antes_despues": [
+          "50",
+          "50"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "sapi59.latest_ranking_psql",
+      "ca": "SAPI-59 evidencia (psql)",
+      "command": "psql -f db/queries/latest_ranking.sql dentro de db-v2",
+      "expected": "50 filas de la última ejecución, rank 1..50, mismo orden que la respuesta",
+      "observed": {
+        "filas": 50,
+        "problemas": []
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "backend.logs",
+      "ca": "CA6 (Flyway) + SAPI-57.CA5",
+      "command": "docker compose logs backend",
+      "expected": "Flyway aplicó 3 migraciones; ml_predict outcome=ok ml_http_status=200",
+      "observed": {
+        "flyway_3_migrations": true,
+        "ml_predict_events": 2
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ca4.up_again",
+      "ca": "CA1, CA2",
+      "command": "docker compose up -d --wait --wait-timeout 600",
+      "expected": "exit 0 (todos los servicios healthy)",
+      "observed": "exit 0",
+      "status": "PASS"
+    },
+    {
+      "id": "ca4.flyway_unchanged",
+      "ca": "CA6 (Flyway del backend, ADR-008)",
+      "command": "psql: flyway_schema_history",
+      "expected": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ],
+      "observed": [
+        "001:true",
+        "002:true",
+        "003:true"
+      ],
+      "status": "PASS"
+    },
+    {
+      "id": "ca4.data_survives_down_up",
+      "ca": "CA4",
+      "command": "docker compose down (sin -v) + up -d --wait + conteos",
+      "expected": {
+        "ejecuciones": "1",
+        "predicciones": "50",
+        "flyway": "sin cambios"
+      },
+      "observed": {
+        "down_exit": 0,
+        "ejecuciones": "1",
+        "predicciones": "50",
+        "flyway": [
+          "001:true",
+          "002:true",
+          "003:true"
+        ]
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ca4.health.backend",
+      "ca": "CA2",
+      "command": "GET http://127.0.0.1:8080/health",
+      "expected": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "UP"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ca4.health.ml",
+      "ca": "CA2",
+      "command": "GET http://127.0.0.1:8000/health",
+      "expected": {
+        "status_code": 200,
+        "status": "ok",
+        "model_version": "no vacío"
+      },
+      "observed": {
+        "status_code": 200,
+        "body": {
+          "status": "ok",
+          "model_version": "prototype_model_d_v1"
+        }
+      },
+      "status": "PASS"
+    },
+    {
+      "id": "ca4.health.db",
+      "ca": "CA2",
+      "command": "docker compose exec -T db-v2 pg_isready -h 127.0.0.1 -p 5432",
+      "expected": "exit 0, accepting connections",
+      "observed": "exit 0: 127.0.0.1:5432 - accepting connections",
+      "status": "PASS"
+    }
+  ],
+  "commands": [
+    {
+      "command": "docker version --format {{.Server.Version}}",
+      "exit": 0,
+      "seconds": 0.0
+    },
+    {
+      "command": "docker compose version --short",
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "command": "git rev-parse HEAD",
+      "exit": 0,
+      "seconds": 0.0
+    },
+    {
+      "command": "git status --porcelain",
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "command": "git status --porcelain --ignored",
+      "exit": 0,
+      "seconds": 0.0
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight config --services",
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight down -v --remove-orphans",
+      "exit": 0,
+      "seconds": 0.1
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight up -d --wait --wait-timeout 600",
+      "exit": 0,
+      "seconds": 13.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight ps --format json",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c pg_isready -h 127.0.0.1 -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -P pager=off",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight logs --no-color backend",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight down",
+      "exit": 0,
+      "seconds": 1.9
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight up -d --wait --wait-timeout 600",
+      "exit": 0,
+      "seconds": 12.0
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c psql -X -v ON_ERROR_STOP=1 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\" -At -F '|'",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight exec -T db-v2 sh -c pg_isready -h 127.0.0.1 -p 5432 -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\"",
+      "exit": 0,
+      "seconds": 0.2
+    },
+    {
+      "command": "docker compose --project-directory [repo] -f [repo]/docker-compose.yml -p sapi60-preflight down -v --remove-orphans",
+      "exit": 0,
+      "seconds": 1.9
+    }
+  ]
+}

@@ -1,0 +1,422 @@
+# backend-unit - mvnw -B verify -DskipITs (JDK 21)
+# utc=2026-10-10T15:52:29Z
+
+$ sh mvnw -B verify -DskipITs   (cwd=[gate-out]/src-799s5a62/services/backend)
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] --------------------------< cl.sapi:backend >---------------------------
+[INFO] Building backend 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] Artifact org.apache.maven.plugins:maven-failsafe-plugin:pom:3.5.6 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [central (https://repo.maven.apache.org/maven2, default, releases)]
+[INFO] Artifact org.apache.maven.plugins:maven-failsafe-plugin:pom:3.5.6 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [central (https://repo.maven.apache.org/maven2, default, releases)]
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-failsafe-plugin/3.5.6/maven-failsafe-plugin-3.5.6.pom
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-failsafe-plugin/3.5.6/maven-failsafe-plugin-3.5.6.pom (0 B at 0 B/s)
+[INFO] Artifact org.apache.maven.plugins:maven-failsafe-plugin:jar:3.5.6 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [central (https://repo.maven.apache.org/maven2, default, releases)]
+[INFO] Artifact org.apache.maven.plugins:maven-failsafe-plugin:jar:3.5.6 is present in the local repository, but cached from a remote repository ID that is unavailable in current build context, verifying that is downloadable from [central (https://repo.maven.apache.org/maven2, default, releases)]
+[INFO] Downloading from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-failsafe-plugin/3.5.6/maven-failsafe-plugin-3.5.6.jar
+[INFO] Downloaded from central: https://repo.maven.apache.org/maven2/org/apache/maven/plugins/maven-failsafe-plugin/3.5.6/maven-failsafe-plugin-3.5.6.jar (0 B at 0 B/s)
+[INFO] 
+[INFO] --- resources:3.5.0:resources (default-resources) @ backend ---
+[INFO] Copying 1 resource from src/main/resources to target/classes
+[INFO] Copying 0 resource from src/main/resources to target/classes
+[INFO] 
+[INFO] --- compiler:3.15.0:compile (default-compile) @ backend ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 18 source files with javac [debug parameters release 21] to target/classes
+[INFO] 
+[INFO] --- resources:3.5.0:testResources (default-testResources) @ backend ---
+[INFO] Copying 5 resources from src/test/resources to target/test-classes
+[INFO] 
+[INFO] --- compiler:3.15.0:testCompile (default-testCompile) @ backend ---
+[INFO] Recompiling the module because of changed dependency.
+[INFO] Compiling 15 source files with javac [debug parameters release 21] to target/test-classes
+[INFO] [gate-out]/src-799s5a62/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: [gate-out]/src-799s5a62/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java uses unchecked or unsafe operations.
+[INFO] [gate-out]/src-799s5a62/services/backend/src/test/java/cl/sapi/backend/HealthControllerTests.java: Recompile with -Xlint:unchecked for details.
+[INFO] 
+[INFO] --- surefire:3.5.6:test (default-test) @ backend ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO] 
+[INFO] -------------------------------------------------------
+[INFO]  T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+15:52:37.301 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingEndpointIntegrationTests]: RankingEndpointIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+15:52:37.457 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+15:52:37.528 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingEndpointIntegrationTests]: RankingEndpointIntegrationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+15:52:37.533 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T15:52:38.002Z  INFO 32127 --- [sapi-backend] [           main] c.s.b.r.RankingEndpointIntegrationTests  : Starting RankingEndpointIntegrationTests using Java 21.0.12.1 with PID 32127 (started by root in [gate-out]/src-799s5a62/services/backend)
+2026-10-10T15:52:38.006Z  INFO 32127 --- [sapi-backend] [           main] c.s.b.r.RankingEndpointIntegrationTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T15:52:39.073Z  INFO 32127 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-10T15:52:39.095Z  INFO 32127 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-10T15:52:39.096Z  INFO 32127 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-10T15:52:39.144Z  INFO 32127 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 1103 ms
+2026-10-10T15:52:39.840Z  INFO 32127 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 32769 (http) with context path '/'
+2026-10-10T15:52:39.854Z  INFO 32127 --- [sapi-backend] [           main] c.s.b.r.RankingEndpointIntegrationTests  : Started RankingEndpointIntegrationTests in 2.247 seconds (process running for 3.721)
+Mockito is currently self-attaching to enable the inline-mock-maker. This will no longer work in future releases of the JDK. Please add Mockito as an agent to your build as described in Mockito's documentation: https://javadoc.io/doc/org.mockito/mockito-core/latest/org.mockito/org/mockito/Mockito.html#0.3
+WARNING: A Java agent has been loaded dynamically ([m2]/repository/net/bytebuddy/byte-buddy-agent/1.18.11/byte-buddy-agent-1.18.11.jar)
+WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning
+WARNING: If a serviceability tool is not in use, please run with -Djdk.instrument.traceUsage for more information
+WARNING: Dynamic loading of agents will be disallowed by default in a future release
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+2026-10-10T15:52:40.650Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-10T15:52:40.651Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-10T15:52:40.653Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 2 ms
+2026-10-10T15:52:40.871Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=d7859243-fc90-4f34-857e-3b805c170988 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=140 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:41.007Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=1cdbe368-12d8-43d1-bab0-2bec6ef50a6b forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=7 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:41.149Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=42fbe945-5c00-422a-bc51-08917174de33 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=9 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo no es un objeto JSON en UTF-8"
+2026-10-10T15:52:41.354Z  WARN 32127 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword openapi - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T15:52:41.355Z  WARN 32127 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword info - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T15:52:41.355Z  WARN 32127 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword servers - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T15:52:41.356Z  WARN 32127 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword tags - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T15:52:41.356Z  WARN 32127 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword paths - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T15:52:41.356Z  WARN 32127 --- [sapi-backend] [           main] c.n.schema.UnknownKeywordFactory         : Unknown keyword components - you should define your own Meta Schema. If the keyword is irrelevant for validation, just use a NonValidationKeyword or if it should generate annotations AnnotationKeyword
+2026-10-10T15:52:41.490Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=5f026a07-e818-48c8-8cec-a0a8a5c6bc7b forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=15 outcome=upstream_invalid_response backend_http_status=502 violation="cells no es un arreglo de exactamente 50 celdas"
+2026-10-10T15:52:41.551Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=fa89428a-0ec7-47b6-a1a0-d2b9724d60bc forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=6 outcome=upstream_invalid_response backend_http_status=502 violation="cells[0].score no es un número en [0, 1]"
+2026-10-10T15:52:41.593Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=5c33014a-a47f-4a40-bb0a-45a3af860c63 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=9 outcome=upstream_invalid_response backend_http_status=502 violation="scientific_model_validation distinto de false"
+2026-10-10T15:52:41.630Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=091fde55-2c24-4c65-a5dd-85f72c0f1d6e forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=8 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo no es un objeto JSON en UTF-8"
+2026-10-10T15:52:41.710Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=07052c66-8d66-47b4-8a30-71e2231f5249 forecast_time_requested=latest ml_responded=true ml_http_status=201 ml_latency_ms=54 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 201"
+2026-10-10T15:52:41.744Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=b91e059a-09a8-41d7-8dd8-6042b5c621fa forecast_time_requested=latest ml_responded=true ml_http_status=302 ml_latency_ms=5 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 302"
+2026-10-10T15:52:41.789Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=78178625-6e45-44ea-a891-faff1cfd9472 forecast_time_requested=latest ml_responded=true ml_http_status=404 ml_latency_ms=7 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 404"
+2026-10-10T15:52:41.836Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=5b6ab695-6022-4446-ab73-3b2af9674264 forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=422 ml_latency_ms=10 outcome=invalid_request backend_http_status=422
+2026-10-10T15:52:41.884Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=69c7a046-4f7d-48d6-9d4c-bf25de2e620b forecast_time_requested=latest ml_responded=true ml_http_status=422 ml_latency_ms=8 outcome=upstream_invalid_response backend_http_status=502 violation="el ML respondió 422 a una petición sin forecast_time"
+2026-10-10T15:52:41.962Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=b01d828c-39bb-44d2-983e-c7f8680c4e55 forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=422 ml_latency_ms=48 outcome=upstream_invalid_response backend_http_status=502 violation="422 sin cuerpo Error invalid_request"
+2026-10-10T15:52:42.043Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-7] sapi.backend.ml                          : ml_predict request_id=503cfa53-03ff-486e-870c-ec9b94375f47 forecast_time_requested=latest ml_responded=true ml_http_status=500 ml_latency_ms=48 outcome=internal_error backend_http_status=500
+2026-10-10T15:52:42.128Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=e2a9123e-1821-4a5b-b71c-ef5b1f92cbb9 forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=503 ml_latency_ms=51 outcome=prototype_unavailable backend_http_status=503
+2026-10-10T15:52:42.178Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=09d11e2e-c339-477b-87b5-24035b1239d5 forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=7 outcome=data_unavailable backend_http_status=503
+2026-10-10T15:52:42.258Z  WARN 32127 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ml_predict request_id=95c31b5b-3e6c-4d84-88cb-d7d4f3628e31 forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=51 outcome=upstream_unavailable backend_http_status=503
+2026-10-10T15:52:42.334Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=c2253c7a-b7a6-4edf-87fc-97d6383e0fde forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=46 outcome=upstream_unavailable backend_http_status=503
+2026-10-10T15:52:42.361Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ml_predict request_id=82b5b876-074c-4feb-9503-5b43891319e8 forecast_time_requested=latest ml_responded=true ml_http_status=502 ml_latency_ms=6 outcome=upstream_invalid_response backend_http_status=502 violation="código HTTP no previsto: 502"
+2026-10-10T15:52:42.383Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ranking_request_rejected request_id=d297d093-7e04-4e0c-bd4b-657834d5d596 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:42.413Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=streamlit-42.a:b forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=5 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:42.484Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=5f5881ab-35b1-4123-9324-62dc607cd40b forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=48 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:42.539Z  WARN 32127 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ml_predict request_id=47eea86c-1cea-4c64-9b71-a8b2a2d909d2 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=20 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo supera 1048576 bytes"
+2026-10-10T15:52:42.572Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ml_predict request_id=70b5af4a-cde8-4842-baf3-0e6bebd343b6 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=6 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:42.651Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ml_predict request_id=72675051-9ee2-4e64-94c0-43f6da160d1f forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=4 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:42.727Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=34b0cb51-b063-4afe-813b-ae0058328b5f forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=52 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:43.763Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=2baa0bb0-5a60-498f-9bec-c2b5a04b4b4f forecast_time_requested=latest ml_responded=false ml_latency_ms=1004 outcome=upstream_timeout backend_http_status=504
+2026-10-10T15:52:44.783Z  WARN 32127 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ml_predict request_id=9dc4d01f-fafb-44d7-ac8f-1b14877d7108 forecast_time_requested=latest ml_responded=false ml_latency_ms=1001 outcome=upstream_timeout backend_http_status=504
+2026-10-10T15:52:44.807Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ml_predict request_id=fb17d21b-6afe-435d-a5fd-3a26c17950c0 forecast_time_requested=2026-09-01T00:00:00Z ml_responded=true ml_http_status=200 ml_latency_ms=4 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:44.867Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ml_predict request_id=7ed29af1-4832-4bb5-8dd9-c0eb245b677f forecast_time_requested=2026-10-01T18:00:00-03:00 ml_responded=true ml_http_status=200 ml_latency_ms=44 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:44.934Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ml_predict request_id=8a097f10-7420-41d8-9d4c-442c6ff76193 forecast_time_requested=2026-10-01T21:00:00+00:00 ml_responded=true ml_http_status=200 ml_latency_ms=47 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:45.004Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ml_predict request_id=352f9d4a-3f88-4ff4-81f3-7c3bb7adeb63 forecast_time_requested=2026-10-01T21:00:00.5+00:00 ml_responded=true ml_http_status=200 ml_latency_ms=50 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:45.020Z  WARN 32127 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ranking_request_rejected request_id=21cf373e-1f7f-4a93-a3cf-8f138c8ddeb4 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.038Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ranking_request_rejected request_id=b2cced97-a1f4-4262-ad08-d9dd689bfedc outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.057Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ranking_request_rejected request_id=198eeee9-ddeb-4cb7-a47f-cdadb88ca1ea outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.075Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ranking_request_rejected request_id=f037229e-2b7a-4f2f-872c-22089438db6e outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.090Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ranking_request_rejected request_id=4b015004-9c8a-4426-b924-1288cfa0a9f8 outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.108Z  WARN 32127 --- [sapi-backend] [-auto-1-exec-10] sapi.backend.ml                          : ranking_request_rejected request_id=00ef693d-a17c-460d-8491-059ef53fd1db outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.133Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-2] sapi.backend.ml                          : ranking_request_rejected request_id=a05fe3fa-c1e5-4ea5-b2a3-b225d1e6f62c outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.154Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-4] sapi.backend.ml                          : ranking_request_rejected request_id=55d32bec-a9dd-43a8-8e82-9af7efeef91a outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.176Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-6] sapi.backend.ml                          : ranking_request_rejected request_id=f5b19594-9a57-489b-a2d2-7faf9cde68ed outcome=invalid_request backend_http_status=422 reason=forecast_time_invalido
+2026-10-10T15:52:45.263Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-8] sapi.backend.ml                          : ranking_request_rejected request_id=zz-request-1 outcome=invalid_request backend_http_status=422 reason=parametros_no_decodificables
+2026-10-10T15:52:45.309Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-9] sapi.backend.ml                          : ml_predict request_id=42269c51-0043-46cf-825c-9ed61b0aea28 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=16 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:45.354Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-1] sapi.backend.ml                          : ml_predict request_id=66d953b4-5dcd-4af5-b6a4-4751defb28cf forecast_time_requested=latest ml_responded=true ml_http_status=503 ml_latency_ms=20 outcome=upstream_invalid_response backend_http_status=502 violation="el cuerpo supera 1048576 bytes"
+2026-10-10T15:52:46.372Z  WARN 32127 --- [sapi-backend] [o-auto-1-exec-3] sapi.backend.ml                          : ml_predict request_id=d9aaf680-c5b4-4e76-b1f2-d4acf822495e forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=1002 outcome=upstream_timeout backend_http_status=504
+2026-10-10T15:52:46.400Z  INFO 32127 --- [sapi-backend] [o-auto-1-exec-5] sapi.backend.ml                          : ml_predict request_id=b6625dfb-1e83-4fad-b14c-3aaeb6b9a94a forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=7 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 9.321 s -- in cl.sapi.backend.ranking.RankingEndpointIntegrationTests
+[INFO] Running cl.sapi.backend.ranking.RankingServiceTests
+2026-10-10T15:52:46.428Z  INFO 32127 --- [sapi-backend] [           main] sapi.backend.ml                          : ml_predict request_id=req-4 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=0 outcome=ok backend_http_status=200 model_version="[omitido]" forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3
+2026-10-10T15:52:46.433Z  WARN 32127 --- [sapi-backend] [           main] sapi.backend.ml                          : ml_predict request_id=req-2 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=0 outcome=upstream_unavailable backend_http_status=503
+2026-10-10T15:52:46.436Z ERROR 32127 --- [sapi-backend] [           main] sapi.backend.ml                          : ml_predict request_id=req-1 forecast_time_requested=latest ml_responded=false ml_latency_ms=0 outcome=internal_error backend_http_status=500 error_class=IllegalStateException
+
+java.lang.IllegalStateException: fallo interno
+	at cl.sapi.backend.ranking.RankingServiceTests.lambda$unexpectedErrorIsInternalError$0(RankingServiceTests.java:51) ~[test-classes/:na]
+	at cl.sapi.backend.ranking.RankingServiceTests$3.predict(RankingServiceTests.java:167) ~[test-classes/:na]
+	at cl.sapi.backend.ranking.RankingService.rank(RankingService.java:69) ~[classes/:na]
+	at cl.sapi.backend.ranking.RankingServiceTests.unexpectedErrorIsInternalError(RankingServiceTests.java:52) ~[test-classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:701) ~[junit-platform-commons-6.0.3.jar:6.0.3]
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:502) ~[junit-platform-commons-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.support.MethodReflectionUtils.invoke(MethodReflectionUtils.java:45) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:61) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:124) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:163) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:148) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:123) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:105) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:99) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:66) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:47) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:39) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:104) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:98) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invokeVoid(InterceptingExecutableInvoker.java:71) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$0(TestMethodTestDescriptor.java:219) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:215) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:157) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:176) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:42) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:180) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:42) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:180) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:36) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:52) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:58) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:246) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:218) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:179) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:108) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:66) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:157) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:65) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:125) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:114) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:58) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$2(InterceptingLauncher.java:57) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:56) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:58) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.apache.maven.surefire.api.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:125) ~[surefire-api-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.executeWithCancellationToken(LauncherAdapter.java:68) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.execute(LauncherAdapter.java:54) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:203) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:168) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:136) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495) ~[surefire-booter-3.5.6.jar:3.5.6]
+
+2026-10-10T15:52:46.446Z  INFO 32127 --- [sapi-backend] [           main] sapi.backend.ml                          : ml_predict request_id=req-persist forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=0 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3 ejecucion_id=42
+2026-10-10T15:52:46.459Z ERROR 32127 --- [sapi-backend] [           main] sapi.backend.ml                          : ml_predict request_id=req-persist-fail forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=0 outcome=internal_error backend_http_status=500 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3 error_class=RankingPersistenceException
+
+cl.sapi.backend.ranking.persistence.RankingPersistenceException: fallo de persistencia controlado
+	at cl.sapi.backend.ranking.RankingServiceTests$2.persist(RankingServiceTests.java:139) ~[test-classes/:na]
+	at cl.sapi.backend.ranking.RankingService.interpret(RankingService.java:142) ~[classes/:na]
+	at cl.sapi.backend.ranking.RankingService.rank(RankingService.java:72) ~[classes/:na]
+	at cl.sapi.backend.ranking.RankingServiceTests.persistenceFailureIsInternalErrorNotRanking200(RankingServiceTests.java:144) ~[test-classes/:na]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.junit.platform.commons.util.ReflectionUtils.invokeMethod(ReflectionUtils.java:701) ~[junit-platform-commons-6.0.3.jar:6.0.3]
+	at org.junit.platform.commons.support.ReflectionSupport.invokeMethod(ReflectionSupport.java:502) ~[junit-platform-commons-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.support.MethodReflectionUtils.invoke(MethodReflectionUtils.java:45) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.MethodInvocation.proceed(MethodInvocation.java:61) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$ValidatingInvocation.proceed(InvocationInterceptorChain.java:124) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.intercept(TimeoutExtension.java:163) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestableMethod(TimeoutExtension.java:148) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.extension.TimeoutExtension.interceptTestMethod(TimeoutExtension.java:86) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker$ReflectiveInterceptorCall.lambda$ofVoidMethod$0(InterceptingExecutableInvoker.java:123) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.lambda$invoke$0(InterceptingExecutableInvoker.java:105) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain$InterceptedInvocation.proceed(InvocationInterceptorChain.java:99) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.proceed(InvocationInterceptorChain.java:66) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.chainAndInvoke(InvocationInterceptorChain.java:47) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InvocationInterceptorChain.invoke(InvocationInterceptorChain.java:39) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:104) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invoke(InterceptingExecutableInvoker.java:98) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.execution.InterceptingExecutableInvoker.invokeVoid(InterceptingExecutableInvoker.java:71) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.lambda$invokeTestMethod$0(TestMethodTestDescriptor.java:219) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.invokeTestMethod(TestMethodTestDescriptor.java:215) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:157) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.jupiter.engine.descriptor.TestMethodTestDescriptor.execute(TestMethodTestDescriptor.java:70) ~[junit-jupiter-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:176) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:42) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:180) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596) ~[na:na]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.invokeAll(SameThreadHierarchicalTestExecutorService.java:42) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$2(NodeTestTask.java:180) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$1(NodeTestTask.java:166) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.Node.around(Node.java:138) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.lambda$executeRecursively$0(NodeTestTask.java:164) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.ThrowableCollector.execute(ThrowableCollector.java:74) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.executeRecursively(NodeTestTask.java:163) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.NodeTestTask.execute(NodeTestTask.java:116) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.SameThreadHierarchicalTestExecutorService.submit(SameThreadHierarchicalTestExecutorService.java:36) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestExecutor.execute(HierarchicalTestExecutor.java:52) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.engine.support.hierarchical.HierarchicalTestEngine.execute(HierarchicalTestEngine.java:58) ~[junit-platform-engine-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.executeEngine(EngineExecutionOrchestrator.java:246) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.failOrExecuteEngine(EngineExecutionOrchestrator.java:218) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:179) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:108) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.lambda$execute$0(EngineExecutionOrchestrator.java:66) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.withInterceptedStreams(EngineExecutionOrchestrator.java:157) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.EngineExecutionOrchestrator.execute(EngineExecutionOrchestrator.java:65) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:125) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DefaultLauncher.execute(DefaultLauncher.java:114) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:58) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.InterceptingLauncher.lambda$execute$2(InterceptingLauncher.java:57) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.ClasspathAlignmentCheckingLauncherInterceptor.intercept(ClasspathAlignmentCheckingLauncherInterceptor.java:25) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.InterceptingLauncher.execute(InterceptingLauncher.java:56) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at org.junit.platform.launcher.core.DelegatingLauncher.execute(DelegatingLauncher.java:58) ~[junit-platform-launcher-6.0.3.jar:6.0.3]
+	at java.base/jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103) ~[na:na]
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580) ~[na:na]
+	at org.apache.maven.surefire.api.util.ReflectionUtils.invokeMethodWithArray(ReflectionUtils.java:125) ~[surefire-api-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.executeWithCancellationToken(LauncherAdapter.java:68) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.LauncherAdapter.execute(LauncherAdapter.java:54) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.execute(JUnitPlatformProvider.java:203) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invokeAllTests(JUnitPlatformProvider.java:168) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.junitplatform.JUnitPlatformProvider.invoke(JUnitPlatformProvider.java:136) ~[surefire-junit-platform-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.runSuitesInProcess(ForkedBooter.java:385) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.execute(ForkedBooter.java:162) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.run(ForkedBooter.java:507) ~[surefire-booter-3.5.6.jar:3.5.6]
+	at org.apache.maven.surefire.booter.ForkedBooter.main(ForkedBooter.java:495) ~[surefire-booter-3.5.6.jar:3.5.6]
+
+2026-10-10T15:52:46.474Z  WARN 32127 --- [sapi-backend] [           main] sapi.backend.ml                          : ml_predict request_id=req-3 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=0 outcome=upstream_timeout backend_http_status=504
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.055 s -- in cl.sapi.backend.ranking.RankingServiceTests
+[INFO] Running cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.424 s -- in cl.sapi.backend.ranking.persistence.RankingPersistenceServiceTests
+[INFO] Running cl.sapi.backend.ranking.RankingResultValidatorTests
+[INFO] Tests run: 47, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.360 s -- in cl.sapi.backend.ranking.RankingResultValidatorTests
+[INFO] Running cl.sapi.backend.ranking.RankingMlUnavailableTests
+2026-10-10T15:52:47.294Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingMlUnavailableTests]: RankingMlUnavailableTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:47.311Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingMlUnavailableTests
+2026-10-10T15:52:47.313Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.ranking.RankingMlUnavailableTests]: RankingMlUnavailableTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:47.319Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.ranking.RankingMlUnavailableTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T15:52:47.400Z  INFO 32127 --- [sapi-backend] [           main] c.s.b.ranking.RankingMlUnavailableTests  : Starting RankingMlUnavailableTests using Java 21.0.12.1 with PID 32127 (started by root in [gate-out]/src-799s5a62/services/backend)
+2026-10-10T15:52:47.400Z  INFO 32127 --- [sapi-backend] [           main] c.s.b.ranking.RankingMlUnavailableTests  : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T15:52:47.724Z  INFO 32127 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-10T15:52:47.726Z  INFO 32127 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-10T15:52:47.726Z  INFO 32127 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-10T15:52:47.745Z  INFO 32127 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 340 ms
+2026-10-10T15:52:47.959Z  INFO 32127 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 34447 (http) with context path '/'
+2026-10-10T15:52:47.965Z  INFO 32127 --- [sapi-backend] [           main] c.s.b.ranking.RankingMlUnavailableTests  : Started RankingMlUnavailableTests in 0.635 seconds (process running for 11.833)
+2026-10-10T15:52:47.996Z  INFO 32127 --- [sapi-backend] [o-auto-2-exec-1] o.a.c.c.C.[Tomcat-1].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-10T15:52:47.997Z  INFO 32127 --- [sapi-backend] [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-10T15:52:47.998Z  INFO 32127 --- [sapi-backend] [o-auto-2-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+2026-10-10T15:52:48.027Z  WARN 32127 --- [sapi-backend] [o-auto-2-exec-1] sapi.backend.ml                          : ml_predict request_id=75f77444-2a6a-4ecc-beb2-e0d95a3b9c9a forecast_time_requested=latest ml_responded=false ml_latency_ms=24 outcome=upstream_unavailable backend_http_status=503
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.772 s -- in cl.sapi.backend.ranking.RankingMlUnavailableTests
+[INFO] Running cl.sapi.backend.ranking.RankingRealMlServiceTests
+[WARNING] Tests run: 4, Failures: 0, Errors: 0, Skipped: 4, Time elapsed: 0.010 s -- in cl.sapi.backend.ranking.RankingRealMlServiceTests
+[INFO] Running cl.sapi.backend.ranking.ml.MlServiceClientTests
+[INFO] Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.163 s -- in cl.sapi.backend.ranking.ml.MlServiceClientTests
+[INFO] Running cl.sapi.backend.ranking.ml.MlServicePropertiesTests
+2026-10-10T15:52:49.278Z  WARN 32127 --- [sapi-backend] [           main] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.boot.context.properties.ConfigurationPropertiesBindException: Error creating bean with name 'sapi.ml-cl.sapi.backend.ranking.ml.MlServiceProperties': Could not bind properties to 'MlServiceProperties' : prefix=sapi.ml, ignoreInvalidFields=false, ignoreUnknownFields=true
+2026-10-10T15:52:49.302Z  WARN 32127 --- [sapi-backend] [           main] s.c.a.AnnotationConfigApplicationContext : Exception encountered during context initialization - cancelling refresh attempt: org.springframework.boot.context.properties.ConfigurationPropertiesBindException: Error creating bean with name 'sapi.ml-cl.sapi.backend.ranking.ml.MlServiceProperties': Could not bind properties to 'MlServiceProperties' : prefix=sapi.ml, ignoreInvalidFields=false, ignoreUnknownFields=true
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.149 s -- in cl.sapi.backend.ranking.ml.MlServicePropertiesTests
+[INFO] Running cl.sapi.backend.HealthControllerTests
+2026-10-10T15:52:49.387Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.HealthControllerTests]: HealthControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:49.398Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.HealthControllerTests
+2026-10-10T15:52:49.400Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.HealthControllerTests]: HealthControllerTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:49.404Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.HealthControllerTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T15:52:49.435Z  INFO 32127 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Starting HealthControllerTests using Java 21.0.12.1 with PID 32127 (started by root in [gate-out]/src-799s5a62/services/backend)
+2026-10-10T15:52:49.435Z  INFO 32127 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T15:52:49.595Z  INFO 32127 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat initialized with port 0 (http)
+2026-10-10T15:52:49.597Z  INFO 32127 --- [sapi-backend] [           main] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2026-10-10T15:52:49.597Z  INFO 32127 --- [sapi-backend] [           main] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/11.0.24]
+2026-10-10T15:52:49.613Z  INFO 32127 --- [sapi-backend] [           main] b.w.c.s.WebApplicationContextInitializer : Root WebApplicationContext: initialization completed in 176 ms
+2026-10-10T15:52:49.726Z  INFO 32127 --- [sapi-backend] [           main] o.s.boot.tomcat.TomcatWebServer          : Tomcat started on port 44609 (http) with context path '/'
+2026-10-10T15:52:49.730Z  INFO 32127 --- [sapi-backend] [           main] cl.sapi.backend.HealthControllerTests    : Started HealthControllerTests in 0.32 seconds (process running for 13.597)
+2026-10-10T15:52:49.753Z  INFO 32127 --- [sapi-backend] [o-auto-3-exec-1] o.a.c.c.C.[Tomcat-2].[localhost].[/]     : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2026-10-10T15:52:49.753Z  INFO 32127 --- [sapi-backend] [o-auto-3-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2026-10-10T15:52:49.755Z  INFO 32127 --- [sapi-backend] [o-auto-3-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 1 ms
+[INFO] Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.427 s -- in cl.sapi.backend.HealthControllerTests
+[INFO] Running cl.sapi.backend.BackendApplicationTests
+2026-10-10T15:52:49.813Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:49.816Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+2026-10-10T15:52:49.817Z  INFO 32127 --- [sapi-backend] [           main] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [cl.sapi.backend.BackendApplicationTests]: BackendApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-10-10T15:52:49.819Z  INFO 32127 --- [sapi-backend] [           main] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration cl.sapi.backend.BackendApplication for test class cl.sapi.backend.BackendApplicationTests
+
+  .   ____          _            __ _ _
+ /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
+( ( )\___ | '_ | '_| | '_ \/ _` | \ \ \ \
+ \\/  ___)| |_)| | | | | || (_| |  ) ) ) )
+  '  |____| .__|_| |_|_| |_\__, | / / / /
+ =========|_|==============|___/=/_/_/_/
+
+ :: Spring Boot ::                (v4.1.1)
+
+2026-10-10T15:52:49.850Z  INFO 32127 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Starting BackendApplicationTests using Java 21.0.12.1 with PID 32127 (started by root in [gate-out]/src-799s5a62/services/backend)
+2026-10-10T15:52:49.850Z  INFO 32127 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : No active profile set, falling back to 1 default profile: "default"
+2026-10-10T15:52:50.181Z  INFO 32127 --- [sapi-backend] [           main] c.sapi.backend.BackendApplicationTests   : Started BackendApplicationTests in 0.35 seconds (process running for 14.048)
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.384 s -- in cl.sapi.backend.BackendApplicationTests
+[INFO] 
+[INFO] Results:
+[INFO] 
+[INFO] Tests run: 127, Failures: 0, Errors: 0, Skipped: 4
+[INFO] 
+[INFO] 
+[INFO] --- jar:3.5.1:jar (default-jar) @ backend ---
+[INFO] Building jar: [gate-out]/src-799s5a62/services/backend/target/backend-0.0.1-SNAPSHOT.jar
+[INFO] 
+[INFO] --- spring-boot:4.1.1:repackage (repackage) @ backend ---
+[INFO] Replacing main artifact [gate-out]/src-799s5a62/services/backend/target/backend-0.0.1-SNAPSHOT.jar with repackaged archive, adding nested dependencies in BOOT-INF/.
+[INFO] The original artifact has been renamed to [gate-out]/src-799s5a62/services/backend/target/backend-0.0.1-SNAPSHOT.jar.original
+[INFO] 
+[INFO] --- failsafe:3.5.6:integration-test (default) @ backend ---
+[INFO] Tests are skipped.
+[INFO] 
+[INFO] --- failsafe:3.5.6:verify (default) @ backend ---
+[INFO] Tests are skipped.
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  20.434 s
+[INFO] Finished at: 2026-10-10T15:52:51Z
+[INFO] ------------------------------------------------------------------------
+exit=0

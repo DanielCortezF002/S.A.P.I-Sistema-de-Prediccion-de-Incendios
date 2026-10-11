@@ -1,0 +1,35 @@
+# syntax=docker/dockerfile:1
+# SOLO SANDBOX (no versionado; autorizado por Daniel para la validación de
+# SAPI-60 en el entorno cloud). Igual a Dockerfile.ml-api salvo dos cosas:
+#  1. Sin el apt-get de gdal/geos/proj/gcc: la política de egress de la sesión
+#     bloquea deb.debian.org. Todas las dependencias se instalan como wheels
+#     binarios (--only-binary=:all:; rasterio trae GDAL embebido).
+#  2. pip usa el proxy de la sesión y su CA solo durante el build (secret
+#     mount): la CA no queda en la imagen.
+#  3. libexpat.so.1 (que en Dockerfile.ml-api llega con el apt de GDAL y que
+#     rasterio necesita) se copia de la imagen postgis/postgis:15-3.4 (Debian
+#     bullseye, glibc 2.31: ABI compatible), ya presente en el sandbox.
+# NO prueba el build de Dockerfile.ml-api: eso queda para el host (CA6).
+FROM postgis/postgis:15-3.4 AS sandbox-libexpat
+
+FROM python:3.14-slim
+COPY --from=sandbox-libexpat /lib/x86_64-linux-gnu/libexpat.so.1.6.12 /usr/lib/x86_64-linux-gnu/libexpat.so.1
+
+WORKDIR /app
+
+COPY requirements.txt requirements-dev.txt ./
+RUN --mount=type=secret,id=proxyca PIP_CERT=/run/secrets/proxyca \
+    pip install --no-cache-dir --only-binary=:all: -r requirements-dev.txt
+
+COPY . .
+
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
+
+RUN useradd --system --uid 10001 --no-create-home sapi
+USER sapi
+
+EXPOSE 8000
+
+CMD ["uvicorn", "services.ml_api.main:app", "--host", "0.0.0.0", "--port", "8000"]
