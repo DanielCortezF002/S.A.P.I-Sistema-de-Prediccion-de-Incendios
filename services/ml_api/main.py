@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import date, datetime
 from typing import Annotated, Literal, Optional
 
 import pandas as pd
@@ -117,7 +116,7 @@ class RankingResult(BaseModel):
     station_id: Optional[Annotated[str, Field(min_length=1)]] = None
     station_name: Optional[Annotated[str, Field(min_length=1)]] = None
     firms_origin: Optional[Literal["baseline", "current", "reproducibility"]] = None
-    firms_coverage_end: Optional[date] = None
+    firms_coverage_end: Optional[Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]] = None
     firms_lag_days: Optional[Annotated[int, Field(ge=0)]] = None
     firms_status: Optional[Literal["FIRMS AL DÍA", "FIRMS DESACTUALIZADO"]] = None
     cells: Annotated[list[CellRanking], Field(min_length=50, max_length=50)]
@@ -179,43 +178,37 @@ def health():
     return JSONResponse(status_code=503, content=body.model_dump())
 
 
-def _aware(value) -> datetime:
-    """Datetime con zona, truncado a microsegundos (RFC 3339, ≤ 9 decimales)."""
-    ts = pd.Timestamp(value)
-    if ts.tzinfo is None:
-        raise ValueError("timestamp sin zona horaria")
-    return ts.to_pydatetime()
-
-
-def _coverage_end(value) -> date:
-    if isinstance(value, datetime):
-        return value.date()
-    if isinstance(value, pd.Timestamp):
-        return value.date()
-    if isinstance(value, date):
-        return value
-    raise ValueError("firms_coverage_end no es una fecha")
-
-
 def _ranking(result, disclaimer: str) -> RankingResult:
     # age_hours y freshness ya vienen de la evaluación (captured_at −
     # weather_timestamp). Este servicio no los recalcula.
+    def aware(value):
+        ts = pd.Timestamp(value)
+        if ts.tzinfo is None:
+            raise ValueError("timestamp sin zona horaria")
+        return ts.to_pydatetime()
+
+    coverage = result.firms_coverage_end
+    coverage_text = coverage.isoformat() if hasattr(coverage, "isoformat") else None
+    if not isinstance(coverage_text, str) or len(coverage_text) < 10:
+        raise ValueError("firms_coverage_end no es una fecha")
+    coverage_text = coverage_text[:10]
+
     return RankingResult(
         schema_version=SCHEMA_VERSION,
         model_version=result.model_version,
-        forecast_time=_aware(result.forecast_time),
+        forecast_time=aware(result.forecast_time),
         inputs_fingerprint=result.inputs_fingerprint,
         score_semantics="relative_rank",
         scientific_model_validation=False,
         horizon_hours=result.horizon_hours,
         disclaimer=disclaimer,
-        weather_timestamp=_aware(result.weather_timestamp),
+        weather_timestamp=aware(result.weather_timestamp),
         age_hours=float(result.age_hours),
         freshness=result.freshness,
         station_id=result.station_id,
         station_name=result.station_name,
         firms_origin=result.firms_origin,
-        firms_coverage_end=_coverage_end(result.firms_coverage_end),
+        firms_coverage_end=coverage_text,
         firms_lag_days=int(result.firms_lag_days),
         firms_status=result.firms_status,
         cells=[
