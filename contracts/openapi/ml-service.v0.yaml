@@ -156,6 +156,62 @@ components:
         disclaimer:
           type: string
           description: Aviso para mostrar al usuario final. Opcional.
+        weather_timestamp:
+          type: string
+          format: date-time
+          description: |
+            Instante de la observación meteorológica regional DMC usada para
+            puntuar. Opcional. No es `forecast_time` ni la hora del navegador.
+        age_hours:
+          type: number
+          minimum: 0
+          description: |
+            Horas entre el instante de captura de la evaluación (reloj del
+            servicio al puntuar) y `weather_timestamp`. Opcional. No se
+            recalcula en el cliente.
+        freshness:
+          type: string
+          enum:
+            - DATOS RECIENTES
+            - DATOS CON RETRASO
+            - DATOS HISTÓRICOS / DESACTUALIZADOS
+          description: |
+            Clasificación de `age_hours` ya hecha por el servicio (≤12 h,
+            ≤24 h, o más). Opcional. No afirma que el ranking sea el riesgo
+            actual.
+        station_id:
+          type: string
+          minLength: 1
+          description: |
+            Código de la estación DMC regional cuya lectura se usó. Opcional.
+            No es meteorología medida en la celda.
+        station_name:
+          type: string
+          minLength: 1
+          description: Nombre de esa estación DMC regional. Opcional.
+        firms_origin:
+          type: string
+          enum: [baseline, current, reproducibility]
+          description: |
+            Origen del archivo FIRMS usado (anomalías térmicas satelitales;
+            no incendios confirmados en terreno). Opcional.
+        firms_coverage_end:
+          type: string
+          format: date
+          description: Último día cubierto por ese archivo FIRMS. Opcional.
+        firms_lag_days:
+          type: integer
+          minimum: 0
+          description: |
+            Días entre la fecha de `forecast_time` y `firms_coverage_end`.
+            Opcional. No convierte las detecciones en incendios confirmados.
+        firms_status:
+          type: string
+          enum:
+            - FIRMS AL DÍA
+            - FIRMS DESACTUALIZADO
+          description: |
+            Clasificación del desfase FIRMS ya hecha por el servicio. Opcional.
         cells:
           type: array
           minItems: 50

@@ -1,9 +1,8 @@
 # SAPI-61 — Configuración `SAPI_BACKEND_BASE_URL` (Streamlit → backend REST)
 
-Estado: **Etapa A** (rama `feat/SAPI-61-streamlit-backend-rest`, sin merge).
-Este documento existe porque `README.md`, `.env.example` y `docker-compose*`
-pertenecen a SAPI-60 (PR-4) y no se tocan en esta rama; la integración real en
-Compose se hace en la Etapa B, después del merge de SAPI-60.
+Estado: **Etapa B** (rama `feat/SAPI-61-streamlit-backend-rest`, sin merge).
+`main` ya incluye el Compose de SAPI-60. El dashboard v2 es el servicio
+`web-v2` (profile `presentation`); el profile `legacy` no se activa.
 
 ## Qué cambia
 
@@ -39,40 +38,48 @@ Las tres primeras se leen en cada consulta (`get_backend_base_url()`,
 `get_backend_timeouts()`), así que pueden inyectarse desde tests o cambiarse
 sin reiniciar el proceso. Un timeout no numérico o ≤ 0 vuelve al default.
 
-## Para la Etapa B (SAPI-60 / Compose)
+## Compose (profile `presentation`)
 
-- `tests/test_docker_build_hygiene.py` exige que `web-presentation` **no**
-  reciba `env_file`; la variable debe ir por `environment:`:
+`docker compose up` sigue levantando solo `db-v2`, `ml-api` y `backend`.
+Streamlit v2 es opt-in:
 
-  ```yaml
-  web-presentation:
-    environment:
-      SAPI_BACKEND_BASE_URL: http://backend:8080
-  ```
+```bash
+docker compose --profile presentation up --build web-v2
+```
 
-  (`backend` = nombre del servicio Spring Boot en el Compose de SAPI-60).
-- Desde el host contra un backend en contenedor: `http://localhost:8080`
-  (puerto publicado). Desde un contenedor hacia el host:
-  `http://host.docker.internal:8080` (mismo patrón que `SAPI_SCORE_URL`).
-- `README.md` y `.env.example` deben documentar las cuatro variables en el
-  mismo PR que integre Compose.
-- `scripts/merge_gate.py::V2_LINT_PATHS` debe incorporar
-  `app/utils/backend_client.py`, `app/utils/reference_topography.py`,
-  `app/components/ranking_backend_view.py`, `tests/test_backend_client.py`,
-  `tests/test_ranking_backend_view.py` y `tests/test_sapi61_http_stub.py`
-  (en Etapa A se verificaron a mano con `black --line-length 100` y
-  `flake8 --max-line-length=100 --extend-ignore=E203,W503`).
+`web-v2` fija `SAPI_BACKEND_BASE_URL=http://backend:8080` por `environment:`
+(sin `env_file`, misma higiene que `web-presentation`). No monta `data/` ni
+depende de `db-postgis`. Publica `127.0.0.1:8501`.
 
-## Comportamiento con el contrato v0 actual
+Desde el host, contra el puerto publicado del backend, el default
+`http://localhost:8080` alcanza el mismo `GET /api/v1/ranking`.
 
-El `RankingResult` v0 no transporta frescura (`weather_timestamp`,
-`age_hours`, `freshness`), estación (`station_id`, `station_name`),
-`model_status`, meteorología usada (`meteo_actual`) ni procedencia FIRMS
-(`firms_*`). La vista los lee como opcionales: si llegan (extensión aditiva de
-la Etapa B) se muestran tal cual; si no, muestra "no informado por el backend"
-y una nota explícita de que no se asume que el ranking sea actual. Nunca se
-derivan localmente. `historical_count` por celda no viaja (`CellRanking`
-congelado, F4c) y se muestra como "no disponible en la respuesta del backend".
+`README.md` y `.env.example` documentan `SAPI_BACKEND_BASE_URL`,
+`SAPI_BACKEND_CONNECT_TIMEOUT`, `SAPI_BACKEND_READ_TIMEOUT` y
+`SAPI_UI_LEGACY_MODES`. `scripts/merge_gate.py::V2_LINT_PATHS` incluye los
+módulos de esta vista.
+
+## Metadata opcional del contrato
+
+`schema_version` sigue siendo `sapi-ranking-v0`. El `RankingResult` suma nueve
+campos opcionales, emitidos por el servicio ML desde el resultado de la
+evaluación (no los calcula Streamlit):
+
+| Campo | Origen |
+|---|---|
+| `weather_timestamp` | observación DMC regional usada al puntuar |
+| `age_hours` | instante de captura de la evaluación − `weather_timestamp` |
+| `freshness` | clasificación de ese `age_hours` |
+| `station_id`, `station_name` | estación DMC regional (no meteorología por celda) |
+| `firms_origin`, `firms_coverage_end`, `firms_lag_days`, `firms_status` | archivo FIRMS usado (anomalías térmicas, no incendios confirmados) |
+
+No se agregan `model_status`, `meteo_actual` ni `historical_count`.
+`CellRanking` no cambia. Si un campo opcional no llega, la vista muestra
+"no informado por el backend" y no asume que el ranking sea el riesgo actual.
+`age_hours` puede cambiar entre dos evaluaciones con los mismos insumos,
+porque el instante de captura es el reloj del servicio; la clave de
+idempotencia persistida sigue siendo `(forecast_time, model_version,
+inputs_fingerprint)`.
 
 ## Errores (CA4)
 

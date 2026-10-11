@@ -14,9 +14,11 @@ que lo prueba y su resultado observado:
 Verifica además la integración real de la cadena:
   Flyway V001-V003 aplicadas por el backend (`flyway_schema_history`), 50
   celdas en `celdas_geom`; `GET /api/v1/ranking` = 200 con 50 celdas,
-  `relative_rank` y `scientific_model_validation=false`, con los mismos bytes
-  que `POST /predict` del ML (SAPI-57); la ejecución y sus 50 filas
-  persistidas, sin duplicarse al repetir la evaluación (SAPI-59); y
+  `relative_rank` y `scientific_model_validation=false`. La identidad estable
+  (celdas, fingerprint, estación, FIRMS y `weather_timestamp`) coincide con
+  `POST /predict`; `age_hours` y `freshness` pueden diferir entre evaluaciones
+  porque el reloj de captura no es parte del fingerprint (SAPI-61). La
+  ejecución y sus 50 filas se persisten sin duplicarse (SAPI-59); y
   `db/queries/latest_ranking.sql` por psql dentro del contenedor (50 filas, el
   mismo orden que la respuesta).
 
@@ -65,15 +67,30 @@ CELL_COUNT = 50
 REQUEST_ID = "sapi60-preflight-1"
 LATEST_RANKING_SQL = REPO_ROOT / "db" / "queries" / "latest_ranking.sql"
 # Salida real de POST /predict en modo reproducible (SAPI-57, forecast_time
-# 2026-09-01T00:00Z): el ranking del Compose por defecto debe ser byte a byte este.
+# 2026-09-01T00:00Z). Las celdas y la cabecera estable deben coincidir. Los
+# campos dinámicos de metadata (age_hours, freshness) no entran en esa
+# igualdad: cambian con el instante de captura.
 REPRODUCIBLE_FIXTURE = (
-    REPO_ROOT
-    / "services/backend/src/test/resources/ml/predict-reproducible-2026-09-01.json"
+    REPO_ROOT / "services/backend/src/test/resources/ml/predict-reproducible-2026-09-01.json"
 )
 PSQL = 'psql -X -v ON_ERROR_STOP=1 -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 
 PASS = "PASS"
 FAIL = "FAIL"
+# Cambian entre evaluaciones con los mismos insumos. No participan de la
+# igualdad entre dos llamadas ni de la comparación con el fixture estático.
+DYNAMIC_METADATA = ("age_hours", "freshness")
+OPTIONAL_METADATA = (
+    "weather_timestamp",
+    "age_hours",
+    "freshness",
+    "station_id",
+    "station_name",
+    "firms_origin",
+    "firms_coverage_end",
+    "firms_lag_days",
+    "firms_status",
+)
 
 
 def utc_now() -> str:
@@ -114,9 +131,7 @@ def secret_values(env_file: Path = REPO_ROOT / ".env") -> list[str]:
         if sep and not name.startswith("#") and SECRET_NAME.search(name):
             candidates.append(value.strip().strip("'\""))
     # Del entorno, solo las contraseñas que interpola docker-compose.yml.
-    candidates += [
-        os.environ.get(name, "") for name in ("SAPI_DB_PASSWORD", "POSTGRES_PASSWORD")
-    ]
+    candidates += [os.environ.get(name, "") for name in ("SAPI_DB_PASSWORD", "POSTGRES_PASSWORD")]
     return sorted({value for value in candidates if len(value) >= 4})
 
 
@@ -157,9 +172,7 @@ def parse_rows(output: str) -> list[list[str]]:
     return [line.split("|") for line in output.splitlines() if line.strip()]
 
 
-def check_latest_ranking(
-    rows: list[list[str]], expected_cells: list[str], ejecucion_id: str
-):
+def check_latest_ranking(rows: list[list[str]], expected_cells: list[str], ejecucion_id: str):
     """Filas de latest_ranking.sql frente a la respuesta del backend.
 
     Columnas: 0 ejecucion_id, 5 score_semantics, 6 scientific_model_validation,
@@ -180,9 +193,7 @@ def check_latest_ranking(
         problems.append("el score crece al avanzar el rank")
     if [row[9] for row in rows] != expected_cells:
         problems.append("el orden de cell_id difiere de la respuesta del backend")
-    if {row[5] for row in rows} != {"relative_rank"} or {row[6] for row in rows} != {
-        "f"
-    }:
+    if {row[5] for row in rows} != {"relative_rank"} or {row[6] for row in rows} != {"f"}:
         problems.append("score_semantics / scientific_model_validation inesperados")
     return problems
 
@@ -256,9 +267,7 @@ class Preflight:
 
     def psql(self, sql: str, *, unaligned: bool = True):
         flags = "-At -F '|'" if unaligned else "-P pager=off"
-        return self.compose_run(
-            "exec", "-T", "db-v2", "sh", "-c", f"{PSQL} {flags}", stdin=sql
-        )
+        return self.compose_run("exec", "-T", "db-v2", "sh", "-c", f"{PSQL} {flags}", stdin=sql)
 
     def scalar(self, sql: str) -> str:
         code, out, err = self.psql(sql)
@@ -267,9 +276,7 @@ class Preflight:
     def write(self, name: str, text: str) -> None:
         (self.out_dir / name).write_text(redact(text, self.pairs), encoding="utf-8")
 
-    def check(
-        self, check_id: str, ca: str, command: str, expected, observed, ok: bool
-    ) -> bool:
+    def check(self, check_id: str, ca: str, command: str, expected, observed, ok: bool) -> bool:
         self.checks.append(
             {
                 "id": check_id,
@@ -309,9 +316,7 @@ class Preflight:
     # --- pasos ---------------------------------------------------------------
 
     def environment(self) -> None:
-        _, docker, _ = self.run(
-            ["docker", "version", "--format", "{{.Server.Version}}"]
-        )
+        _, docker, _ = self.run(["docker", "version", "--format", "{{.Server.Version}}"])
         _, compose, _ = self.run(["docker", "compose", "version", "--short"])
         _, head, _ = self.run(["git", "rev-parse", "HEAD"])
         _, status, _ = self.run(["git", "status", "--porcelain"])
@@ -352,9 +357,7 @@ class Preflight:
 
     def fresh_project(self) -> None:
         """Arranca de cero: borra contenedores y volúmenes previos de ESTE proyecto."""
-        code, _, _ = self.compose_run(
-            "down", "-v", "--remove-orphans", log="fresh_start.log"
-        )
+        code, _, _ = self.compose_run("down", "-v", "--remove-orphans", log="fresh_start.log")
         self.facts["fresh_start"] = (
             f"docker compose down -v (solo {self.args.project_name}): exit {code}"
         )
@@ -374,9 +377,7 @@ class Preflight:
 
     def build(self) -> bool:
         if self.args.skip_build:
-            self.facts["build"] = (
-                "omitido (--skip-build): se usan las imágenes ya construidas"
-            )
+            self.facts["build"] = "omitido (--skip-build): se usan las imágenes ya construidas"
             return True
         code, _, _ = self.compose_run("build", timeout=3600, log="compose_build.log")
         return self.check(
@@ -413,9 +414,7 @@ class Preflight:
         # Solo lo que verifica el check: el JSON completo trae etiquetas y
         # montajes con rutas locales.
         projection = {
-            service: {
-                key: row.get(key) for key in ("Image", "State", "Health", "Publishers")
-            }
+            service: {key: row.get(key) for key in ("Image", "State", "Health", "Publishers")}
             for service, row in rows.items()
         }
         self.write(
@@ -536,12 +535,9 @@ class Preflight:
             "status_code": status,
             "x_request_id": headers.get("X-Request-Id"),
             "cells": len(cells),
-            "ranks": [cell.get("rank") for cell in cells]
-            == list(range(1, CELL_COUNT + 1)),
+            "ranks": [cell.get("rank") for cell in cells] == list(range(1, CELL_COUNT + 1)),
             "score_semantics": (ranking or {}).get("score_semantics"),
-            "scientific_model_validation": (ranking or {}).get(
-                "scientific_model_validation"
-            ),
+            "scientific_model_validation": (ranking or {}).get("scientific_model_validation"),
             "forecast_time": (ranking or {}).get("forecast_time"),
             "model_version": (ranking or {}).get("model_version"),
             "inputs_fingerprint": (ranking or {}).get("inputs_fingerprint"),
@@ -573,24 +569,41 @@ class Preflight:
         status, _, ml_payload, ml_seconds = self.http(
             "POST", self.ports["ml-api"], "/predict", body=b"{}"
         )
+        ml_body = _json(ml_payload)
         ml_sha = hashlib.sha256(ml_payload).hexdigest()
+        stable_equal = (
+            isinstance(ranking, dict)
+            and isinstance(ml_body, dict)
+            and _stable_ranking(ranking) == _stable_ranking(ml_body)
+        )
         self.check(
             "ranking.passthrough",
-            "SAPI-57 (mismos bytes)",
+            "SAPI-57 (identidad estable; age_hours puede diferir)",
             f"POST http://127.0.0.1:{self.ports['ml-api']}/predict {{}}",
-            {"status_code": 200, "body_sha256": observed["body_sha256"]},
-            {"status_code": status, "body_sha256": ml_sha, "seconds": ml_seconds},
-            status == 200 and ml_sha == observed["body_sha256"],
+            {"status_code": 200, "identidad_estable": True},
+            {
+                "status_code": status,
+                "identidad_estable": stable_equal,
+                "body_sha256_backend": observed["body_sha256"],
+                "body_sha256_ml": ml_sha,
+                "seconds": ml_seconds,
+            },
+            status == 200 and stable_equal,
         )
-        fixture_sha = hashlib.sha256(REPRODUCIBLE_FIXTURE.read_bytes()).hexdigest()
+        fixture = _json(REPRODUCIBLE_FIXTURE.read_bytes()) or {}
+        fixture_delta = _fixture_delta(ranking, fixture)
+        metadata_ok = _metadata_ok(ranking)
         self.check(
             "ranking.reproducible_fixture",
-            "ADR-009 (modo reproducible determinista)",
-            "sha256 de la respuesta vs "
-            + REPRODUCIBLE_FIXTURE.relative_to(REPO_ROOT).as_posix(),
-            fixture_sha,
-            observed["body_sha256"],
-            observed["body_sha256"] == fixture_sha,
+            "ADR-009 (celdas y cabecera estable; metadata dinámica aparte)",
+            "comparación con " + REPRODUCIBLE_FIXTURE.relative_to(REPO_ROOT).as_posix(),
+            {"delta": [], "metadata_opcional": "presente y tipada"},
+            {
+                "delta": fixture_delta,
+                "metadata": metadata_ok,
+                "body_sha256": observed["body_sha256"],
+            },
+            not fixture_delta and metadata_ok,
         )
         return ranking if ok else None
 
@@ -602,8 +615,7 @@ class Preflight:
         )
         ejecucion_id = self.scalar(f"SELECT id FROM ejecuciones WHERE {key};")
         rows = self.scalar(
-            "SELECT count(*) FROM predicciones_celda "
-            f"WHERE ejecucion_id = {ejecucion_id or 0};"
+            "SELECT count(*) FROM predicciones_celda " f"WHERE ejecucion_id = {ejecucion_id or 0};"
             if ejecucion_id.isdigit()
             else "SELECT 0;"
         )
@@ -644,23 +656,28 @@ class Preflight:
 
     def idempotent(self, ranking: dict) -> None:
         before = self.counts()
-        status, _, payload, _ = self.http(
-            "GET", self.ports["backend"], "/api/v1/ranking"
-        )
+        status, _, payload, _ = self.http("GET", self.ports["backend"], "/api/v1/ranking")
         after = self.counts()
-        same = _json(payload) == ranking
+        replay = _json(payload)
+        same_identity = isinstance(replay, dict) and _stable_ranking(replay) == _stable_ranking(
+            ranking
+        )
         self.check(
             "persistence.idempotent_replay",
-            "SAPI-59.CA4 (no duplica)",
+            "SAPI-59.CA4 (no duplica; age_hours puede diferir)",
             "GET /api/v1/ranking por segunda vez + conteos",
-            {"status_code": 200, "misma_respuesta": True, "conteos": "sin cambio"},
+            {
+                "status_code": 200,
+                "misma_identidad": True,
+                "conteos": "sin cambio",
+            },
             {
                 "status_code": status,
-                "misma_respuesta": same,
+                "misma_identidad": same_identity,
                 "ejecuciones_antes_despues": [before[0], after[0]],
                 "predicciones_antes_despues": [before[1], after[1]],
             },
-            status == 200 and same and before == after,
+            status == 200 and same_identity and before == after,
         )
 
     def latest_ranking(self, ranking: dict, ejecucion_id: str) -> None:
@@ -669,9 +686,7 @@ class Preflight:
         self.write(
             "latest_ranking_psql.txt",
             '$ docker compose exec -T db-v2 sh -c \'psql -U "$POSTGRES_USER" '
-            '-d "$POSTGRES_DB"\' < db/queries/latest_ranking.sql\n\n'
-            + aligned
-            + aligned_err,
+            '-d "$POSTGRES_DB"\' < db/queries/latest_ranking.sql\n\n' + aligned + aligned_err,
         )
         code, out, err = self.psql(sql)
         rows = parse_rows(out) if code == 0 else []
@@ -703,9 +718,7 @@ class Preflight:
         self.write("backend_log_excerpt.txt", "\n".join(keep) + "\n")
         migrated = any("Successfully applied 3 migrations" in line for line in keep)
         events = [line for line in keep if "ml_predict" in line]
-        ranked = any(
-            "outcome=ok" in line and "ml_http_status=200" in line for line in events
-        )
+        ranked = any("outcome=ok" in line and "ml_http_status=200" in line for line in events)
         self.check(
             "backend.logs",
             "CA6 (Flyway) + SAPI-57.CA5",
@@ -745,9 +758,7 @@ class Preflight:
         if not self.args.project_name.startswith(PROJECT_PREFIX):
             self.facts["cleanup"] = "rechazado: el proyecto no es un preflight"
             return
-        code, _, _ = self.compose_run(
-            "down", "-v", "--remove-orphans", log="cleanup.log"
-        )
+        code, _, _ = self.compose_run("down", "-v", "--remove-orphans", log="cleanup.log")
         self.facts["cleanup"] = (
             f"docker compose down -v (solo {self.args.project_name}): exit {code}"
         )
@@ -778,11 +789,7 @@ class Preflight:
         return self.report()
 
     def report(self) -> int:
-        verdict = (
-            PASS
-            if self.checks and all(c["status"] == PASS for c in self.checks)
-            else FAIL
-        )
+        verdict = PASS if self.checks and all(c["status"] == PASS for c in self.checks) else FAIL
         summary = {
             "tool": "scripts/compose_v2_preflight.py",
             "facts": self.facts,
@@ -790,14 +797,41 @@ class Preflight:
             "checks": self.checks,
             "commands": self.commands,
         }
-        self.write(
-            "preflight.json", json.dumps(summary, indent=2, ensure_ascii=False) + "\n"
-        )
+        self.write("preflight.json", json.dumps(summary, indent=2, ensure_ascii=False) + "\n")
         print(
             f"\nPREFLIGHT {verdict}: {sum(c['status'] == PASS for c in self.checks)}"
             f"/{len(self.checks)} checks -> {redact(str(self.out_dir), self.pairs)}"
         )
         return 0 if verdict == PASS else 1
+
+
+def _stable_ranking(body: dict) -> dict:
+    """Identidad de la evaluación, sin metadata que depende del reloj de captura."""
+    return {key: body.get(key) for key in body if key not in DYNAMIC_METADATA}
+
+
+def _fixture_delta(live: dict, fixture: dict) -> list[str]:
+    """Claves del fixture cuyos valores no coinciden con la respuesta viva."""
+    delta = []
+    for key, expected in fixture.items():
+        if live.get(key) != expected:
+            delta.append(key)
+    return delta
+
+
+def _metadata_ok(body: dict) -> bool:
+    if not isinstance(body, dict):
+        return False
+    if any(key not in body for key in OPTIONAL_METADATA):
+        return False
+    if any(key in body for key in ("model_status", "meteo_actual", "historical_count")):
+        return False
+    age = body.get("age_hours")
+    if isinstance(age, bool) or not isinstance(age, (int, float)) or age < 0:
+        return False
+    if not isinstance(body.get("freshness"), str) or not body["freshness"]:
+        return False
+    return True
 
 
 def _json(payload: bytes):
@@ -809,16 +843,10 @@ def _json(payload: bytes):
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument(
-        "--out-dir", type=Path, required=True, help="carpeta de evidencia"
-    )
+    parser.add_argument("--out-dir", type=Path, required=True, help="carpeta de evidencia")
     parser.add_argument("--project-name", default=PROJECT_PREFIX)
-    parser.add_argument(
-        "--skip-build", action="store_true", help="usa imágenes ya construidas"
-    )
-    parser.add_argument(
-        "--keep", action="store_true", help="no ejecuta down -v al final"
-    )
+    parser.add_argument("--skip-build", action="store_true", help="usa imágenes ya construidas")
+    parser.add_argument("--keep", action="store_true", help="no ejecuta down -v al final")
     parser.add_argument("--http-timeout", type=int, default=180)
     return parser.parse_args(argv)
 

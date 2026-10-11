@@ -17,7 +17,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 import services.ml_api.main as ml_api
-from src.inference.prototype_service import PrototypeUnavailableError
+from src.inference.prototype_service import PrototypeUnavailableError, classify_freshness
 from src.output.synthetic import synthetic_result
 
 MODEL_D_FINGERPRINT = "33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff"
@@ -33,6 +33,21 @@ RANKING_KEYS = {
     "disclaimer",
     "cells",
 }
+# Presentes en una evaluación real, pero opcionales en el contrato: una
+# respuesta anterior, sin ellos, sigue siendo válida.
+OPTIONAL_METADATA_KEYS = {
+    "weather_timestamp",
+    "age_hours",
+    "freshness",
+    "station_id",
+    "station_name",
+    "firms_origin",
+    "firms_coverage_end",
+    "firms_lag_days",
+    "firms_status",
+}
+# No forman parte de sapi-ranking-v0.
+FORBIDDEN_METADATA_KEYS = {"model_status", "meteo_actual", "historical_count"}
 CELL_KEYS = {"cell_id", "score", "rank", "display_rank", "tie_group_size"}
 ERROR_KEYS = {"status", "error_type", "message"}
 
@@ -66,7 +81,7 @@ def test_predict_real_model_matches_contract_and_fingerprint(reproducible):
     response = client.post("/predict", json={})
     assert response.status_code == 200
     body = response.json()
-    assert set(body) == RANKING_KEYS
+    assert set(body) == RANKING_KEYS | OPTIONAL_METADATA_KEYS
     assert body["schema_version"] == "sapi-ranking-v0"
     assert body["model_version"] == "prototype_model_d_v1"
     assert body["score_semantics"] == "relative_rank"
@@ -84,6 +99,16 @@ def test_predict_real_model_matches_contract_and_fingerprint(reproducible):
     assert round(cells[0]["score"], 12) == 0.131293368748
     # Mismo ranking que vigila la sentinela RC-SCI-RANKING de la Release Gate.
     assert _ranking_fingerprint(cells) == MODEL_D_FINGERPRINT
+    assert FORBIDDEN_METADATA_KEYS.isdisjoint(body)
+    assert body["station_id"] == "330007"
+    assert body["station_name"] == "Rodelillo"
+    assert body["firms_origin"] == "reproducibility"
+    assert isinstance(body["age_hours"], (int, float)) and body["age_hours"] >= 0
+    assert body["freshness"] == classify_freshness(body["age_hours"])
+    assert pd.Timestamp(body["weather_timestamp"]).tzinfo is not None
+    assert isinstance(body["firms_lag_days"], int) and body["firms_lag_days"] >= 0
+    assert body["firms_status"] in {"FIRMS AL DÍA", "FIRMS DESACTUALIZADO"}
+    assert len(body["firms_coverage_end"]) == 10
 
 
 def test_predict_preserves_real_ties(reproducible):
@@ -106,9 +131,7 @@ def test_predict_normalizes_forecast_time_to_utc(reproducible):
     chile = client.post("/predict", json={"forecast_time": "2026-08-31T21:00:00-03:00"})
     assert utc.status_code == chile.status_code == 200
     assert utc.json()["inputs_fingerprint"] == chile.json()["inputs_fingerprint"]
-    assert pd.Timestamp(chile.json()["forecast_time"]) == pd.Timestamp(
-        "2026-09-01T00:00Z"
-    )
+    assert pd.Timestamp(chile.json()["forecast_time"]) == pd.Timestamp("2026-09-01T00:00Z")
 
 
 def test_predict_future_forecast_time_is_503(reproducible):
@@ -118,9 +141,7 @@ def test_predict_future_forecast_time_is_503(reproducible):
 
 @pytest.mark.parametrize("year", ["0001", "9999"])
 def test_predict_extreme_years_never_500(reproducible, year):
-    response = client.post(
-        "/predict", json={"forecast_time": f"{year}-01-01T00:00:00Z"}
-    )
+    response = client.post("/predict", json={"forecast_time": f"{year}-01-01T00:00:00Z"})
     assert response.status_code in (422, 503)
     assert response.json()["status"] == "error"
 
@@ -179,11 +200,9 @@ def test_result_violating_contract_is_500_never_200(monkeypatch):
 
 
 def test_valid_synthetic_result_is_serialized_per_contract(monkeypatch):
-    monkeypatch.setattr(
-        ml_api, "score_current_grid", lambda **_kwargs: synthetic_result()
-    )
+    monkeypatch.setattr(ml_api, "score_current_grid", lambda **_kwargs: synthetic_result())
     body = client.post("/predict", json={}).json()
-    assert set(body) == RANKING_KEYS
+    assert set(body) == RANKING_KEYS | OPTIONAL_METADATA_KEYS
     assert [c["display_rank"] for c in body["cells"][:3]] == [1, 1, 3]
     assert [c["tie_group_size"] for c in body["cells"][:2]] == [2, 2]
 
@@ -226,6 +245,10 @@ def test_generated_openapi_declares_contract_operations_and_codes():
         "horizon_hours",
         "disclaimer",
     }
+    props = set(schemas["RankingResult"]["properties"])
+    assert OPTIONAL_METADATA_KEYS <= props
+    assert OPTIONAL_METADATA_KEYS.isdisjoint(schemas["RankingResult"]["required"])
+    assert FORBIDDEN_METADATA_KEYS.isdisjoint(props)
     assert set(schemas["CellRanking"]["required"]) == CELL_KEYS
 
 

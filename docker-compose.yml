@@ -1,9 +1,11 @@
 # Arquitectura v2 (SAPI-60, ADR-004/008/009). `docker compose up --build` levanta
 # solo db-v2 (PostGIS, 5432), ml-api (FastAPI + Modelo D, 8000) y backend
-# (Spring Boot, 8080). Los servicios de Hito 1 quedan fuera de la ruta v2 con
-# profiles: `legacy` (db-postgis, analytics-backend, web-presentation) y `ops`
-# (n8n-bridge). Configuración en .env (ver .env.example y README). La ruta v2
-# usa su propia red (sapi-v2-net): los servicios legacy no llegan a db-v2.
+# (Spring Boot, 8080). El dashboard Streamlit v2 (SAPI-61) es `web-v2`, profile
+# `presentation`: no entra en esa ruta por defecto y no activa el profile
+# `legacy`. Los servicios de Hito 1 quedan fuera con profiles `legacy`
+# (db-postgis, analytics-backend, web-presentation) y `ops` (n8n-bridge).
+# Configuración en .env (ver .env.example y README). La ruta v2 usa su propia
+# red (sapi-v2-net): los servicios legacy no llegan a db-v2.
 services:
   db-v2:
     # Base v2 aislada del legacy (H4, ADR-008): volumen propio, sin
@@ -88,6 +90,25 @@ services:
       timeout: 5s
       retries: 6
       start_period: 60s
+    networks:
+      - sapi-v2-net
+
+  web-v2:
+    # SAPI-61. Fuera de `docker compose up` (profile presentation). Consume
+    # GET /api/v1/ranking del backend; no ejecuta score_current_grid() y no
+    # usa la base legacy. Sin env_file: solo la URL del backend.
+    profiles: ["presentation"]
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    environment:
+      SAPI_BACKEND_BASE_URL: http://backend:8080
+      SAPI_UI_LEGACY_MODES: "0"
+    ports:
+      - "127.0.0.1:8501:8501"
+    depends_on:
+      backend:
+        condition: service_started
     networks:
       - sapi-v2-net
 

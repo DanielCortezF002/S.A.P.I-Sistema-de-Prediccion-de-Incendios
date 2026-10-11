@@ -16,9 +16,11 @@ Reglas:
   `src/geo/grid.py` (la misma que usa el servicio). Elevación y pendiente,
   de la tabla congelada del Hito 1 (`app.utils.reference_topography`),
   etiquetadas como referencia.
-- Lo que el contrato v0 no transporta (frescura, estación, meteorología
-  usada, procedencia FIRMS, historial FIRMS por celda) se declara como
+- La metadata opcional del contrato (frescura, estación, procedencia
+  FIRMS) se muestra solo si el backend la envía. Si falta, se declara
   "no informado por el backend". Nunca se deriva ni se inventa.
+  `model_status`, `meteo_actual` y el historial FIRMS por celda no forman
+  parte del contrato.
 - Texto remoto que entra en HTML se escapa siempre.
 """
 
@@ -34,6 +36,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from app.utils.backend_client import (
+    ADDITIVE_FIELDS,
     KNOWN_ERROR_TYPES,
     RANKING_PATH,
     BackendError,
@@ -54,6 +57,12 @@ _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
 _CACHE_TTL_SECONDS = 300
+# Metadata opcional de sapi-ranking-v0. model_status y meteo_actual se toleran
+# si un payload los trae, pero no son campos del contrato y no se listan como
+# pendientes de él.
+_CONTRACT_METADATA_FIELDS = tuple(
+    name for name in ADDITIVE_FIELDS if name not in {"model_status", "meteo_actual"}
+)
 
 # Etiqueta de frescura que el servicio de inferencia asigna a observaciones
 # de más de 24 h (misma cadena que `prototype_service.FRESHNESS_HISTORICAL`).
@@ -346,8 +355,7 @@ def _render_freshness_state(view: RankingView) -> None:
     """Banner de frescura solo con datos del backend; estado explícito si faltan."""
     if not view.freshness_available:
         st.info(
-            "Frescura de la observación meteorológica: no informada por el backend "
-            "(contrato v0; la extensión aditiva está pendiente). "
+            "Frescura de la observación meteorológica: no informada por el backend. "
             "No se asume que el ranking represente el riesgo actual."
         )
         return
@@ -583,10 +591,10 @@ def _render_tech_expander(view: RankingView) -> None:
         ),
         f"- **Topografía:** {REFERENCE_TOPOGRAPHY_LABEL}",
     ]
-    missing = view.missing_additive_fields
+    missing = tuple(name for name in _CONTRACT_METADATA_FIELDS if getattr(view, name) is None)
     if missing:
         lines.append(
-            "- **Metadata pendiente de la extensión aditiva del contrato:** "
+            "- **Metadata opcional no informada por el backend:** "
             + ", ".join(f"`{name}`" for name in missing)
         )
     with st.expander("Información técnica y fuentes", expanded=False):

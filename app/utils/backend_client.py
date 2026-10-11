@@ -8,11 +8,12 @@ Modelo D en proceso. Consume `GET {SAPI_BACKEND_BASE_URL}/api/v1/ranking`
 Principios:
 - Fail-closed: una respuesta que no cumple el contrato se rechaza completa.
   Nunca se reordena, recalcula ni rellena nada.
-- Tolerante a cambios aditivos: los campos desconocidos se ignoran y los
-  campos opcionales previstos para la extensión aditiva (frescura, estación,
-  meteorología usada, procedencia FIRMS) se leen solo si llegan. Si no llegan
-  quedan en `None`, que la vista muestra como "no informado por el backend";
-  jamás se derivan localmente.
+- Tolerante a cambios aditivos: los campos desconocidos se ignoran. Los nueve
+  campos opcionales del contrato (frescura, estación y procedencia FIRMS) se
+  leen solo si llegan. Si no llegan quedan en `None`, que la vista muestra
+  como "no informado por el backend"; jamás se derivan localmente.
+  `model_status` y `meteo_actual` no forman parte del contrato: se leen si
+  un payload los trae y no se inventan si faltan.
 - Errores tipados con mensaje genérico para el usuario (RN-09): sin host,
   ruta, credenciales ni stack trace.
 

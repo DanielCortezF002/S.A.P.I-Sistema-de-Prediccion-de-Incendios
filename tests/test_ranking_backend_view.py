@@ -382,9 +382,20 @@ def test_tech_expander_v0_traceability_and_pending_fields(mock_st: MagicMock) ->
     assert f"Weather timestamp usado:** {NOT_PROVIDED}" in text
     assert f"frescura de la observación:** {NOT_PROVIDED}" in text
     assert f"Procedencia FIRMS:** {NOT_PROVIDED}" in text
-    assert "Metadata pendiente de la extensión aditiva" in text
-    for name in ("weather_timestamp", "freshness", "age_hours", "station_id", "meteo_actual"):
+    assert "Metadata opcional no informada por el backend" in text
+    for name in (
+        "weather_timestamp",
+        "age_hours",
+        "freshness",
+        "station_id",
+        "station_name",
+        "firms_origin",
+        "firms_coverage_end",
+        "firms_lag_days",
+        "firms_status",
+    ):
         assert f"`{name}`" in text
+    assert "`meteo_actual`" not in text and "`model_status`" not in text
     assert "Dataset hash" not in text  # reemplazado por inputs_fingerprint
     assert "localhost" not in text and "8080" not in text
     assert FIXED_DISCLAIMER in mock_st.caption.call_args[0][0]

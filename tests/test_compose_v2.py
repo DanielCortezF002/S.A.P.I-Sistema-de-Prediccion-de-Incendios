@@ -52,10 +52,21 @@ def _healthcheck_command(service: str) -> str:
     return " ".join(test) if isinstance(test, list) else test
 
 
+def test_presentation_profile_reaches_backend_without_joining_the_default_route() -> None:
+    """SAPI-61: Streamlit v2 es opt-in y habla con Spring, no con el profile legacy."""
+    web = SERVICES["web-v2"]
+    assert web["profiles"] == ["presentation"]
+    assert web["environment"]["SAPI_BACKEND_BASE_URL"] == "http://backend:8080"
+    assert web["environment"]["SAPI_UI_LEGACY_MODES"] == "0"
+    assert web["networks"] == ["sapi-v2-net"]
+    assert web["depends_on"]["backend"]["condition"] == "service_started"
+    assert "env_file" not in web
+    assert "volumes" not in web
+    assert "sapi-v2-net" not in SERVICES["web-presentation"].get("networks", [])
+
+
 def test_default_route_is_exactly_the_v2_services() -> None:
-    default = sorted(
-        name for name, spec in SERVICES.items() if not spec.get("profiles")
-    )
+    default = sorted(name for name, spec in SERVICES.items() if not spec.get("profiles"))
     assert default == sorted(V2_SERVICES)
 
 
@@ -93,9 +104,7 @@ def test_http_healthchecks_bypass_any_injected_proxy() -> None:
 def test_ca3_database_password_has_no_default() -> None:
     required = re.compile(r"^\$\{SAPI_DB_PASSWORD:\?")
     assert required.match(SERVICES["db-v2"]["environment"]["POSTGRES_PASSWORD"])
-    assert required.match(
-        SERVICES["backend"]["environment"]["SPRING_DATASOURCE_PASSWORD"]
-    )
+    assert required.match(SERVICES["backend"]["environment"]["SPRING_DATASOURCE_PASSWORD"])
     for service in V2_SERVICES:
         assert "sapi_secret" not in " ".join(_strings(SERVICES[service]))
 
@@ -107,17 +116,13 @@ def test_ca3_env_example_defines_every_variable_of_the_v2_services() -> None:
         for value in _strings(SERVICES[service])
         for name in INTERPOLATION.findall(value)
     }
-    defined = {
-        line.split("=", 1)[0] for line in ENV_EXAMPLE.splitlines() if "=" in line
-    }
+    defined = {line.split("=", 1)[0] for line in ENV_EXAMPLE.splitlines() if "=" in line}
     assert used, "los servicios v2 deberían leer su configuración de .env"
     assert sorted(used - defined) == []
 
 
 def test_ca3_env_example_password_is_a_non_empty_placeholder() -> None:
-    values = dict(
-        line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line
-    )
+    values = dict(line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line)
     assert values["SAPI_DB_PASSWORD"].strip()
     assert values["SAPI_DB_PASSWORD"] != "sapi_secret"
 
@@ -132,10 +137,7 @@ def test_ca4_v2_database_uses_its_own_volume_without_legacy_initdb() -> None:
     assert "sapi_v2_pgdata" in COMPOSE["volumes"]
     # H4: la base legacy sigue declarada y nadie de la ruta v2 la usa.
     assert "sapi_pgdata" in COMPOSE["volumes"]
-    assert (
-        "./docker/initdb:/docker-entrypoint-initdb.d:ro"
-        in SERVICES["db-postgis"]["volumes"]
-    )
+    assert "./docker/initdb:/docker-entrypoint-initdb.d:ro" in SERVICES["db-postgis"]["volumes"]
     for service in V2_SERVICES:
         mounts = " ".join(SERVICES[service].get("volumes", []))
         assert "sapi_pgdata:" not in mounts
@@ -156,9 +158,7 @@ def test_v2_database_image_is_the_one_used_by_the_persistence_its() -> None:
 def test_backend_reaches_ml_and_database_by_service_name() -> None:
     environment = SERVICES["backend"]["environment"]
     assert environment["SAPI_ML_BASE_URL"] == "http://ml-api:8000"
-    assert environment["SPRING_DATASOURCE_URL"].startswith(
-        "jdbc:postgresql://db-v2:5432/"
-    )
+    assert environment["SPRING_DATASOURCE_URL"].startswith("jdbc:postgresql://db-v2:5432/")
     for value in _strings(environment):
         assert "localhost" not in value
         assert "127.0.0.1" not in value
@@ -167,10 +167,7 @@ def test_backend_reaches_ml_and_database_by_service_name() -> None:
 def test_backend_runs_flyway_on_the_canonical_migrations_read_only() -> None:
     backend = SERVICES["backend"]
     assert backend["volumes"] == ["./db/migration:/app/db/migration:ro"]
-    assert (
-        backend["environment"]["SAPI_FLYWAY_LOCATIONS"]
-        == "filesystem:/app/db/migration"
-    )
+    assert backend["environment"]["SAPI_FLYWAY_LOCATIONS"] == "filesystem:/app/db/migration"
     assert backend["environment"]["SAPI_PERSISTENCE_ENABLED"] == "true"
     # Sin la carpeta montada (o ilegible) el arranque falla en vez de quedar sin esquema.
     assert backend["environment"]["SPRING_FLYWAY_FAILONMISSINGLOCATIONS"] == "true"
