@@ -1,0 +1,24 @@
+.................sssss                                                   [100%]
+============================== warnings summary ===============================
+tests\e2e\test_vertical_slice.py:161
+  [home]\Documents\Codex\sapi66-hardening\tests\e2e\test_vertical_slice.py:161: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests\e2e\test_vertical_slice.py:227
+  [home]\Documents\Codex\sapi66-hardening\tests\e2e\test_vertical_slice.py:227: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests\e2e\test_vertical_slice.py:302
+  [home]\Documents\Codex\sapi66-hardening\tests\e2e\test_vertical_slice.py:302: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests\e2e\test_vertical_slice.py:384
+  [home]\Documents\Codex\sapi66-hardening\tests\e2e\test_vertical_slice.py:384: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+tests\e2e\test_vertical_slice.py:422
+  [home]\Documents\Codex\sapi66-hardening\tests\e2e\test_vertical_slice.py:422: PytestUnknownMarkWarning: Unknown pytest.mark.e2e - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.e2e
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+17 passed, 5 skipped, 5 warnings in 0.86s

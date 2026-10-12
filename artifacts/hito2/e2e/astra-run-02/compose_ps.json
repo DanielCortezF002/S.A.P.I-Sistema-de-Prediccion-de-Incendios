@@ -1,0 +1,122 @@
+[
+  {
+    "Command": "\"java -jar /app/app.\u2026\"",
+    "CreatedAt": "2026-10-12 15:16:22 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "healthy",
+    "ID": "b47914b36067",
+    "Image": "sapi66-63158b8d439f-backend",
+    "Labels": "desktop.docker.io/binds/0/Source=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\db\\migration,org.opencontainers.image.created=2026-09-27T10:25:52.887617+00:00,org.opencontainers.image.title=ubuntu,org.opencontainers.image.version=26.04,com.docker.compose.service=backend,desktop.docker.io/binds/0/Target=/app/db/migration,com.docker.compose.container-number=1,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening,com.docker.compose.version=5.5.1,desktop.docker.io/ports/8080/tcp=127.0.0.1:28080,desktop.docker.io/binds/0/SourceKind=hostFile,com.docker.compose.config-hash=75d6a36f7615a72d03e1e729ee57e28c099724224f215b1f17e85563fad8b17c,com.docker.compose.depends_on=db-v2:service_healthy:false,ml-api:service_started:false,com.docker.compose.image=sha256:107b6feb7cf4f56403eacc337f8304317261b9279351ea366704cb19cdde65c9,com.docker.compose.project=sapi66-63158b8d439f,com.docker.compose.project.environment_file=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\artifacts\\hito2\\e2e\\astra-run-02\\compose.env,desktop.docker.io/ports.scheme=v2,org.opencontainers.image.description=The Ubuntu container image maintained by Canonical\n\nUbuntu is a Debian-based Linux operating system that runs from the desktop to the cloud, to all your internet connected things.\nIt is the world's most popular operating system across public clouds and OpenStack clouds.\nIt is the number one platform for containers; from Docker to Kubernetes to LXD, Ubuntu can run your containers at scale.\nFast, secure and simple, Ubuntu powers millions of PCs worldwide.\n",
+    "LocalVolumes": "0",
+    "Mounts": "/run/desktop/m\u2026",
+    "Name": "sapi66-63158b8d439f-backend-1",
+    "Names": "sapi66-63158b8d439f-backend-1",
+    "Networks": "sapi66-63158b8d439f_sapi-v2-net",
+    "Ports": "127.0.0.1:28080->8080/tcp",
+    "Project": "sapi66-63158b8d439f",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8080,
+        "PublishedPort": 28080,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "18 seconds ago",
+    "Service": "backend",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 11 seconds (healthy)"
+  },
+  {
+    "Command": "\"docker-entrypoint.s\u2026\"",
+    "CreatedAt": "2026-10-12 15:16:21 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "healthy",
+    "ID": "91c8887d3e58",
+    "Image": "postgis/postgis:15-3.4",
+    "Labels": "com.docker.compose.service=db-v2,com.docker.compose.version=5.5.1,desktop.docker.io/ports.scheme=v2,com.docker.compose.depends_on=,com.docker.compose.project=sapi66-63158b8d439f,com.docker.compose.project.working_dir=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening,org.opencontainers.image.source=https://github.com/postgis/docker-postgis,com.docker.compose.oneoff=False,maintainer=PostGIS Project - https://postgis.net,org.opencontainers.image.description=PostGIS 3.4.3+dfsg-2.pgdg110+1 spatial database extension with PostgreSQL 15 bullseye,desktop.docker.io/ports/5432/tcp=127.0.0.1:25432,com.docker.compose.config-hash=88d008ca69774d29791d08d3fa742b92e2b593f0d44a84e11cfdf26345f6a02a,com.docker.compose.container-number=1,com.docker.compose.image=sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd,com.docker.compose.project.config_files=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\docker-compose.yml,com.docker.compose.project.environment_file=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\artifacts\\hito2\\e2e\\astra-run-02\\compose.env",
+    "LocalVolumes": "1",
+    "Mounts": "sapi66-63158b8\u2026",
+    "Name": "sapi66-63158b8d439f-db-v2-1",
+    "Names": "sapi66-63158b8d439f-db-v2-1",
+    "Networks": "sapi66-63158b8d439f_sapi-v2-net",
+    "Ports": "127.0.0.1:25432->5432/tcp",
+    "Project": "sapi66-63158b8d439f",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 5432,
+        "PublishedPort": 25432,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "19 seconds ago",
+    "Service": "db-v2",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 17 seconds (healthy)"
+  },
+  {
+    "Command": "\"uvicorn services.ml\u2026\"",
+    "CreatedAt": "2026-10-12 15:16:22 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "healthy",
+    "ID": "cf0f06861736",
+    "Image": "sapi66-63158b8d439f-ml-api",
+    "Labels": "com.docker.compose.container-number=1,com.docker.compose.project=sapi66-63158b8d439f,com.docker.compose.project.config_files=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\docker-compose.yml,com.docker.compose.service=ml-api,desktop.docker.io/ports/8000/tcp=127.0.0.1:28000,com.docker.compose.config-hash=85cf5c48c70988e024d9ffadb72e04169af1b1dea2ba8e4cfa49a0384bc78613,com.docker.compose.depends_on=,com.docker.compose.image=sha256:7778509f3b976d198f84e017dc99c3b4c7275549b7df225e1bf0f2e1ef1958ef,com.docker.compose.oneoff=False,com.docker.compose.project.environment_file=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\artifacts\\hito2\\e2e\\astra-run-02\\compose.env,com.docker.compose.project.working_dir=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening,com.docker.compose.version=5.5.1,desktop.docker.io/ports.scheme=v2",
+    "LocalVolumes": "0",
+    "Mounts": "",
+    "Name": "sapi66-63158b8d439f-ml-api-1",
+    "Names": "sapi66-63158b8d439f-ml-api-1",
+    "Networks": "sapi66-63158b8d439f_sapi-v2-net",
+    "Ports": "127.0.0.1:28000->8000/tcp",
+    "Project": "sapi66-63158b8d439f",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8000,
+        "PublishedPort": 28000,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "18 seconds ago",
+    "Service": "ml-api",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 17 seconds (healthy)"
+  },
+  {
+    "Command": "\"python -m streamlit\u2026\"",
+    "CreatedAt": "2026-10-12 15:16:22 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "",
+    "ID": "ce041c39fc80",
+    "Image": "sapi66-63158b8d439f-web-v2",
+    "Labels": "com.docker.compose.project.environment_file=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\artifacts\\hito2\\e2e\\astra-run-02\\compose.env,com.docker.compose.project.working_dir=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening,com.docker.compose.config-hash=1929236353a034787036265acce7f74dc8434fa54cdc63d32d57692b88b3ffbb,com.docker.compose.service=web-v2,com.docker.compose.version=5.5.1,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/8501/tcp=127.0.0.1:28501,com.docker.compose.container-number=1,com.docker.compose.depends_on=backend:service_started:false,com.docker.compose.image=sha256:27af00717074421bf13f171f383ef7c53a2cb270129792df33aba87b34891755,com.docker.compose.oneoff=False,com.docker.compose.project=sapi66-63158b8d439f,com.docker.compose.project.config_files=C:\\Users\\danie\\Documents\\Codex\\sapi66-hardening\\docker-compose.yml",
+    "LocalVolumes": "0",
+    "Mounts": "",
+    "Name": "sapi66-63158b8d439f-web-v2-1",
+    "Names": "sapi66-63158b8d439f-web-v2-1",
+    "Networks": "sapi66-63158b8d439f_sapi-v2-net",
+    "Ports": "127.0.0.1:28501->8501/tcp",
+    "Project": "sapi66-63158b8d439f",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8501,
+        "PublishedPort": 28501,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "18 seconds ago",
+    "Service": "web-v2",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 11 seconds"
+  }
+]

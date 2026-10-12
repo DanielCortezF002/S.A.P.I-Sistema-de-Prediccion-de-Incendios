@@ -1,0 +1,80 @@
+{
+  "facts": {
+    "head": "e8e87d910675c7c96dccc417b542efa6964ba161",
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "project": "sapi66-41e8ae517a79",
+    "data_scope": "frozen snapshot; NOT operational CURRENT",
+    "source_sha256": {
+      "scripts/e2e_slice.py": "10492612ba78db2c697dd5d3c4f74a3f08121c1ee1d3f8862f1c7ec6b2716c4e",
+      "scripts/e2e_browser.cjs": "a7c6667920600016e21e684986ac5d7d650b68fed66da9077fcafb68285c4445",
+      "docker-compose.yml": "4b98b77059d00ec8f7a23a16e13c2d6a8a70aa96cc0765101d0682ec1d84683b",
+      "Dockerfile.ml-api": "ec0d85c028a86aaaddf50298e15650ad14a679cdddb5074248dc1b654253cc68",
+      "Dockerfile.web": "330ff83df528aaf8752afb8dfcc222b77742ee2b1637b06ca25cf07855f4c059",
+      "services/backend/Dockerfile": "6122026096637faae094bb9dc0a1ca84bc9bc9118ddb6c7d581972d8406d9bc1"
+    },
+    "image_ids": [
+      "/sapi66-41e8ae517a79-backend-1 sha256:e5dc86487488b638bf1a806ff2d9b316e3461046c7ab484e32951c8912562016",
+      "/sapi66-41e8ae517a79-db-v2-1 sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd",
+      "/sapi66-41e8ae517a79-ml-api-1 sha256:8d1cda2e652f9968b18a53284e8a52812a1ffb50d18eb9625aef7b99e5337deb",
+      "/sapi66-41e8ae517a79-web-v2-1 sha256:bd783aae1cee7851901cce7ddc2bd027ea6f33062b62b0bc92b23f9e645eb71a"
+    ]
+  },
+  "completed": false,
+  "verdict": "FAIL",
+  "checks": [
+    {
+      "name": "exact_services",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.backend",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.db-v2",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.ml-api",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.web-v2",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "backend.UP",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "database.initially_empty",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "browser.ranking",
+      "passed": false,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "runner.exception",
+      "ca": "RUN",
+      "passed": false
+    }
+  ],
+  "timings": []
+}

@@ -1,0 +1,5 @@
+{
+  "seconds": 6.5402915,
+  "cell_ids": [],
+  "text": "Modo de datos\n\nPrototipo (datos reales)\n\nDemo (escenario sembrado)\n\nActualizar ranking\n\nkeyboard_double_arrow_right\nS.A.P.I. — PROTOTIPO EXPLORATORIO\n\nNo se pudo obtener el ranking del backend: No se pudo conectar con el backend de ranking. Verifica que el servicio esté en ejecución.\n\nLa vista consume únicamente GET /api/v1/ranking del backend Spring Boot (SAPI_BACKEND_BASE_URL). No se ejecuta inferencia local ni se muestran datos cacheados como actuales."
+}

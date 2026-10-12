@@ -1,0 +1,162 @@
+{
+  "facts": {
+    "head": "e8e87d910675c7c96dccc417b542efa6964ba161",
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "project": "sapi66-3767bf173d80",
+    "data_scope": "frozen snapshot; NOT operational CURRENT",
+    "source_sha256": {
+      "scripts/e2e_slice.py": "72e1a8a7cef12c6b9bf71ddb16e77e51504e3f6c080a97aa42893ea46e353cf2",
+      "scripts/e2e_browser.cjs": "a7b3add2516f207adb9ab56f183f9adccc75303437ddef94def1b0e5ec7db8b8",
+      "docker-compose.yml": "4b98b77059d00ec8f7a23a16e13c2d6a8a70aa96cc0765101d0682ec1d84683b",
+      "Dockerfile.ml-api": "ec0d85c028a86aaaddf50298e15650ad14a679cdddb5074248dc1b654253cc68",
+      "Dockerfile.web": "330ff83df528aaf8752afb8dfcc222b77742ee2b1637b06ca25cf07855f4c059",
+      "services/backend/Dockerfile": "6122026096637faae094bb9dc0a1ca84bc9bc9118ddb6c7d581972d8406d9bc1"
+    },
+    "image_ids": [
+      "/sapi66-3767bf173d80-backend-1 sha256:8f55376ad7f6559e3dd37b7ac357c207f222f4d6ad7a9e9d71ef782648be7c21",
+      "/sapi66-3767bf173d80-db-v2-1 sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd",
+      "/sapi66-3767bf173d80-ml-api-1 sha256:ca1d4bb1ca23829e0f9b5ff19f6f131ffac00923e5ab60ee43fdcadc60d094de",
+      "/sapi66-3767bf173d80-web-v2-1 sha256:311c7cc6a155e15311eb54cbc65b5eff527cdffb32cb21fde7e9f4d109d9a0a4"
+    ]
+  },
+  "completed": false,
+  "verdict": "FAIL",
+  "checks": [
+    {
+      "name": "exact_services",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.backend",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.db-v2",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.ml-api",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.web-v2",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "backend.UP",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "database.initially_empty",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "browser.ranking",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "browser.persisted_execution",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "backend.contract.reference",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.invalid.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.invalid.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.invalid.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.invalid.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.down.fail_closed",
+      "passed": true,
+      "ca": "CA2",
+      "detail": {
+        "http_status": 504,
+        "error_type": "upstream_timeout"
+      }
+    },
+    {
+      "name": "browser.down",
+      "passed": false,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "runner.exception",
+      "ca": "RUN",
+      "passed": false
+    }
+  ],
+  "timings": [
+    {
+      "hop": "browser-render",
+      "sample": "first_browser_session",
+      "seconds": 7.4829279,
+      "status": 200
+    }
+  ]
+}

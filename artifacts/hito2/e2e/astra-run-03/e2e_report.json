@@ -1,0 +1,153 @@
+{
+  "facts": {
+    "head": "e8e87d910675c7c96dccc417b542efa6964ba161",
+    "python": "3.14.7 (tags/v3.14.7:823f032, Aug  5 2026, 10:51:32) [MSC v.1944 64 bit (AMD64)]",
+    "project": "sapi66-78d9c0f4a52c",
+    "data_scope": "frozen snapshot; NOT operational CURRENT",
+    "source_sha256": {
+      "scripts/e2e_slice.py": "4977509cd689441d8eec76b66982594a140948955cdd1c441dbf1c99f24dc7de",
+      "scripts/e2e_browser.cjs": "a7b3add2516f207adb9ab56f183f9adccc75303437ddef94def1b0e5ec7db8b8",
+      "docker-compose.yml": "4b98b77059d00ec8f7a23a16e13c2d6a8a70aa96cc0765101d0682ec1d84683b",
+      "Dockerfile.ml-api": "ec0d85c028a86aaaddf50298e15650ad14a679cdddb5074248dc1b654253cc68",
+      "Dockerfile.web": "330ff83df528aaf8752afb8dfcc222b77742ee2b1637b06ca25cf07855f4c059",
+      "services/backend/Dockerfile": "6122026096637faae094bb9dc0a1ca84bc9bc9118ddb6c7d581972d8406d9bc1"
+    },
+    "image_ids": [
+      "/sapi66-78d9c0f4a52c-backend-1 sha256:5f71f45e61ec8928f8bb94ab038a67a960f3522fd0eea13bf1ed10f7358244d3",
+      "/sapi66-78d9c0f4a52c-db-v2-1 sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd",
+      "/sapi66-78d9c0f4a52c-ml-api-1 sha256:cdd0b10baba9e923ec61e4299e49b39e819029cc617659710b98d104e23a2bfa",
+      "/sapi66-78d9c0f4a52c-web-v2-1 sha256:b5433bba2ba7c5e7c054d5f4ce9e773554b047e8dde8cce812c6ee3529242ade"
+    ]
+  },
+  "completed": false,
+  "verdict": "FAIL",
+  "checks": [
+    {
+      "name": "exact_services",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.backend",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.db-v2",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.ml-api",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "health.web-v2",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "backend.UP",
+      "passed": true,
+      "ca": "CA5",
+      "detail": null
+    },
+    {
+      "name": "database.initially_empty",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "browser.ranking",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "browser.persisted_execution",
+      "passed": true,
+      "ca": "CA1",
+      "detail": null
+    },
+    {
+      "name": "backend.contract.reference",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.invalid.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "backend.invalid.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.invalid.status",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.invalid.schema",
+      "passed": true,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "ml.down.fail_closed",
+      "passed": false,
+      "ca": "CA2",
+      "detail": null
+    },
+    {
+      "name": "runner.exception",
+      "ca": "RUN",
+      "passed": false
+    }
+  ],
+  "timings": [
+    {
+      "hop": "browser-render",
+      "sample": "first_browser_session",
+      "seconds": 7.2203194,
+      "status": 200
+    }
+  ]
+}

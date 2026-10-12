@@ -1,0 +1,13 @@
+Traceback (most recent call last):
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 232, in run
+    browser = self.browser("ranking")
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 165, in browser
+    evidence = json.loads((self.out / f"browser-{scenario}.json").read_text())
+                          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "[home]\AppData\Local\Programs\Python\Python314\Lib\pathlib\__init__.py", line 788, in read_text
+    return f.read()
+           ~~~~~~^^
+  File "[home]\AppData\Local\Programs\Python\Python314\Lib\encodings\cp1252.py", line 23, in decode
+    return codecs.charmap_decode(input,self.errors,decoding_table)[0]
+           ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeDecodeError: 'charmap' codec can't decode byte 0x8d in position 2498: character maps to <undefined>

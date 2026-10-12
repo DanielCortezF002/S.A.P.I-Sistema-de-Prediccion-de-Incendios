@@ -1,0 +1,4 @@
+Error: Expected 50 cells; got 11
+    at [home]\Documents\Codex\sapi66-hardening\scripts\e2e_browser.cjs:31:41
+    at runNextTicks (node:internal/process/task_queues:65:5)
+    at process.processImmediate (node:internal/timers:502:9)

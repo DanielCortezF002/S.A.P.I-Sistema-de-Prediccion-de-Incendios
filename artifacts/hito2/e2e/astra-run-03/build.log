@@ -1,0 +1,202 @@
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.62kB 0.0s done
+#1 DONE 0.0s
+
+#2 [ml-api internal] load build definition from Dockerfile.ml-api
+#2 transferring dockerfile: 1.46kB 0.0s done
+#2 DONE 0.0s
+
+#3 [web-v2 internal] load build definition from Dockerfile.web
+#3 transferring dockerfile: 509B done
+#3 DONE 0.0s
+
+#4 [backend internal] load build definition from Dockerfile
+#4 transferring dockerfile: 909B done
+#4 DONE 0.0s
+
+#5 [web-v2 internal] load metadata for docker.io/library/python:3.14-slim
+#5 DONE 0.0s
+
+#6 [backend internal] load metadata for docker.io/library/maven:3.9-eclipse-temurin-21
+#6 DONE 0.0s
+
+#7 [ml-api internal] load .dockerignore
+#7 transferring context: 3.41kB done
+#7 DONE 0.0s
+
+#8 [backend internal] load metadata for docker.io/library/eclipse-temurin:21-jre
+#8 DONE 0.0s
+
+#9 [backend internal] load .dockerignore
+#9 transferring context: 74B 0.0s done
+#9 DONE 0.0s
+
+#10 [backend internal] load build context
+#10 DONE 0.0s
+
+#11 [ml-api 1/6] FROM docker.io/library/python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d
+#11 resolve docker.io/library/python:3.14-slim@sha256:51dafde81dbdb6ebde285137a295cf18a47ca95234fe388a343719cb97305b3d 0.1s done
+#11 DONE 0.1s
+
+#12 [web-v2 internal] load build context
+#12 transferring context: 63.67kB 0.1s done
+#12 DONE 0.1s
+
+#13 [backend build 1/7] FROM docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320
+#13 resolve docker.io/library/maven:3.9-eclipse-temurin-21@sha256:99e61abcff91a9b1333463bd8451fb18495d6eba9250ac66a338b518f8278320 0.1s done
+#13 DONE 0.1s
+
+#14 [backend stage-1 1/4] FROM docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5
+#14 resolve docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5
+#14 resolve docker.io/library/eclipse-temurin:21-jre@sha256:cff19e6215689161eb6162c11b86b0c60ddf802164f2eaf48d570f8fb79a36c5 0.1s done
+#14 DONE 0.1s
+
+#15 [ml-api 4/7] COPY requirements.txt requirements-dev.txt ./
+#15 CACHED
+
+#16 [ml-api 3/6] RUN apt-get update && apt-get install -y --no-install-recommends     gdal-bin libgdal-dev libgeos-dev libproj-dev gcc g++     && rm -rf /var/lib/apt/lists/*
+#16 CACHED
+
+#17 [web-v2 4/6] COPY requirements.txt .
+#17 CACHED
+
+#18 [ml-api 2/6] WORKDIR /app
+#18 CACHED
+
+#19 [web-v2 5/6] RUN pip install --no-cache-dir -r requirements.txt
+#19 CACHED
+
+#20 [ml-api 5/7] RUN pip install --no-cache-dir -r requirements-dev.txt
+#20 CACHED
+
+#10 [backend internal] load build context
+#10 transferring context: 4.46kB 0.0s done
+#10 DONE 0.0s
+
+#21 [backend build 5/7] RUN sh ./mvnw -B -q dependency:go-offline
+#21 CACHED
+
+#22 [backend stage-1 2/4] RUN useradd --system --uid 10001 --no-create-home sapi
+#22 CACHED
+
+#23 [backend build 6/7] COPY src src
+#23 CACHED
+
+#24 [backend stage-1 3/4] WORKDIR /app
+#24 CACHED
+
+#25 [backend build 3/7] COPY .mvn .mvn
+#25 CACHED
+
+#26 [backend build 4/7] COPY mvnw pom.xml ./
+#26 CACHED
+
+#27 [backend build 7/7] RUN sh ./mvnw -B -q -DskipTests package
+#27 CACHED
+
+#28 [backend build 2/7] WORKDIR /build
+#28 CACHED
+
+#29 [backend stage-1 4/4] COPY --from=build /build/target/backend-0.0.1-SNAPSHOT.jar app.jar
+#29 CACHED
+
+#30 [backend] exporting to image
+#30 exporting layers 0.0s done
+#30 exporting manifest sha256:28f04927bb2db07b197e06f3512ccb90ca059ee7c5715f999a849e33eed68cca 0.0s done
+#30 exporting config sha256:2702f6875a95fc78977da444db684fed61ef8689237f4328a7be57fae28f505e 0.0s done
+#30 exporting attestation manifest sha256:f76261c5894e20bb5625ce0830a40098d5b53cfd96a970d651e3c45e763e7749 0.0s done
+#30 exporting manifest list sha256:5f71f45e61ec8928f8bb94ab038a67a960f3522fd0eea13bf1ed10f7358244d3 0.0s done
+#30 naming to docker.io/library/sapi66-78d9c0f4a52c-backend:latest
+#30 naming to docker.io/library/sapi66-78d9c0f4a52c-backend:latest done
+#30 unpacking to docker.io/library/sapi66-78d9c0f4a52c-backend:latest 0.0s done
+#30 DONE 0.4s
+
+#31 [web-v2 6/6] COPY . .
+#31 DONE 0.4s
+
+#32 [ml-api 6/7] COPY . .
+#32 DONE 0.4s
+
+#33 [web-v2] exporting to image
+#33 ...
+
+#34 [ml-api 7/7] RUN useradd --system --uid 10001 --no-create-home sapi
+#34 0.563 useradd warning: sapi's uid 10001 is greater than SYS_UID_MAX 999
+#34 DONE 0.6s
+
+#35 [backend] resolving provenance for metadata file
+#35 DONE 0.0s
+
+#36 [ml-api] exporting to image
+#36 exporting layers 0.7s done
+#36 exporting manifest sha256:af5256765e7b4a0947912a7e445be4b95ec8eb196437a1dadf49e745c4be7236 0.0s done
+#36 exporting config sha256:17de5401dbec67eeaed8bbcc1a8c9bed9449b3e9667202594a6de81cf6e9cb1a 0.0s done
+#36 exporting attestation manifest sha256:22e633eb1f5d73b2fdb46981fc1fba4ea9c877e1696adf531c9646bbd7cac258
+#36 ...
+
+#33 [web-v2] exporting to image
+#33 exporting layers 1.0s done
+#33 exporting manifest sha256:3be1d2703f0753a3e80ebb338344ab1b32a67e70109da023b4d9ae6c4a4e5af1 0.0s done
+#33 exporting config sha256:cd2e18a31b66c4a42e419f5b27c6da05a4ab82eda73899065bc3767e011686b2 0.0s done
+#33 exporting attestation manifest sha256:c47244bc7162921685910de84e75f05fc42683ce2e69421a915ce298caa18b15 0.0s done
+#33 exporting manifest list sha256:b5433bba2ba7c5e7c054d5f4ce9e773554b047e8dde8cce812c6ee3529242ade 0.0s done
+#33 naming to docker.io/library/sapi66-78d9c0f4a52c-web-v2:latest done
+#33 unpacking to docker.io/library/sapi66-78d9c0f4a52c-web-v2:latest 0.3s done
+#33 DONE 1.6s
+
+#36 [ml-api] exporting to image
+#36 exporting attestation manifest sha256:22e633eb1f5d73b2fdb46981fc1fba4ea9c877e1696adf531c9646bbd7cac258 0.0s done
+#36 exporting manifest list sha256:cdd0b10baba9e923ec61e4299e49b39e819029cc617659710b98d104e23a2bfa 0.0s done
+#36 naming to docker.io/library/sapi66-78d9c0f4a52c-ml-api:latest done
+#36 unpacking to docker.io/library/sapi66-78d9c0f4a52c-ml-api:latest
+#36 ...
+
+#37 [web-v2] resolving provenance for metadata file
+#37 DONE 0.0s
+
+#36 [ml-api] exporting to image
+#36 unpacking to docker.io/library/sapi66-78d9c0f4a52c-ml-api:latest 0.4s done
+#36 DONE 1.4s
+
+#38 [ml-api] resolving provenance for metadata file
+#38 DONE 0.0s
+ Image sapi66-78d9c0f4a52c-web-v2 Building
+ Image sapi66-78d9c0f4a52c-backend Building
+ Image sapi66-78d9c0f4a52c-ml-api Building
+ Image sapi66-78d9c0f4a52c-ml-api Built
+ Image sapi66-78d9c0f4a52c-backend Built
+ Image sapi66-78d9c0f4a52c-web-v2 Built
+ Network sapi66-78d9c0f4a52c_sapi-v2-net Creating
+ Volume sapi66-78d9c0f4a52c_sapi_v2_pgdata Creating
+ Volume sapi66-78d9c0f4a52c_sapi_v2_pgdata Creating
+ Network sapi66-78d9c0f4a52c_sapi-v2-net Creating
+ Volume sapi66-78d9c0f4a52c_sapi_v2_pgdata Created
+ Volume sapi66-78d9c0f4a52c_sapi_v2_pgdata Created
+ Network sapi66-78d9c0f4a52c_sapi-v2-net Created
+ Network sapi66-78d9c0f4a52c_sapi-v2-net Created
+ Container sapi66-78d9c0f4a52c-db-v2-1 Creating
+ Container sapi66-78d9c0f4a52c-ml-api-1 Creating
+ Container sapi66-78d9c0f4a52c-db-v2-1 Created
+ Container sapi66-78d9c0f4a52c-ml-api-1 Created
+ Container sapi66-78d9c0f4a52c-backend-1 Creating
+ Container sapi66-78d9c0f4a52c-backend-1 Created
+ Container sapi66-78d9c0f4a52c-web-v2-1 Creating
+ Container sapi66-78d9c0f4a52c-web-v2-1 Created
+ Container sapi66-78d9c0f4a52c-db-v2-1 Starting
+ Container sapi66-78d9c0f4a52c-ml-api-1 Starting
+ Container sapi66-78d9c0f4a52c-db-v2-1 Started
+ Container sapi66-78d9c0f4a52c-ml-api-1 Started
+ Container sapi66-78d9c0f4a52c-db-v2-1 Waiting
+ Container sapi66-78d9c0f4a52c-db-v2-1 Healthy
+ Container sapi66-78d9c0f4a52c-backend-1 Starting
+ Container sapi66-78d9c0f4a52c-backend-1 Started
+ Container sapi66-78d9c0f4a52c-web-v2-1 Starting
+ Container sapi66-78d9c0f4a52c-web-v2-1 Started
+ Container sapi66-78d9c0f4a52c-db-v2-1 Waiting
+ Container sapi66-78d9c0f4a52c-backend-1 Waiting
+ Container sapi66-78d9c0f4a52c-ml-api-1 Waiting
+ Container sapi66-78d9c0f4a52c-web-v2-1 Waiting
+ Container sapi66-78d9c0f4a52c-db-v2-1 Healthy
+ Container sapi66-78d9c0f4a52c-web-v2-1 Healthy
+ Container sapi66-78d9c0f4a52c-ml-api-1 Healthy
+ Container sapi66-78d9c0f4a52c-backend-1 Healthy

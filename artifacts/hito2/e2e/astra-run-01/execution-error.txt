@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 232, in run
+    browser = self.browser("ranking")
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 163, in browser
+    self.check("browser." + scenario, result.returncode == 0,
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+               "CA1" if scenario == "ranking" else "CA2")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 112, in check
+    raise RuntimeError(name)
+RuntimeError: browser.ranking

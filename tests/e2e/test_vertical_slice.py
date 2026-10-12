@@ -1,21 +1,13 @@
-"""SAPI-66 — Vertical Slice End-to-End Test Suite (S2-13, CA1-CA5).
+"""Complementary component/AppTest checks retained from Antigravity.
 
-Verifica la cadena vertical completa de la arquitectura S.A.P.I. v2:
-  Streamlit (UI/AppTest/web-v2)
-    -> Spring Boot (backend REST, puerto 18080/8080)
-      -> FastAPI / Modelo D (ml-api, puerto 18000/8000)
-        -> PostgreSQL / PostGIS (db-v2, puerto 15432/5432)
-
-Criterios de aceptación verificados:
-- SAPI-66.CA1: Test E2E reproducible que recorre la cadena completa.
-- SAPI-66.CA2: Errores y contratos OpenAPI verificados en cada salto (RN-02, RN-03, RN-09).
-- SAPI-66.CA3: Persistencia en PostgreSQL/PostGIS, latest_ranking.sql, clave natural e integridad geométrica (RN-07).
-- SAPI-66.CA4: Tiempo total de respuesta documentado (frío y caliente) sin umbrales arbitrarios.
-- SAPI-66.CA5: Entorno Docker Compose reproducible.
+Requires explicit SAPI66_RUN_COMPONENT_TESTS=1 and an existing test stack.
+These checks are NOT final browser E2E acceptance; run scripts/e2e_slice.py
+for the isolated real-browser, full-response timing and exact HTTP/SQL proof.
 """
 
 from __future__ import annotations
 
+from unittest.mock import patch
 import copy
 import json
 import os
@@ -29,6 +21,20 @@ from typing import Any
 import jsonschema
 import pytest
 import yaml
+
+# Retained component/AppTest coverage from Antigravity, not browser E2E proof.
+# External stack tests must never run accidentally in the offline unit suite.
+pytestmark = pytest.mark.skipif(
+    os.environ.get("SAPI66_RUN_COMPONENT_TESTS") != "1",
+    reason="Explicit existing test-stack opt-in; final E2E is scripts/e2e_slice.py",
+)
+
+
+@pytest.fixture(autouse=True)
+def restore_environment():
+    with patch.dict(os.environ):
+        yield
+
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 CONTRACTS_DIR = REPO_ROOT / "contracts" / "openapi"
@@ -94,11 +100,13 @@ def _http_request(
     started = time.monotonic()
     try:
         with opener.open(req, timeout=timeout) as resp:
+            payload = resp.read()
             elapsed = time.monotonic() - started
-            return resp.status, dict(resp.headers), resp.read(), elapsed
+            return resp.status, dict(resp.headers), payload, elapsed
     except urllib.error.HTTPError as err:
+        payload = err.read()
         elapsed = time.monotonic() - started
-        return err.code, dict(err.headers), err.read(), elapsed
+        return err.code, dict(err.headers), payload, elapsed
     except Exception as exc:
         elapsed = time.monotonic() - started
         raise RuntimeError(f"Error HTTP hacia {url}: {exc}") from exc
@@ -350,7 +358,7 @@ def test_sapi66_ca3_postgis_persistence_and_spatial_integrity() -> None:
         count(*) FILTER (WHERE ST_GeometryType(geom) = 'ST_Polygon') AS polygons
     FROM celdas_geom cg
     JOIN predicciones_celda pc ON cg.cell_id = pc.cell_id
-    WHERE pc.ejecucion_id = 1;
+    WHERE pc.ejecucion_id = (SELECT id FROM ejecuciones ORDER BY created_at DESC, id DESC LIMIT 1);
     """
     geom_res = _exec_docker_psql(geom_check_sql)
     total, valids, srid4326, polygons = [
@@ -379,20 +387,20 @@ def test_sapi66_ca4_response_timings_recorded() -> None:
     # 1. FastAPI (frío y caliente)
     _, _, _, ml_t1 = _http_request("POST", f"{ML_BASE_URL}/predict", body={})
     _, _, _, ml_t2 = _http_request("POST", f"{ML_BASE_URL}/predict", body={})
-    timings.append({"hop": "ml-api", "phase": "cold", "seconds": round(ml_t1, 4)})
-    timings.append({"hop": "ml-api", "phase": "warm", "seconds": round(ml_t2, 4)})
+    timings.append({"hop": "ml-api", "phase": "sample_1", "seconds": round(ml_t1, 4)})
+    timings.append({"hop": "ml-api", "phase": "sample_2", "seconds": round(ml_t2, 4)})
 
     # 2. Spring Boot (frío y caliente)
     _, _, _, sb_t1 = _http_request("GET", f"{BACKEND_BASE_URL}/api/v1/ranking")
     _, _, _, sb_t2 = _http_request("GET", f"{BACKEND_BASE_URL}/api/v1/ranking")
-    timings.append({"hop": "backend", "phase": "cold", "seconds": round(sb_t1, 4)})
-    timings.append({"hop": "backend", "phase": "warm", "seconds": round(sb_t2, 4)})
+    timings.append({"hop": "backend", "phase": "sample_1", "seconds": round(sb_t1, 4)})
+    timings.append({"hop": "backend", "phase": "sample_2", "seconds": round(sb_t2, 4)})
 
     # 3. web-v2 HTTP
     _, _, _, web_t1 = _http_request("GET", f"{WEB_BASE_URL}/")
     _, _, _, web_t2 = _http_request("GET", f"{WEB_BASE_URL}/")
-    timings.append({"hop": "web-v2-http", "phase": "cold", "seconds": round(web_t1, 4)})
-    timings.append({"hop": "web-v2-http", "phase": "warm", "seconds": round(web_t2, 4)})
+    timings.append({"hop": "web-v2-http", "phase": "sample_1", "seconds": round(web_t1, 4)})
+    timings.append({"hop": "web-v2-http", "phase": "sample_2", "seconds": round(web_t2, 4)})
 
     # Verificacion basica de validez de tiempos (positivos y razonables)
     for entry in timings:
@@ -439,5 +447,5 @@ def test_sapi66_ca5_compose_services_health_and_ports() -> None:
         health = by_service[s].get("Health", "")
         state = by_service[s].get("State", "")
         assert (
-            health == "healthy" or state == "running"
+            health == "healthy" and state == "running"
         ), f"Servicio {s} no esta saludable: {by_service[s]}"

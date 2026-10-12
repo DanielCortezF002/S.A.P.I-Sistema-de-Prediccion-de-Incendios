@@ -1,0 +1,10 @@
+Traceback (most recent call last):
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 234, in run
+    self.contracts()
+    ~~~~~~~~~~~~~~^^
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 195, in contracts
+    self.check("ml.down.fail_closed", status == 503 and self.counts() == "1|50", "CA2")
+    ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "[home]\Documents\Codex\sapi66-hardening\scripts\e2e_slice.py", line 112, in check
+    raise RuntimeError(name)
+RuntimeError: ml.down.fail_closed
