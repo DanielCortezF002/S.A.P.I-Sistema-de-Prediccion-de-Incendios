@@ -1,0 +1,122 @@
+[
+  {
+    "Command": "\"java -jar /app/app.\u2026\"",
+    "CreatedAt": "2026-10-12 14:35:55 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "healthy",
+    "ID": "051879306bcc",
+    "Image": "sapi66-e2e-backend",
+    "Labels": "com.docker.compose.service=backend,desktop.docker.io/binds/0/Source=C:\\Users\\danie\\feat-SAPI-66-e2e\\db\\migration,desktop.docker.io/binds/0/SourceKind=hostFile,org.opencontainers.image.title=ubuntu,com.docker.compose.depends_on=ml-api:service_started:false,db-v2:service_healthy:false,com.docker.compose.image=sha256:bbe2fef252843f265817f641111820d78ba487b3c85261fa4e7e75a1224e32fe,com.docker.compose.project.config_files=C:\\Users\\danie\\feat-SAPI-66-e2e\\docker-compose.yml,com.docker.compose.container-number=1,com.docker.compose.version=5.5.1,desktop.docker.io/ports/8080/tcp=127.0.0.1:18080,org.opencontainers.image.created=2026-09-27T10:25:52.887617+00:00,org.opencontainers.image.description=The Ubuntu container image maintained by Canonical\n\nUbuntu is a Debian-based Linux operating system that runs from the desktop to the cloud, to all your internet connected things.\nIt is the world's most popular operating system across public clouds and OpenStack clouds.\nIt is the number one platform for containers; from Docker to Kubernetes to LXD, Ubuntu can run your containers at scale.\nFast, secure and simple, Ubuntu powers millions of PCs worldwide.\n,com.docker.compose.oneoff=False,com.docker.compose.project=sapi66-e2e,com.docker.compose.project.working_dir=C:\\Users\\danie\\feat-SAPI-66-e2e,desktop.docker.io/binds/0/Target=/app/db/migration,desktop.docker.io/ports.scheme=v2,org.opencontainers.image.version=26.04,com.docker.compose.config-hash=9040d7f5e9cfb062e69c939d9d8901e1d240b4d13551aeeeb3dd1eed2b29a7dc",
+    "LocalVolumes": "0",
+    "Mounts": "/run/desktop/m\u2026",
+    "Name": "sapi66-e2e-backend-1",
+    "Names": "sapi66-e2e-backend-1",
+    "Networks": "sapi66-e2e_sapi-v2-net",
+    "Ports": "127.0.0.1:18080->8080/tcp",
+    "Project": "sapi66-e2e",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8080,
+        "PublishedPort": 18080,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "17 seconds ago",
+    "Service": "backend",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 10 seconds (healthy)"
+  },
+  {
+    "Command": "\"docker-entrypoint.s\u2026\"",
+    "CreatedAt": "2026-10-12 14:35:55 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "healthy",
+    "ID": "c471127a107a",
+    "Image": "postgis/postgis:15-3.4",
+    "Labels": "maintainer=PostGIS Project - https://postgis.net,com.docker.compose.project.config_files=C:\\Users\\danie\\feat-SAPI-66-e2e\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\danie\\feat-SAPI-66-e2e,com.docker.compose.config-hash=16397d1f0248981a07e42ed632103760449d1c708eba8d523a2be4105e1d867e,com.docker.compose.depends_on=,com.docker.compose.image=sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd,com.docker.compose.oneoff=False,com.docker.compose.version=5.5.1,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/5432/tcp=127.0.0.1:15432,org.opencontainers.image.source=https://github.com/postgis/docker-postgis,com.docker.compose.project=sapi66-e2e,org.opencontainers.image.description=PostGIS 3.4.3+dfsg-2.pgdg110+1 spatial database extension with PostgreSQL 15 bullseye,com.docker.compose.container-number=1,com.docker.compose.service=db-v2",
+    "LocalVolumes": "1",
+    "Mounts": "sapi66-e2e_sap\u2026",
+    "Name": "sapi66-e2e-db-v2-1",
+    "Names": "sapi66-e2e-db-v2-1",
+    "Networks": "sapi66-e2e_sapi-v2-net",
+    "Ports": "127.0.0.1:15432->5432/tcp",
+    "Project": "sapi66-e2e",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 5432,
+        "PublishedPort": 15432,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "17 seconds ago",
+    "Service": "db-v2",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 16 seconds (healthy)"
+  },
+  {
+    "Command": "\"uvicorn services.ml\u2026\"",
+    "CreatedAt": "2026-10-12 14:35:55 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "healthy",
+    "ID": "c86fdab1137f",
+    "Image": "sapi66-e2e-ml-api",
+    "Labels": "com.docker.compose.project.working_dir=C:\\Users\\danie\\feat-SAPI-66-e2e,desktop.docker.io/ports/8000/tcp=127.0.0.1:18000,com.docker.compose.config-hash=96629c14201e1eee57b07be19ee248f5e52f583d2e084b85cb1c9574584bcceb,com.docker.compose.project=sapi66-e2e,com.docker.compose.service=ml-api,com.docker.compose.version=5.5.1,desktop.docker.io/ports.scheme=v2,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:599a1dff30c2de8ccefd75a1143bcabc083e215b6af35608e2286f3034ab5a2c,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\danie\\feat-SAPI-66-e2e\\docker-compose.yml",
+    "LocalVolumes": "0",
+    "Mounts": "",
+    "Name": "sapi66-e2e-ml-api-1",
+    "Names": "sapi66-e2e-ml-api-1",
+    "Networks": "sapi66-e2e_sapi-v2-net",
+    "Ports": "127.0.0.1:18000->8000/tcp",
+    "Project": "sapi66-e2e",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8000,
+        "PublishedPort": 18000,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "17 seconds ago",
+    "Service": "ml-api",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 16 seconds (healthy)"
+  },
+  {
+    "Command": "\"python -m streamlit\u2026\"",
+    "CreatedAt": "2026-10-12 14:35:55 -0300 -03",
+    "Engine": "",
+    "ExitCode": 0,
+    "Health": "",
+    "ID": "79c6757ecf89",
+    "Image": "sapi66-e2e-web-v2",
+    "Labels": "com.docker.compose.config-hash=f44bae0a5b7f85502dcdafce2c49fa67d9dcb40f263154d71183f61b2861bcec,com.docker.compose.depends_on=backend:service_started:false,com.docker.compose.image=sha256:bfc95fcaee1e9df30df496c9aba4f4606d392ce30bf95fd86bfa0145a946d040,com.docker.compose.project=sapi66-e2e,com.docker.compose.project.config_files=C:\\Users\\danie\\feat-SAPI-66-e2e\\docker-compose.yml,com.docker.compose.service=web-v2,desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/8501/tcp=127.0.0.1:18501,com.docker.compose.container-number=1,com.docker.compose.oneoff=False,com.docker.compose.project.working_dir=C:\\Users\\danie\\feat-SAPI-66-e2e,com.docker.compose.version=5.5.1",
+    "LocalVolumes": "0",
+    "Mounts": "",
+    "Name": "sapi66-e2e-web-v2-1",
+    "Names": "sapi66-e2e-web-v2-1",
+    "Networks": "sapi66-e2e_sapi-v2-net",
+    "Ports": "127.0.0.1:18501->8501/tcp",
+    "Project": "sapi66-e2e",
+    "Publishers": [
+      {
+        "URL": "127.0.0.1",
+        "TargetPort": 8501,
+        "PublishedPort": 18501,
+        "Protocol": "tcp"
+      }
+    ],
+    "RunningFor": "17 seconds ago",
+    "Service": "web-v2",
+    "Size": "0B",
+    "State": "running",
+    "Status": "Up 10 seconds"
+  }
+]

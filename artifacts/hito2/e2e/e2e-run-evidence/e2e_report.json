@@ -1,0 +1,264 @@
+{
+  "title": "SAPI-66 Vertical Slice E2E Verification Report",
+  "timestamp": "2026-10-12T17:36:47Z",
+  "facts": {
+    "utc": "2026-10-12T17:35:54Z",
+    "git_head": "64c37f21492041db62adad42a3a574a22918b7cf",
+    "git_branch": "feat/SAPI-66-e2e-vertical-slice",
+    "platform": "Windows AMD64",
+    "compose_project": "sapi66-e2e",
+    "ports": {
+      "backend": 18080,
+      "ml_api": 18000,
+      "db_v2": 15432,
+      "web_v2": 18501
+    }
+  },
+  "summary": {
+    "total": 27,
+    "passed": 27,
+    "failed": 0,
+    "verdict": "PASS"
+  },
+  "checks": [
+    {
+      "id": "service.db-v2.present",
+      "ca": "SAPI-66.CA5",
+      "description": "Servicio db-v2 levantado en Compose",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "service.ml-api.present",
+      "ca": "SAPI-66.CA5",
+      "description": "Servicio ml-api levantado en Compose",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "service.backend.present",
+      "ca": "SAPI-66.CA5",
+      "description": "Servicio backend levantado en Compose",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "service.web-v2.present",
+      "ca": "SAPI-66.CA5",
+      "description": "Servicio web-v2 levantado en Compose",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "backend.health_200",
+      "ca": "SAPI-66.CA5",
+      "description": "GET /health en Spring Boot responde 200 UP",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "ml_api.health_200",
+      "ca": "SAPI-66.CA5",
+      "description": "GET /health en FastAPI responde 200 ok",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "web_v2.http_200",
+      "ca": "SAPI-66.CA5",
+      "description": "GET / en Streamlit web-v2 responde HTTP 200",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.backend.status_200",
+      "ca": "SAPI-66.CA1",
+      "description": "GET /api/v1/ranking responde HTTP 200",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.cell_count_50",
+      "ca": "SAPI-66.CA1",
+      "description": "Exactamente 50 celdas evaluadas",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.model_version",
+      "ca": "SAPI-66.CA1",
+      "description": "model_version es prototype_model_d_v1",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.fingerprint",
+      "ca": "SAPI-66.CA1",
+      "description": "inputs_fingerprint coincide con Modelo D congelado",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.score_semantics",
+      "ca": "SAPI-66.CA1",
+      "description": "score_semantics es relative_rank",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.scientific_validation",
+      "ca": "SAPI-66.CA1",
+      "description": "scientific_model_validation es false",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.scores_descending",
+      "ca": "SAPI-66.CA1",
+      "description": "Scores ordenados en forma descendente no creciente",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.streamlit.apptest_clean",
+      "ca": "SAPI-66.CA1",
+      "description": "Streamlit AppTest corre sin excepciones ni st.error",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "chain.streamlit.ui_elements",
+      "ca": "SAPI-66.CA1",
+      "description": "UI renderiza badge BACKEND REST y 7 celdas empatadas",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "contract.backend.ranking_200",
+      "ca": "SAPI-66.CA2",
+      "description": "Spring Boot GET /api/v1/ranking cumple RankingResult",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "contract.ml.predict_200",
+      "ca": "SAPI-66.CA2",
+      "description": "FastAPI POST /predict cumple RankingResult",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "contract.backend.error_422",
+      "ca": "SAPI-66.CA2",
+      "description": "Spring Boot ante forecast_time invalido devuelve 422 con Error schema",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "contract.ml.error_422",
+      "ca": "SAPI-66.CA2",
+      "description": "FastAPI ante body no permitido devuelve 422 con Error schema",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "ui.error_state.controlled",
+      "ca": "SAPI-66.CA2",
+      "description": "UI muestra st.error visible sin fallback legacy ante backend caido",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "sql.latest_ranking.count_50",
+      "ca": "SAPI-66.CA3",
+      "description": "latest_ranking.sql devuelve exactamente 50 filas",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "sql.latest_ranking.columns_14",
+      "ca": "SAPI-66.CA3",
+      "description": "Todas las filas contienen 14 columnas",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "sql.latest_ranking.ranks_sequential",
+      "ca": "SAPI-66.CA3",
+      "description": "Ranks 1..50 secuenciales en orden ascendente",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "sql.idempotency.natural_key",
+      "ca": "SAPI-66.CA3",
+      "description": "Llamada repetida no duplica filas en ejecuciones ni predicciones_celda",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "sql.spatial.postgis_integrity",
+      "ca": "SAPI-66.CA3",
+      "description": "50 geometrias validas (ST_IsValid=true, SRID=4326, ST_Polygon)",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "id": "timings.recorded.positive",
+      "ca": "SAPI-66.CA4",
+      "description": "Tiempos por salto registrados en timings.csv sin umbrales arbitrarios",
+      "status": "PASS",
+      "detail": null
+    }
+  ],
+  "timings": [
+    {
+      "hop": "ml-api",
+      "phase": "cold",
+      "seconds": 2.4281,
+      "ms": 2428.1,
+      "status": 200,
+      "notes": "FastAPI Modelo D inference"
+    },
+    {
+      "hop": "ml-api",
+      "phase": "warm",
+      "seconds": 2.4285,
+      "ms": 2428.5,
+      "status": 200,
+      "notes": "FastAPI Modelo D inference"
+    },
+    {
+      "hop": "backend",
+      "phase": "cold",
+      "seconds": 2.4393,
+      "ms": 2439.3,
+      "status": 200,
+      "notes": "Spring Boot GET ranking + PostGIS persist"
+    },
+    {
+      "hop": "backend",
+      "phase": "warm",
+      "seconds": 2.8397,
+      "ms": 2839.7,
+      "status": 200,
+      "notes": "Spring Boot GET ranking + PostGIS persist"
+    },
+    {
+      "hop": "web-v2-http",
+      "phase": "cold",
+      "seconds": 0.0042,
+      "ms": 4.2,
+      "status": 200,
+      "notes": "Streamlit web container GET /"
+    },
+    {
+      "hop": "web-v2-http",
+      "phase": "warm",
+      "seconds": 0.0195,
+      "ms": 19.5,
+      "status": 200,
+      "notes": "Streamlit web container GET /"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+hop,phase,seconds,ms,status,notes
+ml-api,cold,2.4281,2428.1,200,FastAPI Modelo D inference
+ml-api,warm,2.4285,2428.5,200,FastAPI Modelo D inference
+backend,cold,2.4393,2439.3,200,Spring Boot GET ranking + PostGIS persist
+backend,warm,2.8397,2839.7,200,Spring Boot GET ranking + PostGIS persist
+web-v2-http,cold,0.0042,4.2,200,Streamlit web container GET /
+web-v2-http,warm,0.0195,19.5,200,Streamlit web container GET /
