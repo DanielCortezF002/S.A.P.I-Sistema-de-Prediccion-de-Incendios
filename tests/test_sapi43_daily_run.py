@@ -98,8 +98,26 @@ def expected_new_executions(
     return 0 if key in already else 1
 
 
+_DROP = object()
+
+
 def _ranking_payload() -> dict[str, Any]:
     return json.loads(RANKING_FIXTURE.read_text(encoding="utf-8"))
+
+
+def _operational_body(**changes: Any) -> dict[str, Any]:
+    """Forma de contrato con firms_origin=current. No es una corrida real."""
+    body = _ranking_payload()
+    body["firms_origin"] = "current"
+    body["firms_coverage_end"] = "2026-08-30"
+    body["firms_lag_days"] = 2
+    body["firms_status"] = "FIRMS AL DÍA"
+    for key, value in changes.items():
+        if value is _DROP:
+            body.pop(key, None)
+        else:
+            body[key] = value
+    return body
 
 
 def _write_pointers(root: Path, firms: str = "{}", dmc: str = "{}") -> None:
@@ -167,8 +185,12 @@ def _client(session: _FakeSession) -> BackendRankingClient:
     )
 
 
+def _session_for(body: dict[str, Any]) -> _FakeSession:
+    return _FakeSession(_FakeResponse(200, json.dumps(body)))
+
+
 def _ok_session() -> _FakeSession:
-    return _FakeSession(_FakeResponse(200, json.dumps(_ranking_payload())))
+    return _session_for(_operational_body())
 
 
 def test_module_is_labeled_fixture_only() -> None:
@@ -260,7 +282,7 @@ def test_success_uses_one_get_with_explicit_timeout(tmp_path: Path) -> None:
     _write_pointers(tmp_path)
     session = _ok_session()
     outcome = daily.execute(tmp_path, client=_client(session))
-    payload = _ranking_payload()
+    payload = _operational_body()
     assert outcome.code == daily.EXIT_OK
     assert outcome.natural_key == (
         "2026-09-01T00:00:00+00:00",
@@ -268,6 +290,9 @@ def test_success_uses_one_get_with_explicit_timeout(tmp_path: Path) -> None:
         payload["inputs_fingerprint"],
     )
     assert "scientific_model_validation=false" in outcome.message
+    assert "firms_origin=current" in outcome.message
+    assert "no demuestra que su almacén versionado se haya usado" in outcome.message
+    assert daily.DMC_STORE_CONSUMPTION_PROVEN is False
     assert "celdas=50" in outcome.message
     assert "model_status" not in outcome.message
     assert "meteo_actual" not in outcome.message
@@ -333,8 +358,8 @@ def test_network_failures_are_ranking_unavailable(tmp_path: Path, exc: BaseExcep
     assert len(session.calls) == 1
 
 
-def test_http_500_is_the_persistence_exit(tmp_path: Path) -> None:
-    """HTTP 500 es el fallo cerrado de persistencia que publica Spring."""
+def test_http_500_is_backend_internal_not_a_database_proof(tmp_path: Path) -> None:
+    """HTTP 500 queda clasificado y no se presenta como fallo de PostGIS."""
     _write_pointers(tmp_path)
     body = json.dumps(
         {
@@ -345,8 +370,9 @@ def test_http_500_is_the_persistence_exit(tmp_path: Path) -> None:
     )
     session = _FakeSession(_FakeResponse(500, body))
     outcome = daily.execute(tmp_path, client=_client(session))
-    assert outcome.code == daily.EXIT_PERSISTENCE_UNAVAILABLE
+    assert outcome.code == daily.EXIT_BACKEND_INTERNAL
     assert outcome.code != daily.EXIT_RANKING_UNAVAILABLE
+    assert "PostGIS" not in outcome.message
     assert "detalle interno" not in outcome.message
     assert len(session.calls) == 1
 
@@ -354,12 +380,37 @@ def test_http_500_is_the_persistence_exit(tmp_path: Path) -> None:
 def test_scientific_validation_true_is_rejected(tmp_path: Path) -> None:
     """Un ranking con validación científica en true no se acepta."""
     _write_pointers(tmp_path)
-    payload = _ranking_payload()
-    payload["scientific_model_validation"] = True
-    session = _FakeSession(_FakeResponse(200, json.dumps(payload)))
+    session = _session_for(_operational_body(scientific_model_validation=True))
     outcome = daily.execute(tmp_path, client=_client(session))
     assert outcome.code == daily.EXIT_RANKING_UNAVAILABLE
     assert outcome.natural_key is None
+    assert "Ranking relativo aceptado" not in outcome.message
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"firms_origin": _DROP},
+        {"firms_origin": "reproducibility"},
+        {"firms_origin": "baseline"},
+        {"firms_origin": "Current"},
+        {"firms_coverage_end": _DROP},
+        {"firms_lag_days": _DROP},
+        {"firms_status": _DROP},
+        {"firms_status": "otro"},
+    ],
+)
+def test_historical_or_incomplete_provenance_is_rejected(
+    tmp_path: Path, changes: dict[str, Any]
+) -> None:
+    """Sin firms_origin=current, o sin su metadata, no hay corrida aceptada."""
+    _write_pointers(tmp_path)
+    session = _session_for(_operational_body(**changes))
+    outcome = daily.execute(tmp_path, client=_client(session))
+    assert outcome.code == daily.EXIT_RANKING_UNAVAILABLE
+    assert outcome.natural_key is None
+    assert "Ranking relativo aceptado" not in outcome.message
+    assert len(session.calls) == 1
 
 
 def test_repeated_natural_key_expects_zero_new_executions(tmp_path: Path) -> None:

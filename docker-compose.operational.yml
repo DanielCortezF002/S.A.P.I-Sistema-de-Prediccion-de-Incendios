@@ -1,0 +1,21 @@
+# Overlay operacional (ADR-009, decisión 2). Pertenece a SAPI-43.
+# No estaba en el historial ni en otras ramas; el Compose base no se modifica.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.operational.yml config
+#
+# El archivo base sigue con SAPI_REPRODUCIBILITY_MODE=1 y el volumen
+# sapi_v2_pgdata. Este overlay no arranca una corrida ni publica CURRENT.
+services:
+  ml-api:
+    environment:
+      SAPI_REPRODUCIBILITY_MODE: "0"
+    volumes:
+      - ./data:/app/data:ro
+  db-v2:
+    # Reemplaza el volumen reproducible. Sin !override, Compose concatenaría
+    # los dos montajes sobre el mismo directorio de datos.
+    volumes: !override
+      - sapi_v2_operational_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sapi_v2_operational_pgdata:

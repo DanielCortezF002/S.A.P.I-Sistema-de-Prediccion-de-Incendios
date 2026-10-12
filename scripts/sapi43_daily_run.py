@@ -18,15 +18,22 @@ Códigos de salida:
   ejecución. Este proceso no consulta la base para distinguir el alta de
   la repetición.
 - ``2``: algún puntero CURRENT falta o no se puede leer. No hay petición HTTP.
-- ``3``: el ranking no está disponible (red, tiempo agotado, HTTP distinto
-  de 200 y de 500, o cuerpo que no cumple el contrato).
-- ``4``: el backend respondió HTTP 500. Spring usa ese código cuando la
-  persistencia write-through falla y también cuando el servicio de ranking
-  responde 500; el cuerpo HTTP no los separa.
+- ``3``: el ranking no está disponible, el cuerpo no cumple el contrato,
+  ``firms_origin`` no es ``current``, o falta la metadata FIRMS ya definida
+  en el contrato.
+- ``4``: el backend respondió HTTP 500. Es una clasificación controlada:
+  ese código no prueba un fallo de la base. Spring lo usa también cuando
+  el servicio de ranking responde 500.
 - ``1``: fallo interno de este proceso, sin traza hacia el operador.
 
 ``scientific_model_validation`` debe permanecer en false. El score es un
-ranking relativo.
+ranking relativo. ``firms_origin=current`` es obligatorio en este flujo.
+Un origen ``reproducibility`` o ``baseline`` es un snapshot histórico y
+no se acepta.
+
+El puntero DMC legible no demuestra que el almacén versionado se haya
+consumido. El contrato público no trae un origen DMC. ``station_id``, si
+llega, solo nombra la estación regional. Esa evidencia queda para SAPI-71.
 """
 
 from __future__ import annotations
@@ -41,21 +48,43 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from app.utils.backend_client import BackendError, BackendRankingClient  # noqa: E402
+from app.utils.backend_client import (  # noqa: E402
+    BackendError,
+    BackendRankingClient,
+    RankingView,
+)
 
 EXIT_OK = 0
 EXIT_INTERNAL = 1
 EXIT_CURRENT_MISSING = 2
 EXIT_RANKING_UNAVAILABLE = 3
-EXIT_PERSISTENCE_UNAVAILABLE = 4
+# HTTP 500 del backend. No afirma que PostGIS haya fallado.
+EXIT_BACKEND_INTERNAL = 4
+
+FIRMS_ORIGIN_CURRENT = "current"
+HISTORICAL_FIRMS_ORIGINS = frozenset({"baseline", "reproducibility"})
+# Valores ya publicados en el contrato. No se agregan campos.
+FIRMS_STATUS_VALUES = frozenset({"FIRMS AL DÍA", "FIRMS DESACTUALIZADO"})
+# El puntero DMC no es evidencia de que el store versionado se haya leído.
+DMC_STORE_CONSUMPTION_PROVEN = False
 
 # Única estación regional ya usada por el Modelo D.
 DMC_STATION_ID = "330007"
 
 _RANKING_UNAVAILABLE = "El ranking no está disponible. Este proceso no escribió en la base."
-_PERSISTENCE_UNAVAILABLE = (
-    "El backend respondió HTTP 500. Puede ser la persistencia o un fallo "
-    "interno del ranking. Este proceso no escribió en la base."
+_HISTORICAL_ORIGIN = (
+    "El ranking no trae firms_origin=current. "
+    "Un snapshot histórico no cuenta como corrida diaria. "
+    "Este proceso no escribió en la base."
+)
+_METADATA_INCOMPLETE = (
+    "Falta metadata FIRMS del contrato (cobertura, desfase o estado). "
+    "Este proceso no escribió en la base."
+)
+_BACKEND_INTERNAL = (
+    "El backend respondió HTTP 500 (error interno). "
+    "Ese código no identifica un fallo de la base. "
+    "Este proceso no escribió en la base."
 )
 _INTERNAL = "Fallo interno del entrypoint diario."
 
@@ -151,10 +180,38 @@ def _from_backend_error(exc: BackendError) -> DailyRunOutcome:
 
     Returns:
         Salida 4 si el backend respondió 500; salida 3 en el resto.
+        La salida 4 no afirma que la base haya fallado.
     """
     if exc.http_status == 500:
-        return DailyRunOutcome(EXIT_PERSISTENCE_UNAVAILABLE, _PERSISTENCE_UNAVAILABLE)
+        return DailyRunOutcome(EXIT_BACKEND_INTERNAL, _BACKEND_INTERNAL)
     return DailyRunOutcome(EXIT_RANKING_UNAVAILABLE, _RANKING_UNAVAILABLE)
+
+
+def _reject_provenance(view: RankingView) -> Optional[DailyRunOutcome]:
+    """Rechaza un ranking que no es una corrida con FIRMS current.
+
+    Usa solo campos que el contrato ya define. No revisa hashes ni sidecars.
+
+    Args:
+        view: Ranking ya validado por el cliente HTTP.
+
+    Returns:
+        Un rechazo, o ``None`` si ``firms_origin`` es ``current`` y la
+        metadata FIRMS del contrato está presente.
+    """
+    if view.scientific_model_validation is not False:
+        return DailyRunOutcome(EXIT_RANKING_UNAVAILABLE, _RANKING_UNAVAILABLE)
+    origin = view.firms_origin
+    if origin in HISTORICAL_FIRMS_ORIGINS or origin != FIRMS_ORIGIN_CURRENT:
+        return DailyRunOutcome(EXIT_RANKING_UNAVAILABLE, _HISTORICAL_ORIGIN)
+    metadata_ok = (
+        view.firms_coverage_end is not None
+        and view.firms_lag_days is not None
+        and view.firms_status in FIRMS_STATUS_VALUES
+    )
+    if not metadata_ok:
+        return DailyRunOutcome(EXIT_RANKING_UNAVAILABLE, _METADATA_INCOMPLETE)
+    return None
 
 
 def execute(
@@ -191,8 +248,9 @@ def execute(
     except BackendError as exc:
         return _from_backend_error(exc)
 
-    if view.scientific_model_validation is not False:
-        return DailyRunOutcome(EXIT_RANKING_UNAVAILABLE, _RANKING_UNAVAILABLE)
+    rejected = _reject_provenance(view)
+    if rejected is not None:
+        return rejected
 
     forecast_time = view.forecast_time.isoformat()
     natural_key = (forecast_time, view.model_version, view.inputs_fingerprint)
@@ -202,8 +260,10 @@ def execute(
         f"model_version={view.model_version} "
         f"inputs_fingerprint={view.inputs_fingerprint} "
         "scientific_model_validation=false "
+        "firms_origin=current "
         f"celdas={len(view.cells)}. "
-        "La persistencia queda en el backend."
+        "La persistencia queda en el backend. "
+        "El puntero DMC legible no demuestra que su almacén versionado se haya usado."
     )
     return DailyRunOutcome(EXIT_OK, message, natural_key)
 
