@@ -292,3 +292,20 @@ def test_every_type_style_has_line_height_above_its_font_size():
         assert estilo.line_px > estilo.size_px, (
             f"La interlínea de '{nombre}' no deja aire sobre el tamaño de fuente"
         )
+
+
+def test_sidebar_toggle_controls_styled_with_tokens_and_accessibility():
+    """El control de apertura de la barra lateral (esquina superior izquierda)
+    debe tener contraste accesible, hover y foco en ambos modos."""
+    from app.theme.css import build_stylesheet
+
+    for mode in (t.APPEARANCE_CLARO, t.APPEARANCE_OSCURO):
+        css = build_stylesheet(mode)
+        assert 'button[data-testid="stExpandSidebarButton"]' in css
+        assert 'button[data-testid="stExpandSidebarButton"]:hover' in css
+        assert 'button[data-testid="stExpandSidebarButton"]:focus-visible' in css
+        assert '[data-testid="stSidebarCollapseButton"] button' in css
+        assert "var(--sapi-surface-card)" in css
+        assert "var(--sapi-text-primary)" in css
+        assert "var(--sapi-accent)" in css
+

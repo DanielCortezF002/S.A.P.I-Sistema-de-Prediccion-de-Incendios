@@ -220,6 +220,123 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             color: {t.TEXT_ON_SIDEBAR} !important;
         }}
 
+        /* ── Control de barra lateral (P0): apertura (esquina superior izquierda) y cierre ── */
+        button[data-testid="stExpandSidebarButton"],
+        [data-testid="stSidebarCollapsedControl"] button,
+        [data-testid="collapsedControl"] button,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"],
+        [data-testid="stHeader"] button[kind="headerNoPadding"],
+        [data-testid="stHeader"] button[kind="header"] {{
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-primary) !important;
+            min-width: 2.25rem !important;
+            min-height: 2.25rem !important;
+            padding: 0.25rem 0.45rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"] svg,
+        button[data-testid="stExpandSidebarButton"] span,
+        button[data-testid="stExpandSidebarButton"] i,
+        button[data-testid="stExpandSidebarButton"] *,
+        [data-testid="stSidebarCollapsedControl"] button svg,
+        [data-testid="stSidebarCollapsedControl"] button span,
+        [data-testid="stSidebarCollapsedControl"] button *,
+        [data-testid="collapsedControl"] button svg,
+        [data-testid="collapsedControl"] button span,
+        [data-testid="collapsedControl"] button *,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] svg,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] span,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] *,
+        [data-testid="stHeader"] button[kind="headerNoPadding"] svg,
+        [data-testid="stHeader"] button[kind="headerNoPadding"] span,
+        [data-testid="stHeader"] button[kind="headerNoPadding"] * {{
+            color: var(--sapi-text-primary) !important;
+            fill: var(--sapi-text-primary) !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"]:hover,
+        [data-testid="stSidebarCollapsedControl"] button:hover,
+        [data-testid="collapsedControl"] button:hover,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:hover,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:hover,
+        [data-testid="stHeader"] button[kind="header"]:hover {{
+            background-color: var(--sapi-surface-muted) !important;
+            border-color: var(--sapi-accent) !important;
+            color: var(--sapi-accent) !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"]:hover svg,
+        button[data-testid="stExpandSidebarButton"]:hover span,
+        button[data-testid="stExpandSidebarButton"]:hover *,
+        [data-testid="stSidebarCollapsedControl"] button:hover svg,
+        [data-testid="stSidebarCollapsedControl"] button:hover *,
+        [data-testid="collapsedControl"] button:hover svg,
+        [data-testid="collapsedControl"] button:hover *,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:hover svg,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:hover *,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:hover svg,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:hover * {{
+            color: var(--sapi-accent) !important;
+            fill: var(--sapi-accent) !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"]:focus-visible,
+        [data-testid="stSidebarCollapsedControl"] button:focus-visible,
+        [data-testid="collapsedControl"] button:focus-visible,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:focus-visible,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:focus-visible,
+        [data-testid="stHeader"] button[kind="header"]:focus-visible {{
+            outline: 2px solid var(--sapi-accent) !important;
+            outline-offset: 2px !important;
+            border-color: var(--sapi-accent) !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button,
+        [data-testid="stSidebarHeader"] button {{
+            background-color: {t.SIDEBAR_INPUT_FILL} !important;
+            border: 1px solid {t.SIDEBAR_INPUT_BORDER} !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: {t.TEXT_ON_SIDEBAR} !important;
+            min-width: 2.25rem !important;
+            min-height: 2.25rem !important;
+            padding: 0.25rem 0.45rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button svg,
+        [data-testid="stSidebarCollapseButton"] button span,
+        [data-testid="stSidebarCollapseButton"] button *,
+        [data-testid="stSidebarHeader"] button svg,
+        [data-testid="stSidebarHeader"] button span,
+        [data-testid="stSidebarHeader"] button * {{
+            color: {t.TEXT_ON_SIDEBAR} !important;
+            fill: {t.TEXT_ON_SIDEBAR} !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button:hover,
+        [data-testid="stSidebarHeader"] button:hover {{
+            background-color: {t.SIDEBAR_CODE_FILL} !important;
+            border-color: {t.TEXT_ON_SIDEBAR} !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button:focus-visible,
+        [data-testid="stSidebarHeader"] button:focus-visible {{
+            outline: 2px solid {t.TEXT_ON_SIDEBAR} !important;
+            outline-offset: 2px !important;
+        }}
+
         /* En el sidebar angosto de un teléfono el dropdown de días cubre todo
            el rango demo por sí solo; el calendario secundario sobra. */
         @media (max-width: {t.BREAKPOINT_NARROW_PX}px) {{
