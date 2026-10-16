@@ -39,7 +39,7 @@ from app.utils.reference_topography import (
     load_reference_topography,
     reference_topography,
 )
-from src.geo.grid import all_cells
+from src.geo.grid import all_cells, cell_center, grid_center
 from tests.test_backend_client import (
     EXTENDED_FIELDS,
     MALICIOUS_MESSAGES,
@@ -679,3 +679,207 @@ def test_reference_topography_missing_or_corrupt_file_degrades_to_empty(
     table = load_reference_topography(broken)
     assert set(table) == {"VP-001"}
     assert table["VP-001"].elevation is None and table["VP-001"].dem_available is False
+
+
+# ── navegación bidireccional tabla-mapa (CA1, CA2, CA3, CA4) ───────────────────────
+
+
+def test_build_map_centers_on_selected_cell_with_zoom_12() -> None:
+    fmap = build_map(v0_view(), "Prioridades", selected_id="VP-047")
+    expected_lat, expected_lon = cell_center(47)
+    assert fmap.location == [expected_lat, expected_lon]
+    assert fmap.options["zoom"] == 12
+
+
+def test_build_map_without_selection_centers_on_grid_center_with_zoom_11() -> None:
+    fmap = build_map(v0_view(), "Prioridades", selected_id=None)
+    expected_lat, expected_lon = grid_center()
+    assert fmap.location == [expected_lat, expected_lon]
+    assert fmap.options["zoom"] == 11
+
+
+def test_build_map_selected_cell_has_edge_highlight_and_fill() -> None:
+    fmap = build_map(v0_view(), "Prioridades", selected_id="VP-047")
+    rects = _rectangles(fmap)
+    vp047 = next(
+        r for r in rects if "<b>VP-047</b>" in next(iter(r._children.values())).text
+    )
+    assert vp047.options["color"] == view_mod._SELECTED_EDGE
+    assert vp047.options["weight"] == 3.0
+    assert vp047.options["fillOpacity"] >= 0.40
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_render_map_stale_click_protection(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    mock_st.radio.return_value = "Prioridades"
+
+    cell = all_cells()[37]  # VP-038
+    lat = (cell["min_lat"] + cell["max_lat"]) / 2
+    lon = (cell["min_lon"] + cell["max_lon"]) / 2
+    click_event = {"last_clicked": {"lat": lat, "lng": lon}}
+
+    with patch("app.components.ranking_backend_view.st_folium", return_value=click_event):
+        # Primer renderizado: debe detectar el click en VP-038
+        res1 = view_mod._render_map(v0_view(), selected_id="VP-001")
+        assert res1 == "VP-038"
+        assert fake_session.get(view_mod._SESSION_LAST_PROCESSED_CLICK) == click_event["last_clicked"]
+
+        # Segundo renderizado con las mismas coordenadas de last_clicked: debe retornar None
+        res2 = view_mod._render_map(v0_view(), selected_id="VP-038")
+        assert res2 is None
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_selection_sets_pending_and_reruns(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_PRIORITY_OFFICIAL
+    mock_st.selectbox.return_value = "Todos los grupos (50 celdas)"
+
+    # El usuario selecciona la fila 7 en la tabla
+    mock_st.dataframe.return_value = {
+        "selection": {"rows": [7], "columns": [], "cells": []}
+    }
+
+    view = v0_view()
+    df, _ = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_PRIORITY_OFFICIAL,
+        group_filter="Todos los grupos (50 celdas)",
+    )
+    expected_cell = str(df.iloc[7]["Celda"])
+
+    view_mod._render_ranking_expander(view, selected_id="VP-001")
+
+    assert fake_session.get(view_mod._SESSION_PENDING_SELECTION) == expected_cell
+    assert fake_session.get(view_mod._SESSION_TABLE_SYNCED_CELL) == expected_cell
+    mock_st.rerun.assert_called_once()
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_same_selection_does_not_rerun(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_PRIORITY_OFFICIAL
+    mock_st.selectbox.return_value = "Todos los grupos (50 celdas)"
+
+    # Fila 0 en el orden oficial es VP-001 (ya seleccionada)
+    mock_st.dataframe.return_value = {
+        "selection": {"rows": [0], "columns": [], "cells": []}
+    }
+
+    view_mod._render_ranking_expander(v0_view(), selected_id="VP-001")
+
+    assert view_mod._SESSION_PENDING_SELECTION not in fake_session
+    mock_st.rerun.assert_not_called()
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_programmatically_syncs_selected_cell(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_PRIORITY_OFFICIAL
+    mock_st.selectbox.return_value = "Todos los grupos (50 celdas)"
+    mock_st.dataframe.return_value = {"selection": {"rows": [], "columns": [], "cells": []}}
+
+    view = v0_view()
+    df, _ = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_PRIORITY_OFFICIAL,
+        group_filter="Todos los grupos (50 celdas)",
+    )
+    target_idx = int(df.index[df["Celda"] == "VP-047"][0])
+
+    view_mod._render_ranking_expander(view, selected_id="VP-047")
+
+    table_state = fake_session.get(view_mod._SESSION_TABLE)
+    assert table_state is not None
+    assert table_state["selection"]["rows"] == [target_idx]
+    assert fake_session.get(view_mod._SESSION_TABLE_SYNCED_CELL) == "VP-047"
+
+    caption_text = mock_st.caption.call_args[0][0]
+    assert "Celda enfocada: **VP-047**" in caption_text
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_selection_with_cell_id_sorting(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_CELL_ID
+    mock_st.selectbox.return_value = "Todos los grupos (50 celdas)"
+
+    # En orden numérico por ID (VP-001 a VP-050), el índice 46 corresponde a VP-047
+    mock_st.dataframe.return_value = {
+        "selection": {"rows": [46], "columns": [], "cells": []}
+    }
+
+    view_mod._render_ranking_expander(v0_view(), selected_id="VP-001")
+
+    assert fake_session.get(view_mod._SESSION_PENDING_SELECTION) == "VP-047"
+    mock_st.rerun.assert_called_once()
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_selection_with_group_filter(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_PRIORITY_OFFICIAL
+    mock_st.selectbox.return_value = "Grupo 3"
+
+    # En Grupo 3 hay 2 celdas: fila 0 = VP-028, fila 1 = VP-038
+    mock_st.dataframe.return_value = {
+        "selection": {"rows": [1], "columns": [], "cells": []}
+    }
+
+    view_mod._render_ranking_expander(v0_view(), selected_id="VP-001")
+
+    assert fake_session.get(view_mod._SESSION_PENDING_SELECTION) == "VP-038"
+    mock_st.rerun.assert_called_once()
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_dashboard_pops_pending_selection_and_syncs_state(mock_st: MagicMock) -> None:
+    fake_session = {view_mod._SESSION_PENDING_SELECTION: "VP-047"}
+    mock_st.session_state = fake_session
+    mock_st.sidebar.button.return_value = False
+    mock_st.columns.side_effect = lambda spec, gap=None: [MagicMock(), MagicMock()]
+    mock_st.selectbox.side_effect = lambda label, options, key=None, **kwargs: fake_session.get(key, options[0])
+
+    with patch.object(view_mod, "_load_ranking", return_value=v0_view()), \
+         patch.object(view_mod, "_render_map", return_value=None), \
+         patch.object(view_mod, "_render_selected_panel"), \
+         patch.object(view_mod, "_render_ranking_expander") as mock_expander:
+        view_mod.render_ranking_backend_dashboard()
+
+    assert fake_session.get(view_mod._SESSION_SELECTED) == "VP-047"
+    assert view_mod._SESSION_PENDING_SELECTION not in fake_session
+    mock_expander.assert_called_once()
+    assert mock_expander.call_args.kwargs.get("selected_id") == "VP-047"
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_dashboard_map_click_clears_table_sync_and_updates_selected(mock_st: MagicMock) -> None:
+    fake_session = {
+        view_mod._SESSION_SELECTED: "VP-001",
+        view_mod._SESSION_TABLE_SYNCED_CELL: "VP-001",
+    }
+    mock_st.session_state = fake_session
+    mock_st.sidebar.button.return_value = False
+    mock_st.columns.side_effect = lambda spec, gap=None: [MagicMock(), MagicMock()]
+    mock_st.selectbox.side_effect = lambda label, options, key=None, **kwargs: fake_session.get(key, options[0])
+
+    with patch.object(view_mod, "_load_ranking", return_value=v0_view()), \
+         patch.object(view_mod, "_render_map", return_value="VP-020"):
+        view_mod.render_ranking_backend_dashboard()
+
+    assert fake_session.get(view_mod._SESSION_SELECTED) == "VP-020"
+    assert fake_session.get(view_mod._SESSION_TABLE_SYNCED_CELL) == "VP-020"
+    mock_st.rerun.assert_called_once()
+

@@ -50,12 +50,17 @@ from app.utils.reference_topography import (
     reference_topography,
 )
 from src.config import get_backend_base_url, get_backend_timeouts
-from src.geo.grid import all_cells, assign_cell, grid_center
+from src.geo.grid import CELL_COUNT, all_cells, assign_cell, cell_center, grid_center
 
 _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
+_SESSION_PENDING_SELECTION = "ranking_v2_pending_cell"
+_SESSION_LAST_PROCESSED_CLICK = "ranking_v2_last_processed_click"
+_SESSION_TABLE = "ranking_v2_table"
+_SESSION_TABLE_SYNCED_CELL = "ranking_v2_table_synced_cell"
+_SESSION_TABLE_LAST_FILTER = "ranking_v2_table_last_filter"
 _ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
 _ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
 _ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
@@ -220,9 +225,21 @@ def build_map(
     geometry = _geometry_by_cell()
     group_by_score = _score_group_map(view.cells)
     top_rank = min((c.display_rank for c in view.cells), default=1)
-    center_lat, center_lon = grid_center()
+
+    if selected_id:
+        cell_idx = _cell_num(selected_id)
+        if 1 <= cell_idx <= CELL_COUNT:
+            center_lat, center_lon = cell_center(cell_idx)
+            zoom_start = 12
+        else:
+            center_lat, center_lon = grid_center()
+            zoom_start = 11
+    else:
+        center_lat, center_lon = grid_center()
+        zoom_start = 11
+
     fmap = folium.Map(
-        location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap"
+        location=[center_lat, center_lon], zoom_start=zoom_start, tiles="OpenStreetMap"
     )
 
     for c in view.cells:
@@ -243,7 +260,8 @@ def build_map(
         if is_selected:
             edge = _SELECTED_EDGE
             weight = 3.0
-            fill_opacity = max(fill_opacity, 0.35)
+            fill = vis["fill"]
+            fill_opacity = max(fill_opacity, 0.40)
 
         elev_txt, slope_txt, is_covered = _topo_for(topo, c.cell_id)
         topo_note = "" if is_covered else " (sin cobertura DEM)"
@@ -598,15 +616,35 @@ def _render_map(view: RankingView, selected_id: Optional[str]) -> Optional[str]:
         help="Solo cambia la representación visual. No consulta ni recalcula nada.",
     )
     fmap = build_map(view, mode, selected_id)
+
+    target_center = None
+    target_zoom = 11
+    if selected_id:
+        cell_idx = _cell_num(selected_id)
+        if 1 <= cell_idx <= CELL_COUNT:
+            target_center = cell_center(cell_idx)
+            target_zoom = 12
+
     event = st_folium(
         fmap,
         height=560,
         use_container_width=True,
         key="ranking_v2_map",
+        center=target_center,
+        zoom=target_zoom,
         returned_objects=["last_clicked"],
     )
     _render_map_legend(_score_group_map(view.cells))
-    return cell_from_click(event)
+
+    # Protección ante eventos anteriores de st_folium:
+    # Solo procesar el clic si las coordenadas del evento son genuinamente nuevas.
+    raw_click = event.get("last_clicked") if isinstance(event, dict) else None
+    if raw_click is not None:
+        last_processed = st.session_state.get(_SESSION_LAST_PROCESSED_CLICK)
+        if raw_click != last_processed:
+            st.session_state[_SESSION_LAST_PROCESSED_CLICK] = raw_click
+            return cell_from_click(event)
+    return None
 
 
 def _render_priority_panel(view: RankingView) -> None:
@@ -764,7 +802,9 @@ def _prepare_ranking_display(
     return df, note
 
 
-def _render_ranking_expander(view: RankingView) -> None:
+def _render_ranking_expander(
+    view: RankingView, selected_id: Optional[str] = None
+) -> None:
     with st.expander("Ver ranking completo", expanded=False):
         order_mode = st.radio(
             "Criterio de ordenación",
@@ -794,9 +834,59 @@ def _render_ranking_expander(view: RankingView) -> None:
         )
 
         df, note = _prepare_ranking_display(view.cells, order_mode, group_filter)
-        st.dataframe(df, width="stretch", hide_index=True, height=340)
+
+        # Detectar cambio de filtro u orden para reajustar los índices de fila
+        current_filter_key = (str(order_mode), str(group_filter))
+        if st.session_state.get(_SESSION_TABLE_LAST_FILTER) != current_filter_key:
+            st.session_state[_SESSION_TABLE_LAST_FILTER] = current_filter_key
+            st.session_state[_SESSION_TABLE_SYNCED_CELL] = None
+
+        # Sincronización programática de la selección de tabla
+        if st.session_state.get(_SESSION_TABLE_SYNCED_CELL) != selected_id:
+            matching = (
+                df.index[df["Celda"] == selected_id].tolist()
+                if isinstance(selected_id, str) and "Celda" in df.columns
+                else []
+            )
+            target_rows = [int(matching[0])] if matching else []
+            st.session_state[_SESSION_TABLE] = {
+                "selection": {"rows": target_rows, "columns": [], "cells": []}
+            }
+            st.session_state[_SESSION_TABLE_SYNCED_CELL] = selected_id
+
+        table_event = st.dataframe(
+            df,
+            width="stretch",
+            hide_index=True,
+            height=340,
+            on_select="rerun",
+            selection_mode="single-row",
+            key=_SESSION_TABLE,
+        )
+
+        # Procesar selección de fila del usuario
+        selected_rows = []
+        if isinstance(table_event, dict):
+            selected_rows = table_event.get("selection", {}).get("rows", [])
+        elif hasattr(table_event, "selection"):
+            selected_rows = getattr(table_event.selection, "rows", [])
+
+        if isinstance(selected_rows, (list, tuple)) and selected_rows:
+            row_idx = selected_rows[0]
+            if isinstance(row_idx, int) and 0 <= row_idx < len(df):
+                table_cell = str(df.iloc[row_idx]["Celda"])
+                if isinstance(selected_id, str) and table_cell != selected_id:
+                    st.session_state[_SESSION_PENDING_SELECTION] = table_cell
+                    st.session_state[_SESSION_TABLE_SYNCED_CELL] = table_cell
+                    st.rerun()
+
+        focus_caption = (
+            f" · Celda enfocada: **{selected_id}**"
+            if isinstance(selected_id, str) and selected_id
+            else ""
+        )
         st.caption(
-            f"{note} Criterio exploratorio relativo del Modelo D "
+            f"{note}{focus_caption} — Criterio exploratorio relativo del Modelo D "
             "(no constituye alerta ni nivel oficial de riesgo)."
         )
 
@@ -926,7 +1016,14 @@ def render_ranking_backend_dashboard() -> None:
     _render_disclaimer(view)
 
     cell_ids = [c.cell_id for c in view.cells]
-    if st.session_state.get(_SESSION_SELECTED) not in cell_ids:
+    pending_selected = (
+        st.session_state.pop(_SESSION_PENDING_SELECTION, None)
+        if hasattr(st.session_state, "pop")
+        else None
+    )
+    if isinstance(pending_selected, str) and pending_selected in cell_ids:
+        st.session_state[_SESSION_SELECTED] = pending_selected
+    elif st.session_state.get(_SESSION_SELECTED) not in cell_ids:
         st.session_state[_SESSION_SELECTED] = cell_ids[0]
 
     map_col, side_col = st.columns([1.85, 1], gap="medium")
@@ -934,10 +1031,11 @@ def render_ranking_backend_dashboard() -> None:
         clicked = _render_map(view, selected_id=st.session_state.get(_SESSION_SELECTED))
         if clicked and clicked != st.session_state.get(_SESSION_SELECTED):
             st.session_state[_SESSION_SELECTED] = clicked
+            st.session_state[_SESSION_TABLE_SYNCED_CELL] = None
             st.rerun()
         _render_tech_expander(view)
     with side_col:
         _render_priority_panel(view)
         selected = st.selectbox("Celda", options=cell_ids, key=_SESSION_SELECTED)
         _render_selected_panel(view, selected)
-        _render_ranking_expander(view)
+        _render_ranking_expander(view, selected_id=selected)
