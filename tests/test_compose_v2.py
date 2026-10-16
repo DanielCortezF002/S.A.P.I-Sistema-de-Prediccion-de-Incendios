@@ -52,7 +52,9 @@ def _healthcheck_command(service: str) -> str:
     return " ".join(test) if isinstance(test, list) else test
 
 
-def test_presentation_profile_reaches_backend_without_joining_the_default_route() -> None:
+def test_presentation_profile_reaches_backend_without_joining_the_default_route() -> (
+    None
+):
     """SAPI-61: Streamlit v2 es opt-in y habla con Spring, no con el profile legacy."""
     web = SERVICES["web-v2"]
     assert web["profiles"] == ["presentation"]
@@ -66,7 +68,9 @@ def test_presentation_profile_reaches_backend_without_joining_the_default_route(
 
 
 def test_default_route_is_exactly_the_v2_services() -> None:
-    default = sorted(name for name, spec in SERVICES.items() if not spec.get("profiles"))
+    default = sorted(
+        name for name, spec in SERVICES.items() if not spec.get("profiles")
+    )
     assert default == sorted(V2_SERVICES)
 
 
@@ -104,7 +108,9 @@ def test_http_healthchecks_bypass_any_injected_proxy() -> None:
 def test_ca3_database_password_has_no_default() -> None:
     required = re.compile(r"^\$\{SAPI_DB_PASSWORD:\?")
     assert required.match(SERVICES["db-v2"]["environment"]["POSTGRES_PASSWORD"])
-    assert required.match(SERVICES["backend"]["environment"]["SPRING_DATASOURCE_PASSWORD"])
+    assert required.match(
+        SERVICES["backend"]["environment"]["SPRING_DATASOURCE_PASSWORD"]
+    )
     for service in V2_SERVICES:
         assert "sapi_secret" not in " ".join(_strings(SERVICES[service]))
 
@@ -116,13 +122,17 @@ def test_ca3_env_example_defines_every_variable_of_the_v2_services() -> None:
         for value in _strings(SERVICES[service])
         for name in INTERPOLATION.findall(value)
     }
-    defined = {line.split("=", 1)[0] for line in ENV_EXAMPLE.splitlines() if "=" in line}
+    defined = {
+        line.split("=", 1)[0] for line in ENV_EXAMPLE.splitlines() if "=" in line
+    }
     assert used, "los servicios v2 deberían leer su configuración de .env"
     assert sorted(used - defined) == []
 
 
 def test_ca3_env_example_password_is_a_non_empty_placeholder() -> None:
-    values = dict(line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line)
+    values = dict(
+        line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line
+    )
     assert values["SAPI_DB_PASSWORD"].strip()
     assert values["SAPI_DB_PASSWORD"] != "sapi_secret"
 
@@ -137,7 +147,10 @@ def test_ca4_v2_database_uses_its_own_volume_without_legacy_initdb() -> None:
     assert "sapi_v2_pgdata" in COMPOSE["volumes"]
     # H4: la base legacy sigue declarada y nadie de la ruta v2 la usa.
     assert "sapi_pgdata" in COMPOSE["volumes"]
-    assert "./docker/initdb:/docker-entrypoint-initdb.d:ro" in SERVICES["db-postgis"]["volumes"]
+    assert (
+        "./docker/initdb:/docker-entrypoint-initdb.d:ro"
+        in SERVICES["db-postgis"]["volumes"]
+    )
     for service in V2_SERVICES:
         mounts = " ".join(SERVICES[service].get("volumes", []))
         assert "sapi_pgdata:" not in mounts
@@ -158,7 +171,9 @@ def test_v2_database_image_is_the_one_used_by_the_persistence_its() -> None:
 def test_backend_reaches_ml_and_database_by_service_name() -> None:
     environment = SERVICES["backend"]["environment"]
     assert environment["SAPI_ML_BASE_URL"] == "http://ml-api:8000"
-    assert environment["SPRING_DATASOURCE_URL"].startswith("jdbc:postgresql://db-v2:5432/")
+    assert environment["SPRING_DATASOURCE_URL"].startswith(
+        "jdbc:postgresql://db-v2:5432/"
+    )
     for value in _strings(environment):
         assert "localhost" not in value
         assert "127.0.0.1" not in value
@@ -167,7 +182,10 @@ def test_backend_reaches_ml_and_database_by_service_name() -> None:
 def test_backend_runs_flyway_on_the_canonical_migrations_read_only() -> None:
     backend = SERVICES["backend"]
     assert backend["volumes"] == ["./db/migration:/app/db/migration:ro"]
-    assert backend["environment"]["SAPI_FLYWAY_LOCATIONS"] == "filesystem:/app/db/migration"
+    assert (
+        backend["environment"]["SAPI_FLYWAY_LOCATIONS"]
+        == "filesystem:/app/db/migration"
+    )
     assert backend["environment"]["SAPI_PERSISTENCE_ENABLED"] == "true"
     # Sin la carpeta montada (o ilegible) el arranque falla en vez de quedar sin esquema.
     assert backend["environment"]["SPRING_FLYWAY_FAILONMISSINGLOCATIONS"] == "true"
@@ -193,3 +211,48 @@ def test_ml_service_runs_in_reproducible_mode_from_the_image() -> None:
     assert ml["build"] == {"context": ".", "dockerfile": "Dockerfile.ml-api"}
     # El snapshot de Hito 1 va dentro de la imagen: sin montajes del host.
     assert "volumes" not in ml
+
+
+class _ComposeOverrideTolerantLoader(yaml.SafeLoader):
+    """SafeLoader + las extensiones de Docker Compose (!override, !reset) que no son YAML
+    estándar -- yaml.safe_load no las conoce y falla con ConstructorError sin esto."""
+
+
+_ComposeOverrideTolerantLoader.add_constructor(
+    "!override", yaml.SafeLoader.construct_yaml_seq
+)
+_ComposeOverrideTolerantLoader.add_constructor("!reset", lambda loader, node: None)
+
+
+def test_f1_operational_overlay_pins_the_persistence_policy_to_current_only() -> None:
+    """SAPI F1 (Astra B3): el overlay operacional de SAPI-43 debe fijar política=current.
+
+    Corrige una copia preexistente del overlay (varios directorios SAPI-43-*)
+    que no declaraba esta variable y heredaba silenciosamente el
+    "current,reproducibility" del Compose base -- nunca válido en operación.
+    """
+    overlay_path = REPO_ROOT / "docker-compose.operational.yml"
+    assert (
+        overlay_path.exists()
+    ), "falta docker-compose.operational.yml (overlay operacional SAPI-43)"
+    overlay = yaml.load(
+        overlay_path.read_text(encoding="utf-8"), Loader=_ComposeOverrideTolerantLoader
+    )
+    backend_override = overlay["services"]["backend"]["environment"]
+    assert backend_override["SAPI_PERSISTENCE_ALLOWED_FIRMS_ORIGINS"] == "current"
+
+
+def test_f1_persistence_policy_allows_current_and_reproducibility_in_base_route() -> (
+    None
+):
+    """SAPI F1 (D1/D2/D10, Jira #10134): política literal en el Compose base (C3).
+
+    Coherente con ml-api en SAPI_REPRODUCIBILITY_MODE=1: la ruta base/E2E acepta
+    tanto "current" como "reproducibility". El overlay operacional (SAPI-43) fija
+    esto a solo "current" por variable de entorno, fuera de este repositorio.
+    """
+    backend = SERVICES["backend"]
+    assert (
+        backend["environment"]["SAPI_PERSISTENCE_ALLOWED_FIRMS_ORIGINS"]
+        == "current,reproducibility"
+    )

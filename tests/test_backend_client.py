@@ -41,7 +41,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 # Corrida real reproducible del servicio ML (misma fixture que usa Spring en
 # sus tests): 3 scores únicos, empates de 7, 41 y 2 celdas.
 REAL_FIXTURE = (
-    REPO_ROOT / "services/backend/src/test/resources/ml/predict-reproducible-2026-09-01.json"
+    REPO_ROOT
+    / "services/backend/src/test/resources/ml/predict-reproducible-2026-09-01.json"
 )
 
 EXTENDED_FIELDS: dict[str, Any] = {
@@ -161,7 +162,11 @@ def test_v0_without_additive_metadata_leaves_all_optional_fields_none() -> None:
     assert view.station_available is False
     assert view.firms_provenance_available is False
     assert view.meteo_actual is None
-    assert view.freshness is None and view.age_hours is None and view.weather_timestamp is None
+    assert (
+        view.freshness is None
+        and view.age_hours is None
+        and view.weather_timestamp is None
+    )
 
 
 def test_forecast_time_with_offset_is_normalised_to_utc() -> None:
@@ -250,7 +255,9 @@ def test_explicit_null_additive_fields_are_treated_as_absent() -> None:
         ("firms_lag_days", True),
     ],
 )
-def test_known_additive_field_with_wrong_type_fails_closed(field: str, value: Any) -> None:
+def test_known_additive_field_with_wrong_type_fails_closed(
+    field: str, value: Any
+) -> None:
     payload = synthetic_payload()
     payload[field] = value
     _expect_invalid(payload, field.split(".")[0])
@@ -387,7 +394,9 @@ def test_bad_rank_rejected(bad_rank: Any) -> None:
     _expect_invalid(payload, "rank")
 
 
-@pytest.mark.parametrize("score", [1.0001, -0.1, 2, "0.5", None, float("nan"), float("inf")])
+@pytest.mark.parametrize(
+    "score", [1.0001, -0.1, 2, "0.5", None, float("nan"), float("inf")]
+)
 def test_score_out_of_range_or_not_numeric_rejected(score: Any) -> None:
     payload = synthetic_payload()
     payload["cells"][0]["score"] = score
@@ -466,7 +475,20 @@ def test_window_end_largest_representable_is_still_computed() -> None:
 
 @pytest.mark.parametrize(
     "raw",
-    ["nan", "inf", "+inf", "-inf", "Infinity", "0", "0.0", "-3", "-0.5", "rápido", "", "  "],
+    [
+        "nan",
+        "inf",
+        "+inf",
+        "-inf",
+        "Infinity",
+        "0",
+        "0.0",
+        "-3",
+        "-0.5",
+        "rápido",
+        "",
+        "  ",
+    ],
 )
 def test_env_float_rejects_non_finite_zero_negative_and_text(
     monkeypatch: pytest.MonkeyPatch, raw: str
@@ -544,7 +566,9 @@ class _FakeResponse:
 
 
 class _FakeSession:
-    def __init__(self, response: Any = None, raise_exc: BaseException | None = None) -> None:
+    def __init__(
+        self, response: Any = None, raise_exc: BaseException | None = None
+    ) -> None:
         self.response = response
         self.raise_exc = raise_exc
         self.calls: list[dict] = []
@@ -556,8 +580,12 @@ class _FakeSession:
         return self.response
 
 
-def _client(session: _FakeSession, base: str = "http://backend.test:8080/") -> BackendRankingClient:
-    return BackendRankingClient(base, connect_timeout=1.5, read_timeout=2.5, session=session)
+def _client(
+    session: _FakeSession, base: str = "http://backend.test:8080/"
+) -> BackendRankingClient:
+    return BackendRankingClient(
+        base, connect_timeout=1.5, read_timeout=2.5, session=session
+    )
 
 
 def _fetch_error(response: _FakeResponse) -> BackendError:
@@ -593,11 +621,15 @@ def test_client_never_touches_content_or_json_on_success_or_error() -> None:
     # el AssertionError saldría por fuera de BackendError y rompería el test.
     ok = _FakeResponse(200, json.dumps(synthetic_payload()), content_length=None)
     assert len(_client(_FakeSession(ok)).fetch_ranking().cells) == 50
-    err = _FakeResponse(503, json.dumps(error_body("upstream_unavailable")), content_length=None)
+    err = _FakeResponse(
+        503, json.dumps(error_body("upstream_unavailable")), content_length=None
+    )
     assert _fetch_error(err).error_type == "upstream_unavailable"
 
 
-def test_base_url_is_configurable_by_environment(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_base_url_is_configurable_by_environment(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setenv("SAPI_BACKEND_BASE_URL", "http://backend:9090/")
     monkeypatch.setenv("SAPI_BACKEND_CONNECT_TIMEOUT", "0.5")
     monkeypatch.setenv("SAPI_BACKEND_READ_TIMEOUT", "7")
@@ -612,7 +644,9 @@ def test_default_base_url_is_localhost_8080(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.delenv("SAPI_BACKEND_READ_TIMEOUT", raising=False)
     import src.config as config
 
-    monkeypatch.setattr(config, "SAPI_BACKEND_BASE_URL", config.SAPI_BACKEND_BASE_URL_DEFAULT)
+    monkeypatch.setattr(
+        config, "SAPI_BACKEND_BASE_URL", config.SAPI_BACKEND_BASE_URL_DEFAULT
+    )
     client = BackendRankingClient.from_env()
     assert client.ranking_url == "http://localhost:8080/api/v1/ranking"
     assert client.timeout == (3.0, 90.0)
@@ -633,7 +667,9 @@ def test_empty_base_url_is_rejected() -> None:
         (requests.exceptions.ChunkedEncodingError("cut"), ERROR_KIND_CONNECTION),
     ],
 )
-def test_network_errors_map_to_typed_backend_errors(exc: BaseException, kind: str) -> None:
+def test_network_errors_map_to_typed_backend_errors(
+    exc: BaseException, kind: str
+) -> None:
     with pytest.raises(BackendError) as info:
         _client(_FakeSession(raise_exc=exc)).fetch_ranking()
     assert info.value.kind == kind
@@ -834,22 +870,29 @@ def test_known_error_types_match_the_contract_enum() -> None:
     }
 
 
-@pytest.mark.parametrize("bad_type", MALICIOUS_MESSAGES + ["tipo_503", "", 42, None, ["x"]])
+@pytest.mark.parametrize(
+    "bad_type", MALICIOUS_MESSAGES + ["tipo_503", "", 42, None, ["x"]]
+)
 def test_unknown_error_type_is_dropped(bad_type: Any) -> None:
     err = _fetch_error(_FakeResponse(503, json.dumps(error_body(bad_type))))
     assert err.error_type is None
     assert (
-        BackendError(ERROR_KIND_HTTP_BACKEND, http_status=503, error_type=bad_type).error_type
+        BackendError(
+            ERROR_KIND_HTTP_BACKEND, http_status=503, error_type=bad_type
+        ).error_type
         is None
     )
 
 
 @pytest.mark.parametrize("message", MALICIOUS_MESSAGES)
 def test_remote_message_never_persists_in_the_error_object(message: str) -> None:
-    err = _fetch_error(_FakeResponse(503, json.dumps(error_body("upstream_unavailable", message))))
+    err = _fetch_error(
+        _FakeResponse(503, json.dumps(error_body("upstream_unavailable", message)))
+    )
     assert not hasattr(err, "backend_message")
     surface = " ".join(
-        [err.user_message, str(err), repr(err), err.detail] + [str(v) for v in vars(err).values()]
+        [err.user_message, str(err), repr(err), err.detail]
+        + [str(v) for v in vars(err).values()]
     )
     for fragment in (
         "secret",
@@ -897,7 +940,10 @@ def test_invalid_json_body(body: bytes) -> None:
 def test_200_with_invalid_ranking_fails_closed() -> None:
     payload = synthetic_payload()
     payload["cells"].pop()
-    assert _fetch_error(_FakeResponse(200, json.dumps(payload))).kind == ERROR_KIND_INVALID_RANKING
+    assert (
+        _fetch_error(_FakeResponse(200, json.dumps(payload))).kind
+        == ERROR_KIND_INVALID_RANKING
+    )
 
 
 def test_200_with_json_array_fails_closed() -> None:
@@ -905,7 +951,9 @@ def test_200_with_json_array_fails_closed() -> None:
 
 
 def test_user_messages_never_leak_host_path_or_stack() -> None:
-    session = _FakeSession(raise_exc=requests.exceptions.ConnectionError("http://secreto:8080/x"))
+    session = _FakeSession(
+        raise_exc=requests.exceptions.ConnectionError("http://secreto:8080/x")
+    )
     with pytest.raises(BackendError) as info:
         _client(session, base="http://secreto:8080").fetch_ranking()
     for text in (info.value.user_message, str(info.value), info.value.detail):

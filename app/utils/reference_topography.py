@@ -21,7 +21,12 @@ from typing import Mapping, Optional
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 REFERENCE_TOPOGRAPHY_CSV = (
-    _REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "dem" / "grid_topography.csv"
+    _REPO_ROOT
+    / "artifacts"
+    / "hito1"
+    / "reproducibility"
+    / "dem"
+    / "grid_topography.csv"
 )
 REFERENCE_TOPOGRAPHY_LABEL = (
     "Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1)"

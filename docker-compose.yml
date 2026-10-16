@@ -70,6 +70,10 @@ services:
       SPRING_DATASOURCE_USERNAME: ${SAPI_DB_USER:-sapi}
       SPRING_DATASOURCE_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
       SAPI_PERSISTENCE_ENABLED: "true"
+      # F1 (D1/D2/D10, Jira #10134): base/E2E acepta current y reproducibility (coherente con
+      # SAPI_REPRODUCIBILITY_MODE de ml-api). El overlay operacional (SAPI-43) debe fijar esto
+      # a solo "current" -- nunca reproducibility en producción.
+      SAPI_PERSISTENCE_ALLOWED_FIRMS_ORIGINS: "current,reproducibility"
       SAPI_FLYWAY_LOCATIONS: filesystem:/app/db/migration
       SPRING_FLYWAY_FAILONMISSINGLOCATIONS: "true"
     volumes:
@@ -105,7 +109,7 @@ services:
       SAPI_BACKEND_BASE_URL: http://backend:8080
       SAPI_UI_LEGACY_MODES: "0"
     ports:
-      - "127.0.0.1:8501:8501"
+      - "127.0.0.1:${SAPI_WEB_PORT:-8501}:8501"
     depends_on:
       backend:
         condition: service_started

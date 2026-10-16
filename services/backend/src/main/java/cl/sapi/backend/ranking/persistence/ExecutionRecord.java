@@ -15,6 +15,7 @@ import org.jspecify.annotations.Nullable;
  * @param scoreSemantics siempre {@code relative_rank}
  * @param scientificModelValidation siempre {@code false}
  * @param horizonHours horizonte en horas, o null
+ * @param firmsOrigin procedencia (SAPI F1, D1/D2/D10); null solo en filas anteriores a V004 (legacy)
  * @param createdAt instante en que el sistema persistió la corrida
  */
 public record ExecutionRecord(
@@ -26,5 +27,6 @@ public record ExecutionRecord(
         String scoreSemantics,
         boolean scientificModelValidation,
         @Nullable Integer horizonHours,
+        @Nullable String firmsOrigin,
         OffsetDateTime createdAt) {
 }

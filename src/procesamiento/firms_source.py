@@ -163,20 +163,15 @@ def _sha256_of(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
-    try:
-        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise FirmsSourceError(
-            f"Puntero FIRMS ilegible en {pointer_path.name}: {exc}"
-        ) from exc
-
+def validate_pointer_dict(
+    pointer: dict, versions_dir: Path, source_name: str = "CURRENT.json"
+) -> FirmsSource:
     if not isinstance(pointer, dict) or pointer.get("schema_version") not in (
         POINTER_SCHEMA_VERSION,
         PROJECTED_POINTER_SCHEMA_VERSION,
     ):
         raise FirmsSourceError(
-            f"Puntero FIRMS con esquema no soportado en {pointer_path.name}."
+            f"Puntero FIRMS con esquema no soportado en {source_name}."
         )
 
     try:
@@ -187,7 +182,7 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
         datetime.fromisoformat(pointer["created_at"])
     except (KeyError, TypeError, ValueError) as exc:
         raise FirmsSourceError(
-            f"Puntero FIRMS incompleto en {pointer_path.name}: {exc}"
+            f"Puntero FIRMS incompleto en {source_name}: {exc}"
         ) from exc
 
     # El puntero solo puede apuntar dentro de versions/ -- nunca a la línea
@@ -256,6 +251,16 @@ def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
         coverage_end=coverage_end,
         sha256=actual_sha,
     )
+
+
+def _resolve_pointer(pointer_path: Path, versions_dir: Path) -> FirmsSource:
+    try:
+        pointer = json.loads(pointer_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise FirmsSourceError(
+            f"Puntero FIRMS ilegible en {pointer_path.name}: {exc}"
+        ) from exc
+    return validate_pointer_dict(pointer, versions_dir, source_name=pointer_path.name)
 
 
 def resolve_firms_source(

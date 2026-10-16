@@ -95,7 +95,7 @@ class RankingEndpointIntegrationTests {
     @Test
     @DisplayName("SAPI-57.CA1, CA4 — el backend llama POST /predict del ML por HTTP con cuerpo {} y JSON")
     void callsPredictWithEmptyBody() throws Exception {
-        ML.reply(Reply.json(200, Fixtures.realRanking()));
+        ML.reply(Reply.json(200, Fixtures.realRankingWithAllowedOrigin()));
 
         HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
 
@@ -114,7 +114,7 @@ class RankingEndpointIntegrationTests {
             "2026-10-01T21:00:00.5+00:00"})
     @DisplayName("SAPI-57.CA1, CA4 — forecast_time se reenvía al ML sin modificar")
     void forwardsForecastTime(String forecastTime) throws Exception {
-        ML.reply(Reply.json(200, Fixtures.realRanking()));
+        ML.reply(Reply.json(200, Fixtures.realRankingWithAllowedOrigin()));
 
         HttpResponse<byte[]> response = get("/api/v1/ranking?forecast_time="
                 + URLEncoder.encode(forecastTime, StandardCharsets.UTF_8), Map.of());
@@ -128,7 +128,7 @@ class RankingEndpointIntegrationTests {
     @Test
     @DisplayName("SAPI-57.CA3, CA4 — GET /api/v1/ranking devuelve las 50 celdas del ML ordenadas, sin reordenar")
     void returnsFiftyCellsOrderedByScore() throws Exception {
-        ML.reply(Reply.json(200, Fixtures.realRanking()));
+        ML.reply(Reply.json(200, Fixtures.realRankingWithAllowedOrigin()));
 
         HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
 
@@ -152,7 +152,8 @@ class RankingEndpointIntegrationTests {
         // Válido para el contrato, pero cualquier re-serialización lo cambiaría: espacios, un escape
         // ó, el número 0.50 y un salto de línea final.
         String real = new String(Fixtures.realRanking(), StandardCharsets.UTF_8);
-        byte[] mlBody = ("{ \"nota\" : \"evaluaci\\u00f3n\" ,\n  \"factor\": 0.50,\n" + real.substring(1) + "\n")
+        byte[] mlBody = ("{ \"nota\" : \"evaluaci\\u00f3n\" ,\n  \"factor\": 0.50,\n"
+                + "  \"firms_origin\": \"reproducibility\",\n" + real.substring(1) + "\n")
                 .getBytes(StandardCharsets.UTF_8);
         assertThat(RankingResultValidator.violation(mlBody)).isEmpty();
         ML.reply(Reply.json(200, mlBody));
@@ -166,7 +167,7 @@ class RankingEndpointIntegrationTests {
     @Test
     @DisplayName("SAPI-57.CA3 — la respuesta 200 cumple backend.v0.yaml (RankingResult vía $ref)")
     void successResponseConformsToContract() throws Exception {
-        ML.reply(Reply.json(200, Fixtures.realRanking()));
+        ML.reply(Reply.json(200, Fixtures.realRankingWithAllowedOrigin()));
 
         HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
 
@@ -342,7 +343,7 @@ class RankingEndpointIntegrationTests {
     @Test
     @DisplayName("SAPI-57.CA5 — cada llamada al ML deja un log ml_predict con request_id y latencia")
     void logsEachMlCall() throws Exception {
-        ML.reply(Reply.json(200, Fixtures.realRanking()));
+        ML.reply(Reply.json(200, Fixtures.realRankingWithAllowedOrigin()));
 
         HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
 
@@ -417,7 +418,7 @@ class RankingEndpointIntegrationTests {
     @Test
     @DisplayName("SAPI-57.CA5 — con el formato estructurado logstash de Spring Boot, los campos salen como JSON")
     void fieldsRenderAsJsonWithStructuredLogging() throws Exception {
-        ML.reply(Reply.json(200, Fixtures.realRanking()));
+        ML.reply(Reply.json(200, Fixtures.realRankingWithAllowedOrigin()));
         HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
         ILoggingEvent event = singleEvent("ml_predict");
 
@@ -436,11 +437,39 @@ class RankingEndpointIntegrationTests {
         assertThat(json.get("outcome").stringValue()).isEqualTo("ok");
     }
 
+    // --- SAPI F1 (gate A3, Jira #10134/#10135): procedencia --------------------------------------
+
+    @Test
+    @DisplayName("F1 — firms_origin ausente en la respuesta del ML → 500 internal_error, sin persistir")
+    void missingFirmsOriginIs500() throws Exception {
+        ML.reply(Reply.json(200, Fixtures.realRanking()));
+
+        HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
+
+        assertError(response, 500, "internal_error");
+        assertThat(fields(singleEvent("ml_predict"))).containsEntry("persistence_policy", "rejected")
+                .containsEntry("outcome", "internal_error")
+                .containsEntry("firms_origin_observed", "[ausente]")
+                .containsEntry("firms_origin_policy_effective", java.util.List.of("current", "reproducibility"));
+    }
+
+    @Test
+    @DisplayName("F1 — firms_origin fuera de la política configurada → 500 internal_error, sin persistir")
+    void disallowedFirmsOriginIs500() throws Exception {
+        ML.reply(Reply.json(200, Fixtures.realRankingWith(root -> root.put("firms_origin", "baseline"))));
+
+        HttpResponse<byte[]> response = get("/api/v1/ranking", Map.of());
+
+        assertError(response, 500, "internal_error");
+        assertThat(fields(singleEvent("ml_predict"))).containsEntry("persistence_policy", "rejected")
+                .containsEntry("firms_origin_observed", "baseline");
+    }
+
     // --- helpers ---------------------------------------------------------------------------------
 
     /** El ranking real con espacios al final hasta medir exactamente {@code size} bytes (JSON válido). */
     private static byte[] paddedRanking(int size) {
-        byte[] real = Fixtures.realRanking();
+        byte[] real = Fixtures.realRankingWithAllowedOrigin();
         byte[] padded = Arrays.copyOf(real, size);
         Arrays.fill(padded, real.length, size, (byte) ' ');
         return padded;

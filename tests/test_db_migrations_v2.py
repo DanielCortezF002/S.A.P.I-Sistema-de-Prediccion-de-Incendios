@@ -20,6 +20,7 @@ from src.geo.grid import all_cells
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MIGRATIONS = REPO_ROOT / "db" / "migration"
 V002 = MIGRATIONS / "V002__create_sapi_v2_schema.sql"
+V004 = MIGRATIONS / "V004__add_firms_origin.sql"
 
 
 @pytest.fixture(autouse=True)
@@ -53,6 +54,7 @@ def test_migrations_are_versioned_in_order():
         "V001__enable_postgis.sql",
         "V002__create_sapi_v2_schema.sql",
         "V003__seed_celdas_geom.sql",
+        "V004__add_firms_origin.sql",
     ]
     assert all(re.fullmatch(r"V\d{3}__[a-z0-9_]+\.sql", n) for n in names)
 
@@ -110,6 +112,30 @@ def test_predicciones_celda_keys_checks_and_history_index():
         r"\(cell_id, forecast_time DESC\)",
         _sql(V002),
     )
+
+
+def test_v004_adds_firms_origin_not_in_the_natural_key():
+    """SAPI F1 (D1/D2/D10, Jira #10134): metadata, no clave -- IA-P1-01."""
+    sql = _without_comments(_sql(V004))
+    assert "ALTER TABLE ejecuciones ADD COLUMN firms_origin text" in sql
+    assert "firms_origin" not in _table_body("ejecuciones"), (
+        "firms_origin es de V004, no debe quedar en la clave natural de V002"
+    )
+
+
+def test_v004_restricts_firms_origin_to_the_contract_values():
+    sql = _without_comments(_sql(V004))
+    assert (
+        "CHECK (firms_origin IN ('baseline', 'current', 'reproducibility'))" in sql
+    )
+
+
+def test_v004_not_null_check_is_not_valid_so_legacy_rows_survive():
+    """D10/R2: NOT VALID no escanea filas previas (legacy = NULL) pero sí exige el valor en
+    todo INSERT/UPDATE nuevo -- revertir el backend falla cerrado, nunca persiste F1 en silencio."""
+    sql = _without_comments(_sql(V004))
+    assert "CHECK (firms_origin IS NOT NULL) NOT VALID" in sql
+    assert "VALIDATE CONSTRAINT" not in sql
 
 
 def test_seed_is_generated_from_the_grid():

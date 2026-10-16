@@ -32,8 +32,8 @@ public class RankingRepository {
     private static final String INSERT_EJECUCION = """
             INSERT INTO ejecuciones (
                 forecast_time, model_version, inputs_fingerprint, schema_version,
-                score_semantics, scientific_model_validation, horizon_hours)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+                score_semantics, scientific_model_validation, horizon_hours, firms_origin)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT (forecast_time, model_version, inputs_fingerprint) DO NOTHING
             RETURNING id
             """;
@@ -45,14 +45,14 @@ public class RankingRepository {
 
     private static final String SELECT_EJECUCION_BY_ID = """
             SELECT id, forecast_time, model_version, inputs_fingerprint, schema_version,
-                   score_semantics, scientific_model_validation, horizon_hours, created_at
+                   score_semantics, scientific_model_validation, horizon_hours, firms_origin, created_at
             FROM ejecuciones
             WHERE id = ?
             """;
 
     private static final String SELECT_LATEST_EJECUCION = """
             SELECT id, forecast_time, model_version, inputs_fingerprint, schema_version,
-                   score_semantics, scientific_model_validation, horizon_hours, created_at
+                   score_semantics, scientific_model_validation, horizon_hours, firms_origin, created_at
             FROM ejecuciones
             ORDER BY created_at DESC, id DESC
             LIMIT 1
@@ -108,7 +108,8 @@ public class RankingRepository {
             String schemaVersion,
             String scoreSemantics,
             boolean scientificModelValidation,
-            @Nullable Integer horizonHours) {
+            @Nullable Integer horizonHours,
+            @Nullable String firmsOrigin) {
         List<Long> ids = jdbc.query(INSERT_EJECUCION, (rs, rowNum) -> rs.getLong(1),
                 Timestamp.from(forecastTime.toInstant()),
                 modelVersion,
@@ -116,7 +117,8 @@ public class RankingRepository {
                 schemaVersion,
                 scoreSemantics,
                 scientificModelValidation,
-                horizonHours);
+                horizonHours,
+                firmsOrigin);
         return ids.stream().findFirst();
     }
 
@@ -192,6 +194,7 @@ public class RankingRepository {
                 rs.getString("score_semantics"),
                 rs.getBoolean("scientific_model_validation"),
                 horizon,
+                rs.getString("firms_origin"),
                 toOffsetDateTime(rs.getTimestamp("created_at")));
     }
 

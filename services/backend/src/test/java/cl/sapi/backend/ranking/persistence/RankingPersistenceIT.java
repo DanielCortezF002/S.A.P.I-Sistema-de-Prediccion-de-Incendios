@@ -38,7 +38,13 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.ObjectNode;
 
 /**
- * ITs reales SAPI-59 (CA1–CA5) con Testcontainers PostgreSQL/PostGIS y Flyway V001–V003.
+ * ITs reales SAPI-59 (CA1–CA5) con Testcontainers PostgreSQL/PostGIS y Flyway V001–V004.
+ *
+ * <p>El fixture protegido no trae {@code firms_origin} (ver {@code ml/README.md}): se agrega
+ * en memoria en {@link #loadRanking()} como "reproducibility" -- lo que SAPI_REPRODUCIBILITY_MODE=1
+ * habría producido para este {@code forecast_time} -- para que estos CA pasen el gate de F1
+ * (Jira #10134) sin alterar el fixture ni su SHA. El rechazo D2-B contra filas legacy se
+ * prueba aparte, en {@link FirmsOriginLegacyRowIT}.
  *
  * <p>Desde {@code services/backend} en Omen: {@code .\mvnw.cmd -B verify} (failsafe).
  * En Cursor sin Docker: no declarar PASS; surefire los excluye ({@code *IT.java}).
@@ -79,7 +85,7 @@ class RankingPersistenceIT {
     void loadRanking() {
         RankingResultValidator.Validation validation = RankingResultValidator.validate(realRankingBytes());
         assertThat(validation.violation()).isEmpty();
-        ranking = validation.ranking();
+        ranking = ((ObjectNode) validation.ranking().deepCopy()).put("firms_origin", "reproducibility");
         jdbc.update("DELETE FROM predicciones_celda");
         jdbc.update("DELETE FROM ejecuciones");
     }
@@ -97,7 +103,7 @@ class RankingPersistenceIT {
 
         ExecutionRecord stored = jdbc.queryForObject("""
                 SELECT id, forecast_time, model_version, inputs_fingerprint, schema_version,
-                       score_semantics, scientific_model_validation, horizon_hours, created_at
+                       score_semantics, scientific_model_validation, horizon_hours, firms_origin, created_at
                 FROM ejecuciones WHERE id = ?
                 """, (rs, rowNum) -> new ExecutionRecord(
                 rs.getLong("id"),
@@ -108,6 +114,7 @@ class RankingPersistenceIT {
                 rs.getString("score_semantics"),
                 rs.getBoolean("scientific_model_validation"),
                 (Integer) rs.getObject("horizon_hours"),
+                rs.getString("firms_origin"),
                 rs.getTimestamp("created_at").toInstant().atOffset(java.time.ZoneOffset.UTC)), id);
 
         assertThat(stored).isNotNull();
@@ -115,6 +122,7 @@ class RankingPersistenceIT {
         assertThat(stored.createdAt()).isNotNull();
         assertThat(stored.scientificModelValidation()).isFalse();
         assertThat(stored.scoreSemantics()).isEqualTo("relative_rank");
+        assertThat(stored.firmsOrigin()).isEqualTo("reproducibility");
     }
 
     @Test
@@ -272,13 +280,13 @@ class RankingPersistenceIT {
     }
 
     @Test
-    @DisplayName("SAPI-59.CA5 — Flyway V001–V003 aplicadas; persistencia redonda OK")
+    @DisplayName("SAPI-59.CA5 — Flyway V001–V004 aplicadas; persistencia redonda OK")
     void ca5FlywayAndPersistenceRoundTrip() {
         Integer flywayCount = jdbc.queryForObject("SELECT COUNT(*) FROM flyway_schema_history", Integer.class);
-        assertThat(flywayCount).isGreaterThanOrEqualTo(3);
+        assertThat(flywayCount).isGreaterThanOrEqualTo(4);
         List<String> versions = jdbc.queryForList("SELECT version FROM flyway_schema_history ORDER BY installed_rank",
                 String.class);
-        assertThat(versions).contains("001", "002", "003");
+        assertThat(versions).contains("001", "002", "003", "004");
 
         long id = persistence.persist(ranking);
         Optional<PersistedRanking> latest = persistence.findLatestRanking();

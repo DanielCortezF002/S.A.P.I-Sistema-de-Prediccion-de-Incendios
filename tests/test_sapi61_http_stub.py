@@ -108,7 +108,9 @@ class StubBackend:
         return responder
 
     @staticmethod
-    def respond_raw(status: int, body: bytes, content_type: str = "application/json") -> Responder:
+    def respond_raw(
+        status: int, body: bytes, content_type: str = "application/json"
+    ) -> Responder:
         def responder(handler: BaseHTTPRequestHandler) -> None:
             handler.send_response(status)
             handler.send_header("Content-Type", content_type)
@@ -119,7 +121,9 @@ class StubBackend:
         return responder
 
     @staticmethod
-    def respond_raw_declared(status: int, body: bytes, *, declared_length: int | None) -> Responder:
+    def respond_raw_declared(
+        status: int, body: bytes, *, declared_length: int | None
+    ) -> Responder:
         """Cuerpo completo con un Content-Length que miente (o ausente)."""
 
         def responder(handler: BaseHTTPRequestHandler) -> None:
@@ -242,12 +246,16 @@ def error_body(error_type: str, message: str) -> dict:
 
 
 def client_for(stub: StubBackend, read_timeout: float = 10.0) -> BackendRankingClient:
-    return BackendRankingClient(stub.base_url, connect_timeout=2.0, read_timeout=read_timeout)
+    return BackendRankingClient(
+        stub.base_url, connect_timeout=2.0, read_timeout=read_timeout
+    )
 
 
 def run_app(monkeypatch: pytest.MonkeyPatch, base_url: str) -> AppTest:
     monkeypatch.setenv("SAPI_BACKEND_BASE_URL", base_url)
-    monkeypatch.setenv("SAPI_BACKEND_CONNECT_TIMEOUT", "2")
+    monkeypatch.setenv(
+        "SAPI_BACKEND_CONNECT_TIMEOUT", "5"
+    )  # > ~2 s de rechazo local en Windows
     monkeypatch.setenv("SAPI_BACKEND_READ_TIMEOUT", "10")
     monkeypatch.delenv("SAPI_UI_LEGACY_MODES", raising=False)
     # Los puertos efímeros pueden reutilizarse entre tests: nunca heredar cache.
@@ -276,7 +284,8 @@ def test_client_issues_get_on_the_contract_path(stub: StubBackend) -> None:
 def test_client_forwards_forecast_time_query(stub: StubBackend) -> None:
     client_for(stub).fetch_ranking(forecast_time="2026-10-01T18:00:00-03:00")
     assert (
-        stub.requests[0]["path"] == "/api/v1/ranking?forecast_time=2026-10-01T18%3A00%3A00-03%3A00"
+        stub.requests[0]["path"]
+        == "/api/v1/ranking?forecast_time=2026-10-01T18%3A00%3A00-03%3A00"
     )
 
 
@@ -289,10 +298,15 @@ def test_client_reads_base_url_from_environment(
     assert stub.requests[0]["path"] == "/api/v1/ranking"
 
 
-def test_client_preserves_scores_ranks_and_ties_over_the_wire(stub: StubBackend) -> None:
+def test_client_preserves_scores_ranks_and_ties_over_the_wire(
+    stub: StubBackend,
+) -> None:
     payload = real_payload()
     view = client_for(stub).fetch_ranking()
-    assert [(c.cell_id, c.score, c.rank, c.display_rank, c.tie_group_size) for c in view.cells] == [
+    assert [
+        (c.cell_id, c.score, c.rank, c.display_rank, c.tie_group_size)
+        for c in view.cells
+    ] == [
         (c["cell_id"], c["score"], c["rank"], c["display_rank"], c["tie_group_size"])
         for c in payload["cells"]
     ]
@@ -308,7 +322,11 @@ def test_client_accepts_extended_payload_over_the_wire(stub: StubBackend) -> Non
 
 
 def test_connection_refused_is_a_controlled_error() -> None:
-    client = BackendRankingClient(closed_port_url(), connect_timeout=1.0, read_timeout=1.0)
+    # Windows reintenta el SYN ante RST local: el rechazo llega a ~2 s. El
+    # timeout de conexión debe superarlo o el rechazo se clasifica como timeout.
+    client = BackendRankingClient(
+        closed_port_url(), connect_timeout=5.0, read_timeout=1.0
+    )
     with pytest.raises(BackendError) as info:
         client.fetch_ranking()
     assert info.value.kind == ERROR_KIND_CONNECTION
@@ -331,7 +349,9 @@ def test_read_timeout_is_a_controlled_error(stub: StubBackend) -> None:
         (504, "upstream_timeout"),
     ],
 )
-def test_backend_error_statuses_are_mapped(stub: StubBackend, status: int, error_type: str) -> None:
+def test_backend_error_statuses_are_mapped(
+    stub: StubBackend, status: int, error_type: str
+) -> None:
     stub.responder = StubBackend.respond_json(status, error_body(error_type, "mensaje"))
     with pytest.raises(BackendError) as info:
         client_for(stub).fetch_ranking()
@@ -419,7 +439,9 @@ def test_503_oversized_chunked_error_body_is_controlled(stub: StubBackend) -> No
 
 
 def test_503_oversized_without_content_length_is_controlled(stub: StubBackend) -> None:
-    stub.responder = StubBackend.respond_stream(503, OVERSIZED, declared_length=None, fill=b"x")
+    stub.responder = StubBackend.respond_stream(
+        503, OVERSIZED, declared_length=None, fill=b"x"
+    )
     err, _ = _fetch_recorded(stub)
     assert err.kind == ERROR_KIND_HTTP_BACKEND and err.http_status == 503
 
@@ -432,15 +454,21 @@ def test_lying_small_content_length_fails_closed(stub: StubBackend) -> None:
     assert err.kind == ERROR_KIND_INVALID_JSON
 
 
-def test_lying_huge_content_length_with_small_body_fails_early(stub: StubBackend) -> None:
+def test_lying_huge_content_length_with_small_body_fails_early(
+    stub: StubBackend,
+) -> None:
     body = json.dumps(real_payload()).encode("utf-8")
-    stub.responder = StubBackend.respond_raw_declared(200, body, declared_length=OVERSIZED)
+    stub.responder = StubBackend.respond_raw_declared(
+        200, body, declared_length=OVERSIZED
+    )
     err, session = _fetch_recorded(stub)
     assert err.kind == ERROR_KIND_INVALID_RANKING and "supera" in err.detail
     assert session.last_response._content_consumed is False
 
 
-def test_incomplete_transfer_is_a_controlled_connection_error(stub: StubBackend) -> None:
+def test_incomplete_transfer_is_a_controlled_connection_error(
+    stub: StubBackend,
+) -> None:
     body = json.dumps(real_payload()).encode("utf-8")
     stub.responder = StubBackend.respond_incomplete(len(body) * 3, body)
     err, _ = _fetch_recorded(stub)
@@ -553,7 +581,9 @@ def test_apptest_map_mode_toggle_does_not_refetch_or_break(
     assert len(stub.requests) == calls_before  # cache: la UI no vuelve a consultar
 
 
-def test_apptest_backend_down_shows_controlled_message(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_apptest_backend_down_shows_controlled_message(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     at = run_app(monkeypatch, closed_port_url())
     assert at.error, "con el backend caído debe haber un st.error visible"
     message = at.error[0].value
@@ -583,7 +613,14 @@ def test_apptest_backend_http_error_shows_controlled_message(
 
 def _everything_rendered(at: AppTest) -> str:
     parts: list[str] = []
-    for collection in (at.error, at.warning, at.info, at.success, at.caption, at.markdown):
+    for collection in (
+        at.error,
+        at.warning,
+        at.info,
+        at.success,
+        at.caption,
+        at.markdown,
+    ):
         parts.extend(str(e.value) for e in collection)
     parts.extend(str(t.value) for t in at.title)
     parts.extend(str(h.value) for h in at.header)
@@ -599,12 +636,19 @@ def test_apptest_malicious_remote_message_never_reaches_the_ui(
     (rutas, hosts, credenciales, markdown, HTML, controles) llega al render."""
     combined = " | ".join(MALICIOUS_MESSAGES)
     stub.responder = StubBackend.respond_json(
-        503, {"status": "error", "error_type": "C:\\Users\\private\\secret", "message": combined}
+        503,
+        {
+            "status": "error",
+            "error_type": "C:\\Users\\private\\secret",
+            "message": combined,
+        },
     )
     at = run_app(monkeypatch, stub.base_url)
     assert at.error and "503" in at.error[0].value
     rendered = _everything_rendered(at)
-    assert "tipo reportado" not in rendered  # error_type fuera del contrato → no se muestra
+    assert (
+        "tipo reportado" not in rendered
+    )  # error_type fuera del contrato → no se muestra
     for fragment in (
         "secret",
         "private",
@@ -623,7 +667,9 @@ def test_apptest_malicious_remote_message_never_reaches_the_ui(
         str(stub.server.server_port),
         "/api/v1/ranking?",
     ):
-        assert fragment not in rendered, f"{fragment!r} se filtró al render de Streamlit"
+        assert (
+            fragment not in rendered
+        ), f"{fragment!r} se filtró al render de Streamlit"
     for message in MALICIOUS_MESSAGES:
         assert message not in rendered
 

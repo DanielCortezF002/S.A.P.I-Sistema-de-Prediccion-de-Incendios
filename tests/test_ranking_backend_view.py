@@ -90,7 +90,9 @@ def test_map_has_exactly_50_rectangles_with_authoritative_geometry(mode: str) ->
     }
     seen = set()
     for rect in rects:
-        tip_html = next(iter(rect._children.values())).text  # tooltip, hijo del rectángulo
+        tip_html = next(
+            iter(rect._children.values())
+        ).text  # tooltip, hijo del rectángulo
         cell_id = tip_html.split("<b>")[1].split("</b>")[0]
         seen.add(cell_id)
         assert rect.locations == expected[cell_id]
@@ -110,7 +112,9 @@ def test_map_tooltip_preserves_score_priority_and_declares_firms_unavailable() -
 
 def test_map_marks_the_selected_cell() -> None:
     fmap = build_map(v0_view(), "Prioridades", selected_id="VP-038")
-    selected = [r for r in _rectangles(fmap) if r.options["color"] == view_mod._SELECTED_EDGE]
+    selected = [
+        r for r in _rectangles(fmap) if r.options["color"] == view_mod._SELECTED_EDGE
+    ]
     assert len(selected) == 1
     assert selected[0].options["weight"] == 3.0
 
@@ -164,7 +168,9 @@ def test_click_outside_or_malformed_returns_none(event: object) -> None:
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_v0_header_declares_station_and_horizon_without_inventing(mock_st: MagicMock) -> None:
+def test_v0_header_declares_station_and_horizon_without_inventing(
+    mock_st: MagicMock,
+) -> None:
     payload = real_payload()
     del payload["horizon_hours"]
     view_mod._render_header(parse_ranking(payload, fetched_at=FETCHED_AT))
@@ -180,7 +186,9 @@ def test_v0_header_declares_station_and_horizon_without_inventing(mock_st: Magic
 
 @pytest.mark.parametrize("horizon", [10**8, 10**18])
 @patch("app.components.ranking_backend_view.st")
-def test_absurd_horizon_never_crashes_presentation(mock_st: MagicMock, horizon: int) -> None:
+def test_absurd_horizon_never_crashes_presentation(
+    mock_st: MagicMock, horizon: int
+) -> None:
     """Astra MINOR 1: T+h no representable → ausencia explícita, sin fecha inventada."""
     _mock_expander(mock_st)
     payload = real_payload()
@@ -205,7 +213,9 @@ def test_v0_header_shows_human_window_when_horizon_present(mock_st: MagicMock) -
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_v0_freshness_state_is_explicit_pending_not_a_banner(mock_st: MagicMock) -> None:
+def test_v0_freshness_state_is_explicit_pending_not_a_banner(
+    mock_st: MagicMock,
+) -> None:
     view_mod._render_freshness_state(v0_view())
     mock_st.warning.assert_not_called()
     mock_st.info.assert_called_once()
@@ -216,7 +226,9 @@ def test_v0_freshness_state_is_explicit_pending_not_a_banner(mock_st: MagicMock)
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_extended_historical_freshness_renders_banner_and_badge(mock_st: MagicMock) -> None:
+def test_extended_historical_freshness_renders_banner_and_badge(
+    mock_st: MagicMock,
+) -> None:
     view = extended_view()
     view_mod._render_freshness_state(view)
     mock_st.info.assert_not_called()
@@ -232,7 +244,9 @@ def test_extended_historical_freshness_renders_banner_and_badge(mock_st: MagicMo
 
 @pytest.mark.parametrize("label", ["DATOS RECIENTES", "DATOS CON RETRASO"])
 @patch("app.components.ranking_backend_view.st")
-def test_extended_non_historical_freshness_has_no_banner(mock_st: MagicMock, label: str) -> None:
+def test_extended_non_historical_freshness_has_no_banner(
+    mock_st: MagicMock, label: str
+) -> None:
     view = extended_view(freshness=label, age_hours=3.0)
     view_mod._render_freshness_state(view)
     mock_st.warning.assert_not_called()
@@ -242,7 +256,9 @@ def test_extended_non_historical_freshness_has_no_banner(mock_st: MagicMock, lab
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_partial_freshness_fields_are_not_rendered_as_a_banner(mock_st: MagicMock) -> None:
+def test_partial_freshness_fields_are_not_rendered_as_a_banner(
+    mock_st: MagicMock,
+) -> None:
     payload = real_payload()
     payload["freshness"] = FRESHNESS_HISTORICAL_LABEL  # sin age_hours/weather_timestamp
     view_mod._render_freshness_state(parse_ranking(payload))
@@ -254,7 +270,9 @@ def test_partial_freshness_fields_are_not_rendered_as_a_banner(mock_st: MagicMoc
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(mock_st: MagicMock) -> None:
+def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(
+    mock_st: MagicMock,
+) -> None:
     view_mod._render_kpi_strip(v0_view())
     text = _markdown_blob(mock_st)
     assert text.count(NOT_PROVIDED) == 4
@@ -266,12 +284,19 @@ def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(mock_st: Magic
 def test_kpi_strip_extended_shows_backend_meteo_verbatim(mock_st: MagicMock) -> None:
     view_mod._render_kpi_strip(extended_view())
     text = _markdown_blob(mock_st)
-    assert "18.8 °C" in text and "72 %" in text and "15.7 km/h" in text and "Inactiva" in text
+    assert (
+        "18.8 °C" in text
+        and "72 %" in text
+        and "15.7 km/h" in text
+        and "Inactiva" in text
+    )
     assert NOT_PROVIDED not in text
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_disclaimer_from_backend_is_escaped_and_rn01_text_kept(mock_st: MagicMock) -> None:
+def test_disclaimer_from_backend_is_escaped_and_rn01_text_kept(
+    mock_st: MagicMock,
+) -> None:
     view = extended_view(disclaimer="<script>alert(1)</script> aviso")
     view_mod._render_disclaimer(view)
     text = _markdown_blob(mock_st)
@@ -307,7 +332,12 @@ def test_selected_panel_v0_territory_from_reference_and_unavailable_states(
 ) -> None:
     view_mod._render_selected_panel(v0_view(), "VP-038")
     text = _markdown_blob(mock_st)
-    assert "VP-038" in text and "Prioridad #49" in text and "0.102103" in text and "×2" in text
+    assert (
+        "VP-038" in text
+        and "Prioridad #49" in text
+        and "0.102103" in text
+        and "×2" in text
+    )
     assert "Territorio (referencia)" in text
     assert "Topografía de referencia" in text
     assert f"Historial FIRMS</span><b>{NOT_IN_CONTRACT}" in text
@@ -319,7 +349,9 @@ def test_selected_panel_v0_territory_from_reference_and_unavailable_states(
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_selected_panel_covered_cell_shows_reference_topography(mock_st: MagicMock) -> None:
+def test_selected_panel_covered_cell_shows_reference_topography(
+    mock_st: MagicMock,
+) -> None:
     view_mod._render_selected_panel(v0_view(), "VP-001")
     text = _markdown_blob(mock_st)
     topo = reference_topography()["VP-001"]
@@ -419,8 +451,12 @@ def test_tech_expander_extended_metadata_rendered_verbatim(mock_st: MagicMock) -
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_error_state_is_visible_generic_and_without_internals(mock_st: MagicMock) -> None:
-    view_mod._render_backend_error(BackendError(ERROR_KIND_CONNECTION, detail="ConnectionError"))
+def test_error_state_is_visible_generic_and_without_internals(
+    mock_st: MagicMock,
+) -> None:
+    view_mod._render_backend_error(
+        BackendError(ERROR_KIND_CONNECTION, detail="ConnectionError")
+    )
     mock_st.error.assert_called_once()
     text = mock_st.error.call_args[0][0]
     assert "No se pudo obtener el ranking del backend" in text
@@ -441,7 +477,9 @@ def _all_streamlit_output(mock_st: MagicMock) -> str:
 
 @patch("app.components.ranking_backend_view.st")
 def test_error_state_shows_only_contract_error_type(mock_st: MagicMock) -> None:
-    exc = BackendError(ERROR_KIND_HTTP_BACKEND, http_status=503, error_type="upstream_unavailable")
+    exc = BackendError(
+        ERROR_KIND_HTTP_BACKEND, http_status=503, error_type="upstream_unavailable"
+    )
     view_mod._render_backend_error(exc)
     assert "503" in mock_st.error.call_args[0][0]
     captions = " ".join(c.args[0] for c in mock_st.caption.call_args_list)
@@ -451,14 +489,22 @@ def test_error_state_shows_only_contract_error_type(mock_st: MagicMock) -> None:
 
 @pytest.mark.parametrize("message", MALICIOUS_MESSAGES)
 @patch("app.components.ranking_backend_view.st")
-def test_remote_message_never_reaches_streamlit_output(mock_st: MagicMock, message: str) -> None:
+def test_remote_message_never_reaches_streamlit_output(
+    mock_st: MagicMock, message: str
+) -> None:
     """Astra MAJOR 2: el `message` remoto no cruza la frontera de presentación.
 
     Se simula el cuerpo `Error` completo a través del cliente real (sesión
     falsa) y se inspecciona todo lo entregado a `st`."""
     response = _FakeResponse(
         503,
-        json.dumps({"status": "error", "error_type": "upstream_unavailable", "message": message}),
+        json.dumps(
+            {
+                "status": "error",
+                "error_type": "upstream_unavailable",
+                "message": message,
+            }
+        ),
     )
     with pytest.raises(BackendError) as info:
         BackendRankingClient("http://b", session=_FakeSession(response)).fetch_ranking()
@@ -485,7 +531,9 @@ def test_remote_message_never_reaches_streamlit_output(mock_st: MagicMock, messa
 
 @pytest.mark.parametrize("error_type", MALICIOUS_MESSAGES + ["tipo_503"])
 @patch("app.components.ranking_backend_view.st")
-def test_non_contract_error_type_is_not_rendered(mock_st: MagicMock, error_type: str) -> None:
+def test_non_contract_error_type_is_not_rendered(
+    mock_st: MagicMock, error_type: str
+) -> None:
     # Construcción directa (defensa en profundidad, aunque el cliente ya filtra).
     exc = BackendError(ERROR_KIND_HTTP_BACKEND, http_status=503, error_type=error_type)
     view_mod._render_backend_error(exc)
@@ -495,9 +543,13 @@ def test_non_contract_error_type_is_not_rendered(mock_st: MagicMock, error_type:
 
 
 @patch("app.components.ranking_backend_view.st")
-def test_dashboard_entry_point_renders_error_state_on_backend_error(mock_st: MagicMock) -> None:
+def test_dashboard_entry_point_renders_error_state_on_backend_error(
+    mock_st: MagicMock,
+) -> None:
     mock_st.sidebar.button.return_value = False
-    with patch.object(view_mod, "_load_ranking", side_effect=BackendError(ERROR_KIND_CONNECTION)):
+    with patch.object(
+        view_mod, "_load_ranking", side_effect=BackendError(ERROR_KIND_CONNECTION)
+    ):
         view_mod.render_ranking_backend_dashboard()
     mock_st.error.assert_called_once()
     mock_st.columns.assert_not_called()
@@ -522,17 +574,28 @@ def test_reference_topography_table_covers_the_grid() -> None:
     assert set(table) == {c["cell_id"] for c in all_cells()}
     covered = {cid for cid, row in table.items() if row.dem_available}
     uncovered = set(table) - covered
-    assert len(covered) == 30 and len(uncovered) == 20  # cobertura real de la tabla Hito 1
+    assert (
+        len(covered) == 30 and len(uncovered) == 20
+    )  # cobertura real de la tabla Hito 1
     # Celdas sin valor DEM en la tabla congelada: se exponen como N/D (nunca 0).
     assert {"VP-007", "VP-017", "VP-038"} <= uncovered
-    assert all(table[cid].elevation is None and table[cid].slope is None for cid in uncovered)
-    assert all(table[cid].elevation is not None and table[cid].slope is not None for cid in covered)
+    assert all(
+        table[cid].elevation is None and table[cid].slope is None for cid in uncovered
+    )
+    assert all(
+        table[cid].elevation is not None and table[cid].slope is not None
+        for cid in covered
+    )
 
 
-def test_reference_topography_missing_or_corrupt_file_degrades_to_empty(tmp_path: Path) -> None:
+def test_reference_topography_missing_or_corrupt_file_degrades_to_empty(
+    tmp_path: Path,
+) -> None:
     assert load_reference_topography(tmp_path / "no_existe.csv") == {}
     broken = tmp_path / "broken.csv"
-    broken.write_text("cell_id,elevacion,pendiente,dem_disponible\nVP-001,abc,,False\n,1,2,True\n")
+    broken.write_text(
+        "cell_id,elevacion,pendiente,dem_disponible\nVP-001,abc,,False\n,1,2,True\n"
+    )
     table = load_reference_topography(broken)
     assert set(table) == {"VP-001"}
     assert table["VP-001"].elevation is None and table["VP-001"].dem_available is False

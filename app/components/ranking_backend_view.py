@@ -78,12 +78,43 @@ FIXED_DISCLAIMER = (
 # Paleta por grupo de score único (misma semántica que la vista Hito 1):
 # posición relativa en un ranking exploratorio, nunca alerta oficial.
 _GROUP_VISUAL = {
-    1: {"label": "Grupo 1", "fill": "#c45c26", "edge": "#f0a070", "op_all": 0.42, "op_prio": 0.48},
-    2: {"label": "Grupo 2", "fill": "#a67c2a", "edge": "#c9a35a", "op_all": 0.20, "op_prio": 0.10},
-    3: {"label": "Grupo 3", "fill": "#5a6570", "edge": "#7a8694", "op_all": 0.11, "op_prio": 0.08},
+    1: {
+        "label": "Grupo 1",
+        "fill": "#c45c26",
+        "edge": "#f0a070",
+        "op_all": 0.42,
+        "op_prio": 0.48,
+    },
+    2: {
+        "label": "Grupo 2",
+        "fill": "#a67c2a",
+        "edge": "#c9a35a",
+        "op_all": 0.20,
+        "op_prio": 0.10,
+    },
+    3: {
+        "label": "Grupo 3",
+        "fill": "#5a6570",
+        "edge": "#7a8694",
+        "op_all": 0.11,
+        "op_prio": 0.08,
+    },
 }
 _SELECTED_EDGE = "#38bdf8"
-_MONTHS = ("ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic")
+_MONTHS = (
+    "ene",
+    "feb",
+    "mar",
+    "abr",
+    "may",
+    "jun",
+    "jul",
+    "ago",
+    "sep",
+    "oct",
+    "nov",
+    "dic",
+)
 
 _esc = html.escape
 
@@ -138,12 +169,18 @@ def _geometry_by_cell() -> dict[str, dict]:
     return {c["cell_id"]: c for c in all_cells()}
 
 
-def _topo_for(topography: Mapping[str, CellTopography], cell_id: str) -> tuple[str, str, bool]:
+def _topo_for(
+    topography: Mapping[str, CellTopography], cell_id: str
+) -> tuple[str, str, bool]:
     """(elevación, pendiente, cobertura) formateados desde la tabla de referencia."""
     row = topography.get(cell_id)
     if row is None:
         return "N/D", "N/D", False
-    return _fmt_nd(row.elevation, " m", 0), _fmt_nd(row.slope, "°", 1), row.dem_available
+    return (
+        _fmt_nd(row.elevation, " m", 0),
+        _fmt_nd(row.slope, "°", 1),
+        row.dem_available,
+    )
 
 
 def cell_from_click(event: Any) -> Optional[str]:
@@ -181,7 +218,9 @@ def build_map(
     group_by_score = _score_group_map(view.cells)
     top_rank = min((c.display_rank for c in view.cells), default=1)
     center_lat, center_lon = grid_center()
-    fmap = folium.Map(location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap")
+    fmap = folium.Map(
+        location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap"
+    )
 
     for c in view.cells:
         g = geometry[c.cell_id]
@@ -231,7 +270,9 @@ def build_map(
     ttl=_CACHE_TTL_SECONDS,
     show_spinner="Consultando el ranking al backend...",
 )
-def _cached_ranking(base_url: str, connect_timeout: float, read_timeout: float) -> RankingView:
+def _cached_ranking(
+    base_url: str, connect_timeout: float, read_timeout: float
+) -> RankingView:
     """Cache de 5 min del ranking YA validado (los errores no se cachean)."""
     client = BackendRankingClient(
         base_url, connect_timeout=connect_timeout, read_timeout=read_timeout
@@ -368,7 +409,11 @@ def _render_freshness_state(view: RankingView) -> None:
 
 
 def _kpi(value: str, label: str, available: bool = True) -> str:
-    cls = "sapi-v2-kpi__value" if available else "sapi-v2-kpi__value sapi-v2-kpi__value--na"
+    cls = (
+        "sapi-v2-kpi__value"
+        if available
+        else "sapi-v2-kpi__value sapi-v2-kpi__value--na"
+    )
     return (
         f'<div class="sapi-v2-kpi"><div class="{cls}">{value}</div>'
         f'<div class="sapi-v2-kpi__label">{label}</div></div>'
@@ -393,17 +438,24 @@ def _render_kpi_strip(view: RankingView) -> None:
             _kpi(na, "Regla 30-30-30", available=False),
         ]
     cards.append(_kpi(str(len(view.cells)), "Celdas evaluadas"))
-    st.markdown(f'<div class="sapi-v2-kpi-row">{"".join(cards)}</div>', unsafe_allow_html=True)
+    st.markdown(
+        f'<div class="sapi-v2-kpi-row">{"".join(cards)}</div>', unsafe_allow_html=True
+    )
 
 
 def _render_disclaimer(view: RankingView) -> None:
-    text = view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
+    text = (
+        view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
+    )
     st.markdown(
         f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
         unsafe_allow_html=True,
     )
     if text and FIXED_DISCLAIMER not in text:
-        st.markdown(f'<p class="sapi-v2-disclaimer">{FIXED_DISCLAIMER}</p>', unsafe_allow_html=True)
+        st.markdown(
+            f'<p class="sapi-v2-disclaimer">{FIXED_DISCLAIMER}</p>',
+            unsafe_allow_html=True,
+        )
 
 
 def _render_map_legend(group_by_score: dict[float, int]) -> None:
@@ -491,7 +543,9 @@ def _render_selected_panel(
             f"<li><span>Viento</span><b>{m.velocidad_viento_kmh:.1f} km/h</b></li>"
         )
     else:
-        meteo_rows = f"<li><span>Meteorología usada</span><b>{_esc(NOT_PROVIDED)}</b></li>"
+        meteo_rows = (
+            f"<li><span>Meteorología usada</span><b>{_esc(NOT_PROVIDED)}</b></li>"
+        )
     window_end = view.window_end
     if window_end is not None:
         window_rows = (
@@ -548,7 +602,11 @@ def _render_ranking_expander(view: RankingView) -> None:
 
 def _render_tech_expander(view: RankingView) -> None:
     window_end = view.window_end
-    station = f"{view.station_name} {view.station_id}" if view.station_available else NOT_PROVIDED
+    station = (
+        f"{view.station_name} {view.station_id}"
+        if view.station_available
+        else NOT_PROVIDED
+    )
     lines = [
         f"- **Origen del ranking:** backend Spring Boot, `GET {RANKING_PATH}` "
         f"(obtenido {_iso_utc(view.fetched_at)}; cache de {_CACHE_TTL_SECONDS // 60} min)",
@@ -591,7 +649,9 @@ def _render_tech_expander(view: RankingView) -> None:
         ),
         f"- **Topografía:** {REFERENCE_TOPOGRAPHY_LABEL}",
     ]
-    missing = tuple(name for name in _CONTRACT_METADATA_FIELDS if getattr(view, name) is None)
+    missing = tuple(
+        name for name in _CONTRACT_METADATA_FIELDS if getattr(view, name) is None
+    )
     if missing:
         lines.append(
             "- **Metadata opcional no informada por el backend:** "

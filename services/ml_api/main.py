@@ -62,7 +62,8 @@ MESSAGES = {
         "como fecha-hora ISO 8601 con zona horaria."
     ),
     "prototype_unavailable": (
-        "No se puede puntuar con los insumos disponibles para el forecast_time " "solicitado."
+        "No se puede puntuar con los insumos disponibles para el forecast_time "
+        "solicitado."
     ),
     "data_unavailable": "Insumo de datos no disponible o ilegible.",
     "internal_error": "Error interno al generar el ranking.",
@@ -116,7 +117,9 @@ class RankingResult(BaseModel):
     station_id: Optional[Annotated[str, Field(min_length=1)]] = None
     station_name: Optional[Annotated[str, Field(min_length=1)]] = None
     firms_origin: Optional[Literal["baseline", "current", "reproducibility"]] = None
-    firms_coverage_end: Optional[Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]] = None
+    firms_coverage_end: Optional[
+        Annotated[str, Field(pattern=r"^\d{4}-\d{2}-\d{2}$")]
+    ] = None
     firms_lag_days: Optional[Annotated[int, Field(ge=0)]] = None
     firms_status: Optional[Literal["FIRMS AL DÍA", "FIRMS DESACTUALIZADO"]] = None
     cells: Annotated[list[CellRanking], Field(min_length=50, max_length=50)]
@@ -145,7 +148,9 @@ app = FastAPI(
 
 
 def _error(status_code: int, error_type: str) -> JSONResponse:
-    body = ErrorBody(status="error", error_type=error_type, message=MESSAGES[error_type])
+    body = ErrorBody(
+        status="error", error_type=error_type, message=MESSAGES[error_type]
+    )
     return JSONResponse(status_code=status_code, content=body.model_dump())
 
 

@@ -1,0 +1,30 @@
+# Overlay operacional (ADR-009, decisión 2). Pertenece a SAPI-43.
+# No estaba en el historial ni en otras ramas; el Compose base no se modifica.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.operational.yml config
+#
+# El archivo base sigue con SAPI_REPRODUCIBILITY_MODE=1 y el volumen
+# sapi_v2_pgdata. Este overlay no arranca una corrida ni publica CURRENT.
+#
+# CORRECCIÓN F1 (Astra B3, 14/10/2026): la copia preexistente de este overlay
+# (varios directorios SAPI-43-*, hash f6ce8c73...) NO fijaba la política de
+# procedencia del backend -- heredaba el "current,reproducibility" literal del
+# Compose base, nunca válido en operación real (D2/A2). Se agrega aquí la
+# variable que la ruta operacional de SAPI-43 debe traer consigo.
+services:
+  backend:
+    environment:
+      SAPI_PERSISTENCE_ALLOWED_FIRMS_ORIGINS: "current"
+  ml-api:
+    environment:
+      SAPI_REPRODUCIBILITY_MODE: "0"
+    volumes:
+      - ./data:/app/data:ro
+  db-v2:
+    # Reemplaza el volumen reproducible. Sin !override, Compose concatenaría
+    # los dos montajes sobre el mismo directorio de datos.
+    volumes: !override
+      - sapi_v2_operational_pgdata:/var/lib/postgresql/data
+
+volumes:
+  sapi_v2_operational_pgdata:

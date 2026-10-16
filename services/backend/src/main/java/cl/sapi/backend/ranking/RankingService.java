@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import cl.sapi.backend.ranking.ml.MlCallException;
 import cl.sapi.backend.ranking.ml.MlResponse;
 import cl.sapi.backend.ranking.ml.MlServiceClient;
+import cl.sapi.backend.ranking.persistence.FirmsOriginPolicy;
 import cl.sapi.backend.ranking.persistence.RankingPersistenceService;
 import tools.jackson.databind.JsonNode;
 
@@ -45,10 +46,13 @@ public class RankingService {
 
     private final MlServiceClient client;
     private final RankingPersistenceService persistence;
+    private final FirmsOriginPolicy firmsOriginPolicy;
 
-    public RankingService(MlServiceClient client, RankingPersistenceService persistence) {
+    public RankingService(MlServiceClient client, RankingPersistenceService persistence,
+            FirmsOriginPolicy firmsOriginPolicy) {
         this.client = client;
         this.persistence = persistence;
+        this.firmsOriginPolicy = firmsOriginPolicy;
     }
 
     /**
@@ -138,6 +142,20 @@ public class RankingService {
                         SAFE_MODEL_VERSION.matcher(modelVersion).matches() ? modelVersion : "[omitido]");
                 details.put("forecast_time", ranking.get("forecast_time").stringValue());
                 details.put("inputs_fingerprint", ranking.get("inputs_fingerprint").stringValue());
+                // SAPI F1 (gate A3, Jira #10134/#10135): procedencia ausente o no autorizada se
+                // rechaza antes de persistir, sin inferirla (IA-P1-01). Cero escrituras.
+                JsonNode firmsOriginNode = ranking.get("firms_origin");
+                String firmsOrigin = firmsOriginNode == null || firmsOriginNode.isNull()
+                        ? null : firmsOriginNode.stringValue();
+                if (!firmsOriginPolicy.isAllowed(firmsOrigin)) {
+                    // Observabilidad (Astra C): origen observado y política efectiva en el
+                    // único ml_predict, sin exponer secretos -- son valores del contrato
+                    // (baseline/current/reproducibility) o su ausencia, nunca credenciales.
+                    details.put("persistence_policy", "rejected");
+                    details.put("firms_origin_observed", firmsOrigin == null ? "[ausente]" : firmsOrigin);
+                    details.put("firms_origin_policy_effective", firmsOriginPolicy.getAllowedFirmsOrigins());
+                    return RankingOutcome.error(RankingError.INTERNAL_ERROR);
+                }
                 // SAPI-59: write-through tras validación SAPI-57 y antes de RankingOutcome.ranking.
                 long executionId = persistence.persist(ranking);
                 if (executionId >= 0) {
