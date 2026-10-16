@@ -36,14 +36,14 @@
 
 ### [01:00 – 02:00] Minuto 2: La Arquitectura de Microservicios en Acción
 
-**Acción en Pantalla:** Alternar 10 segundos a la terminal para mostrar `docker ps` o señalar los badges del encabezado: `PROTOTIPO EXPLORATORIO`, `BACKEND REST`, `POSTGIS PERSISTED`, `HISTGRADIENTBOOST (MODELO D)`.
+**Acción en Pantalla:** Alternar 10 segundos a la terminal para mostrar `docker ps` o señalar los badges del encabezado: `PROTOTIPO EXPLORATORIO`, `BACKEND REST` (y el panel inferior de información técnica para detalles de PostGIS y Modelo D).
 
 **Discurso sugerido:**
 > *"La interfaz que están viendo no ejecuta machine learning en el navegador ni lee archivos de disco locales. Está desacoplada en una arquitectura de cuatro capas:*
-> 1. *El frontend **Streamlit** consume la API REST empresarial.*
-> 2. *El backend en **Spring Boot (Java 21)** orquesta las consultas, gestiona las migraciones de base de datos con Flyway y asegura la persistencia de auditoría.*
-> 3. *El microservicio de inferencia en **FastAPI** sirve el Modelo D congelado de forma aislada.*
-> 4. *Una base de datos **PostgreSQL 15 con PostGIS** registra espacialmente cada evaluación.*
+> 1. *El frontend **Streamlit** (`web-v2`) consume la API REST empresarial.*
+> 2. *El backend en **Spring Boot (Java 21)** (`backend`) orquesta las consultas, gestiona las migraciones de base de datos con Flyway y asegura la persistencia de auditoría.*
+> 3. *El microservicio de inferencia en **FastAPI** (`ml-api`) sirve el Modelo D congelado de forma aislada.*
+> 4. *Una base de datos **PostgreSQL 15 con PostGIS** (`db-v2`) registra espacialmente cada evaluación.*
 > 
 > *Toda la infraestructura se despliega con Docker Compose sin costos de nube (\$0 CLP), en redes internas seguras y con puertos expuestos únicamente en loopback."*
 
@@ -53,30 +53,30 @@
 
 **Acción en Pantalla:**
 1. Interactuar con el mapa Folium en pantalla completa.
-2. Hacer clic en una celda roja/naranja (por ejemplo, `VP-013` o `VP-001`).
+2. Hacer clic en una celda de alta prioridad relativa (por ejemplo, `VP-013` o `VP-001`).
 3. Observar cómo se actualiza el panel lateral derecho con el detalle de la celda.
 
 **Discurso sugerido:**
 > *"En el centro de operaciones observamos la grilla territorial sobre la cartografía base de OpenStreetMap. Cada celda cubre un área estandarizada del corredor.*
 > 
-> *Al seleccionar una celda en el mapa, como la `VP-013`, el panel de la derecha refleja inmediatamente su estado: su identificador territorial, su posición en el ranking, su score relativo y sus variables físicas de referencia: elevación y pendiente derivadas de nuestro modelo digital de elevación (DEM).*
+> *Al seleccionar una celda en el mapa, como la `VP-013`, el panel de la derecha refleja inmediatamente su estado: su identificador territorial, su posición en el ranking, su score relativo y sus variables físicas de referencia: elevación y pendiente derivadas de la capa de referencia topográfica Copernicus DEM 30m.*
 > 
-> *Podemos alternar entre ver 'Todas las celdas' y la vista filtrada de 'Prioridades', lo que permite a un comandante de incidente concentrar su atención en el cuartel crítico del territorio."*
+> *Podemos alternar entre ver 'Todas las celdas' y la vista filtrada de 'Prioridades', lo que permite explorar visualmente qué sectores concentran la mayor prioridad relativa bajo las condiciones evaluadas."*
 
 ---
 
 ### [03:00 – 04:00] Minuto 4: Semántica Científica y Manejo Riguroso de Empates
 
 **Acción en Pantalla:**
-1. Señalar la tarjeta de **Grupo Prioritario**: `#1 · 7 celdas empatadas (Score: 0.131293)`.
+1. Señalar la tarjeta de **Grupo Prioritario**: `#1 · 7 celdas empatadas (Score: 0.131293 en esta corrida)`.
 2. Señalar el banner del **Aviso Científico**: *"El score corresponde a un ranking relativo exploratorio y no a una probabilidad calibrada de incendio"*.
 
 **Discurso sugerido:**
 > *"Aquí radica la honestidad y rigurosidad técnica de S.A.P.I.:*
 > 
-> *Como observan en la tarjeta superior, el Grupo 1 está compuesto por **7 celdas que comparten exactamente el mismo score relativo (0.131293)**. Un error común en sistemas novatos es forzar un orden artificial —por ejemplo ordenar por ID alfabético— engañando al operador. S.A.P.I. reporta el empate real: las 7 celdas comparten la prioridad #1.*
+> *En la corrida reproducible de evaluación que tenemos cargada (ventana histórica 2026-09-01T00:00Z bajo modo ADR-009), el Grupo 1 resultó compuesto por **7 celdas que comparten exactamente el mismo score relativo (0.131293)**. Esta cifra y multiplicidad son el resultado de la inferencia matemática para estas condiciones particulares, no una constante estática del sistema. Un error común en sistemas novatos es forzar un orden artificial —por ejemplo ordenar por ID alfabético— engañando al operador. S.A.P.I. reporta el empate real: las 7 celdas comparten la prioridad #1.*
 > 
-> *Además, respetamos estrictamente el estado científico del proyecto: el flag `scientific_model_validation` permanece en `false` porque la compuerta F4 no ha sido liberada operacionalmente. Por lo tanto, el sistema prohíbe taxativamente presentar estos scores como probabilidades calibradas porcentuales o emitir alertas oficiales de evacuación CONAF/SENAPRED. Es una herramienta de priorización relativa para apoyo a la decisión."*
+> *Además, respetamos estrictamente el estado científico del proyecto: el flag `scientific_model_validation` permanece en `false` porque la compuerta F4 no ha sido liberada operacionalmente (F4 FAIL) y la generalización en temporadas no vistas no ha sido demostrada. Por lo tanto, el sistema prohíbe taxativamente presentar estos scores como probabilidades calibradas porcentuales o emitir alertas oficiales de evacuación. S.A.P.I. no cuenta con autorización institucional de CONAF ni SENAPRED; es exclusivamente un prototipo académico de investigación y priorización territorial."*
 
 ---
 

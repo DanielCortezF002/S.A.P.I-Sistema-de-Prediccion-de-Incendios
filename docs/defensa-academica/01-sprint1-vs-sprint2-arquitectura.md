@@ -69,7 +69,7 @@ En Sprint 1, Streamlit compartía el mismo entorno de ejecución Python que `sci
 Streamlit es una excelente herramienta de prototipado rápido, pero no está diseñada para actuar como API Gateway corporativo, ni para gestionar transacciones ACID, migraciones controladas de esquemas relacionales, ni pools de conexiones concurrentes. La incorporación de Spring Boot 3 con Java 21 proporciona un núcleo transaccional robusto, respaldado por Flyway para versionamiento de la base de datos y validaciones estrictas de contratos.
 
 ### C. Persistencia Espacial y Auditoría en PostGIS
-En emergencias ambientales, no basta con mostrar una visualización efímera; se requiere un registro histórico inmutable de qué se predijo, cuándo se predijo, con qué datos de entrada y qué brigadas o recursos se priorizaron. La persistencia en PostgreSQL con extensión PostGIS asegura que cada ejecución queda registrada con geometrías vectoriales estándar y metadatos de trazabilidad.
+En análisis territorial y soporte a la decisión, no basta con mostrar una visualización efímera; se requiere un registro histórico inmutable de qué se evaluó, cuándo se evaluó, con qué datos de entrada y qué celdas se priorizaron de forma relativa en el análisis. La persistencia en PostgreSQL con extensión PostGIS asegura que cada ejecución queda registrada con geometrías vectoriales estándar y metadatos de trazabilidad.
 
 ### D. Idempotencia y Consistencia de Decisiones
 Si dos analistas u operadores consultan el ranking para una misma ventana de pronóstico (`forecast_time`), el sistema debe entregar exactamente los mismos resultados sin re-ejecutar inferencias redundantes ni provocar condiciones de carrera. El backend en Spring Boot implementa esta garantía de idempotencia.

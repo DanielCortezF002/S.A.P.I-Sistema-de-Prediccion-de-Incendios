@@ -138,11 +138,16 @@ En Streamlit, la clase `BackendRankingClient` procesa este error y renderiza una
 ### P8.1: ¿Por qué la aplicación enfatiza que los scores son un "ranking relativo" y no probabilidades calibradas?
 **Respuesta:**  
 Esta es una decisión de **ética e integridad profesional en ingeniería**.  
-Un modelo de Machine Learning clasificador (como `HistGradientBoostingClassifier`) produce salidas numéricas entre 0 y 1 mediante una función sigmoide o softmax. Sin embargo, estas cifras son **scores de decisión matemática**, no probabilidades estadísticas calibradas del mundo real. Decir que una celda tiene un "72% de probabilidad de incendio" sin calibración isotónica o de Platt y sin validación temporal exhaustiva es irresponsable en protección civil.  
-S.A.P.I. categoriza el resultado como un ranking relativo de priorización: la celda con score 0.147 presenta mayores indicadores comparativos de riesgo que la celda con 0.102, orientando los recursos de vigilancia hacia donde el modelo detecta mayor concentración de señales.
+Un modelo de Machine Learning clasificador (como `HistGradientBoostingClassifier`) produce salidas numéricas entre 0 y 1 mediante una función matemática. Sin embargo, estas cifras son **scores de decisión relativa**, no probabilidades estadísticas calibradas del mundo real. Decir que una celda tiene un "72% de probabilidad de incendio" sin calibración isotónica o de Platt y sin validación temporal exhaustiva es metodológicamente incorrecto.  
+S.A.P.I. categoriza el resultado como un ranking relativo de priorización: en una corrida específica, una celda con score relativamente más alto presenta mayores indicadores comparativos que otra con menor score, orientando el análisis territorial hacia donde el modelo detecta mayor concentración de señales bajo las condiciones evaluadas. Estos valores numéricos varían entre evaluaciones y no constituyen constantes estáticas del sistema.
 
 ### P8.2: ¿Qué significa que `scientific_model_validation` esté en `false` y F4 permanezca en FAIL?
 **Respuesta:**  
 Dentro del marco metodológico de S.A.P.I., la compuerta F4 evalúa la validez científica del modelo frente a series temporales no vistas y métricas operacionales de desbalance extremo.  
-Debido a que el modelo no ha sido validado en escenarios operacionales en tiempo real con datos meteorológicos continuos de múltiples temporadas, la compuerta F4 está formalmente registrada como **FAIL** y el flag `scientific_model_validation` es estrictamente `false`.  
-Por esta razón, S.A.P.I. Sprint 2 se defiende como una **plataforma arquitectónica de demostración y priorización exploratoria**, no como un sistema de despacho oficial de emergencias.
+Debido a que el modelo no ha demostrado generalización predictiva sobre temporadas forestales no observadas ni ha sido validado en escenarios operacionales en tiempo real con datos meteorológicos continuos, la compuerta F4 está formalmente registrada como **FAIL** y el flag `scientific_model_validation` es estrictamente `false`.  
+Por esta razón, S.A.P.I. Sprint 2 se defiende como una **plataforma arquitectónica de demostración y priorización exploratoria**, no como un sistema de despacho oficial de emergencias. S.A.P.I. carece de homologación, validación o autorización institucional por parte de CONAF o SENAPRED.
+
+### P8.3: ¿Por qué celdas como VP-047 muestran 'N/D' en elevación y pendiente?
+**Respuesta:**  
+Porque en el corredor de 50 celdas, exactamente 30 celdas cuentan con cobertura ráster Copernicus DEM 30m. Las 20 celdas restantes (específicamente VP-007–010, VP-017–020, VP-027–030, VP-037–040 y VP-047–050 en el margen oriental del polígono de Valparaíso) quedan fuera de la delimitación ráster original.  
+Bajo los principios de integridad científica del Hito 1, QA-04 y REQ-15, está prohibido inventar ceros o realizar imputaciones sintéticas arbitrarias: el dato faltante debe presentarse explícitamente como `N/D` (No Disponible), manteniendo la trazabilidad rigurosa del dato.
