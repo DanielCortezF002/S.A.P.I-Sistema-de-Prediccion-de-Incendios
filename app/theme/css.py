@@ -254,6 +254,106 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             border-radius: var(--sapi-radius-control) !important;
         }}
 
+        /* ── Expansores (P0): contraste alto en encabezado, fondo de tarjeta y chevron visible ── */
+        [data-testid="stExpander"] {{
+            background: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-card) !important;
+            margin-bottom: 0.85rem !important;
+            overflow: hidden !important;
+        }}
+        [data-testid="stExpander"] > details {{
+            background: transparent !important;
+        }}
+        [data-testid="stExpander"] summary {{
+            background: var(--sapi-surface-muted) !important;
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+            font-weight: 700 !important;
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid var(--sapi-border-subtle) !important;
+            cursor: pointer !important;
+        }}
+        [data-testid="stExpander"] summary:hover {{
+            background: var(--sapi-surface-card) !important;
+            color: var(--sapi-accent) !important;
+        }}
+        [data-testid="stExpander"] summary p,
+        [data-testid="stExpander"] summary span {{
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+            font-weight: 700 !important;
+        }}
+        [data-testid="stExpander"] summary svg {{
+            color: var(--sapi-accent) !important;
+            fill: var(--sapi-accent) !important;
+            width: 1.15rem !important;
+            height: 1.15rem !important;
+        }}
+        [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+            padding: 1rem 1.15rem !important;
+            background: var(--sapi-surface-card) !important;
+            color: var(--sapi-text-primary) !important;
+            border-top: none !important;
+        }}
+
+        /* ── Selectores y Dropdowns (P0): contraste consistente en input y menú flotante ── */
+        div[data-baseweb="select"] > div {{
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-primary) !important;
+            min-height: var(--sapi-touch-target) !important;
+            font-weight: 600 !important;
+        }}
+        div[data-baseweb="select"] svg {{
+            color: var(--sapi-text-primary) !important;
+            fill: var(--sapi-text-primary) !important;
+        }}
+        div[data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
+        div[data-baseweb="select"] span {{
+            color: var(--sapi-text-primary) !important;
+            font-weight: 600 !important;
+        }}
+        div[data-baseweb="popover"],
+        ul[data-baseweb="menu"] {{
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+        }}
+        li[data-baseweb="menu-item"] {{
+            background-color: var(--sapi-surface-card) !important;
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+            padding: 0.6rem 0.9rem !important;
+        }}
+        li[data-baseweb="menu-item"]:hover,
+        li[data-baseweb="menu-item"][aria-selected="true"] {{
+            background-color: var(--sapi-surface-muted) !important;
+            color: var(--sapi-accent) !important;
+            font-weight: 700 !important;
+        }}
+
+        /* ── Radio buttons (P0) ── */
+        div[data-testid="stRadio"] label {{
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+            font-weight: 600 !important;
+        }}
+        div[data-testid="stRadio"] label p {{
+            color: var(--sapi-text-primary) !important;
+            font-weight: 600 !important;
+        }}
+
+        /* ── Dataframes y Tablas (P0) ── */
+        div[data-testid="stDataFrame"] {{
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-card) !important;
+            overflow: hidden !important;
+            background: var(--sapi-surface-card) !important;
+        }}
+
         /* ── Ops-center: hero, chips, var-cards, detalle ── */
         .sapi-risk-hero {{
             display: grid;

@@ -105,6 +105,19 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.web
+    command:
+      - python
+      - -m
+      - streamlit
+      - run
+      - app/app.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --theme.base=dark
+      - --theme.primaryColor=#6b9fd4
+      - --theme.backgroundColor=#14171b
+      - --theme.secondaryBackgroundColor=#1c2128
+      - --theme.textColor=#e8eaed
     environment:
       SAPI_BACKEND_BASE_URL: http://backend:8080
       SAPI_UI_LEGACY_MODES: "0"

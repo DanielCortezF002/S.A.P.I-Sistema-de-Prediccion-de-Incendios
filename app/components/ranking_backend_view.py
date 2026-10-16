@@ -297,58 +297,144 @@ def _inject_css() -> None:
     st.markdown(
         """
         <style>
-        .sapi-v2-header { display:flex; flex-wrap:wrap; justify-content:space-between;
-            gap:1rem; align-items:flex-start; margin:0 0 0.6rem 0; }
-        .sapi-v2-title { font-size:1.65rem; font-weight:750; letter-spacing:-0.02em;
-            line-height:1.15; margin:0; }
-        .sapi-v2-sub { font-size:0.92rem; opacity:0.78; margin-top:0.2rem; max-width:36rem; }
-        .sapi-v2-status { display:flex; flex-wrap:wrap; gap:0.45rem; justify-content:flex-end; }
-        .sapi-v2-badge { display:inline-flex; align-items:center; padding:0.28rem 0.65rem;
-            border-radius:999px; font-size:0.68rem; font-weight:700; letter-spacing:0.06em;
-            text-transform:uppercase; border:1px solid rgba(127,127,127,0.35); }
-        .sapi-v2-badge--violet { background:#3b2a6d; border-color:#7c3aed; color:#ede9fe; }
-        .sapi-v2-badge--hist { background:#7f1d1d; border-color:#dc2626; color:#fee2e2; }
-        .sapi-v2-badge--rest { background:#0f3b2e; border-color:#10b981; color:#d1fae5; }
-        .sapi-v2-meta { margin-top:0.45rem; font-size:0.92rem; opacity:0.92;
-            text-align:right; line-height:1.5; }
-        .sapi-v2-kpi-row { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr));
-            gap:0.55rem; margin:0.35rem 0 0.85rem 0; }
-        .sapi-v2-kpi { border:1px solid rgba(127,127,127,0.35); border-radius:10px;
-            padding:0.55rem 0.7rem; min-height:4.4rem; }
-        .sapi-v2-kpi__value { font-size:1.2rem; font-weight:750; letter-spacing:-0.02em;
-            line-height:1.1; }
-        .sapi-v2-kpi__value--na { font-size:0.82rem; font-weight:600; opacity:0.7; }
-        .sapi-v2-kpi__label { font-size:0.72rem; opacity:0.7; margin-top:0.25rem; font-weight:600; }
-        .sapi-v2-panel { border:1px solid rgba(127,127,127,0.35); border-radius:12px;
-            padding:0.85rem 0.95rem; margin-bottom:0.75rem; }
-        .sapi-v2-panel__h { font-size:0.7rem; font-weight:800; letter-spacing:0.1em;
-            text-transform:uppercase; opacity:0.65; margin:0 0 0.55rem 0; }
-        .sapi-v2-prio-num { font-size:2rem; font-weight:800; letter-spacing:-0.03em;
-            line-height:1; color:#f0a070; }
-        .sapi-v2-chip { display:inline-block; padding:0.22rem 0.5rem; margin:0.18rem 0.18rem 0 0;
-            border-radius:6px; border:1px solid rgba(127,127,127,0.45); font-size:0.78rem;
-            font-weight:650; font-variant-numeric:tabular-nums; }
-        .sapi-v2-kv { list-style:none; padding:0; margin:0; }
-        .sapi-v2-kv li { display:flex; justify-content:space-between; gap:0.75rem;
-            padding:0.28rem 0; border-bottom:1px solid rgba(127,127,127,0.2); font-size:0.84rem; }
-        .sapi-v2-kv li:last-child { border-bottom:none; }
-        .sapi-v2-kv span { opacity:0.65; }
-        .sapi-v2-legend { position:relative; z-index:2; margin:-0.35rem 0 0.5rem 0;
-            border:1px solid rgba(127,127,127,0.35); border-radius:10px; padding:0.55rem 0.75rem;
-            max-width:18rem; font-size:0.75rem; }
-        .sapi-v2-legend__title { font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
-            font-size:0.68rem; opacity:0.7; margin-bottom:0.35rem; }
-        .sapi-v2-legend__row { display:flex; align-items:center; gap:0.45rem; margin:0.18rem 0; }
-        .sapi-v2-dot { width:10px; height:10px; border-radius:50%; display:inline-block;
-            border:1px solid rgba(127,127,127,0.5); }
-        .sapi-v2-disclaimer { font-size:0.75rem; opacity:0.72; margin:0.5rem 0 0 0; }
-        .sapi-v2-note { font-size:0.75rem; opacity:0.7; margin-top:0.35rem; }
+        .sapi-v2-header {
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            gap: 1.25rem; align-items: flex-start; margin: 0 0 1rem 0;
+            font-family: var(--sapi-font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+        }
+        .sapi-v2-title {
+            font-size: 2.1rem; font-weight: 850; letter-spacing: -0.03em;
+            line-height: 1.1; margin: 0; color: var(--sapi-text-primary);
+        }
+        .sapi-v2-sub {
+            font-size: 1.02rem; opacity: 0.88; margin-top: 0.35rem; max-width: 42rem;
+            color: var(--sapi-text-primary); font-weight: 500;
+        }
+        .sapi-v2-status {
+            display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: flex-end; align-items: center;
+        }
+        .sapi-v2-badge {
+            display: inline-flex; align-items: center; padding: 0.38rem 0.85rem;
+            border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em;
+            text-transform: uppercase; border: 1px solid rgba(127,127,127,0.35);
+        }
+        .sapi-v2-badge--violet { background: #3b2a6d; border-color: #8b5cf6; color: #ede9fe; box-shadow: 0 2px 6px rgba(139,92,246,0.25); }
+        .sapi-v2-badge--hist { background: #7f1d1d; border-color: #ef4444; color: #fee2e2; box-shadow: 0 2px 6px rgba(239,68,68,0.25); }
+        .sapi-v2-badge--rest { background: #064e3b; border-color: #10b981; color: #d1fae5; box-shadow: 0 2px 6px rgba(16,185,129,0.25); }
+        .sapi-v2-badge--postgis { background: #0c4a6e; border-color: #38bdf8; color: #e0f2fe; }
+        .sapi-v2-badge--model { background: #262626; border-color: #737373; color: #f5f5f5; }
+        
+        .sapi-v2-meta {
+            margin-top: 0.6rem; font-size: 0.95rem; opacity: 0.95;
+            text-align: right; line-height: 1.6; color: var(--sapi-text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .sapi-v2-kpi-row {
+            display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.75rem; margin: 0.5rem 0 0.85rem 0;
+        }
+        .sapi-v2-kpi {
+            background: var(--sapi-surface-card);
+            border: 1px solid var(--sapi-border-card);
+            border-radius: 12px;
+            padding: 0.85rem 1rem; min-height: 5.2rem;
+            display: flex; flex-direction: column; justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .sapi-v2-kpi:hover {
+            border-color: var(--sapi-accent);
+        }
+        .sapi-v2-kpi__value {
+            font-size: 1.55rem; font-weight: 850; letter-spacing: -0.02em;
+            line-height: 1.15; font-variant-numeric: tabular-nums;
+            color: var(--sapi-text-primary);
+        }
+        .sapi-v2-kpi__value--na {
+            font-size: 0.88rem; font-weight: 600; opacity: 0.82;
+            color: var(--sapi-text-primary); font-style: italic;
+        }
+        .sapi-v2-kpi__label {
+            font-size: 0.82rem; opacity: 0.85; margin-top: 0.35rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.04em;
+            color: var(--sapi-text-primary);
+        }
+        
+        .sapi-v2-panel {
+            background: var(--sapi-surface-card);
+            border: 1px solid var(--sapi-border-card);
+            border-radius: 14px;
+            padding: 1.15rem 1.3rem; margin-bottom: 1rem;
+            color: var(--sapi-text-primary);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.16);
+        }
+        .sapi-v2-panel__h {
+            font-size: 0.85rem; font-weight: 850; letter-spacing: 0.09em;
+            text-transform: uppercase; color: var(--sapi-accent); margin: 0 0 0.65rem 0;
+            display: flex; align-items: center; gap: 0.45rem;
+        }
+        .sapi-v2-prio-num {
+            font-size: 2.35rem; font-weight: 900; letter-spacing: -0.04em;
+            line-height: 1; color: #f0a070;
+            text-shadow: 0 2px 8px rgba(240, 160, 112, 0.25);
+        }
+        .sapi-v2-chip {
+            display: inline-block; padding: 0.32rem 0.65rem; margin: 0.22rem 0.22rem 0 0;
+            border-radius: 6px; background: var(--sapi-surface-muted);
+            border: 1px solid var(--sapi-border-card); font-size: 0.88rem;
+            font-weight: 750; font-variant-numeric: tabular-nums;
+            color: var(--sapi-text-primary);
+        }
+        .sapi-v2-kv { list-style: none; padding: 0; margin: 0.45rem 0 0 0; }
+        .sapi-v2-kv li {
+            display: flex; justify-content: space-between; gap: 0.85rem;
+            padding: 0.45rem 0; border-bottom: 1px solid var(--sapi-border-subtle);
+            font-size: 0.95rem; color: var(--sapi-text-primary);
+        }
+        .sapi-v2-kv li:last-child { border-bottom: none; }
+        .sapi-v2-kv span { opacity: 0.75; font-weight: 550; }
+        .sapi-v2-kv b { font-weight: 750; }
+        
+        .sapi-v2-legend {
+            position: relative; z-index: 2; margin: 0.5rem 0 0.75rem 0;
+            background: var(--sapi-surface-card);
+            border: 1px solid var(--sapi-border-card);
+            border-radius: 12px; padding: 0.85rem 1.15rem;
+            max-width: 26rem; font-size: 0.88rem; color: var(--sapi-text-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+        }
+        .sapi-v2-legend__title {
+            font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase;
+            font-size: 0.82rem; color: var(--sapi-accent); margin-bottom: 0.55rem;
+        }
+        .sapi-v2-legend__row {
+            display: flex; align-items: center; gap: 0.65rem; margin: 0.35rem 0;
+            font-weight: 650; font-size: 0.90rem;
+        }
+        .sapi-v2-dot {
+            width: 15px; height: 15px; border-radius: 50%; display: inline-block;
+            border: 2px solid rgba(255,255,255,0.45); flex-shrink: 0;
+        }
+        
+        .sapi-v2-disclaimer {
+            font-size: 0.92rem; opacity: 0.95; margin: 0.65rem 0 0 0;
+            padding: 0.75rem 1.1rem; border-radius: 8px;
+            background: var(--sapi-surface-muted);
+            border-left: 4px solid var(--sapi-accent);
+            color: var(--sapi-text-primary);
+            line-height: 1.45; font-weight: 550;
+        }
+        .sapi-v2-note {
+            font-size: 0.84rem; opacity: 0.82; margin-top: 0.45rem;
+            color: var(--sapi-text-primary); font-style: italic;
+        }
         @media (max-width:1100px) {
-            .sapi-v2-kpi-row { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+            .sapi-v2-kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
         @media (max-width:700px) {
-            .sapi-v2-kpi-row { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-            .sapi-v2-meta { text-align:left; }
+            .sapi-v2-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .sapi-v2-meta { text-align: left; }
         }
         </style>
         """,
@@ -380,11 +466,13 @@ def _render_header(view: RankingView) -> None:
     st.markdown(
         '<div class="sapi-v2-header"><div>'
         '<div class="sapi-v2-title">S.A.P.I.</div>'
-        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios</div>'
+        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios · Defensa Académica Sprint 2</div>'
         "</div>"
         '<div class="sapi-v2-status">'
         '<span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>'
         '<span class="sapi-v2-badge sapi-v2-badge--rest">BACKEND REST</span>'
+        '<span class="sapi-v2-badge sapi-v2-badge--postgis">POSTGIS PERSISTED</span>'
+        '<span class="sapi-v2-badge sapi-v2-badge--model">HISTGRADIENTBOOST (MODELO D)</span>'
         f"{hist_badge}</div></div>"
         f'<div class="sapi-v2-meta">{date_line}<br>{window_line}<br>{station_line}<br>'
         f"Obtenido del backend: {_human_hm(view.fetched_at)} UTC</div>",
@@ -441,6 +529,11 @@ def _render_kpi_strip(view: RankingView) -> None:
     st.markdown(
         f'<div class="sapi-v2-kpi-row">{"".join(cards)}</div>', unsafe_allow_html=True
     )
+    if m is None:
+        st.caption(
+            "ℹ **Variables meteorológicas:** Procesadas por el Modelo D en inferencia (`temperatura`, `humedad`, `viento`). "
+            "El endpoint v0 proyecta el ranking relativo de celdas; la exposición de telemetría instantánea está catalogada como mejora aditiva para el contrato v1."
+        )
 
 
 def _render_disclaimer(view: RankingView) -> None:
@@ -692,7 +785,13 @@ def render_ranking_backend_dashboard() -> None:
         return
 
     _inject_css()
-    _render_header(view)
+    header_col, toggle_col = st.columns([8.8, 1.2], gap="small")
+    with header_col:
+        _render_header(view)
+    with toggle_col:
+        from app.components.controls import render_appearance_toggle
+
+        render_appearance_toggle()
     _render_freshness_state(view)
     _render_kpi_strip(view)
     _render_disclaimer(view)
