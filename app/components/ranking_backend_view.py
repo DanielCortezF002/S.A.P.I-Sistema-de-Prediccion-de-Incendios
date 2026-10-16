@@ -56,6 +56,9 @@ _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
+_ORDER_PRIORITY_OFFICIAL = "Prioridad relativa (oficial backend)"
+_ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
+_ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
 _CACHE_TTL_SECONDS = 300
 # Metadata opcional de sapi-ranking-v0. model_status y meteo_actual se toleran
 # si un payload los trae, pero no son campos del contrato y no se listan como
@@ -671,23 +674,111 @@ def _render_selected_panel(
     )
 
 
-def _render_ranking_expander(view: RankingView) -> None:
-    with st.expander("Ver ranking completo", expanded=False):
-        df = pd.DataFrame(
-            [
-                {
-                    "Prioridad": c.display_rank,
-                    "Celda": c.cell_id,
-                    "Score relativo": round(c.score, 6),
-                    "Empate": f"×{c.tie_group_size}" if c.tie_group_size > 1 else "—",
-                }
-                for c in view.cells
-            ]
+def _cell_num(cell_id: str) -> int:
+    """Extrae el número de celda ('VP-012' -> 12) para ordenación numérica."""
+    try:
+        return int(cell_id.split("-")[1])
+    except (IndexError, ValueError):
+        return 0
+
+
+def _prepare_ranking_display(
+    cells: tuple[RankingCell, ...],
+    order_mode: Any,
+    group_filter: Any,
+) -> tuple[pd.DataFrame, str]:
+    """Prepara el DataFrame y la leyenda explicativa para el ranking expandido.
+
+    Asegura:
+    - Conservación del contrato del backend (scores, display_rank y empates intactos).
+    - Visualización predeterminada por prioridad contractual.
+    - Orden numérico opcional por celda (VP-001 -> VP-050).
+    - Orden numérico de identificadores dentro de empates cuando se solicite.
+    - Filtro por grupo de prioridad relativa exploratoria.
+    """
+    group_map = _score_group_map(cells)
+
+    # 1. Filtro por grupo de prioridad relativa
+    filter_str = str(group_filter) if group_filter is not None else ""
+    if filter_str.startswith("Grupo "):
+        try:
+            target_group = int(filter_str.split()[1])
+            filtered_cells = [c for c in cells if group_map.get(c.score) == target_group]
+        except (IndexError, ValueError):
+            filtered_cells = list(cells)
+    else:
+        filtered_cells = list(cells)
+
+    # 2. Ordenación según el criterio seleccionado
+    order_str = str(order_mode) if order_mode is not None else ""
+    if order_str == _ORDER_CELL_ID:
+        display_cells = sorted(filtered_cells, key=lambda c: _cell_num(c.cell_id))
+        note = "Orden numérico ascendente por identificador de celda (VP-001 → VP-050)."
+    elif order_str == _ORDER_PRIORITY_TIES_BY_ID:
+        display_cells = sorted(
+            filtered_cells, key=lambda c: (c.display_rank, _cell_num(c.cell_id))
         )
-        st.dataframe(df, width="stretch", hide_index=True, height=320)
-        st.caption(
+        note = (
+            "Orden por prioridad relativa; identificadores ordenados numéricamente "
+            "dentro de cada grupo de empate."
+        )
+    else:
+        # Default: orden y empates contractuales directos del backend
+        display_cells = filtered_cells
+        note = (
             "Orden y empates tal como los emitió el backend: celdas con score idéntico "
             "comparten el mismo número de prioridad."
+        )
+
+    df = pd.DataFrame(
+        [
+            {
+                "Prioridad": c.display_rank,
+                "Celda": c.cell_id,
+                "Score relativo": round(c.score, 6),
+                "Empate": f"×{c.tie_group_size}" if c.tie_group_size > 1 else "—",
+                "Grupo": f"Grupo {group_map.get(c.score, 1)}",
+            }
+            for c in display_cells
+        ]
+    )
+    return df, note
+
+
+def _render_ranking_expander(view: RankingView) -> None:
+    with st.expander("Ver ranking completo", expanded=False):
+        order_mode = st.radio(
+            "Criterio de ordenación",
+            options=[
+                _ORDER_PRIORITY_OFFICIAL,
+                _ORDER_PRIORITY_TIES_BY_ID,
+                _ORDER_CELL_ID,
+            ],
+            horizontal=True,
+            key="ranking_v2_order",
+            help=(
+                "Cambia solo el orden de presentación en esta tabla. "
+                "No altera el ranking ni los scores emitidos por el backend."
+            ),
+        )
+
+        group_map = _score_group_map(view.cells)
+        available_groups = sorted(set(group_map.values()))
+        group_options = ["Todos los grupos (50 celdas)"] + [
+            f"Grupo {g}" for g in available_groups
+        ]
+        group_filter = st.selectbox(
+            "Filtrar por grupo de prioridad relativa",
+            options=group_options,
+            key="ranking_v2_group_filter",
+            help="Filtra la visualización por grupo relativo de score exploratorio.",
+        )
+
+        df, note = _prepare_ranking_display(view.cells, order_mode, group_filter)
+        st.dataframe(df, width="stretch", hide_index=True, height=340)
+        st.caption(
+            f"{note} Criterio exploratorio relativo del Modelo D "
+            "(no constituye alerta ni nivel oficial de riesgo)."
         )
 
 

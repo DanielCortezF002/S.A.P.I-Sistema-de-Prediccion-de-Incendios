@@ -23,6 +23,11 @@ def _type_scale_vars() -> str:
 def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
     """Hoja de estilo completa, envuelta en `<style>`, lista para st.markdown."""
     a = t.appearance_tokens(mode)
+    df_filter = (
+        "filter: invert(1) hue-rotate(180deg) !important;"
+        if mode == t.APPEARANCE_CLARO
+        else "filter: none !important;"
+    )
     return f"""
         <style>
         @import url('{t.FONT_IMPORT_URL}');
@@ -63,10 +68,6 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         section.main [data-testid="stWidgetLabel"],
         section.main .stTabs [data-baseweb="tab"],
         section.main .stRadio label {{
-            color: var(--sapi-text-primary) !important;
-        }}
-        section.main div[data-testid="stAlert"] {{
-            background: var(--sapi-surface-card) !important;
             color: var(--sapi-text-primary) !important;
         }}
         section.main div[data-baseweb="tab-list"] {{
@@ -242,9 +243,35 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         section.main div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
             color: var(--sapi-text-primary) !important;
         }}
-        div[data-testid="stAlert"] {{
-            border-radius: var(--sapi-radius-card);
-            border: 1px solid var(--sapi-border-card);
+        /* ── Alertas (P0): contraste WCAG AAA en aviso de datos históricos y estados ── */
+        div[data-testid="stAlert"],
+        section.main div[data-testid="stAlert"] {{
+            background: var(--sapi-surface-card) !important;
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-left: 5px solid {t.RISK["medio"].surface} !important;
+            border-radius: var(--sapi-radius-card) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
+        }}
+        div[data-testid="stAlert"] [data-baseweb="notification"],
+        section.main div[data-testid="stAlert"] [data-baseweb="notification"] {{
+            background: var(--sapi-surface-card) !important;
+            background-color: var(--sapi-surface-card) !important;
+            color: var(--sapi-text-primary) !important;
+            border: none !important;
+        }}
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"],
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] span,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] div,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] strong,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] b,
+        div[data-testid="stAlert"] [data-baseweb="notification"] * {{
+            color: var(--sapi-text-primary) !important;
+        }}
+        div[data-testid="stAlert"] svg {{
+            color: {t.RISK["medio"].surface} !important;
+            fill: {t.RISK["medio"].surface} !important;
         }}
         section.main div[data-testid="stVerticalBlockBorderWrapper"] {{
             background: var(--sapi-surface-card);
@@ -306,52 +333,55 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             min-height: var(--sapi-touch-target) !important;
             font-weight: 600 !important;
         }}
+        div[data-baseweb="select"] * {{
+            color: var(--sapi-text-primary) !important;
+        }}
         div[data-baseweb="select"] svg {{
             color: var(--sapi-text-primary) !important;
             fill: var(--sapi-text-primary) !important;
-        }}
-        div[data-baseweb="select"] [data-testid="stMarkdownContainer"] p,
-        div[data-baseweb="select"] span {{
-            color: var(--sapi-text-primary) !important;
-            font-weight: 600 !important;
         }}
         div[data-baseweb="popover"],
         ul[data-baseweb="menu"] {{
             background-color: var(--sapi-surface-card) !important;
             border: 1px solid var(--sapi-border-card) !important;
             border-radius: var(--sapi-radius-control) !important;
-            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
         }}
-        li[data-baseweb="menu-item"] {{
+        li[data-baseweb="menu-item"],
+        li[data-baseweb="menu-item"] * {{
             background-color: var(--sapi-surface-card) !important;
             color: var(--sapi-text-primary) !important;
             font-size: var(--sapi-font-body-size) !important;
-            padding: 0.6rem 0.9rem !important;
         }}
         li[data-baseweb="menu-item"]:hover,
-        li[data-baseweb="menu-item"][aria-selected="true"] {{
+        li[data-baseweb="menu-item"]:hover *,
+        li[data-baseweb="menu-item"][aria-selected="true"],
+        li[data-baseweb="menu-item"][aria-selected="true"] * {{
             background-color: var(--sapi-surface-muted) !important;
             color: var(--sapi-accent) !important;
             font-weight: 700 !important;
         }}
 
-        /* ── Radio buttons (P0) ── */
-        div[data-testid="stRadio"] label {{
+        /* ── Radio buttons y Checkboxes (P0) ── */
+        div[data-testid="stRadio"] label,
+        div[data-testid="stRadio"] label p,
+        div[data-testid="stRadio"] label span,
+        div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+        div[data-testid="stCheckbox"] label,
+        div[data-testid="stCheckbox"] label p,
+        div[data-testid="stCheckbox"] label span {{
             color: var(--sapi-text-primary) !important;
             font-size: var(--sapi-font-body-size) !important;
             font-weight: 600 !important;
         }}
-        div[data-testid="stRadio"] label p {{
-            color: var(--sapi-text-primary) !important;
-            font-weight: 600 !important;
-        }}
 
-        /* ── Dataframes y Tablas (P0) ── */
+        /* ── Dataframes y Tablas (P0): coherencia visual entre temas ── */
         div[data-testid="stDataFrame"] {{
             border: 1px solid var(--sapi-border-card) !important;
             border-radius: var(--sapi-radius-card) !important;
             overflow: hidden !important;
             background: var(--sapi-surface-card) !important;
+            {df_filter}
         }}
 
         /* ── Ops-center: hero, chips, var-cards, detalle ── */
@@ -655,11 +685,6 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         .sapi-chip--muted {{ opacity: 0.7; }}
         .sapi-chip--time {{ font-variant-numeric: tabular-nums; }}
 
-        section.main div[data-testid="stAlert"] {{
-            background: var(--sapi-surface-muted) !important;
-            border-left: 4px solid var(--sapi-accent) !important;
-            color: var(--sapi-text-primary) !important;
-        }}
         .sapi-corridor-verified {{
             text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
             text-transform: uppercase; color: var(--sapi-text-primary); opacity: 0.65;

@@ -396,6 +396,86 @@ def test_ranking_expander_table_preserves_order_and_ties(mock_st: MagicMock) -> 
     assert list(df["Empate"][:1]) == ["×7"] and list(df["Empate"][-2:]) == ["×2", "×2"]
 
 
+def test_cell_num_parses_numeric_id_correctly() -> None:
+    assert view_mod._cell_num("VP-001") == 1
+    assert view_mod._cell_num("VP-012") == 12
+    assert view_mod._cell_num("VP-050") == 50
+    assert view_mod._cell_num("invalid") == 0
+
+
+def test_prepare_ranking_display_by_cell_id_sorts_numerically() -> None:
+    view = v0_view()
+    df, note = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_CELL_ID,
+        group_filter="Todos los grupos (50 celdas)",
+    )
+    assert len(df) == 50
+    assert list(df["Celda"]) == [f"VP-{i:03d}" for i in range(1, 51)]
+    # VP-001 sigue teniendo su score y prioridad oficial intactos
+    vp01 = df[df["Celda"] == "VP-001"].iloc[0]
+    assert vp01["Prioridad"] == 1
+    assert vp01["Score relativo"] == 0.131293
+    assert "numérico ascendente" in note
+
+
+def test_prepare_ranking_display_ties_ordered_by_cell_id() -> None:
+    view = v0_view()
+    df, note = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_PRIORITY_TIES_BY_ID,
+        group_filter="Todos los grupos (50 celdas)",
+    )
+    assert len(df) == 50
+    # Los primeros 7 empatados con display_rank 1 deben quedar ordenados por ID
+    top7_ids = list(df["Celda"][:7])
+    assert top7_ids == ["VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"]
+    assert list(df["Prioridad"][:7]) == [1] * 7
+    # Los 2 últimos empatados con display_rank 49 (VP-028 y VP-038)
+    bottom2_ids = list(df["Celda"][-2:])
+    assert bottom2_ids == ["VP-028", "VP-038"]
+    assert list(df["Prioridad"][-2:]) == [49, 49]
+    assert list(df["Empate"][-2:]) == ["×2", "×2"]
+    assert "identificadores ordenados numéricamente" in note
+
+
+@pytest.mark.parametrize(
+    "group_name,expected_count,expected_rank",
+    [
+        ("Grupo 1", 7, 1),
+        ("Grupo 2", 41, 8),
+        ("Grupo 3", 2, 49),
+    ],
+)
+def test_prepare_ranking_display_filters_by_group(
+    group_name: str, expected_count: int, expected_rank: int
+) -> None:
+    view = v0_view()
+    df, _ = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_PRIORITY_OFFICIAL,
+        group_filter=f"{group_name} (filtrado)",
+    )
+    assert len(df) == expected_count
+    assert all(df["Grupo"] == group_name)
+    assert df.iloc[0]["Prioridad"] == expected_rank
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_ranking_expander_with_cell_id_order_and_filter(mock_st: MagicMock) -> None:
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_CELL_ID
+    mock_st.selectbox.return_value = "Grupo 1"
+    view_mod._render_ranking_expander(v0_view())
+    df = mock_st.dataframe.call_args[0][0]
+    assert len(df) == 7
+    assert list(df["Celda"]) == [
+        "VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"
+    ]
+    assert all(df["Grupo"] == "Grupo 1")
+    assert all(df["Prioridad"] == 1)
+
+
 # ── trazabilidad (CA3) ───────────────────────────────────────────────────────
 
 
