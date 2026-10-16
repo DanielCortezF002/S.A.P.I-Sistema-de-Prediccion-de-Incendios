@@ -176,6 +176,49 @@ def test_stylesheet_switches_page_surface_between_light_and_dark():
 
 
 # ──────────────────────────────────────────────
+# Regresiones de cascada CSS: botón del sidebar y radio del mapa
+# (defecto P0 de contraste en modo claro, verificado en navegador headless)
+# ──────────────────────────────────────────────
+def test_no_dead_section_main_selector_regresses_into_the_stylesheet():
+    """`section.main` no matchea nada en Streamlit 1.63: el wrapper real
+    lleva `data-testid="stMain"`, sin la clase `main` (la renombró a
+    `stMain`). Todas las reglas que dependían de `section.main` quedaban
+    muertas en silencio — texto, botones y el radio del mapa heredaban el
+    `textColor` fijo (`light`) de `.streamlit/config.toml` en vez del token
+    de esta app. Si `section.main` reaparece, vuelve a romperse así."""
+    from app.theme.css import build_stylesheet
+
+    for mode in t.APPEARANCES:
+        assert "section.main" not in build_stylesheet(mode)
+
+
+def test_button_selectors_tolerate_a_help_tooltip_wrapper():
+    """Un `st.button(..., help=...)` envuelve el <button> en spans de
+    tooltip (`stTooltipIcon`/`stTooltipHoverTarget`) más un div sin testid,
+    así que deja de ser hijo directo de `div[data-testid="stButton"]`.
+    "Actualizar ranking" tiene `help=`: con el combinador de hijo directo
+    (`>`) la regla de fondo/color nunca llegaba a aplicarse."""
+    from app.theme.css import build_stylesheet
+
+    css = build_stylesheet()
+    assert '"] > button' not in css
+
+
+def test_radio_option_text_is_force_repainted_against_basewebs_own_color():
+    """BaseWeb pinta el <p> de cada opción del radio con una clase propia
+    que fija el textColor base de Streamlit (ajeno al toggle claro/oscuro):
+    ese color es una declaración explícita en el propio nodo, así que ni la
+    herencia ni el `!important` de un ancestro lo alcanzan. Hace falta
+    repintar cada nodo interno con `!important` para ganarle."""
+    from app.theme.css import build_stylesheet
+
+    css = build_stylesheet()
+    assert 'div[data-testid="stRadio"] *' in css
+    assert "-webkit-text-fill-color: var(--sapi-text-primary) !important" in css
+    assert "-webkit-text-fill-color: var(--sapi-text-sidebar) !important" in css
+
+
+# ──────────────────────────────────────────────
 # Umbrales WCAG de la paleta de riesgo
 # ──────────────────────────────────────────────
 @pytest.mark.parametrize("nivel,palette", TODOS_LOS_NIVELES)
@@ -292,3 +335,20 @@ def test_every_type_style_has_line_height_above_its_font_size():
         assert estilo.line_px > estilo.size_px, (
             f"La interlínea de '{nombre}' no deja aire sobre el tamaño de fuente"
         )
+
+
+def test_sidebar_toggle_controls_styled_with_tokens_and_accessibility():
+    """El control de apertura de la barra lateral (esquina superior izquierda)
+    debe tener contraste accesible, hover y foco en ambos modos."""
+    from app.theme.css import build_stylesheet
+
+    for mode in (t.APPEARANCE_CLARO, t.APPEARANCE_OSCURO):
+        css = build_stylesheet(mode)
+        assert 'button[data-testid="stExpandSidebarButton"]' in css
+        assert 'button[data-testid="stExpandSidebarButton"]:hover' in css
+        assert 'button[data-testid="stExpandSidebarButton"]:focus-visible' in css
+        assert '[data-testid="stSidebarCollapseButton"] button' in css
+        assert "var(--sapi-surface-card)" in css
+        assert "var(--sapi-text-primary)" in css
+        assert "var(--sapi-accent)" in css
+

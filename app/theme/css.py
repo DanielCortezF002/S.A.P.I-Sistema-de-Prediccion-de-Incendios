@@ -23,6 +23,22 @@ def _type_scale_vars() -> str:
 def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
     """Hoja de estilo completa, envuelta en `<style>`, lista para st.markdown."""
     a = t.appearance_tokens(mode)
+    df_filter = (
+        "filter: invert(1) hue-rotate(180deg) !important;"
+        if mode == t.APPEARANCE_CLARO
+        else "filter: none !important;"
+    )
+    is_claro = mode == t.APPEARANCE_CLARO
+    sidebar_bg = a.surface_muted if is_claro else t.SURFACE_SIDEBAR
+    sidebar_text = a.text_primary if is_claro else t.TEXT_ON_SIDEBAR
+    sidebar_text_muted = a.text_primary if is_claro else t.TEXT_ON_SIDEBAR_MUTED
+    sidebar_label = a.text_primary if is_claro else t.TEXT_ON_SIDEBAR_LABEL
+    sidebar_border = a.border_card if is_claro else t.SIDEBAR_RULE
+    sidebar_input_fill = a.surface_card if is_claro else t.SIDEBAR_INPUT_FILL
+    sidebar_input_border = a.border_card if is_claro else t.SIDEBAR_INPUT_BORDER
+    sidebar_btn_hover_bg = a.surface_card if is_claro else t.SIDEBAR_CODE_FILL
+    sidebar_btn_hover_border = a.accent if is_claro else t.TEXT_ON_SIDEBAR
+    sidebar_btn_hover_text = a.accent if is_claro else t.TEXT_ON_SIDEBAR
     return f"""
         <style>
         @import url('{t.FONT_IMPORT_URL}');
@@ -35,6 +51,16 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             --sapi-border-subtle: {a.border_subtle};
             --sapi-text-primary: {a.text_primary};
             --sapi-accent: {a.accent};
+            --sapi-surface-sidebar: {sidebar_bg};
+            --sapi-text-sidebar: {sidebar_text};
+            --sapi-text-sidebar-muted: {sidebar_text_muted};
+            --sapi-text-sidebar-label: {sidebar_label};
+            --sapi-border-sidebar: {sidebar_border};
+            --sapi-sidebar-input-bg: {sidebar_input_fill};
+            --sapi-sidebar-input-border: {sidebar_input_border};
+            --sapi-sidebar-btn-hover-bg: {sidebar_btn_hover_bg};
+            --sapi-sidebar-btn-hover-border: {sidebar_btn_hover_border};
+            --sapi-sidebar-btn-hover-text: {sidebar_btn_hover_text};
             --sapi-radius-control: {t.RADIUS_PX["control"]}px;
             --sapi-radius-card: {t.RADIUS_PX["card"]}px;
             --sapi-radius-banner: {t.RADIUS_PX["banner"]}px;
@@ -48,7 +74,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         [data-testid="stAppViewContainer"],
         [data-testid="stHeader"],
         [data-testid="stToolbar"],
-        section.main,
+        section[data-testid="stMain"],
         .main,
         .block-container {{
             background-color: var(--sapi-surface-page) !important;
@@ -58,18 +84,14 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             background: var(--sapi-surface-page) !important;
         }}
         /* Widgets del panel principal que Streamlit pinta con el theme light */
-        section.main [data-testid="stMarkdownContainer"],
-        section.main [data-testid="stText"],
-        section.main [data-testid="stWidgetLabel"],
-        section.main .stTabs [data-baseweb="tab"],
-        section.main .stRadio label {{
+        section[data-testid="stMain"] [data-testid="stMarkdownContainer"],
+        section[data-testid="stMain"] [data-testid="stText"],
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"],
+        section[data-testid="stMain"] .stTabs [data-baseweb="tab"],
+        section[data-testid="stMain"] .stRadio label {{
             color: var(--sapi-text-primary) !important;
         }}
-        section.main div[data-testid="stAlert"] {{
-            background: var(--sapi-surface-card) !important;
-            color: var(--sapi-text-primary) !important;
-        }}
-        section.main div[data-baseweb="tab-list"] {{
+        section[data-testid="stMain"] div[data-baseweb="tab-list"] {{
             background: var(--sapi-surface-muted);
             border-radius: var(--sapi-radius-control);
         }}
@@ -78,7 +100,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
            padding-top >= la altura del header fijo de Streamlit (~2.9rem):
            con menos, el título y los chips del header propio quedaban
            renderizados debajo de la barra "Deploy" y se veían cortados. */
-        section.main .block-container {{
+        section[data-testid="stMain"] .block-container {{
             max-width: 100%;
             padding: 3.25rem 0.75rem 0 0.75rem;
             overflow-x: hidden;
@@ -90,13 +112,13 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             line-height: var(--sapi-font-body-line);
             font-weight: var(--sapi-font-body-weight);
         }}
-        section.main h1,
-        section.main h2,
-        section.main h3,
-        section.main h4,
-        section.main p,
-        section.main label,
-        section.main span {{
+        section[data-testid="stMain"] h1,
+        section[data-testid="stMain"] h2,
+        section[data-testid="stMain"] h3,
+        section[data-testid="stMain"] h4,
+        section[data-testid="stMain"] p,
+        section[data-testid="stMain"] label,
+        section[data-testid="stMain"] span {{
             color: var(--sapi-text-primary);
         }}
         h1 {{
@@ -117,9 +139,9 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             font-weight: var(--sapi-font-h2-weight) !important;
             letter-spacing: -0.01em;
         }}
-        section.main [data-testid="stCaptionContainer"],
-        section.main small,
-        section.main .stCaption {{
+        section[data-testid="stMain"] [data-testid="stCaptionContainer"],
+        section[data-testid="stMain"] small,
+        section[data-testid="stMain"] .stCaption {{
             font-size: var(--sapi-font-small-size);
             line-height: var(--sapi-font-small-line);
             color: var(--sapi-text-primary);
@@ -137,7 +159,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         }}
 
         /* ── Botones ── Área de toque ≥44px (WCAG 2.5.5) desde --sapi-touch-target.
-           El texto heredaba --sapi-text-primary por la regla `section.main
+           El texto heredaba --sapi-text-primary por la regla `section[data-testid="stMain"]
            p/span` de arriba, mientras el FONDO del botón quedaba con el gris
            tenue nativo de Streamlit (pensado para su propio tema claro, no
            para las superficies oscuras de esta app): en oscuro, texto claro
@@ -146,8 +168,8 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
            costaba leer. Se fija el mismo par fondo/texto que ya usa cada
            tarjeta de la app — contraste verificado, consistente con el
            resto — en vez de heredar el tema propio del botón. */
-        section.main div[data-testid="stButton"] > button,
-        section.main div[data-testid="stDownloadButton"] > button {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button {{
             min-height: var(--sapi-touch-target);
             padding: 0 1.1rem;
             font-weight: 600;
@@ -155,68 +177,263 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             border: 1px solid var(--sapi-border-card);
             color: var(--sapi-text-primary) !important;
         }}
-        section.main div[data-testid="stButton"] > button p,
-        section.main div[data-testid="stButton"] > button span,
-        section.main div[data-testid="stButton"] > button div,
-        section.main div[data-testid="stDownloadButton"] > button p,
-        section.main div[data-testid="stDownloadButton"] > button span,
-        section.main div[data-testid="stDownloadButton"] > button div {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button p,
+        section[data-testid="stMain"] div[data-testid="stButton"] button span,
+        section[data-testid="stMain"] div[data-testid="stButton"] button div,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button p,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button span,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button div {{
             color: var(--sapi-text-primary) !important;
         }}
-        section.main div[data-testid="stButton"] > button:hover,
-        section.main div[data-testid="stDownloadButton"] > button:hover {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button:hover,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover {{
             border-color: var(--sapi-accent);
             color: var(--sapi-accent) !important;
         }}
-        section.main div[data-testid="stButton"] > button:hover p,
-        section.main div[data-testid="stButton"] > button:hover span,
-        section.main div[data-testid="stDownloadButton"] > button:hover p,
-        section.main div[data-testid="stDownloadButton"] > button:hover span {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button:hover p,
+        section[data-testid="stMain"] div[data-testid="stButton"] button:hover span,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover p,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover span {{
             color: var(--sapi-accent) !important;
         }}
         /* Botón "primary" (el modo ☀️/🌙 activo del interruptor de apariencia):
            fondo de acento sólido, texto blanco — Streamlit ya hace exactamente
            esto nativamente, pero el bloque de arriba lo pisaba con el fondo
            de tarjeta. Se reafirma acá, después, para que gane. */
-        section.main div[data-testid="stButton"] > button[kind="primary"] {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] {{
             background: var(--sapi-accent);
             border-color: var(--sapi-accent);
             color: {t.TEXT_ON_SIDEBAR} !important;
         }}
-        section.main div[data-testid="stButton"] > button[kind="primary"] p,
-        section.main div[data-testid="stButton"] > button[kind="primary"] span,
-        section.main div[data-testid="stButton"] > button[kind="primary"] div {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] p,
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] span,
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] div {{
             color: {t.TEXT_ON_SIDEBAR} !important;
         }}
 
-        /* ── Sidebar: navy institucional ──
-           secondaryBackgroundColor del theme se dejó neutro porque afecta
-           también widgets fuera del sidebar; el navy va acotado acá. */
-        section[data-testid="stSidebar"] {{ background: {t.SURFACE_SIDEBAR}; }}
-        section[data-testid="stSidebar"] * {{ color: {t.TEXT_ON_SIDEBAR}; }}
+        /* ── Sidebar (P0): contraste y coherencia adaptativa claro / oscuro ── */
+        section[data-testid="stSidebar"] {{
+            background: var(--sapi-surface-sidebar) !important;
+            border-right: 1px solid var(--sapi-border-sidebar) !important;
+        }}
+        section[data-testid="stSidebar"] * {{
+            color: var(--sapi-text-sidebar);
+        }}
         section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
         section[data-testid="stSidebar"] small,
         section[data-testid="stSidebar"] .stCaption {{
-            color: {t.TEXT_ON_SIDEBAR_MUTED} !important;
+            color: var(--sapi-text-sidebar-muted) !important;
         }}
-        section[data-testid="stSidebar"] hr {{ border-color: {t.SIDEBAR_RULE}; }}
+        section[data-testid="stSidebar"] hr {{
+            border-color: var(--sapi-border-sidebar) !important;
+        }}
         section[data-testid="stSidebar"] div[data-testid="stMetricValue"] {{
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            color: var(--sapi-text-sidebar) !important;
         }}
         section[data-testid="stSidebar"] div[data-testid="stMetricLabel"] {{
-            color: {t.TEXT_ON_SIDEBAR_LABEL} !important;
+            color: var(--sapi-text-sidebar-label) !important;
         }}
         section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
         section[data-testid="stSidebar"] input {{
-            background: {t.SIDEBAR_INPUT_FILL} !important;
-            border-color: {t.SIDEBAR_INPUT_BORDER} !important;
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            background: var(--sapi-sidebar-input-bg) !important;
+            border-color: var(--sapi-sidebar-input-border) !important;
+            color: var(--sapi-text-sidebar) !important;
         }}
-        /* Los <code> inline traen fondo claro propio; con el texto forzado a
-           blanco arriba quedaban blanco sobre claro. */
+        /* Los <code> inline traen fondo coherente en ambos temas */
         section[data-testid="stSidebar"] code {{
-            background: {t.SIDEBAR_CODE_FILL} !important;
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            background: var(--sapi-sidebar-btn-hover-bg) !important;
+            color: var(--sapi-text-sidebar) !important;
+        }}
+        /* Radio buttons y widgets en barra lateral */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] *,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label p,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label span,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"] span {{
+            color: var(--sapi-text-sidebar) !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: var(--sapi-text-sidebar) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover span {{
+            color: var(--sapi-accent) !important;
+            -webkit-text-fill-color: var(--sapi-accent) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [aria-disabled="true"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [aria-disabled="true"] *,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-disabled="true"] * {{
+            opacity: 0.55 !important;
+            cursor: not-allowed !important;
+        }}
+        /* Botón de barra lateral (p. ej. "Actualizar ranking") */
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button {{
+            background-color: var(--sapi-sidebar-input-bg) !important;
+            border: 1px solid var(--sapi-sidebar-input-border) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-sidebar) !important;
+            font-weight: 600 !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button p,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button span,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button div,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button p,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button span,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button div {{
+            color: var(--sapi-text-sidebar) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover {{
+            background-color: var(--sapi-sidebar-btn-hover-bg) !important;
+            border-color: var(--sapi-sidebar-btn-hover-border) !important;
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover span,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover div,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover span,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover div {{
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:focus-visible,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:focus-visible {{
+            outline: 2px solid var(--sapi-accent) !important;
+            outline-offset: 2px !important;
+            border-color: var(--sapi-accent) !important;
+        }}
+
+        /* ── Control de barra lateral (P0): apertura (esquina superior izquierda) y cierre ── */
+        button[data-testid="stExpandSidebarButton"],
+        [data-testid="stSidebarCollapsedControl"] button,
+        [data-testid="collapsedControl"] button,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"],
+        [data-testid="stHeader"] button[kind="headerNoPadding"],
+        [data-testid="stHeader"] button[kind="header"] {{
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-primary) !important;
+            min-width: 2.25rem !important;
+            min-height: 2.25rem !important;
+            padding: 0.25rem 0.45rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"] svg,
+        button[data-testid="stExpandSidebarButton"] span,
+        button[data-testid="stExpandSidebarButton"] i,
+        button[data-testid="stExpandSidebarButton"] *,
+        [data-testid="stSidebarCollapsedControl"] button svg,
+        [data-testid="stSidebarCollapsedControl"] button span,
+        [data-testid="stSidebarCollapsedControl"] button *,
+        [data-testid="collapsedControl"] button svg,
+        [data-testid="collapsedControl"] button span,
+        [data-testid="collapsedControl"] button *,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] svg,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] span,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"] *,
+        [data-testid="stHeader"] button[kind="headerNoPadding"] svg,
+        [data-testid="stHeader"] button[kind="headerNoPadding"] span,
+        [data-testid="stHeader"] button[kind="headerNoPadding"] * {{
+            color: var(--sapi-text-primary) !important;
+            fill: var(--sapi-text-primary) !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"]:hover,
+        [data-testid="stSidebarCollapsedControl"] button:hover,
+        [data-testid="collapsedControl"] button:hover,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:hover,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:hover,
+        [data-testid="stHeader"] button[kind="header"]:hover {{
+            background-color: var(--sapi-surface-muted) !important;
+            border-color: var(--sapi-accent) !important;
+            color: var(--sapi-accent) !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"]:hover svg,
+        button[data-testid="stExpandSidebarButton"]:hover span,
+        button[data-testid="stExpandSidebarButton"]:hover *,
+        [data-testid="stSidebarCollapsedControl"] button:hover svg,
+        [data-testid="stSidebarCollapsedControl"] button:hover *,
+        [data-testid="collapsedControl"] button:hover svg,
+        [data-testid="collapsedControl"] button:hover *,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:hover svg,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:hover *,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:hover svg,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:hover * {{
+            color: var(--sapi-accent) !important;
+            fill: var(--sapi-accent) !important;
+        }}
+
+        button[data-testid="stExpandSidebarButton"]:focus-visible,
+        [data-testid="stSidebarCollapsedControl"] button:focus-visible,
+        [data-testid="collapsedControl"] button:focus-visible,
+        [data-testid="stHeader"] button[data-testid="stExpandSidebarButton"]:focus-visible,
+        [data-testid="stHeader"] button[kind="headerNoPadding"]:focus-visible,
+        [data-testid="stHeader"] button[kind="header"]:focus-visible {{
+            outline: 2px solid var(--sapi-accent) !important;
+            outline-offset: 2px !important;
+            border-color: var(--sapi-accent) !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button,
+        [data-testid="stSidebarHeader"] button {{
+            background-color: var(--sapi-sidebar-input-bg) !important;
+            border: 1px solid var(--sapi-sidebar-input-border) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-sidebar) !important;
+            min-width: 2.25rem !important;
+            min-height: 2.25rem !important;
+            padding: 0.25rem 0.45rem !important;
+            display: inline-flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button svg,
+        [data-testid="stSidebarCollapseButton"] button span,
+        [data-testid="stSidebarCollapseButton"] button *,
+        [data-testid="stSidebarHeader"] button svg,
+        [data-testid="stSidebarHeader"] button span,
+        [data-testid="stSidebarHeader"] button * {{
+            color: var(--sapi-text-sidebar) !important;
+            fill: var(--sapi-text-sidebar) !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button:hover,
+        [data-testid="stSidebarHeader"] button:hover {{
+            background-color: var(--sapi-sidebar-btn-hover-bg) !important;
+            border-color: var(--sapi-sidebar-btn-hover-border) !important;
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button:hover svg,
+        [data-testid="stSidebarCollapseButton"] button:hover *,
+        [data-testid="stSidebarHeader"] button:hover svg,
+        [data-testid="stSidebarHeader"] button:hover * {{
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+            fill: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button:focus-visible,
+        [data-testid="stSidebarHeader"] button:focus-visible {{
+            outline: 2px solid var(--sapi-accent) !important;
+            outline-offset: 2px !important;
+            border-color: var(--sapi-accent) !important;
         }}
 
         /* En el sidebar angosto de un teléfono el dropdown de días cubre todo
@@ -228,30 +445,188 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         }}
 
         /* ── Tarjetas del panel principal ──
-           Acotadas a section.main: sobre el navy del sidebar una tarjeta
+           Acotadas a section[data-testid="stMain"]: sobre el navy del sidebar una tarjeta
            blanca dejaría texto blanco sobre blanco. */
-        section.main div[data-testid="stMetric"] {{
+        section[data-testid="stMain"] div[data-testid="stMetric"] {{
             background: var(--sapi-surface-card);
             border: 1px solid var(--sapi-border-card);
             border-radius: var(--sapi-radius-card);
             padding: 0.9rem 1rem;
             color: var(--sapi-text-primary);
         }}
-        section.main div[data-testid="stMetric"] label,
-        section.main div[data-testid="stMetric"] [data-testid="stMetricLabel"],
-        section.main div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
+        section[data-testid="stMain"] div[data-testid="stMetric"] label,
+        section[data-testid="stMain"] div[data-testid="stMetric"] [data-testid="stMetricLabel"],
+        section[data-testid="stMain"] div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
             color: var(--sapi-text-primary) !important;
         }}
-        div[data-testid="stAlert"] {{
-            border-radius: var(--sapi-radius-card);
-            border: 1px solid var(--sapi-border-card);
+        /* ── Alertas (P0): contraste WCAG AAA en aviso de datos históricos y estados ── */
+        div[data-testid="stAlert"],
+        section[data-testid="stMain"] div[data-testid="stAlert"] {{
+            background: var(--sapi-surface-card) !important;
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-left: 5px solid {t.RISK["medio"].surface} !important;
+            border-radius: var(--sapi-radius-card) !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
         }}
-        section.main div[data-testid="stVerticalBlockBorderWrapper"] {{
+        div[data-testid="stAlert"] [data-baseweb="notification"],
+        section[data-testid="stMain"] div[data-testid="stAlert"] [data-baseweb="notification"] {{
+            background: var(--sapi-surface-card) !important;
+            background-color: var(--sapi-surface-card) !important;
+            color: var(--sapi-text-primary) !important;
+            border: none !important;
+        }}
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"],
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] p,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] span,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] div,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] strong,
+        div[data-testid="stAlert"] [data-testid="stMarkdownContainer"] b,
+        div[data-testid="stAlert"] [data-baseweb="notification"] * {{
+            color: var(--sapi-text-primary) !important;
+        }}
+        div[data-testid="stAlert"] svg {{
+            color: {t.RISK["medio"].surface} !important;
+            fill: {t.RISK["medio"].surface} !important;
+        }}
+        section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"] {{
             background: var(--sapi-surface-card);
             border-color: var(--sapi-border-card) !important;
         }}
         button, div[data-baseweb="select"] > div, div[data-testid="stDateInput"] input {{
             border-radius: var(--sapi-radius-control) !important;
+        }}
+
+        /* ── Expansores (P0): contraste alto en encabezado, fondo de tarjeta y chevron visible ── */
+        [data-testid="stExpander"] {{
+            background: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-card) !important;
+            margin-bottom: 0.85rem !important;
+            overflow: hidden !important;
+        }}
+        [data-testid="stExpander"] > details {{
+            background: transparent !important;
+        }}
+        [data-testid="stExpander"] summary {{
+            background: var(--sapi-surface-muted) !important;
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+            font-weight: 700 !important;
+            padding: 0.75rem 1rem !important;
+            border-bottom: 1px solid var(--sapi-border-subtle) !important;
+            cursor: pointer !important;
+        }}
+        [data-testid="stExpander"] summary:hover {{
+            background: var(--sapi-surface-card) !important;
+            color: var(--sapi-accent) !important;
+        }}
+        [data-testid="stExpander"] summary p,
+        [data-testid="stExpander"] summary span {{
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+            font-weight: 700 !important;
+        }}
+        [data-testid="stExpander"] summary svg {{
+            color: var(--sapi-accent) !important;
+            fill: var(--sapi-accent) !important;
+            width: 1.15rem !important;
+            height: 1.15rem !important;
+        }}
+        [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+            padding: 1rem 1.15rem !important;
+            background: var(--sapi-surface-card) !important;
+            color: var(--sapi-text-primary) !important;
+            border-top: none !important;
+        }}
+        [data-testid="stExpander"] [data-testid="stExpanderDetails"] code {{
+            word-break: break-all !important;
+            overflow-wrap: break-word !important;
+            white-space: pre-wrap !important;
+        }}
+
+        /* ── Selectores y Dropdowns (P0): contraste consistente en input y menú flotante ── */
+        div[data-baseweb="select"] > div {{
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-primary) !important;
+            min-height: var(--sapi-touch-target) !important;
+            font-weight: 600 !important;
+        }}
+        div[data-baseweb="select"] * {{
+            color: var(--sapi-text-primary) !important;
+        }}
+        div[data-baseweb="select"] svg {{
+            color: var(--sapi-text-primary) !important;
+            fill: var(--sapi-text-primary) !important;
+        }}
+        div[data-baseweb="popover"],
+        ul[data-baseweb="menu"] {{
+            background-color: var(--sapi-surface-card) !important;
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+        }}
+        li[data-baseweb="menu-item"],
+        li[data-baseweb="menu-item"] * {{
+            background-color: var(--sapi-surface-card) !important;
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size) !important;
+        }}
+        li[data-baseweb="menu-item"]:hover,
+        li[data-baseweb="menu-item"]:hover *,
+        li[data-baseweb="menu-item"][aria-selected="true"],
+        li[data-baseweb="menu-item"][aria-selected="true"] * {{
+            background-color: var(--sapi-surface-muted) !important;
+            color: var(--sapi-accent) !important;
+            font-weight: 700 !important;
+        }}
+
+        /* ── Radio buttons y Checkboxes del panel principal (P0) ── */
+        section[data-testid="stMain"] div[data-testid="stRadio"],
+        section[data-testid="stMain"] div[data-testid="stRadio"] *,
+        [data-testid="stExpander"] div[data-testid="stRadio"],
+        [data-testid="stExpander"] div[data-testid="stRadio"] *,
+        section[data-testid="stMain"] div[data-testid="stRadio"] label,
+        section[data-testid="stMain"] div[data-testid="stRadio"] label p,
+        section[data-testid="stMain"] div[data-testid="stRadio"] label span,
+        section[data-testid="stMain"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+        section[data-testid="stMain"] div[data-testid="stCheckbox"] label,
+        section[data-testid="stMain"] div[data-testid="stCheckbox"] label p,
+        section[data-testid="stMain"] div[data-testid="stCheckbox"] label span {{
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-body-size);
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: var(--sapi-text-primary) !important;
+        }}
+
+        /* ── Etiquetas de widgets (P0): contraste nítido y legible en ambos temas ── */
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] label,
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stWidgetLabel"] span,
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"],
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"] p,
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"] span,
+        [data-testid="stExpander"] [data-testid="stWidgetLabel"],
+        [data-testid="stExpander"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stExpander"] [data-testid="stWidgetLabel"] span {{
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-small-size) !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: var(--sapi-text-primary) !important;
+        }}
+
+        /* ── Dataframes y Tablas (P0): coherencia visual entre temas ── */
+        div[data-testid="stDataFrame"] {{
+            border: 1px solid var(--sapi-border-card) !important;
+            border-radius: var(--sapi-radius-card) !important;
+            overflow: hidden !important;
+            background: var(--sapi-surface-card) !important;
+            {df_filter}
         }}
 
         /* ── Ops-center: hero, chips, var-cards, detalle ── */
@@ -555,11 +930,6 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         .sapi-chip--muted {{ opacity: 0.7; }}
         .sapi-chip--time {{ font-variant-numeric: tabular-nums; }}
 
-        section.main div[data-testid="stAlert"] {{
-            background: var(--sapi-surface-muted) !important;
-            border-left: 4px solid var(--sapi-accent) !important;
-            color: var(--sapi-text-primary) !important;
-        }}
         .sapi-corridor-verified {{
             text-align: right; font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
             text-transform: uppercase; color: var(--sapi-text-primary); opacity: 0.65;

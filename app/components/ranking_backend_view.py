@@ -56,6 +56,9 @@ _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
+_ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
+_ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
+_ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
 _CACHE_TTL_SECONDS = 300
 # Metadata opcional de sapi-ranking-v0. model_status y meteo_actual se toleran
 # si un payload los trae, pero no son campos del contrato y no se listan como
@@ -69,7 +72,7 @@ _CONTRACT_METADATA_FIELDS = tuple(
 # Solo se compara contra lo que el backend envíe; nunca se calcula aquí.
 FRESHNESS_HISTORICAL_LABEL = "DATOS HISTÓRICOS / DESACTUALIZADOS"
 NOT_PROVIDED = "no informado por el backend"
-NOT_IN_CONTRACT = "no disponible en la respuesta del backend"
+NOT_IN_CONTRACT = "Detalle FIRMS por celda no expuesto por API v0"
 FIXED_DISCLAIMER = (
     "El score corresponde a un ranking relativo exploratorio "
     "y no a una probabilidad calibrada de incendio."
@@ -242,13 +245,14 @@ def build_map(
             weight = 3.0
             fill_opacity = max(fill_opacity, 0.35)
 
-        elev_txt, slope_txt, _ = _topo_for(topo, c.cell_id)
+        elev_txt, slope_txt, is_covered = _topo_for(topo, c.cell_id)
+        topo_note = "" if is_covered else " (sin cobertura DEM)"
         tooltip = (
             f"<b>{_esc(c.cell_id)}</b><br>"
             f"Prioridad #{c.display_rank}<br>"
             f"Score {c.score:.6f}<br><br>"
-            f"Elevación {elev_txt} (ref.)<br>"
-            f"Pendiente {slope_txt} (ref.)<br>"
+            f"Elevación {elev_txt} (ref.){topo_note}<br>"
+            f"Pendiente {slope_txt} (ref.){topo_note}<br>"
             f"Historial FIRMS: {NOT_IN_CONTRACT}"
         )
         folium.Rectangle(
@@ -297,58 +301,154 @@ def _inject_css() -> None:
     st.markdown(
         """
         <style>
-        .sapi-v2-header { display:flex; flex-wrap:wrap; justify-content:space-between;
-            gap:1rem; align-items:flex-start; margin:0 0 0.6rem 0; }
-        .sapi-v2-title { font-size:1.65rem; font-weight:750; letter-spacing:-0.02em;
-            line-height:1.15; margin:0; }
-        .sapi-v2-sub { font-size:0.92rem; opacity:0.78; margin-top:0.2rem; max-width:36rem; }
-        .sapi-v2-status { display:flex; flex-wrap:wrap; gap:0.45rem; justify-content:flex-end; }
-        .sapi-v2-badge { display:inline-flex; align-items:center; padding:0.28rem 0.65rem;
-            border-radius:999px; font-size:0.68rem; font-weight:700; letter-spacing:0.06em;
-            text-transform:uppercase; border:1px solid rgba(127,127,127,0.35); }
-        .sapi-v2-badge--violet { background:#3b2a6d; border-color:#7c3aed; color:#ede9fe; }
-        .sapi-v2-badge--hist { background:#7f1d1d; border-color:#dc2626; color:#fee2e2; }
-        .sapi-v2-badge--rest { background:#0f3b2e; border-color:#10b981; color:#d1fae5; }
-        .sapi-v2-meta { margin-top:0.45rem; font-size:0.92rem; opacity:0.92;
-            text-align:right; line-height:1.5; }
-        .sapi-v2-kpi-row { display:grid; grid-template-columns:repeat(5, minmax(0, 1fr));
-            gap:0.55rem; margin:0.35rem 0 0.85rem 0; }
-        .sapi-v2-kpi { border:1px solid rgba(127,127,127,0.35); border-radius:10px;
-            padding:0.55rem 0.7rem; min-height:4.4rem; }
-        .sapi-v2-kpi__value { font-size:1.2rem; font-weight:750; letter-spacing:-0.02em;
-            line-height:1.1; }
-        .sapi-v2-kpi__value--na { font-size:0.82rem; font-weight:600; opacity:0.7; }
-        .sapi-v2-kpi__label { font-size:0.72rem; opacity:0.7; margin-top:0.25rem; font-weight:600; }
-        .sapi-v2-panel { border:1px solid rgba(127,127,127,0.35); border-radius:12px;
-            padding:0.85rem 0.95rem; margin-bottom:0.75rem; }
-        .sapi-v2-panel__h { font-size:0.7rem; font-weight:800; letter-spacing:0.1em;
-            text-transform:uppercase; opacity:0.65; margin:0 0 0.55rem 0; }
-        .sapi-v2-prio-num { font-size:2rem; font-weight:800; letter-spacing:-0.03em;
-            line-height:1; color:#f0a070; }
-        .sapi-v2-chip { display:inline-block; padding:0.22rem 0.5rem; margin:0.18rem 0.18rem 0 0;
-            border-radius:6px; border:1px solid rgba(127,127,127,0.45); font-size:0.78rem;
-            font-weight:650; font-variant-numeric:tabular-nums; }
-        .sapi-v2-kv { list-style:none; padding:0; margin:0; }
-        .sapi-v2-kv li { display:flex; justify-content:space-between; gap:0.75rem;
-            padding:0.28rem 0; border-bottom:1px solid rgba(127,127,127,0.2); font-size:0.84rem; }
-        .sapi-v2-kv li:last-child { border-bottom:none; }
-        .sapi-v2-kv span { opacity:0.65; }
-        .sapi-v2-legend { position:relative; z-index:2; margin:-0.35rem 0 0.5rem 0;
-            border:1px solid rgba(127,127,127,0.35); border-radius:10px; padding:0.55rem 0.75rem;
-            max-width:18rem; font-size:0.75rem; }
-        .sapi-v2-legend__title { font-weight:800; letter-spacing:0.08em; text-transform:uppercase;
-            font-size:0.68rem; opacity:0.7; margin-bottom:0.35rem; }
-        .sapi-v2-legend__row { display:flex; align-items:center; gap:0.45rem; margin:0.18rem 0; }
-        .sapi-v2-dot { width:10px; height:10px; border-radius:50%; display:inline-block;
-            border:1px solid rgba(127,127,127,0.5); }
-        .sapi-v2-disclaimer { font-size:0.75rem; opacity:0.72; margin:0.5rem 0 0 0; }
-        .sapi-v2-note { font-size:0.75rem; opacity:0.7; margin-top:0.35rem; }
+        .sapi-v2-header {
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            gap: 1.25rem; align-items: flex-start; margin: 0 0 1rem 0;
+            font-family: var(--sapi-font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+        }
+        .sapi-v2-title {
+            font-size: 2.1rem; font-weight: 850; letter-spacing: -0.03em;
+            line-height: 1.1; margin: 0; color: var(--sapi-text-primary);
+        }
+        .sapi-v2-sub {
+            font-size: 1.02rem; opacity: 0.88; margin-top: 0.35rem; max-width: 42rem;
+            color: var(--sapi-text-primary); font-weight: 500;
+        }
+        .sapi-v2-status {
+            display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: flex-end; align-items: center;
+        }
+        .sapi-v2-badge {
+            display: inline-flex; align-items: center; padding: 0.38rem 0.85rem;
+            border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em;
+            text-transform: uppercase; border: 1px solid rgba(127,127,127,0.35);
+        }
+        .sapi-v2-badge--violet { background: #3b2a6d; border-color: #8b5cf6; color: #ede9fe; box-shadow: 0 2px 6px rgba(139,92,246,0.25); }
+        .sapi-v2-badge--hist { background: #7f1d1d; border-color: #ef4444; color: #fee2e2; box-shadow: 0 2px 6px rgba(239,68,68,0.25); }
+        .sapi-v2-badge--rest { background: #064e3b; border-color: #10b981; color: #d1fae5; box-shadow: 0 2px 6px rgba(16,185,129,0.25); }
+        .sapi-v2-badge--postgis { background: #0c4a6e; border-color: #38bdf8; color: #e0f2fe; }
+        .sapi-v2-badge--model { background: #262626; border-color: #737373; color: #f5f5f5; }
+        
+        .sapi-v2-meta {
+            margin-top: 0.6rem; font-size: 0.95rem; opacity: 0.95;
+            text-align: right; line-height: 1.6; color: var(--sapi-text-primary);
+            font-variant-numeric: tabular-nums;
+        }
+        
+        .sapi-v2-kpi-row {
+            display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.65rem; margin: 0.4rem 0 0.65rem 0;
+        }
+        .sapi-v2-kpi {
+            background: var(--sapi-surface-card);
+            border: 1px solid var(--sapi-border-card);
+            border-radius: 10px;
+            padding: 0.65rem 0.85rem; min-height: 4.4rem;
+            display: flex; flex-direction: column; justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+            transition: transform 0.15s ease, border-color 0.15s ease;
+        }
+        .sapi-v2-kpi:hover {
+            border-color: var(--sapi-accent);
+        }
+        .sapi-v2-kpi__value {
+            font-size: 1.40rem; font-weight: 850; letter-spacing: -0.02em;
+            line-height: 1.15; font-variant-numeric: tabular-nums;
+            color: var(--sapi-text-primary);
+        }
+        .sapi-v2-kpi__value--na {
+            font-size: 0.85rem; font-weight: 600; opacity: 0.82;
+            color: var(--sapi-text-primary); font-style: italic;
+        }
+        .sapi-v2-kpi__label {
+            font-size: 0.78rem; opacity: 0.85; margin-top: 0.25rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: 0.04em;
+            color: var(--sapi-text-primary);
+        }
+        
+        .sapi-v2-panel {
+            background: var(--sapi-surface-card);
+            border: 1px solid var(--sapi-border-card);
+            border-radius: 10px;
+            padding: 0.85rem 1.05rem; margin-bottom: 0.75rem;
+            color: var(--sapi-text-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+        }
+        .sapi-v2-panel__h {
+            font-size: 0.80rem; font-weight: 850; letter-spacing: 0.09em;
+            text-transform: uppercase; color: var(--sapi-accent); margin: 0 0 0.45rem 0;
+            display: flex; align-items: center; gap: 0.45rem;
+        }
+        .sapi-v2-prio-num {
+            font-size: 2.05rem; font-weight: 900; letter-spacing: -0.04em;
+            line-height: 1; color: #f0a070;
+            text-shadow: 0 2px 8px rgba(240, 160, 112, 0.25);
+        }
+        .sapi-v2-chip {
+            display: inline-block; padding: 0.22rem 0.55rem; margin: 0.18rem 0.18rem 0 0;
+            border-radius: 5px; background: var(--sapi-surface-muted);
+            border: 1px solid var(--sapi-border-card); font-size: 0.85rem;
+            font-weight: 750; font-variant-numeric: tabular-nums;
+            color: var(--sapi-text-primary);
+        }
+        .sapi-v2-kv { list-style: none; padding: 0; margin: 0.35rem 0 0 0; }
+        .sapi-v2-kv li {
+            display: flex; justify-content: space-between; gap: 0.75rem;
+            padding: 0.32rem 0; border-bottom: 1px solid var(--sapi-border-subtle);
+            font-size: 0.90rem; color: var(--sapi-text-primary);
+        }
+        .sapi-v2-kv li:last-child { border-bottom: none; }
+        .sapi-v2-kv span { opacity: 0.75; font-weight: 550; }
+        .sapi-v2-kv b { font-weight: 750; }
+        
+        .sapi-v2-legend {
+            margin: 0.45rem 0 0.65rem 0;
+            background: var(--sapi-surface-card);
+            border: 1px solid var(--sapi-border-card);
+            border-radius: 10px; padding: 0.55rem 0.95rem;
+            color: var(--sapi-text-primary);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;
+        }
+        .sapi-v2-legend__header {
+            display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+        }
+        .sapi-v2-legend__title {
+            font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase;
+            font-size: 0.80rem; color: var(--sapi-accent); margin: 0;
+        }
+        .sapi-v2-legend__note {
+            font-size: 0.80rem; opacity: 0.72; font-style: italic;
+        }
+        .sapi-v2-legend__items {
+            display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+        }
+        .sapi-v2-legend__row {
+            display: flex; align-items: center; gap: 0.45rem;
+            font-weight: 650; font-size: 0.86rem;
+        }
+        .sapi-v2-dot {
+            width: 13px; height: 13px; border-radius: 50%; display: inline-block;
+            border: 2px solid rgba(255,255,255,0.45); flex-shrink: 0;
+        }
+        
+        .sapi-v2-disclaimer {
+            font-size: 0.88rem; opacity: 0.95; margin: 0.45rem 0 0.65rem 0;
+            padding: 0.65rem 1rem; border-radius: 8px;
+            background: var(--sapi-surface-muted);
+            border-left: 4px solid var(--sapi-accent);
+            color: var(--sapi-text-primary);
+            line-height: 1.45; font-weight: 550;
+        }
+        .sapi-v2-note {
+            font-size: 0.82rem; opacity: 0.82; margin-top: 0.35rem;
+            color: var(--sapi-text-primary); font-style: italic;
+        }
         @media (max-width:1100px) {
-            .sapi-v2-kpi-row { grid-template-columns:repeat(3, minmax(0, 1fr)); }
+            .sapi-v2-kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
         }
         @media (max-width:700px) {
-            .sapi-v2-kpi-row { grid-template-columns:repeat(2, minmax(0, 1fr)); }
-            .sapi-v2-meta { text-align:left; }
+            .sapi-v2-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .sapi-v2-meta { text-align: left; }
         }
         </style>
         """,
@@ -380,7 +480,7 @@ def _render_header(view: RankingView) -> None:
     st.markdown(
         '<div class="sapi-v2-header"><div>'
         '<div class="sapi-v2-title">S.A.P.I.</div>'
-        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios</div>'
+        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios · Defensa Académica Sprint 2</div>'
         "</div>"
         '<div class="sapi-v2-status">'
         '<span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>'
@@ -441,19 +541,28 @@ def _render_kpi_strip(view: RankingView) -> None:
     st.markdown(
         f'<div class="sapi-v2-kpi-row">{"".join(cards)}</div>', unsafe_allow_html=True
     )
+    if m is None:
+        st.caption(
+            "ℹ **Variables meteorológicas:** Procesadas por el Modelo D en inferencia (`temperatura`, `humedad`, `viento`). "
+            "El endpoint v0 proyecta el ranking relativo de celdas; la exposición de telemetría instantánea está catalogada como mejora aditiva para el contrato v1."
+        )
 
 
 def _render_disclaimer(view: RankingView) -> None:
     text = (
         view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
     )
-    st.markdown(
-        f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
-        unsafe_allow_html=True,
-    )
     if text and FIXED_DISCLAIMER not in text:
         st.markdown(
-            f'<p class="sapi-v2-disclaimer">{FIXED_DISCLAIMER}</p>',
+            f'<div class="sapi-v2-disclaimer">'
+            f'<div>{_esc(text)}</div>'
+            f'<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">{FIXED_DISCLAIMER}</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
             unsafe_allow_html=True,
         )
 
@@ -468,10 +577,13 @@ def _render_map_legend(group_by_score: dict[float, int]) -> None:
             f'{vis["label"]}</div>'
         )
     st.markdown(
-        '<div class="sapi-v2-legend"><div class="sapi-v2-legend__title">Prioridad relativa</div>'
-        f'{"".join(rows)}'
-        '<div style="margin-top:0.4rem;opacity:0.7;line-height:1.35">Basado en score relativo.'
-        "<br>No representa niveles oficiales de alerta.</div></div>",
+        '<div class="sapi-v2-legend">'
+        '<div class="sapi-v2-legend__header">'
+        '<div class="sapi-v2-legend__title">Prioridad relativa</div>'
+        '<div class="sapi-v2-legend__note">Score relativo (no representa alertas oficiales).</div>'
+        '</div>'
+        f'<div class="sapi-v2-legend__items">{"".join(rows)}</div>'
+        '</div>',
         unsafe_allow_html=True,
     )
 
@@ -531,7 +643,8 @@ def _render_selected_panel(
     topo = reference_topography() if topography is None else topography
     elev, slope, covered = _topo_for(topo, cell.cell_id)
     dem_note = (
-        '<div class="sapi-v2-note">Sin cobertura DEM de referencia en esta celda</div>'
+        '<div class="sapi-v2-note">Sin cobertura DEM de referencia en esta celda '
+        "(se conserva N/D, QA-04)</div>"
         if not covered
         else ""
     )
@@ -580,23 +693,111 @@ def _render_selected_panel(
     )
 
 
-def _render_ranking_expander(view: RankingView) -> None:
-    with st.expander("Ver ranking completo", expanded=False):
-        df = pd.DataFrame(
-            [
-                {
-                    "Prioridad": c.display_rank,
-                    "Celda": c.cell_id,
-                    "Score relativo": round(c.score, 6),
-                    "Empate": f"×{c.tie_group_size}" if c.tie_group_size > 1 else "—",
-                }
-                for c in view.cells
-            ]
+def _cell_num(cell_id: str) -> int:
+    """Extrae el número de celda ('VP-012' -> 12) para ordenación numérica."""
+    try:
+        return int(cell_id.split("-")[1])
+    except (IndexError, ValueError):
+        return 0
+
+
+def _prepare_ranking_display(
+    cells: tuple[RankingCell, ...],
+    order_mode: Any,
+    group_filter: Any,
+) -> tuple[pd.DataFrame, str]:
+    """Prepara el DataFrame y la leyenda explicativa para el ranking expandido.
+
+    Asegura:
+    - Conservación del contrato del backend (scores, display_rank y empates intactos).
+    - Visualización predeterminada por prioridad contractual.
+    - Orden numérico opcional por celda (VP-001 -> VP-050).
+    - Orden numérico de identificadores dentro de empates cuando se solicite.
+    - Filtro por grupo de prioridad relativa exploratoria.
+    """
+    group_map = _score_group_map(cells)
+
+    # 1. Filtro por grupo de prioridad relativa
+    filter_str = str(group_filter) if group_filter is not None else ""
+    if filter_str.startswith("Grupo "):
+        try:
+            target_group = int(filter_str.split()[1])
+            filtered_cells = [c for c in cells if group_map.get(c.score) == target_group]
+        except (IndexError, ValueError):
+            filtered_cells = list(cells)
+    else:
+        filtered_cells = list(cells)
+
+    # 2. Ordenación según el criterio seleccionado
+    order_str = str(order_mode) if order_mode is not None else ""
+    if order_str == _ORDER_CELL_ID:
+        display_cells = sorted(filtered_cells, key=lambda c: _cell_num(c.cell_id))
+        note = "Orden numérico ascendente por identificador de celda (VP-001 → VP-050)."
+    elif order_str == _ORDER_PRIORITY_TIES_BY_ID:
+        display_cells = sorted(
+            filtered_cells, key=lambda c: (c.display_rank, _cell_num(c.cell_id))
         )
-        st.dataframe(df, width="stretch", hide_index=True, height=320)
-        st.caption(
+        note = (
+            "Orden por prioridad relativa; identificadores ordenados numéricamente "
+            "dentro de cada grupo de empate."
+        )
+    else:
+        # Default: orden y empates contractuales directos del backend
+        display_cells = filtered_cells
+        note = (
             "Orden y empates tal como los emitió el backend: celdas con score idéntico "
             "comparten el mismo número de prioridad."
+        )
+
+    df = pd.DataFrame(
+        [
+            {
+                "Prioridad": c.display_rank,
+                "Celda": c.cell_id,
+                "Score relativo": round(c.score, 6),
+                "Empate": f"×{c.tie_group_size}" if c.tie_group_size > 1 else "—",
+                "Grupo": f"Grupo {group_map.get(c.score, 1)}",
+            }
+            for c in display_cells
+        ]
+    )
+    return df, note
+
+
+def _render_ranking_expander(view: RankingView) -> None:
+    with st.expander("Ver ranking completo", expanded=False):
+        order_mode = st.radio(
+            "Criterio de ordenación",
+            options=[
+                _ORDER_PRIORITY_OFFICIAL,
+                _ORDER_PRIORITY_TIES_BY_ID,
+                _ORDER_CELL_ID,
+            ],
+            horizontal=True,
+            key="ranking_v2_order",
+            help=(
+                "Cambia solo el orden de presentación en esta tabla. "
+                "No altera el ranking ni los scores emitidos por el backend."
+            ),
+        )
+
+        group_map = _score_group_map(view.cells)
+        available_groups = sorted(set(group_map.values()))
+        group_options = ["Todos los grupos (50 celdas)"] + [
+            f"Grupo {g}" for g in available_groups
+        ]
+        group_filter = st.selectbox(
+            "Filtrar por grupo de prioridad relativa",
+            options=group_options,
+            key="ranking_v2_group_filter",
+            help="Filtra la visualización por grupo relativo de score exploratorio.",
+        )
+
+        df, note = _prepare_ranking_display(view.cells, order_mode, group_filter)
+        st.dataframe(df, width="stretch", hide_index=True, height=340)
+        st.caption(
+            f"{note} Criterio exploratorio relativo del Modelo D "
+            "(no constituye alerta ni nivel oficial de riesgo)."
         )
 
 
@@ -607,58 +808,79 @@ def _render_tech_expander(view: RankingView) -> None:
         if view.station_available
         else NOT_PROVIDED
     )
-    lines = [
-        f"- **Origen del ranking:** backend Spring Boot, `GET {RANKING_PATH}` "
-        f"(obtenido {_iso_utc(view.fetched_at)}; cache de {_CACHE_TTL_SECONDS // 60} min)",
-        f"- **Schema:** `{view.schema_version}` · semántica `{view.score_semantics}` · "
-        f"validación científica: `{str(view.scientific_model_validation).lower()}`",
-        f"- **Modelo:** {view.model_version} — **{view.model_status or NOT_PROVIDED}**",
-        f"- **Inputs fingerprint:** `{view.inputs_fingerprint}`",
-        f"- **Forecast time:** {_iso_utc(view.forecast_time)}",
+    model_str = (
+        f"{view.model_version} ({view.model_status})"
+        if view.model_status
+        else f"{view.model_version}"
+    )
+    firms_detail = (
+        f"origen {view.firms_origin or NOT_PROVIDED} · cobertura hasta "
+        f"{view.firms_coverage_end.isoformat() if view.firms_coverage_end else NOT_PROVIDED}"
+        f" · lag {view.firms_lag_days if view.firms_lag_days is not None else NOT_PROVIDED}"
+        f" · estado {view.firms_status or NOT_PROVIDED}"
+        if view.firms_provenance_available
+        else NOT_PROVIDED
+    )
+    sections = [
         (
-            f"- **Ventana evaluada:** {_iso_utc(view.forecast_time)} → {_iso_utc(window_end)} "
-            f"(h={view.horizon_hours}h)"
-            if window_end is not None
-            else (
-                "- **Ventana evaluada:** ventana no representable"
-                if view.horizon_hours is not None
-                else f"- **Ventana evaluada:** horizonte {NOT_PROVIDED}"
+            "**Modelo y evaluación**\n"
+            f"- **Origen del ranking:** backend Spring Boot, `GET {RANKING_PATH}` "
+            f"(obtenido {_iso_utc(view.fetched_at)}; cache de {_CACHE_TTL_SECONDS // 60} min)\n"
+            f"- **Schema:** `{view.schema_version}` · semántica `{view.score_semantics}` · "
+            f"validación científica: `{str(view.scientific_model_validation).lower()}`\n"
+            f"- **Modelo:** {model_str}\n"
+            f"- **Inputs fingerprint:** `{view.inputs_fingerprint}`\n"
+            f"- **Forecast time:** {_iso_utc(view.forecast_time)}\n"
+            + (
+                f"- **Ventana evaluada:** {_iso_utc(view.forecast_time)} → {_iso_utc(window_end)} "
+                f"(h={view.horizon_hours}h)"
+                if window_end is not None
+                else (
+                    "- **Ventana evaluada:** ventana no representable"
+                    if view.horizon_hours is not None
+                    else f"- **Ventana evaluada:** horizonte {NOT_PROVIDED}"
+                )
             )
         ),
-        f"- **Estación DMC:** {station}",
         (
-            f"- **Weather timestamp usado:** {_iso_utc(view.weather_timestamp)}"
-            if view.weather_timestamp is not None
-            else f"- **Weather timestamp usado:** {NOT_PROVIDED}"
+            "**Procedencia y frescura de datos**\n"
+            f"- **Estación DMC:** {station}\n"
+            + (
+                f"- **Weather timestamp usado:** {_iso_utc(view.weather_timestamp)}\n"
+                if view.weather_timestamp is not None
+                else f"- **Weather timestamp usado:** {NOT_PROVIDED}\n"
+            )
+            + (
+                f"- **Antigüedad de la observación (al evaluar):** {view.age_hours:.1f} h — "
+                f"**{view.freshness}**\n"
+                if view.freshness_available
+                else f"- **Antigüedad / frescura de la observación:** {NOT_PROVIDED}\n"
+            )
+            + "- **Fuente de detecciones:** NASA FIRMS\n"
+            + f"- **Procedencia FIRMS:** {firms_detail}"
+            + (
+                "\n  *(Sincronía FIRMS evaluada respecto a fecha T; cumple umbral operacional ≤3 días)*"
+                if view.firms_provenance_available and view.firms_status == "FIRMS AL DÍA"
+                else ""
+            )
         ),
         (
-            f"- **Antigüedad de la observación (al evaluar):** {view.age_hours:.1f} h — "
-            f"**{view.freshness}**"
-            if view.freshness_available
-            else f"- **Antigüedad / frescura de la observación:** {NOT_PROVIDED}"
+            "**Trazabilidad y topografía**\n"
+            f"- **Topografía:** {REFERENCE_TOPOGRAPHY_LABEL}\n"
+            "- **Integración de contrato:** Detalle meteorológico y FIRMS desagregado por celda "
+            "no expuesto en el contrato `sapi-ranking-v0` (consolidación regional v0)."
         ),
-        "- **Fuente de detecciones:** NASA FIRMS",
-        (
-            "- **Procedencia FIRMS:** "
-            f"origen {view.firms_origin or NOT_PROVIDED} · cobertura hasta "
-            f"{view.firms_coverage_end.isoformat() if view.firms_coverage_end else NOT_PROVIDED}"
-            f" · lag {view.firms_lag_days if view.firms_lag_days is not None else NOT_PROVIDED}"
-            f" · estado {view.firms_status or NOT_PROVIDED}"
-            if view.firms_provenance_available
-            else f"- **Procedencia FIRMS:** {NOT_PROVIDED}"
-        ),
-        f"- **Topografía:** {REFERENCE_TOPOGRAPHY_LABEL}",
     ]
     missing = tuple(
         name for name in _CONTRACT_METADATA_FIELDS if getattr(view, name) is None
     )
     if missing:
-        lines.append(
+        sections.append(
             "- **Metadata opcional no informada por el backend:** "
             + ", ".join(f"`{name}`" for name in missing)
         )
     with st.expander("Información técnica y fuentes", expanded=False):
-        st.markdown("\n".join(lines))
+        st.markdown("\n\n".join(sections))
         st.caption(FIXED_DISCLAIMER)
 
 
@@ -692,7 +914,13 @@ def render_ranking_backend_dashboard() -> None:
         return
 
     _inject_css()
-    _render_header(view)
+    header_col, toggle_col = st.columns([8.8, 1.2], gap="small")
+    with header_col:
+        _render_header(view)
+    with toggle_col:
+        from app.components.controls import render_appearance_toggle
+
+        render_appearance_toggle()
     _render_freshness_state(view)
     _render_kpi_strip(view)
     _render_disclaimer(view)
@@ -701,16 +929,15 @@ def render_ranking_backend_dashboard() -> None:
     if st.session_state.get(_SESSION_SELECTED) not in cell_ids:
         st.session_state[_SESSION_SELECTED] = cell_ids[0]
 
-    map_col, side_col = st.columns([2.1, 1], gap="large")
+    map_col, side_col = st.columns([1.85, 1], gap="medium")
     with map_col:
         clicked = _render_map(view, selected_id=st.session_state.get(_SESSION_SELECTED))
         if clicked and clicked != st.session_state.get(_SESSION_SELECTED):
             st.session_state[_SESSION_SELECTED] = clicked
             st.rerun()
+        _render_tech_expander(view)
     with side_col:
         _render_priority_panel(view)
         selected = st.selectbox("Celda", options=cell_ids, key=_SESSION_SELECTED)
         _render_selected_panel(view, selected)
         _render_ranking_expander(view)
-
-    _render_tech_expander(view)
