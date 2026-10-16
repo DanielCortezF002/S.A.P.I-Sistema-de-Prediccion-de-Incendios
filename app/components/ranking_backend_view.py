@@ -471,8 +471,6 @@ def _render_header(view: RankingView) -> None:
         '<div class="sapi-v2-status">'
         '<span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>'
         '<span class="sapi-v2-badge sapi-v2-badge--rest">BACKEND REST</span>'
-        '<span class="sapi-v2-badge sapi-v2-badge--postgis">POSTGIS PERSISTED</span>'
-        '<span class="sapi-v2-badge sapi-v2-badge--model">HISTGRADIENTBOOST (MODELO D)</span>'
         f"{hist_badge}</div></div>"
         f'<div class="sapi-v2-meta">{date_line}<br>{window_line}<br>{station_line}<br>'
         f"Obtenido del backend: {_human_hm(view.fetched_at)} UTC</div>",
