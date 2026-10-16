@@ -539,6 +539,11 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             color: var(--sapi-text-primary) !important;
             border-top: none !important;
         }}
+        [data-testid="stExpander"] [data-testid="stExpanderDetails"] code {{
+            word-break: break-all !important;
+            overflow-wrap: break-word !important;
+            white-space: pre-wrap !important;
+        }}
 
         /* ── Selectores y Dropdowns (P0): contraste consistente en input y menú flotante ── */
         div[data-baseweb="select"] > div {{

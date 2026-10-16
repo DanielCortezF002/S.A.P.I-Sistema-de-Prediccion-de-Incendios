@@ -56,7 +56,7 @@ _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
-_ORDER_PRIORITY_OFFICIAL = "Prioridad relativa (oficial backend)"
+_ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
 _ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
 _ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
 _CACHE_TTL_SECONDS = 300
@@ -789,58 +789,79 @@ def _render_tech_expander(view: RankingView) -> None:
         if view.station_available
         else NOT_PROVIDED
     )
-    lines = [
-        f"- **Origen del ranking:** backend Spring Boot, `GET {RANKING_PATH}` "
-        f"(obtenido {_iso_utc(view.fetched_at)}; cache de {_CACHE_TTL_SECONDS // 60} min)",
-        f"- **Schema:** `{view.schema_version}` · semántica `{view.score_semantics}` · "
-        f"validación científica: `{str(view.scientific_model_validation).lower()}`",
-        f"- **Modelo:** {view.model_version} — **{view.model_status or NOT_PROVIDED}**",
-        f"- **Inputs fingerprint:** `{view.inputs_fingerprint}`",
-        f"- **Forecast time:** {_iso_utc(view.forecast_time)}",
+    model_str = (
+        f"{view.model_version} ({view.model_status})"
+        if view.model_status
+        else f"{view.model_version}"
+    )
+    firms_detail = (
+        f"origen {view.firms_origin or NOT_PROVIDED} · cobertura hasta "
+        f"{view.firms_coverage_end.isoformat() if view.firms_coverage_end else NOT_PROVIDED}"
+        f" · lag {view.firms_lag_days if view.firms_lag_days is not None else NOT_PROVIDED}"
+        f" · estado {view.firms_status or NOT_PROVIDED}"
+        if view.firms_provenance_available
+        else NOT_PROVIDED
+    )
+    sections = [
         (
-            f"- **Ventana evaluada:** {_iso_utc(view.forecast_time)} → {_iso_utc(window_end)} "
-            f"(h={view.horizon_hours}h)"
-            if window_end is not None
-            else (
-                "- **Ventana evaluada:** ventana no representable"
-                if view.horizon_hours is not None
-                else f"- **Ventana evaluada:** horizonte {NOT_PROVIDED}"
+            "**Modelo y evaluación**\n"
+            f"- **Origen del ranking:** backend Spring Boot, `GET {RANKING_PATH}` "
+            f"(obtenido {_iso_utc(view.fetched_at)}; cache de {_CACHE_TTL_SECONDS // 60} min)\n"
+            f"- **Schema:** `{view.schema_version}` · semántica `{view.score_semantics}` · "
+            f"validación científica: `{str(view.scientific_model_validation).lower()}`\n"
+            f"- **Modelo:** {model_str}\n"
+            f"- **Inputs fingerprint:** `{view.inputs_fingerprint}`\n"
+            f"- **Forecast time:** {_iso_utc(view.forecast_time)}\n"
+            + (
+                f"- **Ventana evaluada:** {_iso_utc(view.forecast_time)} → {_iso_utc(window_end)} "
+                f"(h={view.horizon_hours}h)"
+                if window_end is not None
+                else (
+                    "- **Ventana evaluada:** ventana no representable"
+                    if view.horizon_hours is not None
+                    else f"- **Ventana evaluada:** horizonte {NOT_PROVIDED}"
+                )
             )
         ),
-        f"- **Estación DMC:** {station}",
         (
-            f"- **Weather timestamp usado:** {_iso_utc(view.weather_timestamp)}"
-            if view.weather_timestamp is not None
-            else f"- **Weather timestamp usado:** {NOT_PROVIDED}"
+            "**Procedencia y frescura de datos**\n"
+            f"- **Estación DMC:** {station}\n"
+            + (
+                f"- **Weather timestamp usado:** {_iso_utc(view.weather_timestamp)}\n"
+                if view.weather_timestamp is not None
+                else f"- **Weather timestamp usado:** {NOT_PROVIDED}\n"
+            )
+            + (
+                f"- **Antigüedad de la observación (al evaluar):** {view.age_hours:.1f} h — "
+                f"**{view.freshness}**\n"
+                if view.freshness_available
+                else f"- **Antigüedad / frescura de la observación:** {NOT_PROVIDED}\n"
+            )
+            + "- **Fuente de detecciones:** NASA FIRMS\n"
+            + f"- **Procedencia FIRMS:** {firms_detail}"
+            + (
+                "\n  *(Sincronía FIRMS evaluada respecto a fecha T; cumple umbral operacional ≤3 días)*"
+                if view.firms_provenance_available and view.firms_status == "FIRMS AL DÍA"
+                else ""
+            )
         ),
         (
-            f"- **Antigüedad de la observación (al evaluar):** {view.age_hours:.1f} h — "
-            f"**{view.freshness}**"
-            if view.freshness_available
-            else f"- **Antigüedad / frescura de la observación:** {NOT_PROVIDED}"
+            "**Trazabilidad y topografía**\n"
+            f"- **Topografía:** {REFERENCE_TOPOGRAPHY_LABEL}\n"
+            "- **Integración de contrato:** Detalle meteorológico y FIRMS desagregado por celda "
+            "no expuesto en el contrato `sapi-ranking-v0` (consolidación regional v0)."
         ),
-        "- **Fuente de detecciones:** NASA FIRMS",
-        (
-            "- **Procedencia FIRMS:** "
-            f"origen {view.firms_origin or NOT_PROVIDED} · cobertura hasta "
-            f"{view.firms_coverage_end.isoformat() if view.firms_coverage_end else NOT_PROVIDED}"
-            f" · lag {view.firms_lag_days if view.firms_lag_days is not None else NOT_PROVIDED}"
-            f" · estado {view.firms_status or NOT_PROVIDED}"
-            if view.firms_provenance_available
-            else f"- **Procedencia FIRMS:** {NOT_PROVIDED}"
-        ),
-        f"- **Topografía:** {REFERENCE_TOPOGRAPHY_LABEL}",
     ]
     missing = tuple(
         name for name in _CONTRACT_METADATA_FIELDS if getattr(view, name) is None
     )
     if missing:
-        lines.append(
+        sections.append(
             "- **Metadata opcional no informada por el backend:** "
             + ", ".join(f"`{name}`" for name in missing)
         )
     with st.expander("Información técnica y fuentes", expanded=False):
-        st.markdown("\n".join(lines))
+        st.markdown("\n\n".join(sections))
         st.caption(FIXED_DISCLAIMER)
 
 
@@ -895,10 +916,9 @@ def render_ranking_backend_dashboard() -> None:
         if clicked and clicked != st.session_state.get(_SESSION_SELECTED):
             st.session_state[_SESSION_SELECTED] = clicked
             st.rerun()
+        _render_tech_expander(view)
     with side_col:
         _render_priority_panel(view)
         selected = st.selectbox("Celda", options=cell_ids, key=_SESSION_SELECTED)
         _render_selected_panel(view, selected)
         _render_ranking_expander(view)
-
-    _render_tech_expander(view)
