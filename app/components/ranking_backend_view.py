@@ -245,13 +245,14 @@ def build_map(
             weight = 3.0
             fill_opacity = max(fill_opacity, 0.35)
 
-        elev_txt, slope_txt, _ = _topo_for(topo, c.cell_id)
+        elev_txt, slope_txt, is_covered = _topo_for(topo, c.cell_id)
+        topo_note = "" if is_covered else " (sin cobertura DEM)"
         tooltip = (
             f"<b>{_esc(c.cell_id)}</b><br>"
             f"Prioridad #{c.display_rank}<br>"
             f"Score {c.score:.6f}<br><br>"
-            f"Elevación {elev_txt} (ref.)<br>"
-            f"Pendiente {slope_txt} (ref.)<br>"
+            f"Elevación {elev_txt} (ref.){topo_note}<br>"
+            f"Pendiente {slope_txt} (ref.){topo_note}<br>"
             f"Historial FIRMS: {NOT_IN_CONTRACT}"
         )
         folium.Rectangle(
@@ -335,31 +336,31 @@ def _inject_css() -> None:
         
         .sapi-v2-kpi-row {
             display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.75rem; margin: 0.5rem 0 0.85rem 0;
+            gap: 0.65rem; margin: 0.4rem 0 0.65rem 0;
         }
         .sapi-v2-kpi {
             background: var(--sapi-surface-card);
             border: 1px solid var(--sapi-border-card);
-            border-radius: 12px;
-            padding: 0.85rem 1rem; min-height: 5.2rem;
+            border-radius: 10px;
+            padding: 0.65rem 0.85rem; min-height: 4.4rem;
             display: flex; flex-direction: column; justify-content: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.14);
             transition: transform 0.15s ease, border-color 0.15s ease;
         }
         .sapi-v2-kpi:hover {
             border-color: var(--sapi-accent);
         }
         .sapi-v2-kpi__value {
-            font-size: 1.55rem; font-weight: 850; letter-spacing: -0.02em;
+            font-size: 1.40rem; font-weight: 850; letter-spacing: -0.02em;
             line-height: 1.15; font-variant-numeric: tabular-nums;
             color: var(--sapi-text-primary);
         }
         .sapi-v2-kpi__value--na {
-            font-size: 0.88rem; font-weight: 600; opacity: 0.82;
+            font-size: 0.85rem; font-weight: 600; opacity: 0.82;
             color: var(--sapi-text-primary); font-style: italic;
         }
         .sapi-v2-kpi__label {
-            font-size: 0.82rem; opacity: 0.85; margin-top: 0.35rem; font-weight: 700;
+            font-size: 0.78rem; opacity: 0.85; margin-top: 0.25rem; font-weight: 700;
             text-transform: uppercase; letter-spacing: 0.04em;
             color: var(--sapi-text-primary);
         }
@@ -367,69 +368,79 @@ def _inject_css() -> None:
         .sapi-v2-panel {
             background: var(--sapi-surface-card);
             border: 1px solid var(--sapi-border-card);
-            border-radius: 14px;
-            padding: 1.15rem 1.3rem; margin-bottom: 1rem;
+            border-radius: 10px;
+            padding: 0.85rem 1.05rem; margin-bottom: 0.75rem;
             color: var(--sapi-text-primary);
-            box-shadow: 0 3px 10px rgba(0,0,0,0.16);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.14);
         }
         .sapi-v2-panel__h {
-            font-size: 0.85rem; font-weight: 850; letter-spacing: 0.09em;
-            text-transform: uppercase; color: var(--sapi-accent); margin: 0 0 0.65rem 0;
+            font-size: 0.80rem; font-weight: 850; letter-spacing: 0.09em;
+            text-transform: uppercase; color: var(--sapi-accent); margin: 0 0 0.45rem 0;
             display: flex; align-items: center; gap: 0.45rem;
         }
         .sapi-v2-prio-num {
-            font-size: 2.35rem; font-weight: 900; letter-spacing: -0.04em;
+            font-size: 2.05rem; font-weight: 900; letter-spacing: -0.04em;
             line-height: 1; color: #f0a070;
             text-shadow: 0 2px 8px rgba(240, 160, 112, 0.25);
         }
         .sapi-v2-chip {
-            display: inline-block; padding: 0.32rem 0.65rem; margin: 0.22rem 0.22rem 0 0;
-            border-radius: 6px; background: var(--sapi-surface-muted);
-            border: 1px solid var(--sapi-border-card); font-size: 0.88rem;
+            display: inline-block; padding: 0.22rem 0.55rem; margin: 0.18rem 0.18rem 0 0;
+            border-radius: 5px; background: var(--sapi-surface-muted);
+            border: 1px solid var(--sapi-border-card); font-size: 0.85rem;
             font-weight: 750; font-variant-numeric: tabular-nums;
             color: var(--sapi-text-primary);
         }
-        .sapi-v2-kv { list-style: none; padding: 0; margin: 0.45rem 0 0 0; }
+        .sapi-v2-kv { list-style: none; padding: 0; margin: 0.35rem 0 0 0; }
         .sapi-v2-kv li {
-            display: flex; justify-content: space-between; gap: 0.85rem;
-            padding: 0.45rem 0; border-bottom: 1px solid var(--sapi-border-subtle);
-            font-size: 0.95rem; color: var(--sapi-text-primary);
+            display: flex; justify-content: space-between; gap: 0.75rem;
+            padding: 0.32rem 0; border-bottom: 1px solid var(--sapi-border-subtle);
+            font-size: 0.90rem; color: var(--sapi-text-primary);
         }
         .sapi-v2-kv li:last-child { border-bottom: none; }
         .sapi-v2-kv span { opacity: 0.75; font-weight: 550; }
         .sapi-v2-kv b { font-weight: 750; }
         
         .sapi-v2-legend {
-            position: relative; z-index: 2; margin: 0.5rem 0 0.75rem 0;
+            margin: 0.45rem 0 0.65rem 0;
             background: var(--sapi-surface-card);
             border: 1px solid var(--sapi-border-card);
-            border-radius: 12px; padding: 0.85rem 1.15rem;
-            max-width: 26rem; font-size: 0.88rem; color: var(--sapi-text-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.18);
+            border-radius: 10px; padding: 0.55rem 0.95rem;
+            color: var(--sapi-text-primary);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.14);
+            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;
+        }
+        .sapi-v2-legend__header {
+            display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
         }
         .sapi-v2-legend__title {
             font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase;
-            font-size: 0.82rem; color: var(--sapi-accent); margin-bottom: 0.55rem;
+            font-size: 0.80rem; color: var(--sapi-accent); margin: 0;
+        }
+        .sapi-v2-legend__note {
+            font-size: 0.80rem; opacity: 0.72; font-style: italic;
+        }
+        .sapi-v2-legend__items {
+            display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
         }
         .sapi-v2-legend__row {
-            display: flex; align-items: center; gap: 0.65rem; margin: 0.35rem 0;
-            font-weight: 650; font-size: 0.90rem;
+            display: flex; align-items: center; gap: 0.45rem;
+            font-weight: 650; font-size: 0.86rem;
         }
         .sapi-v2-dot {
-            width: 15px; height: 15px; border-radius: 50%; display: inline-block;
+            width: 13px; height: 13px; border-radius: 50%; display: inline-block;
             border: 2px solid rgba(255,255,255,0.45); flex-shrink: 0;
         }
         
         .sapi-v2-disclaimer {
-            font-size: 0.92rem; opacity: 0.95; margin: 0.65rem 0 0 0;
-            padding: 0.75rem 1.1rem; border-radius: 8px;
+            font-size: 0.88rem; opacity: 0.95; margin: 0.45rem 0 0.65rem 0;
+            padding: 0.65rem 1rem; border-radius: 8px;
             background: var(--sapi-surface-muted);
             border-left: 4px solid var(--sapi-accent);
             color: var(--sapi-text-primary);
             line-height: 1.45; font-weight: 550;
         }
         .sapi-v2-note {
-            font-size: 0.84rem; opacity: 0.82; margin-top: 0.45rem;
+            font-size: 0.82rem; opacity: 0.82; margin-top: 0.35rem;
             color: var(--sapi-text-primary); font-style: italic;
         }
         @media (max-width:1100px) {
@@ -541,13 +552,17 @@ def _render_disclaimer(view: RankingView) -> None:
     text = (
         view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
     )
-    st.markdown(
-        f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
-        unsafe_allow_html=True,
-    )
     if text and FIXED_DISCLAIMER not in text:
         st.markdown(
-            f'<p class="sapi-v2-disclaimer">{FIXED_DISCLAIMER}</p>',
+            f'<div class="sapi-v2-disclaimer">'
+            f'<div>{_esc(text)}</div>'
+            f'<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">{FIXED_DISCLAIMER}</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
             unsafe_allow_html=True,
         )
 
@@ -562,10 +577,13 @@ def _render_map_legend(group_by_score: dict[float, int]) -> None:
             f'{vis["label"]}</div>'
         )
     st.markdown(
-        '<div class="sapi-v2-legend"><div class="sapi-v2-legend__title">Prioridad relativa</div>'
-        f'{"".join(rows)}'
-        '<div style="margin-top:0.4rem;opacity:0.7;line-height:1.35">Basado en score relativo.'
-        "<br>No representa niveles oficiales de alerta.</div></div>",
+        '<div class="sapi-v2-legend">'
+        '<div class="sapi-v2-legend__header">'
+        '<div class="sapi-v2-legend__title">Prioridad relativa</div>'
+        '<div class="sapi-v2-legend__note">Score relativo (no representa alertas oficiales).</div>'
+        '</div>'
+        f'<div class="sapi-v2-legend__items">{"".join(rows)}</div>'
+        '</div>',
         unsafe_allow_html=True,
     )
 
@@ -625,7 +643,8 @@ def _render_selected_panel(
     topo = reference_topography() if topography is None else topography
     elev, slope, covered = _topo_for(topo, cell.cell_id)
     dem_note = (
-        '<div class="sapi-v2-note">Sin cobertura DEM de referencia en esta celda</div>'
+        '<div class="sapi-v2-note">Sin cobertura DEM de referencia en esta celda '
+        "(se conserva N/D, QA-04)</div>"
         if not covered
         else ""
     )
@@ -910,7 +929,7 @@ def render_ranking_backend_dashboard() -> None:
     if st.session_state.get(_SESSION_SELECTED) not in cell_ids:
         st.session_state[_SESSION_SELECTED] = cell_ids[0]
 
-    map_col, side_col = st.columns([2.1, 1], gap="large")
+    map_col, side_col = st.columns([1.85, 1], gap="medium")
     with map_col:
         clicked = _render_map(view, selected_id=st.session_state.get(_SESSION_SELECTED))
         if clicked and clicked != st.session_state.get(_SESSION_SELECTED):
