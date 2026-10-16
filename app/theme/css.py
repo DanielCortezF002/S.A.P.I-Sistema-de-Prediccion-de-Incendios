@@ -28,6 +28,17 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         if mode == t.APPEARANCE_CLARO
         else "filter: none !important;"
     )
+    is_claro = mode == t.APPEARANCE_CLARO
+    sidebar_bg = a.surface_muted if is_claro else t.SURFACE_SIDEBAR
+    sidebar_text = a.text_primary if is_claro else t.TEXT_ON_SIDEBAR
+    sidebar_text_muted = a.text_primary if is_claro else t.TEXT_ON_SIDEBAR_MUTED
+    sidebar_label = a.text_primary if is_claro else t.TEXT_ON_SIDEBAR_LABEL
+    sidebar_border = a.border_card if is_claro else t.SIDEBAR_RULE
+    sidebar_input_fill = a.surface_card if is_claro else t.SIDEBAR_INPUT_FILL
+    sidebar_input_border = a.border_card if is_claro else t.SIDEBAR_INPUT_BORDER
+    sidebar_btn_hover_bg = a.surface_card if is_claro else t.SIDEBAR_CODE_FILL
+    sidebar_btn_hover_border = a.accent if is_claro else t.TEXT_ON_SIDEBAR
+    sidebar_btn_hover_text = a.accent if is_claro else t.TEXT_ON_SIDEBAR
     return f"""
         <style>
         @import url('{t.FONT_IMPORT_URL}');
@@ -40,6 +51,16 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             --sapi-border-subtle: {a.border_subtle};
             --sapi-text-primary: {a.text_primary};
             --sapi-accent: {a.accent};
+            --sapi-surface-sidebar: {sidebar_bg};
+            --sapi-text-sidebar: {sidebar_text};
+            --sapi-text-sidebar-muted: {sidebar_text_muted};
+            --sapi-text-sidebar-label: {sidebar_label};
+            --sapi-border-sidebar: {sidebar_border};
+            --sapi-sidebar-input-bg: {sidebar_input_fill};
+            --sapi-sidebar-input-border: {sidebar_input_border};
+            --sapi-sidebar-btn-hover-bg: {sidebar_btn_hover_bg};
+            --sapi-sidebar-btn-hover-border: {sidebar_btn_hover_border};
+            --sapi-sidebar-btn-hover-text: {sidebar_btn_hover_text};
             --sapi-radius-control: {t.RADIUS_PX["control"]}px;
             --sapi-radius-card: {t.RADIUS_PX["card"]}px;
             --sapi-radius-banner: {t.RADIUS_PX["banner"]}px;
@@ -190,34 +211,88 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             color: {t.TEXT_ON_SIDEBAR} !important;
         }}
 
-        /* ── Sidebar: navy institucional ──
-           secondaryBackgroundColor del theme se dejó neutro porque afecta
-           también widgets fuera del sidebar; el navy va acotado acá. */
-        section[data-testid="stSidebar"] {{ background: {t.SURFACE_SIDEBAR}; }}
-        section[data-testid="stSidebar"] * {{ color: {t.TEXT_ON_SIDEBAR}; }}
+        /* ── Sidebar (P0): contraste y coherencia adaptativa claro / oscuro ── */
+        section[data-testid="stSidebar"] {{
+            background: var(--sapi-surface-sidebar) !important;
+            border-right: 1px solid var(--sapi-border-sidebar) !important;
+        }}
+        section[data-testid="stSidebar"] * {{
+            color: var(--sapi-text-sidebar);
+        }}
         section[data-testid="stSidebar"] [data-testid="stCaptionContainer"],
         section[data-testid="stSidebar"] small,
         section[data-testid="stSidebar"] .stCaption {{
-            color: {t.TEXT_ON_SIDEBAR_MUTED} !important;
+            color: var(--sapi-text-sidebar-muted) !important;
         }}
-        section[data-testid="stSidebar"] hr {{ border-color: {t.SIDEBAR_RULE}; }}
+        section[data-testid="stSidebar"] hr {{
+            border-color: var(--sapi-border-sidebar) !important;
+        }}
         section[data-testid="stSidebar"] div[data-testid="stMetricValue"] {{
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            color: var(--sapi-text-sidebar) !important;
         }}
         section[data-testid="stSidebar"] div[data-testid="stMetricLabel"] {{
-            color: {t.TEXT_ON_SIDEBAR_LABEL} !important;
+            color: var(--sapi-text-sidebar-label) !important;
         }}
         section[data-testid="stSidebar"] div[data-baseweb="select"] > div,
         section[data-testid="stSidebar"] input {{
-            background: {t.SIDEBAR_INPUT_FILL} !important;
-            border-color: {t.SIDEBAR_INPUT_BORDER} !important;
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            background: var(--sapi-sidebar-input-bg) !important;
+            border-color: var(--sapi-sidebar-input-border) !important;
+            color: var(--sapi-text-sidebar) !important;
         }}
-        /* Los <code> inline traen fondo claro propio; con el texto forzado a
-           blanco arriba quedaban blanco sobre claro. */
+        /* Los <code> inline traen fondo coherente en ambos temas */
         section[data-testid="stSidebar"] code {{
-            background: {t.SIDEBAR_CODE_FILL} !important;
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            background: var(--sapi-sidebar-btn-hover-bg) !important;
+            color: var(--sapi-text-sidebar) !important;
+        }}
+        /* Radio buttons y widgets en barra lateral */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label p,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label span,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"] span {{
+            color: var(--sapi-text-sidebar) !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover span {{
+            color: var(--sapi-accent) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [aria-disabled="true"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] [aria-disabled="true"] *,
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] label[data-disabled="true"] * {{
+            opacity: 0.55 !important;
+            cursor: not-allowed !important;
+        }}
+        /* Botón de barra lateral (p. ej. "Actualizar ranking") */
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button {{
+            background-color: var(--sapi-sidebar-input-bg) !important;
+            border: 1px solid var(--sapi-sidebar-input-border) !important;
+            border-radius: var(--sapi-radius-control) !important;
+            color: var(--sapi-text-sidebar) !important;
+            font-weight: 600 !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button p,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button span,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button div {{
+            color: var(--sapi-text-sidebar) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {{
+            background-color: var(--sapi-sidebar-btn-hover-bg) !important;
+            border-color: var(--sapi-sidebar-btn-hover-border) !important;
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover span,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover div {{
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:focus-visible {{
+            outline: 2px solid var(--sapi-accent) !important;
+            outline-offset: 2px !important;
+            border-color: var(--sapi-accent) !important;
         }}
 
         /* ── Control de barra lateral (P0): apertura (esquina superior izquierda) y cierre ── */
@@ -301,10 +376,10 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
 
         [data-testid="stSidebarCollapseButton"] button,
         [data-testid="stSidebarHeader"] button {{
-            background-color: {t.SIDEBAR_INPUT_FILL} !important;
-            border: 1px solid {t.SIDEBAR_INPUT_BORDER} !important;
+            background-color: var(--sapi-sidebar-input-bg) !important;
+            border: 1px solid var(--sapi-sidebar-input-border) !important;
             border-radius: var(--sapi-radius-control) !important;
-            color: {t.TEXT_ON_SIDEBAR} !important;
+            color: var(--sapi-text-sidebar) !important;
             min-width: 2.25rem !important;
             min-height: 2.25rem !important;
             padding: 0.25rem 0.45rem !important;
@@ -312,7 +387,8 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             align-items: center !important;
             justify-content: center !important;
             cursor: pointer !important;
-            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease !important;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12) !important;
+            transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
         }}
 
         [data-testid="stSidebarCollapseButton"] button svg,
@@ -321,20 +397,30 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         [data-testid="stSidebarHeader"] button svg,
         [data-testid="stSidebarHeader"] button span,
         [data-testid="stSidebarHeader"] button * {{
-            color: {t.TEXT_ON_SIDEBAR} !important;
-            fill: {t.TEXT_ON_SIDEBAR} !important;
+            color: var(--sapi-text-sidebar) !important;
+            fill: var(--sapi-text-sidebar) !important;
         }}
 
         [data-testid="stSidebarCollapseButton"] button:hover,
         [data-testid="stSidebarHeader"] button:hover {{
-            background-color: {t.SIDEBAR_CODE_FILL} !important;
-            border-color: {t.TEXT_ON_SIDEBAR} !important;
+            background-color: var(--sapi-sidebar-btn-hover-bg) !important;
+            border-color: var(--sapi-sidebar-btn-hover-border) !important;
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+        }}
+
+        [data-testid="stSidebarCollapseButton"] button:hover svg,
+        [data-testid="stSidebarCollapseButton"] button:hover *,
+        [data-testid="stSidebarHeader"] button:hover svg,
+        [data-testid="stSidebarHeader"] button:hover * {{
+            color: var(--sapi-sidebar-btn-hover-text) !important;
+            fill: var(--sapi-sidebar-btn-hover-text) !important;
         }}
 
         [data-testid="stSidebarCollapseButton"] button:focus-visible,
         [data-testid="stSidebarHeader"] button:focus-visible {{
-            outline: 2px solid {t.TEXT_ON_SIDEBAR} !important;
+            outline: 2px solid var(--sapi-accent) !important;
             outline-offset: 2px !important;
+            border-color: var(--sapi-accent) !important;
         }}
 
         /* En el sidebar angosto de un teléfono el dropdown de días cubre todo
@@ -479,17 +565,34 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             font-weight: 700 !important;
         }}
 
-        /* ── Radio buttons y Checkboxes (P0) ── */
-        div[data-testid="stRadio"] label,
-        div[data-testid="stRadio"] label p,
-        div[data-testid="stRadio"] label span,
-        div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
-        div[data-testid="stCheckbox"] label,
-        div[data-testid="stCheckbox"] label p,
-        div[data-testid="stCheckbox"] label span {{
+        /* ── Radio buttons y Checkboxes del panel principal (P0) ── */
+        section.main div[data-testid="stRadio"] label,
+        section.main div[data-testid="stRadio"] label p,
+        section.main div[data-testid="stRadio"] label span,
+        section.main div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+        section.main div[data-testid="stCheckbox"] label,
+        section.main div[data-testid="stCheckbox"] label p,
+        section.main div[data-testid="stCheckbox"] label span {{
             color: var(--sapi-text-primary) !important;
             font-size: var(--sapi-font-body-size) !important;
             font-weight: 600 !important;
+        }}
+
+        /* ── Etiquetas de widgets (P0): contraste nítido y legible en ambos temas ── */
+        [data-testid="stWidgetLabel"],
+        [data-testid="stWidgetLabel"] label,
+        [data-testid="stWidgetLabel"] p,
+        [data-testid="stWidgetLabel"] span,
+        section.main [data-testid="stWidgetLabel"],
+        section.main [data-testid="stWidgetLabel"] p,
+        section.main [data-testid="stWidgetLabel"] span,
+        [data-testid="stExpander"] [data-testid="stWidgetLabel"],
+        [data-testid="stExpander"] [data-testid="stWidgetLabel"] p,
+        [data-testid="stExpander"] [data-testid="stWidgetLabel"] span {{
+            color: var(--sapi-text-primary) !important;
+            font-size: var(--sapi-font-small-size) !important;
+            font-weight: 700 !important;
+            opacity: 1 !important;
         }}
 
         /* ── Dataframes y Tablas (P0): coherencia visual entre temas ── */

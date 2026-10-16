@@ -72,7 +72,7 @@ _CONTRACT_METADATA_FIELDS = tuple(
 # Solo se compara contra lo que el backend envíe; nunca se calcula aquí.
 FRESHNESS_HISTORICAL_LABEL = "DATOS HISTÓRICOS / DESACTUALIZADOS"
 NOT_PROVIDED = "no informado por el backend"
-NOT_IN_CONTRACT = "no disponible en la respuesta del backend"
+NOT_IN_CONTRACT = "Detalle FIRMS por celda no expuesto por API v0"
 FIXED_DISCLAIMER = (
     "El score corresponde a un ranking relativo exploratorio "
     "y no a una probabilidad calibrada de incendio."
