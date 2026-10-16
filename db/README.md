@@ -20,6 +20,7 @@ Docker Compose) se decide en SAPI-59/SAPI-60.
 | `V001__enable_postgis.sql` | Habilita PostGIS |
 | `V002__create_sapi_v2_schema.sql` | Tablas `celdas_geom`, `ejecuciones`, `predicciones_celda`, constraints e índices |
 | `V003__seed_celdas_geom.sql` | Las 50 celdas. **Generado** por `scripts/generate_celdas_geom_seed.py` desde `src/geo/grid.py::all_cells()`; no editar a mano |
+| `V004__add_firms_origin.sql` | Columna `firms_origin` en `ejecuciones` (SAPI F1, D1/D2/D10, Jira SAPI-43 #10134): CHECK de valores del contrato + `CHECK (firms_origin IS NOT NULL) NOT VALID` (fail-closed hacia adelante; filas anteriores a esta migración quedan legacy con `NULL`) |
 
 El esquema legacy de `docker/initdb/` (clasificado `LEGACY_ONLY`) no se modifica
 ni se reutiliza: sus tablas usan granularidad diaria, un campo con semántica de
@@ -45,6 +46,7 @@ erDiagram
         text score_semantics "relative_rank"
         boolean scientific_model_validation "siempre false"
         integer horizon_hours
+        text firms_origin "V004; NULL solo en filas legacy (D2-B: no se actualiza ni infiere)"
         timestamptz created_at
     }
     predicciones_celda {

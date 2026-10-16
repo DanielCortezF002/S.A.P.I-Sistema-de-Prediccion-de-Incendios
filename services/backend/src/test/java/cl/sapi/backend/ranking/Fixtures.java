@@ -39,6 +39,43 @@ final class Fixtures {
         return MAPPER.writeValueAsBytes(root);
     }
 
+    /**
+     * La respuesta real con {@code firms_origin=reproducibility} (SAPI F1, Jira #10134): el
+     * fixture protegido no lo trae (ver ml/README.md), pero es justo lo que
+     * {@code SAPI_REPRODUCIBILITY_MODE=1} habría producido para este {@code forecast_time}.
+     * Usar donde el test espera que el gate de procedencia autorice la persistencia.
+     */
+    static byte[] realRankingWithAllowedOrigin() {
+        return realRankingWith(root -> root.put("firms_origin", "reproducibility"));
+    }
+
+    /**
+     * Fingerprint sha256 con patrón repetido, deliberadamente distinguible de un hash real (los
+     * del fixture protegido tienen entropía de hash genuina). 64 caracteres hexadecimales
+     * válidos para {@code RankingResultValidator}, nunca un valor que pueda confundirse con
+     * procedencia histórica auténtica.
+     */
+    static final String SYNTHETIC_FINGERPRINT = "ab".repeat(32);
+
+    /** {@code forecast_time} claramente distinto del fixture histórico (2026-09-01). */
+    static final String SYNTHETIC_FORECAST_TIME = "2026-10-14T00:00:00Z";
+
+    /**
+     * La respuesta real con una identidad de negocio (clave natural
+     * {@code forecast_time}/{@code inputs_fingerprint}) inequívocamente sintética y
+     * {@code firms_origin} dado, para no presentar la clave del fixture histórico protegido
+     * como si fuera una ejecución CURRENT auténtica (hallazgo Astra, sección 4). Las 50 celdas
+     * y el resto de los campos contractuales se conservan sin cambios.
+     *
+     * @param firmsOrigin valor de {@code firms_origin} a fijar sobre la identidad sintética
+     */
+    static byte[] syntheticIdentityWithOrigin(String firmsOrigin) {
+        return realRankingWith(root -> root
+                .put("forecast_time", SYNTHETIC_FORECAST_TIME)
+                .put("inputs_fingerprint", SYNTHETIC_FINGERPRINT)
+                .put("firms_origin", firmsOrigin));
+    }
+
     /** El ejemplo sintético {@code RankingResultSynthetic} de ml-service.v0.yaml, como JSON. */
     @SuppressWarnings("unchecked")
     static byte[] contractSyntheticExample() {

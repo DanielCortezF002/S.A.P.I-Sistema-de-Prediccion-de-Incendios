@@ -145,7 +145,9 @@ class BackendError(Exception):
         self.kind = kind
         self.http_status = http_status
         self.error_type = (
-            error_type if isinstance(error_type, str) and error_type in KNOWN_ERROR_TYPES else None
+            error_type
+            if isinstance(error_type, str) and error_type in KNOWN_ERROR_TYPES
+            else None
         )
         self.detail = detail
         if kind == ERROR_KIND_HTTP_BACKEND:
@@ -243,7 +245,12 @@ class RankingView:
     def firms_provenance_available(self) -> bool:
         return any(
             getattr(self, name) is not None
-            for name in ("firms_origin", "firms_coverage_end", "firms_lag_days", "firms_status")
+            for name in (
+                "firms_origin",
+                "firms_coverage_end",
+                "firms_lag_days",
+                "firms_status",
+            )
         )
 
 
@@ -302,7 +309,9 @@ def _parse_optional_number(payload: Mapping[str, Any], field: str) -> Optional[f
     return float(value)
 
 
-def _parse_optional_int(payload: Mapping[str, Any], field: str, minimum: int) -> Optional[int]:
+def _parse_optional_int(
+    payload: Mapping[str, Any], field: str, minimum: int
+) -> Optional[int]:
     value = payload.get(field)
     if value is None:
         return None
@@ -333,7 +342,9 @@ def _parse_cells(raw_cells: Any) -> tuple[RankingCell, ...]:
     if not isinstance(raw_cells, list):
         raise _invalid("cells debe ser una lista")
     if len(raw_cells) != EXPECTED_CELL_COUNT:
-        raise _invalid(f"cells debe tener {EXPECTED_CELL_COUNT} celdas, llegaron {len(raw_cells)}")
+        raise _invalid(
+            f"cells debe tener {EXPECTED_CELL_COUNT} celdas, llegaron {len(raw_cells)}"
+        )
 
     cells: list[RankingCell] = []
     seen: set[str] = set()
@@ -370,7 +381,10 @@ def _parse_cells(raw_cells: Any) -> tuple[RankingCell, ...]:
         if not _is_int(display_rank) or not 1 <= display_rank <= EXPECTED_CELL_COUNT:
             raise _invalid(f"{cell_id}.display_rank inválido: {display_rank!r}")
         tie_group_size = raw["tie_group_size"]
-        if not _is_int(tie_group_size) or not 1 <= tie_group_size <= EXPECTED_CELL_COUNT:
+        if (
+            not _is_int(tie_group_size)
+            or not 1 <= tie_group_size <= EXPECTED_CELL_COUNT
+        ):
             raise _invalid(f"{cell_id}.tie_group_size inválido: {tie_group_size!r}")
         cells.append(
             RankingCell(
@@ -446,11 +460,15 @@ def parse_ranking(payload: Any, fetched_at: Optional[datetime] = None) -> Rankin
 
     weather_ts_raw = payload.get("weather_timestamp")
     weather_timestamp = (
-        _parse_datetime(weather_ts_raw, "weather_timestamp") if weather_ts_raw is not None else None
+        _parse_datetime(weather_ts_raw, "weather_timestamp")
+        if weather_ts_raw is not None
+        else None
     )
     coverage_raw = payload.get("firms_coverage_end")
     firms_coverage_end = (
-        _parse_date(coverage_raw, "firms_coverage_end") if coverage_raw is not None else None
+        _parse_date(coverage_raw, "firms_coverage_end")
+        if coverage_raw is not None
+        else None
     )
 
     return RankingView(
@@ -570,7 +588,9 @@ def _error_from_response(response: Any) -> BackendError:
     except _BodyTooLarge:
         return _http_error(status, None, "cuerpo de error descartado por tamaño")
     except requests.exceptions.RequestException as exc:
-        return _http_error(status, None, f"cuerpo de error ilegible ({type(exc).__name__})")
+        return _http_error(
+            status, None, f"cuerpo de error ilegible ({type(exc).__name__})"
+        )
     return _http_error(status, _error_type_from_body(body), "")
 
 
@@ -601,7 +621,9 @@ class BackendRankingClient:
         self._session = session or requests.Session()
 
     @classmethod
-    def from_env(cls, session: Optional[requests.Session] = None) -> "BackendRankingClient":
+    def from_env(
+        cls, session: Optional[requests.Session] = None
+    ) -> "BackendRankingClient":
         """Cliente con `SAPI_BACKEND_BASE_URL` y timeouts leídos del entorno."""
         connect_timeout, read_timeout = get_backend_timeouts()
         return cls(
@@ -644,7 +666,9 @@ class BackendRankingClient:
         except requests.exceptions.Timeout as exc:
             raise BackendError(ERROR_KIND_TIMEOUT, detail=type(exc).__name__) from exc
         except requests.exceptions.RequestException as exc:
-            raise BackendError(ERROR_KIND_CONNECTION, detail=type(exc).__name__) from exc
+            raise BackendError(
+                ERROR_KIND_CONNECTION, detail=type(exc).__name__
+            ) from exc
 
         fetched_at = datetime.now(timezone.utc)
         try:
@@ -655,9 +679,13 @@ class BackendRankingClient:
             except _BodyTooLarge as exc:
                 raise _invalid(str(exc)) from exc
             except requests.exceptions.Timeout as exc:
-                raise BackendError(ERROR_KIND_TIMEOUT, detail=type(exc).__name__) from exc
+                raise BackendError(
+                    ERROR_KIND_TIMEOUT, detail=type(exc).__name__
+                ) from exc
             except requests.exceptions.RequestException as exc:
-                raise BackendError(ERROR_KIND_CONNECTION, detail=type(exc).__name__) from exc
+                raise BackendError(
+                    ERROR_KIND_CONNECTION, detail=type(exc).__name__
+                ) from exc
         finally:
             # Libera la conexión en todos los caminos, incluido el aborto por
             # tamaño: lo que no se leyó no se lee nunca.

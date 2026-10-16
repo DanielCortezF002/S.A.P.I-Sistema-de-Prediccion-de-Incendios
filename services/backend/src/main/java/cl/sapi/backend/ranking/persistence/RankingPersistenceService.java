@@ -31,9 +31,11 @@ import tools.jackson.databind.JsonNode;
 public class RankingPersistenceService {
 
     private final RankingRepository repository;
+    private final FirmsOriginPolicy firmsOriginPolicy;
 
-    public RankingPersistenceService(RankingRepository repository) {
+    public RankingPersistenceService(RankingRepository repository, FirmsOriginPolicy firmsOriginPolicy) {
         this.repository = repository;
+        this.firmsOriginPolicy = firmsOriginPolicy;
     }
 
     /**
@@ -61,12 +63,24 @@ public class RankingPersistenceService {
         String scoreSemantics = ranking.get("score_semantics").stringValue();
         boolean scientificValidation = ranking.get("scientific_model_validation").booleanValue();
         Integer horizonHours = horizonHours(ranking);
+        String firmsOrigin = firmsOrigin(ranking);
+        // A3 completo (Astra P1-01): el mismo bean de política se consulta aquí también, antes
+        // de tocar el repositorio -- no solo en RankingService. Una llamada directa a persist()
+        // (bypaseando el gate HTTP) con un origen ausente o fuera de la política efectiva
+        // (p. ej. "baseline"/"reproducibility" cuando la política vigente es solo "current")
+        // se rechaza igual, sin inserciones parciales.
+        if (!firmsOriginPolicy.isAllowed(firmsOrigin)) {
+            throw new PersistencePolicyRejectedException(
+                    "firms_origin " + (firmsOrigin == null ? "ausente" : "\"" + firmsOrigin + "\"")
+                            + " no autorizado por la política efectiva de persistencia; rechazado antes de "
+                            + "acceder al repositorio (A3)");
+        }
         List<CellPredictionRow> cells = extractCells(ranking.get("cells"));
 
         try {
             Optional<Long> inserted = repository.insertExecution(
                     forecastTime, modelVersion, fingerprint, schemaVersion,
-                    scoreSemantics, scientificValidation, horizonHours);
+                    scoreSemantics, scientificValidation, horizonHours, firmsOrigin);
             long executionId;
             if (inserted.isPresent()) {
                 executionId = inserted.get();
@@ -79,9 +93,16 @@ public class RankingPersistenceService {
                 ExecutionRecord stored = repository.findExecutionById(executionId)
                         .orElseThrow(() -> new RankingPersistenceException(
                                 "ejecución existente no legible tras conflicto de clave natural"));
+                if (stored.firmsOrigin() == null) {
+                    // D2-B (Jira #10134): fila legacy (anterior a V004). El replay se rechaza
+                    // tal cual; nunca se actualiza, infiere ni borra.
+                    throw new PersistencePolicyRejectedException(
+                            "replay contra ejecución " + executionId
+                                    + " con firms_origin legacy (NULL); rechazado por política D2-B");
+                }
                 assertSameExecutionMetadata(
                         stored, forecastTime, modelVersion, fingerprint, schemaVersion,
-                        scoreSemantics, scientificValidation, horizonHours);
+                        scoreSemantics, scientificValidation, horizonHours, firmsOrigin);
             }
 
             int existing = repository.countPredictions(executionId);
@@ -159,14 +180,16 @@ public class RankingPersistenceService {
             String schemaVersion,
             String scoreSemantics,
             boolean scientificValidation,
-            @Nullable Integer horizonHours) {
+            @Nullable Integer horizonHours,
+            @Nullable String firmsOrigin) {
         boolean same = stored.forecastTime().toInstant().equals(forecastTime.toInstant())
                 && stored.modelVersion().equals(modelVersion)
                 && stored.inputsFingerprint().equals(fingerprint)
                 && stored.schemaVersion().equals(schemaVersion)
                 && stored.scoreSemantics().equals(scoreSemantics)
                 && stored.scientificModelValidation() == scientificValidation
-                && Objects.equals(stored.horizonHours(), horizonHours);
+                && Objects.equals(stored.horizonHours(), horizonHours)
+                && Objects.equals(stored.firmsOrigin(), firmsOrigin);
         if (!same) {
             throw new RankingPersistenceException(
                     "idempotencia: metadata de ejecución divergente; no se sobrescribe");
@@ -222,6 +245,16 @@ public class RankingPersistenceService {
     }
 
     /**
+     * Lee {@code firms_origin} tal cual llega, sin inferirlo (IA-P1-01); null si está ausente
+     * o es JSON null. La validación de que esté en el contrato/política corre antes, en
+     * {@code RankingResultValidator} y el gate de {@code RankingService}.
+     */
+    static @Nullable String firmsOrigin(JsonNode ranking) {
+        JsonNode node = ranking.get("firms_origin");
+        return node == null || node.isNull() ? null : node.stringValue();
+    }
+
+    /**
      * Lee {@code horizon_hours} como {@code Integer} positivo exacto, o null si ausente.
      * Rechaza valores que no caben en {@code int} (sin truncar con {@code intValue()}).
      */
@@ -244,7 +277,7 @@ public class RankingPersistenceService {
     private static final class NoOpRankingPersistenceService extends RankingPersistenceService {
 
         private NoOpRankingPersistenceService() {
-            super(null);
+            super(null, null);
         }
 
         @Override

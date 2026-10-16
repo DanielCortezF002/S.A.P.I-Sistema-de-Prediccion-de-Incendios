@@ -17,7 +17,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 import services.ml_api.main as ml_api
-from src.inference.prototype_service import PrototypeUnavailableError, classify_freshness
+from src.inference.prototype_service import (
+    PrototypeUnavailableError,
+    classify_freshness,
+)
 from src.output.synthetic import synthetic_result
 
 MODEL_D_FINGERPRINT = "33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff"
@@ -131,7 +134,9 @@ def test_predict_normalizes_forecast_time_to_utc(reproducible):
     chile = client.post("/predict", json={"forecast_time": "2026-08-31T21:00:00-03:00"})
     assert utc.status_code == chile.status_code == 200
     assert utc.json()["inputs_fingerprint"] == chile.json()["inputs_fingerprint"]
-    assert pd.Timestamp(chile.json()["forecast_time"]) == pd.Timestamp("2026-09-01T00:00Z")
+    assert pd.Timestamp(chile.json()["forecast_time"]) == pd.Timestamp(
+        "2026-09-01T00:00Z"
+    )
 
 
 def test_predict_future_forecast_time_is_503(reproducible):
@@ -141,7 +146,9 @@ def test_predict_future_forecast_time_is_503(reproducible):
 
 @pytest.mark.parametrize("year", ["0001", "9999"])
 def test_predict_extreme_years_never_500(reproducible, year):
-    response = client.post("/predict", json={"forecast_time": f"{year}-01-01T00:00:00Z"})
+    response = client.post(
+        "/predict", json={"forecast_time": f"{year}-01-01T00:00:00Z"}
+    )
     assert response.status_code in (422, 503)
     assert response.json()["status"] == "error"
 
@@ -200,7 +207,9 @@ def test_result_violating_contract_is_500_never_200(monkeypatch):
 
 
 def test_valid_synthetic_result_is_serialized_per_contract(monkeypatch):
-    monkeypatch.setattr(ml_api, "score_current_grid", lambda **_kwargs: synthetic_result())
+    monkeypatch.setattr(
+        ml_api, "score_current_grid", lambda **_kwargs: synthetic_result()
+    )
     body = client.post("/predict", json={}).json()
     assert set(body) == RANKING_KEYS | OPTIONAL_METADATA_KEYS
     assert [c["display_rank"] for c in body["cells"][:3]] == [1, 1, 3]

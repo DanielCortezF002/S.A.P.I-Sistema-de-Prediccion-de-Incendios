@@ -254,6 +254,7 @@ declarada aquí.
 | SAPI-43.CA5 | Evidencia de que no se usó `demo_seed` ni `run_daily_pipeline` legacy | — | Logs y test de arquitectura | idem |
 | SAPI-43.CA6 | Repetir la corrida con los mismos insumos es idempotente (no duplica) | RN-07 | Segunda corrida: 0 ejecuciones nuevas | idem |
 | SAPI-43.CA7 | Se mantiene `scientific_model_validation=false` (score = ranking relativo, no probabilidad calibrada) | RN-01 | CHECK en V002 y contrato | idem |
+| SAPI-43.CA8 | La corrida operacional nunca persiste con `firms_origin` ausente o distinto de `current`; el overlay operacional fija `sapi.persistence.allowed-firms-origins=current` (D1/D2/D5/D10, Jira SAPI-43 #10134) | RN-11 | `RankingHttpToPostgresIT` (B1: rechazo de `baseline`/`reproducibility`/ausente con política `current`, control sintético `current` → 1 ejecución + 50 predicciones); `test_f1_operational_overlay_pins_the_persistence_policy_to_current_only`; E2E real con `docker-compose.operational.yml` (14/10/2026): backend en modo operacional rechaza (500, cero escrituras) la respuesta real del ML en `reproducibility` | `services/backend/src/test/java/.../RankingHttpToPostgresIT.java`; `artifacts/hito2/f1/<fecha>/` |
 
 **Dependencia humana:** CA1 requiere ejecutar SAPI-71 Attempt 2 (`NOT
 STARTED`, `docs/ops/FIRST-CONTROLLED-REFRESH.md:5`), con autorización
@@ -276,6 +277,7 @@ como corrida diaria real.
 | RN-08 | Entrada mínima: el cliente solo envía `forecast_time` ISO 8601 con zona horaria; las features se resuelven en el servidor | `services/ml_api/main.py:73-85` (`extra="forbid"` L76) |
 | RN-09 | Nunca se responde 200 con un resultado inválido; los errores son genéricos y no exponen rutas internas | `services/ml_api/main.py:58-70`, `221-232`; backend: `RankingService` y `RankingError` (SAPI-57) |
 | RN-10 | Las 50 filas de una ejecución se escriben juntas | Aún no se aplica: V002 L79 lo delega a SAPI-59 |
+| RN-11 | `firms_origin` es procedencia, no se infiere desde `inputs_fingerprint`; una ejecución nunca se persiste con origen ausente o no autorizado por `sapi.persistence.allowed-firms-origins` | V004 (`firms_origin`, CHECK de valores y `NOT NULL NOT VALID`); backend: `FirmsOriginPolicy` (gate A3) y `RankingService` (SAPI F1, D1/D2/D10, Jira #10134); SAPI-43.CA8 |
 
 ## 5. Dependencias (verificadas en el código, plan aprobado 2026-10-08)
 

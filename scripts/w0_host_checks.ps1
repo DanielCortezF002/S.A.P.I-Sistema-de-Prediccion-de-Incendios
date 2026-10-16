@@ -345,6 +345,13 @@ print(json.dumps({
 }
 
 # --- container-smoke-backend (W0.3) ------------------------------------------
+# D29: /health (HealthController) deliberately never queries the DB, but Flyway
+# runs before any controller can serve traffic -- without a reachable Postgres
+# the Spring context aborts before /health ever binds, so the only honest smoke
+# test is to give the backend a REAL disposable PostGIS, on its own isolated
+# network/hostname (never localhost), Flyway and persistence left ENABLED
+# exactly as in production. A second, explicit negative run (no Postgres)
+# proves the harness fails closed instead of reporting a false PASS.
 function Check-BackendContainer($r, [string]$log, [string]$short) {
     if (-not (Docker-Ready $log)) { Expect $r "docker" "running" "unavailable" $false; return }
     $image = "sapi-w0-backend:$short"
@@ -352,31 +359,94 @@ function Check-BackendContainer($r, [string]$log, [string]$short) {
     Expect $r "image_build" "exit 0" ("exit " + $build.code) ($build.code -eq 0)
     if ($build.code -ne 0) { return }
 
-    $name = "sapi-w0-backend-$rand"
-    $port = Get-FreePort
-    try {
-        $run = Invoke-Native $log "docker" @("run", "-d", "--name", $name, "-p", "127.0.0.1:${port}:8080", $image)
-        Expect $r "container_start" "exit 0" ("exit " + $run.code) ($run.code -eq 0)
-        if ($run.code -ne 0) { return }
-        $body = $null
-        $code = $null
-        for ($i = 0; $i -lt 60; $i++) {
+    $net = "sapi-w0-net-bk-$rand"
+    $pg = "sapi-w0-pg-bk-$rand"
+    $db = "sapiw0bk"
+    $dbUser = "sapiw0bk"
+    $dbPassword = "sapi-w0-backend-local-test"
+    $migrations = (Resolve-Path (Join-Path $repo "db/migration")).Path
+
+    function Start-BackendContainer([string]$ContainerName, [string]$DatasourceUrl) {
+        $envArgs = @(
+            "-e", "SPRING_DATASOURCE_URL=$DatasourceUrl",
+            "-e", "SPRING_DATASOURCE_USERNAME=$dbUser",
+            "-e", "SPRING_DATASOURCE_PASSWORD=$dbPassword",
+            "-e", "SAPI_PERSISTENCE_ENABLED=true",
+            "-e", "SAPI_FLYWAY_LOCATIONS=filesystem:/app/db/migration",
+            "-e", "SPRING_FLYWAY_FAILONMISSINGLOCATIONS=true"
+        )
+        $port = Get-FreePort
+        $runArgs = @("run", "-d", "--name", $ContainerName, "--network", $net,
+            "-v", "${migrations}:/app/db/migration:ro",
+            "-p", "127.0.0.1:${port}:8080") + $envArgs + @($image)
+        $run = Invoke-Native $log "docker" $runArgs
+        return @{ run = $run; port = $port }
+    }
+
+    function Wait-Health([int]$Port, [int]$TimeoutIterations) {
+        $body = $null; $code = $null
+        for ($i = 0; $i -lt $TimeoutIterations; $i++) {
             try {
-                $resp = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$port/health" -TimeoutSec 5
+                $resp = Invoke-WebRequest -UseBasicParsing -Uri "http://127.0.0.1:$Port/health" -TimeoutSec 5
                 $code = [int]$resp.StatusCode
                 $body = $resp.Content
                 if ($code -eq 200) { break }
             } catch { Start-Sleep -Seconds 2 }
         }
-        Add-Log $log ("GET http://127.0.0.1:$port/health -> " + $code + " " + $body)
         $status = $null
         try { $status = ($body | ConvertFrom-Json).status } catch { }
-        Expect $r "health" "200 {""status"":""UP""}" ("" + $code + " " + $body) ($code -eq 200 -and $status -eq "UP")
-        $uid = Invoke-Native $log "docker" @("exec", $name, "id", "-u")
-        Expect $r "container_uid" "10001" $uid.out.Trim() ($uid.out.Trim() -eq "10001")
-        Invoke-Native $log "docker" @("logs", "--tail", "40", $name) | Out-Null
-    } finally {
+        return @{ code = $code; body = $body; status = $status }
+    }
+
+    try {
+        $n = Invoke-Native $log "docker" @("network", "create", $net)
+        Expect $r "network" "created" ("exit " + $n.code) ($n.code -eq 0)
+        if ($n.code -ne 0) { return }
+
+        $pgRun = Invoke-Native $log "docker" @(
+            "run", "-d", "--name", $pg, "--network", $net, "--tmpfs", "/var/lib/postgresql/data",
+            "-e", "POSTGRES_USER=$dbUser", "-e", "POSTGRES_PASSWORD=$dbPassword", "-e", "POSTGRES_DB=$db", $PostgisImage)
+        Expect $r "postgis_start" "exit 0" ("exit " + $pgRun.code) ($pgRun.code -eq 0)
+        if ($pgRun.code -ne 0) { return }
+        $ready = $false
+        for ($i = 0; $i -lt 60 -and -not $ready; $i++) {
+            Start-Sleep -Seconds 1
+            $isReady = Invoke-Native $log "docker" @("exec", $pg, "pg_isready", "-h", "127.0.0.1", "-U", $dbUser, "-d", $db)
+            if ($isReady.code -eq 0) { $ready = $true }
+        }
+        Expect $r "postgis_ready" $true $ready $ready
+        if (-not $ready) { return }
+
+        # --- Positive run: real disposable Postgres on its own Docker hostname ---
+        $name = "sapi-w0-backend-$rand"
+        $started = Start-BackendContainer $name "jdbc:postgresql://${pg}:5432/$db"
+        Expect $r "container_start" "exit 0" ("exit " + $started.run.code) ($started.run.code -eq 0)
+        if ($started.run.code -eq 0) {
+            $h = Wait-Health $started.port 60
+            Add-Log $log ("GET http://127.0.0.1:$($started.port)/health -> " + $h.code + " " + $h.body)
+            Expect $r "health" "200 {""status"":""UP""}" ("" + $h.code + " " + $h.body) ($h.code -eq 200 -and $h.status -eq "UP")
+            $uid = Invoke-Native $log "docker" @("exec", $name, "id", "-u")
+            Expect $r "container_uid" "10001" $uid.out.Trim() ($uid.out.Trim() -eq "10001")
+            Invoke-Native $log "docker" @("logs", "--tail", "40", $name) | Out-Null
+        }
         Remove-Container $log $name
+
+        # --- Negative run (fail-closed): same image, unreachable Postgres host ---
+        # Must NOT report health=200/UP; a PASS here would be a false positive.
+        $negName = "sapi-w0-backend-neg-$rand"
+        $negStarted = Start-BackendContainer $negName "jdbc:postgresql://sapi-w0-pg-unreachable-${rand}:5432/$db"
+        if ($negStarted.run.code -eq 0) {
+            $hNeg = Wait-Health $negStarted.port 15
+            Add-Log $log ("[negative] GET http://127.0.0.1:$($negStarted.port)/health -> " + $hNeg.code + " " + $hNeg.body)
+            $negOk = -not ($hNeg.code -eq 200 -and $hNeg.status -eq "UP")
+            Expect $r "negative_no_db_fails_closed" "no 200 UP (sin Postgres alcanzable)" ("" + $hNeg.code + " " + $hNeg.body) $negOk
+        } else {
+            Expect $r "negative_no_db_fails_closed" "no 200 UP (sin Postgres alcanzable)" ("container_start exit " + $negStarted.run.code) $true
+        }
+        Remove-Container $log $negName
+    } finally {
+        Remove-Container $log $pg
+        Invoke-Native $log "docker" @("network", "rm", $net) | Out-Null
     }
 }
 

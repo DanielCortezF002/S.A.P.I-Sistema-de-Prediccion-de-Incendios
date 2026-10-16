@@ -584,9 +584,9 @@ def _month_records(paths: DmcPaths, entry: dict) -> tuple[dict, list[dict]]:
 
 
 def _publish(paths: DmcPaths, pointer: dict, event: str, **extra: Any) -> None:
-    atomic_write_json(paths.pointer, pointer)
     record = {"event": event, "at": _utcnow().isoformat(), **extra, **pointer}
     append_jsonl(paths.history, record)
+    atomic_write_json(paths.pointer, pointer)
 
 
 # --- Refresco ------------------------------------------------------------------

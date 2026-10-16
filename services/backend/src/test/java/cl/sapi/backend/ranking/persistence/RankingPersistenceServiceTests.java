@@ -47,10 +47,14 @@ class RankingPersistenceServiceTests {
 
     @BeforeEach
     void setUp() {
-        service = new RankingPersistenceService(repository);
+        service = new RankingPersistenceService(repository, policyAllowing("current", "reproducibility"));
         RankingResultValidator.Validation validation = RankingResultValidator.validate(realRankingBytes());
         assertThat(validation.violation()).isEmpty();
-        ranking = validation.ranking();
+        // El fixture protegido (predict-reproducible-2026-09-01.json) no trae firms_origin;
+        // estos tests ejercen RankingPersistenceService ya "pasado" el gate de RankingService
+        // (F1), así que se le agrega aquí en memoria -- "reproducibility" porque es exactamente
+        // lo que SAPI_REPRODUCIBILITY_MODE=1 habría producido para este forecast_time.
+        ranking = ((ObjectNode) validation.ranking().deepCopy()).put("firms_origin", "reproducibility");
     }
 
     private static byte[] realRankingBytes() {
@@ -66,7 +70,7 @@ class RankingPersistenceServiceTests {
     @Test
     @DisplayName("SAPI-59.CA1 — primera corrida inserta ejecución y exactamente 50 predicciones")
     void firstPersistInsertsExecutionAndFiftyCells() {
-        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any(), anyString()))
                 .thenReturn(Optional.of(7L));
         when(repository.countPredictions(7L)).thenReturn(0);
 
@@ -80,7 +84,7 @@ class RankingPersistenceServiceTests {
     @Test
     @DisplayName("SAPI-59.CA4.A — misma corrida dos veces: no duplica predicciones")
     void sameRunTwiceIsIdempotent() {
-        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any(), anyString()))
                 .thenReturn(Optional.of(3L))
                 .thenReturn(Optional.empty());
         when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(3L));
@@ -100,7 +104,7 @@ class RankingPersistenceServiceTests {
     @Test
     @DisplayName("SAPI-59 — replay con metadata divergente falla sin sobrescribir")
     void divergentMetadataOnReplayIsRejected() {
-        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any(), anyString()))
                 .thenReturn(Optional.empty());
         when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(3L));
         ExecutionRecord divergent = new ExecutionRecord(
@@ -112,6 +116,7 @@ class RankingPersistenceServiceTests {
                 ranking.get("score_semantics").stringValue(),
                 false,
                 5,
+                "reproducibility",
                 OffsetDateTime.parse("2026-09-01T01:00:00Z"));
         when(repository.findExecutionById(3L)).thenReturn(Optional.of(divergent));
 
@@ -120,6 +125,69 @@ class RankingPersistenceServiceTests {
                 .hasMessageContaining("metadata");
         verify(repository, never()).insertPredictions(anyLong(), any(), anyList());
         verify(repository, never()).countPredictions(anyLong());
+    }
+
+    @Test
+    @DisplayName("F1 D2-B — replay contra fila legacy (firms_origin NULL) se rechaza, sin UPDATE")
+    void replayAgainstLegacyNullOriginRowIsRejected() {
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any(), anyString())).thenReturn(Optional.empty());
+        when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(3L));
+        ExecutionRecord legacy = new ExecutionRecord(
+                3L,
+                OffsetDateTime.parse(ranking.get("forecast_time").stringValue()),
+                ranking.get("model_version").stringValue(),
+                ranking.get("inputs_fingerprint").stringValue(),
+                ranking.get("schema_version").stringValue(),
+                ranking.get("score_semantics").stringValue(),
+                false,
+                ranking.get("horizon_hours").intValue(),
+                null,
+                OffsetDateTime.parse("2026-09-01T01:00:00Z"));
+        when(repository.findExecutionById(3L)).thenReturn(Optional.of(legacy));
+
+        assertThatThrownBy(() -> service.persist(ranking))
+                .isInstanceOf(PersistencePolicyRejectedException.class)
+                .hasMessageContaining("legacy");
+        verify(repository, never()).insertPredictions(anyLong(), any(), anyList());
+        verify(repository, never()).countPredictions(anyLong());
+    }
+
+    @Test
+    @DisplayName("F1 — replay con firms_origin divergente (no legacy) falla sin sobrescribir")
+    void divergentFirmsOriginOnReplayIsRejected() {
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any(), anyString())).thenReturn(Optional.empty());
+        when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(3L));
+        ExecutionRecord storedWithOtherOrigin = new ExecutionRecord(
+                3L,
+                OffsetDateTime.parse(ranking.get("forecast_time").stringValue()),
+                ranking.get("model_version").stringValue(),
+                ranking.get("inputs_fingerprint").stringValue(),
+                ranking.get("schema_version").stringValue(),
+                ranking.get("score_semantics").stringValue(),
+                false,
+                ranking.get("horizon_hours").intValue(),
+                "current",
+                OffsetDateTime.parse("2026-09-01T01:00:00Z"));
+        when(repository.findExecutionById(3L)).thenReturn(Optional.of(storedWithOtherOrigin));
+
+        assertThatThrownBy(() -> service.persist(ranking))
+                .isInstanceOf(RankingPersistenceException.class)
+                .hasMessageContaining("metadata");
+        verify(repository, never()).insertPredictions(anyLong(), any(), anyList());
+    }
+
+    @Test
+    @DisplayName("F1 — persist() con firms_origin ausente falla claro, sin tocar el repositorio")
+    void missingFirmsOriginFailsFastWithoutTouchingTheRepository() {
+        JsonNode withoutOrigin = ((ObjectNode) ranking.deepCopy()).remove(java.util.List.of("firms_origin"));
+
+        assertThatThrownBy(() -> service.persist(withoutOrigin))
+                .isInstanceOf(RankingPersistenceException.class)
+                .hasMessageContaining("firms_origin");
+        verify(repository, never()).insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any(), anyString());
     }
 
     @Test
@@ -132,13 +200,13 @@ class RankingPersistenceServiceTests {
                 .isInstanceOf(RankingPersistenceException.class)
                 .hasMessageContaining("horizon_hours");
         verify(repository, never()).insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
-                anyBoolean(), any());
+                anyBoolean(), any(), anyString());
     }
 
     @Test
     @DisplayName("SAPI-59.CA4.C — mismo forecast/model con fingerprint distinto → nueva ejecución")
     void differentFingerprintCreatesNewExecution() {
-        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any(), anyString()))
                 .thenReturn(Optional.of(10L))
                 .thenReturn(Optional.of(11L));
         when(repository.countPredictions(10L)).thenReturn(0);
@@ -161,7 +229,7 @@ class RankingPersistenceServiceTests {
         ExecutionRecord execution = new ExecutionRecord(
                 9L, OffsetDateTime.parse("2026-09-01T00:00:00Z"), "prototype_model_d_v1",
                 ranking.get("inputs_fingerprint").stringValue(), "sapi-ranking-v0",
-                "relative_rank", false, 6, created);
+                "relative_rank", false, 6, "reproducibility", created);
         when(repository.findLatestExecution()).thenReturn(Optional.of(execution));
         when(repository.findPredictionsByExecutionId(9L)).thenReturn(cellsFrom(ranking));
 
@@ -177,7 +245,7 @@ class RankingPersistenceServiceTests {
     @Test
     @DisplayName("SAPI-59 — ejecución parcial (n≠0 y n≠50) falla sin sobrescribir")
     void partialExecutionIsRejected() {
-        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any()))
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(), anyBoolean(), any(), anyString()))
                 .thenReturn(Optional.empty());
         when(repository.findExecutionId(any(), anyString(), anyString())).thenReturn(Optional.of(5L));
         when(repository.findExecutionById(5L)).thenReturn(Optional.of(matchingExecution(5L)));
@@ -199,6 +267,7 @@ class RankingPersistenceServiceTests {
                 ranking.get("score_semantics").stringValue(),
                 ranking.get("scientific_model_validation").booleanValue(),
                 ranking.get("horizon_hours").intValue(),
+                ranking.get("firms_origin").stringValue(),
                 OffsetDateTime.parse("2026-09-01T01:00:00Z"));
     }
 
@@ -215,5 +284,55 @@ class RankingPersistenceServiceTests {
                     cell.get("tie_group_size").intValue()));
         }
         return rows;
+    }
+
+    private static FirmsOriginPolicy policyAllowing(String... values) {
+        FirmsOriginPolicy policy = new FirmsOriginPolicy();
+        policy.setAllowedFirmsOrigins(List.of(values));
+        policy.validate();
+        return policy;
+    }
+
+    // --- A3 completo (Astra P1-01): persist() consulta la MISMA política, no solo RankingService --
+
+    @Test
+    @DisplayName("A1 — política efectiva=current: persist() directo con reproducibility se rechaza, 0 escrituras")
+    void persistDirectWithReproducibilityIsRejectedWhenEffectivePolicyIsCurrentOnly() {
+        RankingPersistenceService currentOnly = new RankingPersistenceService(repository, policyAllowing("current"));
+
+        assertThatThrownBy(() -> currentOnly.persist(ranking))
+                .isInstanceOf(PersistencePolicyRejectedException.class)
+                .hasMessageContaining("reproducibility");
+        verify(repository, never()).insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any(), anyString());
+        verify(repository, never()).insertPredictions(anyLong(), any(), anyList());
+    }
+
+    @Test
+    @DisplayName("A1 — política efectiva=current: persist() directo con baseline se rechaza, 0 escrituras")
+    void persistDirectWithBaselineIsRejectedWhenEffectivePolicyIsCurrentOnly() {
+        RankingPersistenceService currentOnly = new RankingPersistenceService(repository, policyAllowing("current"));
+        JsonNode baselineRanking = ((ObjectNode) ranking.deepCopy()).put("firms_origin", "baseline");
+
+        assertThatThrownBy(() -> currentOnly.persist(baselineRanking))
+                .isInstanceOf(PersistencePolicyRejectedException.class)
+                .hasMessageContaining("baseline");
+        verify(repository, never()).insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any(), anyString());
+    }
+
+    @Test
+    @DisplayName("A1 — política efectiva=current: persist() directo con current sí persiste")
+    void persistDirectWithCurrentSucceedsWhenEffectivePolicyIsCurrentOnly() {
+        RankingPersistenceService currentOnly = new RankingPersistenceService(repository, policyAllowing("current"));
+        JsonNode currentRanking = ((ObjectNode) ranking.deepCopy()).put("firms_origin", "current");
+        when(repository.insertExecution(any(), anyString(), anyString(), anyString(), anyString(),
+                anyBoolean(), any(), eq("current"))).thenReturn(Optional.of(1L));
+        when(repository.countPredictions(1L)).thenReturn(0);
+
+        long id = currentOnly.persist(currentRanking);
+
+        assertThat(id).isEqualTo(1L);
+        verify(repository).insertPredictions(eq(1L), any(), anyList());
     }
 }

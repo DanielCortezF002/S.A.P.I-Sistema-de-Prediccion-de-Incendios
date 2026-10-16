@@ -11,7 +11,9 @@ import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 import com.sun.net.httpserver.HttpServer;
 
@@ -59,7 +61,8 @@ final class StubMlServer implements AutoCloseable {
 
     private final HttpServer server;
     private final ExecutorService executor = Executors.newCachedThreadPool();
-    private final AtomicReference<Reply> reply = new AtomicReference<>(Reply.json(200, new byte[0]));
+    private final AtomicReference<Supplier<Reply>> replySupplier =
+            new AtomicReference<>(() -> Reply.json(200, new byte[0]));
     private final List<Received> received = new CopyOnWriteArrayList<>();
 
     StubMlServer() {
@@ -74,7 +77,7 @@ final class StubMlServer implements AutoCloseable {
             try (exchange; InputStream in = exchange.getRequestBody()) {
                 received.add(new Received(exchange.getRequestMethod(), exchange.getRequestURI().getPath(),
                         Map.copyOf(exchange.getRequestHeaders()), in.readAllBytes()));
-                Reply current = reply.get();
+                Reply current = replySupplier.get().get();
                 if (current.delayMillis() > 0 && current.stallAfterBytes() < 0) {
                     Thread.sleep(current.delayMillis());
                 }
@@ -108,7 +111,20 @@ final class StubMlServer implements AutoCloseable {
     }
 
     void reply(Reply next) {
-        reply.set(next);
+        replySupplier.set(() -> next);
+    }
+
+    /**
+     * Alterna estrictamente entre dos respuestas, una por cada petición HTTP realmente recibida
+     * (round-robin atómico, no por hilo cliente): con N peticiones concurrentes, exactamente
+     * N/2 obtienen {@code first} y N/2 obtienen {@code second}, sin importar el orden real de
+     * llegada. Para ejercitar concurrencia real con procedencias ({@code firms_origin})
+     * distintas sobre la misma identidad de negocio (Astra, sección 4): el stub real no soporta
+     * una respuesta distinta "por origen esperado del cliente", solo por orden de llegada.
+     */
+    void replyAlternating(Reply first, Reply second) {
+        AtomicInteger counter = new AtomicInteger();
+        replySupplier.set(() -> counter.getAndIncrement() % 2 == 0 ? first : second);
     }
 
     List<Received> received() {
@@ -117,7 +133,7 @@ final class StubMlServer implements AutoCloseable {
 
     void reset() {
         received.clear();
-        reply.set(Reply.json(200, new byte[0]));
+        replySupplier.set(() -> Reply.json(200, new byte[0]));
     }
 
     @Override

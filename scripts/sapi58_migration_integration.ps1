@@ -105,8 +105,8 @@ try {
 
     # --- Valid data is accepted (and cascades) ----------------------------------
     $fp = "a" * 64
-    $ins = Psql ("INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, horizon_hours) " +
-        "VALUES ('2026-09-01T00:00:00Z', 'prototype_model_d_v1', '$fp', 'sapi-ranking-v0', 6) RETURNING id")
+    $ins = Psql ("INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, horizon_hours, firms_origin) " +
+        "VALUES ('2026-09-01T00:00:00Z', 'prototype_model_d_v1', '$fp', 'sapi-ranking-v0', 6, 'current') RETURNING id")
     Expect "insert-ejecucion" ($ins.code -eq 0) ("id=" + $ins.out)
     $ejId = ($ins.out -split "`r?`n")[0].Trim()
     if ($ejId -notmatch '^\d+$') { throw "unexpected ejecucion id: $($ins.out)" }
@@ -120,10 +120,10 @@ try {
     ExpectRejected "score-above-1" "INSERT INTO predicciones_celda VALUES ($ejId, '2026-09-01T00:00:00Z', 'VP-003', 1.5, 3, 3, 1)" "predicciones_celda_score_rango"
     ExpectRejected "duplicate-rank" "INSERT INTO predicciones_celda VALUES ($ejId, '2026-09-01T00:00:00Z', 'VP-003', 0.1, 2, 2, 1)" "predicciones_celda_rank_unico"
     ExpectRejected "display-rank-above-rank" "INSERT INTO predicciones_celda VALUES ($ejId, '2026-09-01T00:00:00Z', 'VP-003', 0.1, 3, 4, 1)" "predicciones_celda_display_rank_min"
-    ExpectRejected "score-semantics" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, score_semantics) VALUES ('2026-09-01T06:00:00Z', 'm', '$fp', 'sapi-ranking-v0', 'probability')" "ejecuciones_score_semantics_ranking"
-    ExpectRejected "scientific-validation-true" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, scientific_model_validation) VALUES ('2026-09-01T06:00:00Z', 'm', '$fp', 'sapi-ranking-v0', true)" "ejecuciones_sin_validacion_cientifica"
-    ExpectRejected "duplicate-natural-key" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version) VALUES ('2026-09-01T00:00:00Z', 'prototype_model_d_v1', '$fp', 'sapi-ranking-v0')" "ejecuciones_clave_natural"
-    ExpectRejected "fingerprint-not-hex" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version) VALUES ('2026-09-01T06:00:00Z', 'm', '$('Z' * 64)', 'sapi-ranking-v0')" "ejecuciones_fingerprint_hex"
+    ExpectRejected "score-semantics" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, score_semantics, firms_origin) VALUES ('2026-09-01T06:00:00Z', 'm', '$fp', 'sapi-ranking-v0', 'probability', 'current')" "ejecuciones_score_semantics_ranking"
+    ExpectRejected "scientific-validation-true" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, scientific_model_validation, firms_origin) VALUES ('2026-09-01T06:00:00Z', 'm', '$fp', 'sapi-ranking-v0', true, 'current')" "ejecuciones_sin_validacion_cientifica"
+    ExpectRejected "duplicate-natural-key" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, firms_origin) VALUES ('2026-09-01T00:00:00Z', 'prototype_model_d_v1', '$fp', 'sapi-ranking-v0', 'current')" "ejecuciones_clave_natural"
+    ExpectRejected "fingerprint-not-hex" "INSERT INTO ejecuciones (forecast_time, model_version, inputs_fingerprint, schema_version, firms_origin) VALUES ('2026-09-01T06:00:00Z', 'm', '$('Z' * 64)', 'sapi-ranking-v0', 'current')" "ejecuciones_fingerprint_hex"
     ExpectRejected "bad-cell-id" "INSERT INTO celdas_geom VALUES ('X-1', ST_MakeEnvelope(0, 0, 1, 1, 4326))" "celdas_geom_cell_id_formato"
 
     $del = Psql "DELETE FROM ejecuciones WHERE id = $ejId"

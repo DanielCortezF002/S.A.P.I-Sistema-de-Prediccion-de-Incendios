@@ -270,11 +270,11 @@ def _sidecar(paths: FirmsPaths, name: str) -> Path:
 
 
 def _publish(paths: FirmsPaths, pointer: dict, event: str) -> None:
-    atomic_write_json(paths.pointer, pointer)
     append_jsonl(
         paths.history,
         {"event": event, "at": _utcnow().isoformat(), **pointer},
     )
+    atomic_write_json(paths.pointer, pointer)
 
 
 def refresh(
@@ -313,6 +313,8 @@ def refresh(
                 new_rows, new_end, raw_files = _download_new_rows(
                     client, start, target_end
                 )
+            except FirmsRefreshError:
+                raise
             except ImmutableVersionError as exc:
                 raise FirmsRefreshError(str(exc), EXIT_DATA) from exc
             except RuntimeError as exc:  # _get_with_retry agotado
@@ -395,9 +397,23 @@ def rollback(
             version, sidecar = paths.versions_dir / to, _sidecar(paths, to)
             if not version.is_file() or not sidecar.is_file():
                 raise FirmsRefreshError(f"No existe la versión {to!r}", EXIT_USAGE)
-            pointer = json.loads(sidecar.read_text(encoding="utf-8"))
-            if sha256_bytes(version.read_bytes()) != pointer.get("sha256"):
-                raise FirmsRefreshError(f"sha256 de {to!r} no coincide.", EXIT_DATA)
+            try:
+                from src.procesamiento.firms_source import validate_pointer_dict
+
+                try:
+                    pointer = json.loads(sidecar.read_text(encoding="utf-8"))
+                except (OSError, json.JSONDecodeError) as exc:
+                    raise FirmsRefreshError(f"Sidecar ilegible: {exc}", EXIT_DATA) from exc
+                if not isinstance(pointer, dict):
+                    raise FirmsRefreshError("Sidecar no es un objeto JSON", EXIT_DATA)
+                if pointer.get("relative_path") != to:
+                    raise FirmsRefreshError(
+                        f"Sidecar apunta a {pointer.get('relative_path')!r}, se solicitó {to!r}.",
+                        EXIT_DATA,
+                    )
+                validate_pointer_dict(pointer, paths.versions_dir, source_name=sidecar.name)
+            except FirmsSourceError as exc:
+                raise FirmsRefreshError(str(exc), EXIT_DATA) from exc
             _publish(paths, pointer, "rollback")
             return pointer
     except RefreshLockedError as exc:
