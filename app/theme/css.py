@@ -74,7 +74,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         [data-testid="stAppViewContainer"],
         [data-testid="stHeader"],
         [data-testid="stToolbar"],
-        section.main,
+        section[data-testid="stMain"],
         .main,
         .block-container {{
             background-color: var(--sapi-surface-page) !important;
@@ -84,14 +84,14 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             background: var(--sapi-surface-page) !important;
         }}
         /* Widgets del panel principal que Streamlit pinta con el theme light */
-        section.main [data-testid="stMarkdownContainer"],
-        section.main [data-testid="stText"],
-        section.main [data-testid="stWidgetLabel"],
-        section.main .stTabs [data-baseweb="tab"],
-        section.main .stRadio label {{
+        section[data-testid="stMain"] [data-testid="stMarkdownContainer"],
+        section[data-testid="stMain"] [data-testid="stText"],
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"],
+        section[data-testid="stMain"] .stTabs [data-baseweb="tab"],
+        section[data-testid="stMain"] .stRadio label {{
             color: var(--sapi-text-primary) !important;
         }}
-        section.main div[data-baseweb="tab-list"] {{
+        section[data-testid="stMain"] div[data-baseweb="tab-list"] {{
             background: var(--sapi-surface-muted);
             border-radius: var(--sapi-radius-control);
         }}
@@ -100,7 +100,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
            padding-top >= la altura del header fijo de Streamlit (~2.9rem):
            con menos, el título y los chips del header propio quedaban
            renderizados debajo de la barra "Deploy" y se veían cortados. */
-        section.main .block-container {{
+        section[data-testid="stMain"] .block-container {{
             max-width: 100%;
             padding: 3.25rem 0.75rem 0 0.75rem;
             overflow-x: hidden;
@@ -112,13 +112,13 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             line-height: var(--sapi-font-body-line);
             font-weight: var(--sapi-font-body-weight);
         }}
-        section.main h1,
-        section.main h2,
-        section.main h3,
-        section.main h4,
-        section.main p,
-        section.main label,
-        section.main span {{
+        section[data-testid="stMain"] h1,
+        section[data-testid="stMain"] h2,
+        section[data-testid="stMain"] h3,
+        section[data-testid="stMain"] h4,
+        section[data-testid="stMain"] p,
+        section[data-testid="stMain"] label,
+        section[data-testid="stMain"] span {{
             color: var(--sapi-text-primary);
         }}
         h1 {{
@@ -139,9 +139,9 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             font-weight: var(--sapi-font-h2-weight) !important;
             letter-spacing: -0.01em;
         }}
-        section.main [data-testid="stCaptionContainer"],
-        section.main small,
-        section.main .stCaption {{
+        section[data-testid="stMain"] [data-testid="stCaptionContainer"],
+        section[data-testid="stMain"] small,
+        section[data-testid="stMain"] .stCaption {{
             font-size: var(--sapi-font-small-size);
             line-height: var(--sapi-font-small-line);
             color: var(--sapi-text-primary);
@@ -159,7 +159,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         }}
 
         /* ── Botones ── Área de toque ≥44px (WCAG 2.5.5) desde --sapi-touch-target.
-           El texto heredaba --sapi-text-primary por la regla `section.main
+           El texto heredaba --sapi-text-primary por la regla `section[data-testid="stMain"]
            p/span` de arriba, mientras el FONDO del botón quedaba con el gris
            tenue nativo de Streamlit (pensado para su propio tema claro, no
            para las superficies oscuras de esta app): en oscuro, texto claro
@@ -168,8 +168,8 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
            costaba leer. Se fija el mismo par fondo/texto que ya usa cada
            tarjeta de la app — contraste verificado, consistente con el
            resto — en vez de heredar el tema propio del botón. */
-        section.main div[data-testid="stButton"] > button,
-        section.main div[data-testid="stDownloadButton"] > button {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button {{
             min-height: var(--sapi-touch-target);
             padding: 0 1.1rem;
             font-weight: 600;
@@ -177,37 +177,37 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             border: 1px solid var(--sapi-border-card);
             color: var(--sapi-text-primary) !important;
         }}
-        section.main div[data-testid="stButton"] > button p,
-        section.main div[data-testid="stButton"] > button span,
-        section.main div[data-testid="stButton"] > button div,
-        section.main div[data-testid="stDownloadButton"] > button p,
-        section.main div[data-testid="stDownloadButton"] > button span,
-        section.main div[data-testid="stDownloadButton"] > button div {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button p,
+        section[data-testid="stMain"] div[data-testid="stButton"] button span,
+        section[data-testid="stMain"] div[data-testid="stButton"] button div,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button p,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button span,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button div {{
             color: var(--sapi-text-primary) !important;
         }}
-        section.main div[data-testid="stButton"] > button:hover,
-        section.main div[data-testid="stDownloadButton"] > button:hover {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button:hover,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover {{
             border-color: var(--sapi-accent);
             color: var(--sapi-accent) !important;
         }}
-        section.main div[data-testid="stButton"] > button:hover p,
-        section.main div[data-testid="stButton"] > button:hover span,
-        section.main div[data-testid="stDownloadButton"] > button:hover p,
-        section.main div[data-testid="stDownloadButton"] > button:hover span {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button:hover p,
+        section[data-testid="stMain"] div[data-testid="stButton"] button:hover span,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover p,
+        section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover span {{
             color: var(--sapi-accent) !important;
         }}
         /* Botón "primary" (el modo ☀️/🌙 activo del interruptor de apariencia):
            fondo de acento sólido, texto blanco — Streamlit ya hace exactamente
            esto nativamente, pero el bloque de arriba lo pisaba con el fondo
            de tarjeta. Se reafirma acá, después, para que gane. */
-        section.main div[data-testid="stButton"] > button[kind="primary"] {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] {{
             background: var(--sapi-accent);
             border-color: var(--sapi-accent);
             color: {t.TEXT_ON_SIDEBAR} !important;
         }}
-        section.main div[data-testid="stButton"] > button[kind="primary"] p,
-        section.main div[data-testid="stButton"] > button[kind="primary"] span,
-        section.main div[data-testid="stButton"] > button[kind="primary"] div {{
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] p,
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] span,
+        section[data-testid="stMain"] div[data-testid="stButton"] button[kind="primary"] div {{
             color: {t.TEXT_ON_SIDEBAR} !important;
         }}
 
@@ -245,6 +245,8 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             color: var(--sapi-text-sidebar) !important;
         }}
         /* Radio buttons y widgets en barra lateral */
+        section[data-testid="stSidebar"] div[data-testid="stRadio"],
+        section[data-testid="stSidebar"] div[data-testid="stRadio"] *,
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label,
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label p,
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label span,
@@ -254,10 +256,12 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             color: var(--sapi-text-sidebar) !important;
             font-weight: 600 !important;
             opacity: 1 !important;
+            -webkit-text-fill-color: var(--sapi-text-sidebar) !important;
         }}
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover p,
         section[data-testid="stSidebar"] div[data-testid="stRadio"] label:hover span {{
             color: var(--sapi-accent) !important;
+            -webkit-text-fill-color: var(--sapi-accent) !important;
         }}
         section[data-testid="stSidebar"] div[data-testid="stRadio"] [aria-disabled="true"],
         section[data-testid="stSidebar"] div[data-testid="stRadio"] [aria-disabled="true"] *,
@@ -266,7 +270,8 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             cursor: not-allowed !important;
         }}
         /* Botón de barra lateral (p. ej. "Actualizar ranking") */
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button {{
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button {{
             background-color: var(--sapi-sidebar-input-bg) !important;
             border: 1px solid var(--sapi-sidebar-input-border) !important;
             border-radius: var(--sapi-radius-control) !important;
@@ -274,22 +279,30 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             font-weight: 600 !important;
             transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease !important;
         }}
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button p,
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button span,
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button div {{
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button p,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button span,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button div,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button p,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button span,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button div {{
             color: var(--sapi-text-sidebar) !important;
         }}
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {{
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover {{
             background-color: var(--sapi-sidebar-btn-hover-bg) !important;
             border-color: var(--sapi-sidebar-btn-hover-border) !important;
             color: var(--sapi-sidebar-btn-hover-text) !important;
         }}
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover p,
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover span,
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover div {{
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover span,
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:hover div,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover p,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover span,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:hover div {{
             color: var(--sapi-sidebar-btn-hover-text) !important;
         }}
-        section[data-testid="stSidebar"] div[data-testid="stButton"] > button:focus-visible {{
+        section[data-testid="stSidebar"] div[data-testid="stButton"] button:focus-visible,
+        section[data-testid="stSidebar"] div[data-testid="stDownloadButton"] button:focus-visible {{
             outline: 2px solid var(--sapi-accent) !important;
             outline-offset: 2px !important;
             border-color: var(--sapi-accent) !important;
@@ -432,23 +445,23 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         }}
 
         /* ── Tarjetas del panel principal ──
-           Acotadas a section.main: sobre el navy del sidebar una tarjeta
+           Acotadas a section[data-testid="stMain"]: sobre el navy del sidebar una tarjeta
            blanca dejaría texto blanco sobre blanco. */
-        section.main div[data-testid="stMetric"] {{
+        section[data-testid="stMain"] div[data-testid="stMetric"] {{
             background: var(--sapi-surface-card);
             border: 1px solid var(--sapi-border-card);
             border-radius: var(--sapi-radius-card);
             padding: 0.9rem 1rem;
             color: var(--sapi-text-primary);
         }}
-        section.main div[data-testid="stMetric"] label,
-        section.main div[data-testid="stMetric"] [data-testid="stMetricLabel"],
-        section.main div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
+        section[data-testid="stMain"] div[data-testid="stMetric"] label,
+        section[data-testid="stMain"] div[data-testid="stMetric"] [data-testid="stMetricLabel"],
+        section[data-testid="stMain"] div[data-testid="stMetric"] [data-testid="stMetricValue"] {{
             color: var(--sapi-text-primary) !important;
         }}
         /* ── Alertas (P0): contraste WCAG AAA en aviso de datos históricos y estados ── */
         div[data-testid="stAlert"],
-        section.main div[data-testid="stAlert"] {{
+        section[data-testid="stMain"] div[data-testid="stAlert"] {{
             background: var(--sapi-surface-card) !important;
             background-color: var(--sapi-surface-card) !important;
             border: 1px solid var(--sapi-border-card) !important;
@@ -457,7 +470,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
         }}
         div[data-testid="stAlert"] [data-baseweb="notification"],
-        section.main div[data-testid="stAlert"] [data-baseweb="notification"] {{
+        section[data-testid="stMain"] div[data-testid="stAlert"] [data-baseweb="notification"] {{
             background: var(--sapi-surface-card) !important;
             background-color: var(--sapi-surface-card) !important;
             color: var(--sapi-text-primary) !important;
@@ -476,7 +489,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             color: {t.RISK["medio"].surface} !important;
             fill: {t.RISK["medio"].surface} !important;
         }}
-        section.main div[data-testid="stVerticalBlockBorderWrapper"] {{
+        section[data-testid="stMain"] div[data-testid="stVerticalBlockBorderWrapper"] {{
             background: var(--sapi-surface-card);
             border-color: var(--sapi-border-card) !important;
         }}
@@ -566,16 +579,22 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         }}
 
         /* ── Radio buttons y Checkboxes del panel principal (P0) ── */
-        section.main div[data-testid="stRadio"] label,
-        section.main div[data-testid="stRadio"] label p,
-        section.main div[data-testid="stRadio"] label span,
-        section.main div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
-        section.main div[data-testid="stCheckbox"] label,
-        section.main div[data-testid="stCheckbox"] label p,
-        section.main div[data-testid="stCheckbox"] label span {{
+        section[data-testid="stMain"] div[data-testid="stRadio"],
+        section[data-testid="stMain"] div[data-testid="stRadio"] *,
+        [data-testid="stExpander"] div[data-testid="stRadio"],
+        [data-testid="stExpander"] div[data-testid="stRadio"] *,
+        section[data-testid="stMain"] div[data-testid="stRadio"] label,
+        section[data-testid="stMain"] div[data-testid="stRadio"] label p,
+        section[data-testid="stMain"] div[data-testid="stRadio"] label span,
+        section[data-testid="stMain"] div[data-testid="stRadio"] [data-testid="stWidgetLabel"] p,
+        section[data-testid="stMain"] div[data-testid="stCheckbox"] label,
+        section[data-testid="stMain"] div[data-testid="stCheckbox"] label p,
+        section[data-testid="stMain"] div[data-testid="stCheckbox"] label span {{
             color: var(--sapi-text-primary) !important;
-            font-size: var(--sapi-font-body-size) !important;
+            font-size: var(--sapi-font-body-size);
             font-weight: 600 !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: var(--sapi-text-primary) !important;
         }}
 
         /* ── Etiquetas de widgets (P0): contraste nítido y legible en ambos temas ── */
@@ -583,9 +602,9 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         [data-testid="stWidgetLabel"] label,
         [data-testid="stWidgetLabel"] p,
         [data-testid="stWidgetLabel"] span,
-        section.main [data-testid="stWidgetLabel"],
-        section.main [data-testid="stWidgetLabel"] p,
-        section.main [data-testid="stWidgetLabel"] span,
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"],
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"] p,
+        section[data-testid="stMain"] [data-testid="stWidgetLabel"] span,
         [data-testid="stExpander"] [data-testid="stWidgetLabel"],
         [data-testid="stExpander"] [data-testid="stWidgetLabel"] p,
         [data-testid="stExpander"] [data-testid="stWidgetLabel"] span {{
@@ -593,6 +612,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
             font-size: var(--sapi-font-small-size) !important;
             font-weight: 700 !important;
             opacity: 1 !important;
+            -webkit-text-fill-color: var(--sapi-text-primary) !important;
         }}
 
         /* ── Dataframes y Tablas (P0): coherencia visual entre temas ── */
