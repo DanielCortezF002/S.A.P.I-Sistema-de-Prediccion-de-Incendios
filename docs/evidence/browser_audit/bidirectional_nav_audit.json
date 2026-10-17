@@ -1,0 +1,39 @@
+{
+  "step1_initial_dark": {
+    "cell": "VP-001",
+    "caption": "Orden y empates tal como los emitió el backend: celdas con score idéntico comparten el mismo número de prioridad. · Celda enfocada: VP-001 — Criterio exploratorio relativo del Modelo D (no constituye alerta ni nivel oficial de riesgo).",
+    "panel": "CELDA SELECCIONADA | VP-001 | Prioridad #1 · Score relativo: 0.131293 · empate ×7 | TERRITORIO (REFERENCIA) | Elevación | 317 m | Pendiente | 14.9° | Historial FIRMS | Detalle FIRMS por celda no expuesto por API v0 | Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1) | METEOROLOGÍA REGIONAL | Meteorología usada | no informado por el backend | VENTANA | T | 01 sep 2026 00:00 UTC | T+6h | 01 sep 2026 06:00 UTC",
+    "screenshot": "C:\\SAPI-PUBLICACION-SEGURA-20261016\\docs\\evidence\\browser_audit\\nav_vp001_initial_dark.png"
+  },
+  "step2_vp047_dark": {
+    "cell": "VP-047",
+    "caption": "Orden numérico ascendente por identificador de celda (VP-001 → VP-050). · Celda enfocada: VP-047 — Criterio exploratorio relativo del Modelo D (no constituye alerta ni nivel oficial de riesgo).",
+    "panel": "CELDA SELECCIONADA | VP-047 | Prioridad #8 · Score relativo: 0.105089 · empate ×41 | TERRITORIO (REFERENCIA) | Elevación | N/D | Pendiente | N/D | Historial FIRMS | Detalle FIRMS por celda no expuesto por API v0 | Sin cobertura DEM de referencia en esta celda (se conserva N/D, QA-04) | Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1) | METEOROLOGÍA REGIONAL | Meteorología usada | no informado por el backend | VENTANA | T | 01 sep 2026 00:00 UTC | T+6h | 01 sep 2026 06:00 UTC",
+    "screenshot": "C:\\SAPI-PUBLICACION-SEGURA-20261016\\docs\\evidence\\browser_audit\\nav_vp047_selected_dark.png"
+  },
+  "step3_vp038_dark": {
+    "cell": "VP-038",
+    "caption": "Orden numérico ascendente por identificador de celda (VP-001 → VP-050). · Celda enfocada: VP-038 — Criterio exploratorio relativo del Modelo D (no constituye alerta ni nivel oficial de riesgo).",
+    "panel": "CELDA SELECCIONADA | VP-038 | Prioridad #49 · Score relativo: 0.102103 · empate ×2 | TERRITORIO (REFERENCIA) | Elevación | N/D | Pendiente | N/D | Historial FIRMS | Detalle FIRMS por celda no expuesto por API v0 | Sin cobertura DEM de referencia en esta celda (se conserva N/D, QA-04) | Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1) | METEOROLOGÍA REGIONAL | Meteorología usada | no informado por el backend | VENTANA | T | 01 sep 2026 00:00 UTC | T+6h | 01 sep 2026 06:00 UTC",
+    "screenshot": "C:\\SAPI-PUBLICACION-SEGURA-20261016\\docs\\evidence\\browser_audit\\nav_vp038_selected_dark.png"
+  },
+  "step4_vp001_dark": {
+    "cell": "VP-001",
+    "caption": "Orden y empates tal como los emitió el backend: celdas con score idéntico comparten el mismo número de prioridad. · Celda enfocada: VP-001 — Criterio exploratorio relativo del Modelo D (no constituye alerta ni nivel oficial de riesgo).",
+    "panel": "CELDA SELECCIONADA | VP-001 | Prioridad #1 · Score relativo: 0.131293 · empate ×7 | TERRITORIO (REFERENCIA) | Elevación | 317 m | Pendiente | 14.9° | Historial FIRMS | Detalle FIRMS por celda no expuesto por API v0 | Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1) | METEOROLOGÍA REGIONAL | Meteorología usada | no informado por el backend | VENTANA | T | 01 sep 2026 00:00 UTC | T+6h | 01 sep 2026 06:00 UTC",
+    "screenshot": "C:\\SAPI-PUBLICACION-SEGURA-20261016\\docs\\evidence\\browser_audit\\nav_vp001_selected_dark.png"
+  },
+  "step5_vp047_light": {
+    "cell": "VP-047",
+    "caption": "Orden numérico ascendente por identificador de celda (VP-001 → VP-050). · Celda enfocada: VP-047 — Criterio exploratorio relativo del Modelo D (no constituye alerta ni nivel oficial de riesgo).",
+    "panel": "CELDA SELECCIONADA | VP-047 | Prioridad #8 · Score relativo: 0.105089 · empate ×41 | TERRITORIO (REFERENCIA) | Elevación | N/D | Pendiente | N/D | Historial FIRMS | Detalle FIRMS por celda no expuesto por API v0 | Sin cobertura DEM de referencia en esta celda (se conserva N/D, QA-04) | Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1) | METEOROLOGÍA REGIONAL | Meteorología usada | no informado por el backend | VENTANA | T | 01 sep 2026 00:00 UTC | T+6h | 01 sep 2026 06:00 UTC",
+    "screenshot": "C:\\SAPI-PUBLICACION-SEGURA-20261016\\docs\\evidence\\browser_audit\\nav_vp047_selected_light.png"
+  },
+  "step5_vp038_light": {
+    "cell": "VP-038",
+    "caption": "Orden numérico ascendente por identificador de celda (VP-001 → VP-050). · Celda enfocada: VP-038 — Criterio exploratorio relativo del Modelo D (no constituye alerta ni nivel oficial de riesgo).",
+    "panel": "CELDA SELECCIONADA | VP-038 | Prioridad #49 · Score relativo: 0.102103 · empate ×2 | TERRITORIO (REFERENCIA) | Elevación | N/D | Pendiente | N/D | Historial FIRMS | Detalle FIRMS por celda no expuesto por API v0 | Sin cobertura DEM de referencia en esta celda (se conserva N/D, QA-04) | Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1) | METEOROLOGÍA REGIONAL | Meteorología usada | no informado por el backend | VENTANA | T | 01 sep 2026 00:00 UTC | T+6h | 01 sep 2026 06:00 UTC",
+    "screenshot": "C:\\SAPI-PUBLICACION-SEGURA-20261016\\docs\\evidence\\browser_audit\\nav_vp038_selected_light.png"
+  },
+  "browser_errors_count": 0
+}
