@@ -61,6 +61,8 @@ _SESSION_LAST_PROCESSED_CLICK = "ranking_v2_last_processed_click"
 _SESSION_TABLE = "ranking_v2_table"
 _SESSION_TABLE_SYNCED_CELL = "ranking_v2_table_synced_cell"
 _SESSION_TABLE_LAST_FILTER = "ranking_v2_table_last_filter"
+_SESSION_TABLE_LAST_ROWS = "ranking_v2_table_last_rows"
+_SESSION_TABLE_LAST_CELLS = "ranking_v2_table_last_cells"
 _ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
 _ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
 _ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
@@ -849,10 +851,13 @@ def _render_ranking_expander(
                 else []
             )
             target_rows = [int(matching[0])] if matching else []
+            target_cells = [[int(matching[0]), "Celda"]] if matching else []
             st.session_state[_SESSION_TABLE] = {
-                "selection": {"rows": target_rows, "columns": [], "cells": []}
+                "selection": {"rows": target_rows, "columns": [], "cells": target_cells}
             }
             st.session_state[_SESSION_TABLE_SYNCED_CELL] = selected_id
+            st.session_state[_SESSION_TABLE_LAST_ROWS] = target_rows
+            st.session_state[_SESSION_TABLE_LAST_CELLS] = target_cells
 
         table_event = st.dataframe(
             df,
@@ -860,25 +865,68 @@ def _render_ranking_expander(
             hide_index=True,
             height=340,
             on_select="rerun",
-            selection_mode="single-row",
+            selection_mode=["single-cell", "single-row"],
             key=_SESSION_TABLE,
         )
 
-        # Procesar selección de fila del usuario
-        selected_rows = []
+        # Procesar selección de celda o fila del usuario
+        raw_cells = []
+        raw_rows = []
         if isinstance(table_event, dict):
-            selected_rows = table_event.get("selection", {}).get("rows", [])
+            selection_dict = table_event.get("selection", {})
+            raw_cells = selection_dict.get("cells", [])
+            raw_rows = selection_dict.get("rows", [])
         elif hasattr(table_event, "selection"):
-            selected_rows = getattr(table_event.selection, "rows", [])
+            raw_cells = getattr(table_event.selection, "cells", [])
+            raw_rows = getattr(table_event.selection, "rows", [])
 
-        if isinstance(selected_rows, (list, tuple)) and selected_rows:
-            row_idx = selected_rows[0]
-            if isinstance(row_idx, int) and 0 <= row_idx < len(df):
-                table_cell = str(df.iloc[row_idx]["Celda"])
-                if isinstance(selected_id, str) and table_cell != selected_id:
-                    st.session_state[_SESSION_PENDING_SELECTION] = table_cell
-                    st.session_state[_SESSION_TABLE_SYNCED_CELL] = table_cell
-                    st.rerun()
+        current_cells = [list(c) if isinstance(c, (list, tuple)) else c for c in raw_cells]
+        current_rows = list(raw_rows) if isinstance(raw_rows, (list, tuple)) else []
+
+        last_cells = st.session_state.get(_SESSION_TABLE_LAST_CELLS)
+        last_rows = st.session_state.get(_SESSION_TABLE_LAST_ROWS)
+
+        target_row_idx: Optional[int] = None
+
+        # 1. Clic directo sobre el contenido de cualquier celda
+        if current_cells != last_cells and current_cells:
+            first_c = current_cells[0]
+            if isinstance(first_c, (list, tuple)) and len(first_c) >= 1:
+                c_idx = first_c[0]
+                if isinstance(c_idx, int) and 0 <= c_idx < len(df):
+                    target_row_idx = c_idx
+
+        # 2. Clic sobre la casilla de selección de fila (checkbox izquierdo)
+        if target_row_idx is None and current_rows != last_rows and current_rows:
+            r_idx = current_rows[0]
+            if isinstance(r_idx, int) and 0 <= r_idx < len(df):
+                target_row_idx = r_idx
+
+        # 3. Fallback de consistencia en primera interacción
+        if target_row_idx is None and last_cells is None and last_rows is None:
+            if current_cells:
+                first_c = current_cells[0]
+                if isinstance(first_c, (list, tuple)) and len(first_c) >= 1 and isinstance(first_c[0], int) and 0 <= first_c[0] < len(df):
+                    target_row_idx = first_c[0]
+            elif current_rows:
+                r_idx = current_rows[0]
+                if isinstance(r_idx, int) and 0 <= r_idx < len(df):
+                    target_row_idx = r_idx
+
+        if target_row_idx is not None:
+            table_cell = str(df.iloc[target_row_idx]["Celda"])
+            if isinstance(selected_id, str) and table_cell != selected_id:
+                st.session_state[_SESSION_PENDING_SELECTION] = table_cell
+                st.session_state[_SESSION_TABLE_SYNCED_CELL] = table_cell
+                st.session_state[_SESSION_TABLE_LAST_CELLS] = current_cells
+                st.session_state[_SESSION_TABLE_LAST_ROWS] = current_rows
+                st.rerun()
+            else:
+                st.session_state[_SESSION_TABLE_LAST_CELLS] = current_cells
+                st.session_state[_SESSION_TABLE_LAST_ROWS] = current_rows
+        else:
+            st.session_state[_SESSION_TABLE_LAST_CELLS] = current_cells
+            st.session_state[_SESSION_TABLE_LAST_ROWS] = current_rows
 
         focus_caption = (
             f" · Celda enfocada: **{selected_id}**"

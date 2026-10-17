@@ -800,10 +800,71 @@ def test_table_expander_programmatically_syncs_selected_cell(mock_st: MagicMock)
     table_state = fake_session.get(view_mod._SESSION_TABLE)
     assert table_state is not None
     assert table_state["selection"]["rows"] == [target_idx]
+    assert table_state["selection"]["cells"] == [[target_idx, "Celda"]]
     assert fake_session.get(view_mod._SESSION_TABLE_SYNCED_CELL) == "VP-047"
 
     caption_text = mock_st.caption.call_args[0][0]
     assert "Celda enfocada: **VP-047**" in caption_text
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_cell_content_selection_sets_pending_and_reruns(mock_st: MagicMock) -> None:
+    fake_session: dict = {}
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_PRIORITY_OFFICIAL
+    mock_st.selectbox.return_value = "Todos los grupos (50 celdas)"
+
+    # El usuario hace clic directo en el contenido de la celda en columna 'Score relativo' de fila 7
+    mock_st.dataframe.return_value = {
+        "selection": {"rows": [], "columns": [], "cells": [[7, "Score relativo"]]}
+    }
+
+    view = v0_view()
+    df, _ = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_PRIORITY_OFFICIAL,
+        group_filter="Todos los grupos (50 celdas)",
+    )
+    expected_cell = str(df.iloc[7]["Celda"])
+
+    view_mod._render_ranking_expander(view, selected_id="VP-001")
+
+    assert fake_session.get(view_mod._SESSION_PENDING_SELECTION) == expected_cell
+    assert fake_session.get(view_mod._SESSION_TABLE_SYNCED_CELL) == expected_cell
+    mock_st.rerun.assert_called_once()
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_table_expander_cell_click_takes_precedence_over_stale_rows(mock_st: MagicMock) -> None:
+    fake_session = {
+        view_mod._SESSION_TABLE_LAST_ROWS: [0],
+        view_mod._SESSION_TABLE_LAST_CELLS: [[0, "Celda"]],
+        view_mod._SESSION_TABLE_SYNCED_CELL: "VP-001",
+    }
+    mock_st.session_state = fake_session
+    _mock_expander(mock_st)
+    mock_st.radio.return_value = view_mod._ORDER_PRIORITY_OFFICIAL
+    mock_st.selectbox.return_value = "Todos los grupos (50 celdas)"
+
+    # rows sigue en [0] (stale), pero cells cambió a [[2, "Prioridad"]]
+    mock_st.dataframe.return_value = {
+        "selection": {"rows": [0], "columns": [], "cells": [[2, "Prioridad"]]}
+    }
+
+    view = v0_view()
+    df, _ = view_mod._prepare_ranking_display(
+        view.cells,
+        order_mode=view_mod._ORDER_PRIORITY_OFFICIAL,
+        group_filter="Todos los grupos (50 celdas)",
+    )
+    expected_cell = str(df.iloc[2]["Celda"])
+
+    view_mod._render_ranking_expander(view, selected_id="VP-001")
+
+    assert fake_session.get(view_mod._SESSION_PENDING_SELECTION) == expected_cell
+    assert fake_session.get(view_mod._SESSION_TABLE_SYNCED_CELL) == expected_cell
+    mock_st.rerun.assert_called_once()
 
 
 @patch("app.components.ranking_backend_view.st")
