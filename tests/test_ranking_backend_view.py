@@ -429,7 +429,15 @@ def test_prepare_ranking_display_ties_ordered_by_cell_id() -> None:
     assert len(df) == 50
     # Los primeros 7 empatados con display_rank 1 deben quedar ordenados por ID
     top7_ids = list(df["Celda"][:7])
-    assert top7_ids == ["VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"]
+    assert top7_ids == [
+        "VP-001",
+        "VP-002",
+        "VP-011",
+        "VP-012",
+        "VP-013",
+        "VP-016",
+        "VP-033",
+    ]
     assert list(df["Prioridad"][:7]) == [1] * 7
     # Los 2 últimos empatados con display_rank 49 (VP-028 y VP-038)
     bottom2_ids = list(df["Celda"][-2:])
@@ -470,7 +478,13 @@ def test_ranking_expander_with_cell_id_order_and_filter(mock_st: MagicMock) -> N
     df = mock_st.dataframe.call_args[0][0]
     assert len(df) == 7
     assert list(df["Celda"]) == [
-        "VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"
+        "VP-001",
+        "VP-002",
+        "VP-011",
+        "VP-012",
+        "VP-013",
+        "VP-016",
+        "VP-033",
     ]
     assert all(df["Grupo"] == "Grupo 1")
     assert all(df["Prioridad"] == 1)

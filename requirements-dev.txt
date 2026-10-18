@@ -9,6 +9,9 @@ scipy==1.18.1
 xgboost==3.4.1
 pytest==9.1.1
 pytest-cov==7.1.0
+# Los tests de scripts/measure_browser_e2e_d21.py importan Selenium
+# durante la recolección aunque utilicen un driver simulado.
+selenium==4.51.0
 flake8==7.3.0
 black==26.5.1
 locust==2.46.5
