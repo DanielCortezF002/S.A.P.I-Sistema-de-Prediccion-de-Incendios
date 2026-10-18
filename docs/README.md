@@ -16,7 +16,7 @@ Este índice proporciona acceso navegable y estructurado a la totalidad de las e
 | **Defensa Académica** | Guiones de presentación, preguntas de comisión y riesgos | [`docs/defensa-academica/`](defensa-academica/01-sprint1-vs-sprint2-arquitectura.md) |
 | **Operaciones y Tooling** | Manuales de contingencia, refresco FIRMS/DMC y n8n | [`docs/ops/`](ops/CONTROL-CENTER.md) |
 | **Contratos e Interfaces** | Especificaciones OpenAPI de microservicios v2 | [`contracts/openapi/`](../contracts/openapi/README.md) |
-| **Agentes e IA** | Contexto permanente, seguridad MCP y gobernanza de skills | [`docs/ai/`](ai/SAPI_CONTEXT.md) |
+| **Agentes e IA** | Contexto permanente, seguridad MCP y gobernanza de skills | [`AGENTS.md`](../AGENTS.md) |
 
 ---
 
@@ -99,12 +99,12 @@ Ubicados en [`docs/ops/`](ops/):
 
 ## 6. Asistencia de Inteligencia Artificial y Gobernanza
 
-Ubicados en [`docs/ai/`](ai/):
-- **[Contexto de Dominio S.A.P.I.](ai/SAPI_CONTEXT.md):** Contexto unificado de alto nivel para agentes Claude Code, Antigravity y Codex.
-- **[Seguridad y Gobernanza MCP](ai/MCP_SECURITY_AND_SETUP.md):** Políticas de menor privilegio para servidores MCP (PostGIS en solo lectura SELECT, GitHub sin escrituras directas).
-- **[Guía de Integración Claude Desktop](ai/CLAUDE_DESKTOP_GUIDE.md):** Configuración de asistentes locales de escritorio.
-- **[Matriz de Rúbricas y Gates](ai/RUBRIC_MATRIX.md):** Reglas automatizables de auditoría técnica.
-- **[Quality Gate de Cierre de Sprint 2](ai/SPRINT2_CLOSURE_GATE.md):** Protocolo de verificación G0-G7.
+Ubicados en `docs/ai/` (documentación pendiente de integración; directiva vigente en [`AGENTS.md`](../AGENTS.md)):
+- **[Contexto de Dominio S.A.P.I.](../AGENTS.md):** Contexto unificado de alto nivel para agentes Claude Code, Antigravity y Codex (`docs/ai/SAPI_CONTEXT.md`: documentación pendiente de integración).
+- **Seguridad y Gobernanza MCP:** Políticas de menor privilegio para servidores MCP (PostGIS en solo lectura SELECT, GitHub sin escrituras directas) (`docs/ai/MCP_SECURITY_AND_SETUP.md`: documentación pendiente de integración).
+- **Guía de Integración Claude Desktop:** Configuración de asistentes locales de escritorio (`docs/ai/CLAUDE_DESKTOP_GUIDE.md`: documentación pendiente de integración).
+- **Matriz de Rúbricas y Gates:** Reglas automatizables de auditoría técnica (`docs/ai/RUBRIC_MATRIX.md`: documentación pendiente de integración).
+- **Quality Gate de Cierre de Sprint 2:** Protocolo de verificación G0-G7 (`docs/ai/SPRINT2_CLOSURE_GATE.md`: documentación pendiente de integración).
 
 ---
 
