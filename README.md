@@ -11,7 +11,7 @@
 
 > El score del Modelo D es un **ranking relativo** entre las celdas de una misma evaluación: **no es una probabilidad calibrada de incendio** y el modelo no tiene validación científica (`scientific_model_validation = false`). Una detección FIRMS es una anomalía térmica observada por satélite, **no** un incendio confirmado en terreno. Ver [`docs/model_card_baseline.md`](docs/model_card_baseline.md).
 
-[Ver demo](#-demo) · [Instalación rápida](#️-instalación) · [Documentación técnica](#-documentación) · [Resultados](#-resultados-obtenidos)
+[Ver demo](#demo) · [Instalación rápida](#instalación) · [Índice de Documentación](docs/README.md) · [Guía de Contribución](CONTRIBUTING.md) · [Gobernanza](docs/repository-governance/REPOSITORY_MAP.md)
 
 </div>
 
@@ -127,30 +127,44 @@ no en este README, para que no queden desactualizados.
 
 ## Estructura del Repositorio
 
+El repositorio organiza sus componentes bajo una estricta separación de responsabilidades y categorías de gobernanza formalizadas en [`docs/repository-governance/REPOSITORY_MAP.md`](docs/repository-governance/REPOSITORY_MAP.md):
+
 ```
 S.A.P.I-Sistema-de-Prediccion-de-Incendios/
-├── app/                 # Streamlit (presentación); vista Prototipo y Centro de Control
-├── services/
-│   ├── ml_api/          # Servicio ML FastAPI (SAPI-55): /health, /predict
+├── app/                 # [CORE] Streamlit (presentación); vista Prototipo y Centro de Control
+├── services/            # [CORE] Microservicios desacoplados de la arquitectura v2
+│   ├── ml_api/          # Servicio ML FastAPI (SAPI-55): /health, /predict (Modelo D)
 │   └── backend/         # Backend Spring Boot (SAPI-54, SAPI-57): /health, /api/v1/ranking
-├── contracts/openapi/   # Contratos OpenAPI v0 (SAPI-56)
-├── db/migration/        # Esquema PostgreSQL/PostGIS v2 (SAPI-58)
-├── src/
-│   ├── inference/       # Ruta activa del Modelo D (score_current_grid)
+├── contracts/openapi/   # [DOCS] Contratos OpenAPI v0 (SAPI-56) de servicios REST
+├── db/migration/        # [CORE] Esquema PostgreSQL/PostGIS v2 y migraciones Flyway V001–V004
+├── src/                 # [CORE] Librería central del dominio en Python
+│   ├── inference/       # Inferencia activa del Modelo D y fijación de entradas (ScoringInputs)
 │   ├── procesamiento/   # Features (FIRMS, DMC regional, DEM)
 │   ├── refresh/         # Refresco versionado FIRMS/DMC (SAPI-71)
-│   ├── geo/             # Grilla de 50 celdas (VP-001..VP-050)
-│   └── modelo/, pipeline/, query/   # Ruta legacy de Hito 1 (no activa)
-├── models/              # Artefacto congelado del Modelo D (.pkl + metadata)
-├── artifacts/           # Evidencia versionada (hito1/, hito2/)
-├── docs/                # Documentación técnica, freeze de arquitectura, model card
-├── scripts/             # Entrenamiento, verificación y utilidades
-├── tests/               # Suite pytest
-├── tools/, ops/         # Tooling de operación (puente n8n, refresco controlado)
-├── docker/initdb/       # Esquema legacy de Hito 1 (LEGACY_ONLY)
-├── docker-compose.yml
-└── Dockerfile.*         # analytics (legacy), web, ml-api, n8n-bridge
+│   ├── geo/             # Grilla poligonal de 50 celdas (VP-001..VP-050)
+│   └── modelo/, pipeline/, query/ # Ruta legacy de Hito 1 (conservada para trazabilidad)
+├── models/              # [CORE] Artefacto congelado del Modelo D (.pkl + metadata reproducible)
+├── artifacts/           # [EVIDENCIA] Evidencia congelada histórica (hito1/reproducibility/, hito2/)
+├── deliverables/        # [ACADÉMICO] Entregables formales de titulación UNAB (DOCX, PDF, PPTX)
+├── docs/                # [DOCS] Documentación técnica, freeze de arquitectura y gobernanza
+│   ├── repository-governance/ # Auditoría integral R1, mapa y propuestas de limpieza
+│   ├── adr/             # Decisiones arquitectónicas (ADR-001 a ADR-011)
+│   ├── hito2/           # Informe académico Hito 2, rúbricas docentes y DoD
+│   ├── defensa-academica/ # Guiones de examen de 5 min y preguntas de comisión
+│   ├── ops/             # Manuales de operación y contingencia
+│   └── ai/              # Contexto de agentes, seguridad MCP y matrices de calidad
+├── reports/             # [EVIDENCIA] Reportes estructurados de auditoría y viabilidad (JSON/CSV)
+├── experiments/         # [INVESTIGACIÓN] Módulos experimentales aislados (SAPI-63 secuencias)
+├── notebooks/           # [INVESTIGACIÓN] Notebooks Jupyter de análisis exploratorio
+├── scripts/             # [TOOLING] Entrenamiento, verificación, preflight y auditoría
+├── tests/               # [CALIDAD] Suite pytest (gate de cobertura mínima 80%)
+├── tools/, ops/         # [OPERACIONES] Tooling de soporte, puente n8n y pipeline documental
+├── docker/initdb/       # [LEGACY] Esquema legacy de Hito 1 (LEGACY_ONLY)
+├── docker-compose.yml   # [INFRA] Orquestación local multicontenedor v2
+└── Dockerfile.*         # [INFRA] Imágenes para analytics, web, ml-api y n8n-bridge
 ```
+
+Para una descripción detallada por directorio y matriz de dependencias, consultar el [Mapa del Repositorio](docs/repository-governance/REPOSITORY_MAP.md).
 
 ---
 
@@ -357,13 +371,15 @@ Actions no registra ninguna ejecución de este workflow**, y no existe despliegu
 automático. Su actualización y primera ejecución verificable es parte del
 Quality Gate W0 de Sprint 2 (`artifacts/hito2/`).
 
-### Estrategia de ramas
+### Estrategia de ramas y colaboración
 
 | Rama | Propósito |
 |------|-----------|
 | `main` | Código integrado |
 | `develop` | Rama de integración histórica |
-| `feat/SAPI-XX-…`, `docs/…`, `chore/…` | Una rama por issue de Jira, integrada vía pull request |
+| `feat/SAPI-XX-…`, `docs/…`, `chore/…` | Una rama por issue de Jira, integrada exclusivamente vía Pull Request |
+
+Para conocer los estándares de mensajes de commit convencionales, el protocolo de evidencias reproducibles y el checklist de Pull Requests, consultar la [Guía de Contribución](CONTRIBUTING.md).
 
 ---
 
