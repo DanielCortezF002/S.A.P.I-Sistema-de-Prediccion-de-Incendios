@@ -1,10 +1,10 @@
 # F4-R2: Implementación Controlada de Excepciones Criptográficas F4
 
-**Directiva:** OCC-003A  
-**Rol:** Principal Software Engineer — Configuration Governance  
-**Fecha:** 19 de octubre de 2026  
-**Rama:** `governance/f4-allowlist-r2-20261019`  
-**Base:** `origin/main` (`2ba8cebe895b3791241546e7303a8f771a93683b`)  
+**Directiva:** OCC-003A
+**Rol:** Principal Software Engineer — Configuration Governance
+**Fecha:** 19 de octubre de 2026
+**Rama:** `governance/f4-allowlist-r2-20261019`
+**Base:** `origin/main` (`2ba8cebe895b3791241546e7303a8f771a93683b`)
 
 ---
 
