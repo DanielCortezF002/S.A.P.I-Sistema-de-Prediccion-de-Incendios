@@ -49,8 +49,12 @@ def _free_port() -> int:
 
 class _StubHandler(http.server.BaseHTTPRequestHandler):
     body: bytes = b"{}"
+    requests: int = 0
+    requests_lock = threading.Lock()
 
     def do_POST(self) -> None:  # noqa: N802
+        with _StubHandler.requests_lock:
+            _StubHandler.requests += 1
         length = int(self.headers.get("Content-Length", "0"))
         self.rfile.read(length)
         body = _StubHandler.body
@@ -102,6 +106,17 @@ def _http_ready(url: str) -> tuple[int, bytes] | None:
         return None
 
 
+def _error_type(body: bytes) -> str:
+    """Extrae solo el tipo de error contractual para un fallo seguro de CI."""
+    try:
+        payload = json.loads(body)
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return "[respuesta no JSON]"
+    if not isinstance(payload, dict):
+        return "[no objeto]"
+    return str(payload.get("error_type", "[ausente]"))
+
+
 def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
     run_id = uuid.uuid4().hex[:8]
     project = f"sapi-f1-ca8-dyn-{run_id}"
@@ -134,6 +149,8 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
             cwd=REPO_ROOT, env=env, capture_output=True, text=True, timeout=600,
         )
 
+    results: dict[str, object] = {}
+    _StubHandler.requests = 0
     try:
         # 1) Stack real aislado: base + overlay operacional, build limpio.
         resolved = compose("config")
@@ -191,16 +208,24 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
         else:
             pytest.fail("contenedor-sonda no respondio a tiempo")
 
-        results = {}
-
         # 3) Rechazo baseline y reproducibility -> 500 internal_error, cero escrituras nuevas.
         reject_fingerprints = {"baseline": "aa" * 32, "reproducibility": "bb" * 32}
         for origin, fingerprint in reject_fingerprints.items():
             _StubHandler.body = _ranking_with("2026-10-14T11:00:00Z", fingerprint, origin)
+            requests_before = _StubHandler.requests
             status, body = _http(f"http://127.0.0.1:{probe_port}/api/v1/ranking")
             payload = json.loads(body)
-            results[f"reject_{origin}"] = {"status": status, "body": payload}
-            assert status == 500
+            stub_posts = _StubHandler.requests - requests_before
+            results[f"reject_{origin}"] = {
+                "status": status,
+                "body": payload,
+                "stub_posts": stub_posts,
+            }
+            assert stub_posts > 0, f"origin={origin}: backend no consulto el stub HTTP"
+            assert status == 500, (
+                f"origin={origin}, HTTP={status}, error_type={_error_type(body)}, "
+                f"stub_posts={stub_posts}"
+            )
             assert payload.get("error_type") == "internal_error"
             assert _count_rows(db_container, "ejecuciones") == before_exec
             assert _count_rows(db_container, "predicciones_celda") == before_pred
@@ -208,9 +233,19 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
         # 5) Control CURRENT sintetico: 1 ejecucion, 50 predicciones.
         synthetic_fp = "f1" * 32
         _StubHandler.body = _ranking_with("2026-10-14T12:00:00Z", synthetic_fp, "current")
+        requests_before = _StubHandler.requests
         status, body = _http(f"http://127.0.0.1:{probe_port}/api/v1/ranking")
-        results["accept_current"] = {"status": status}
-        assert status == 200
+        stub_posts = _StubHandler.requests - requests_before
+        results["accept_current"] = {
+            "status": status,
+            "error_type": _error_type(body) if status != 200 else None,
+            "stub_posts": stub_posts,
+        }
+        assert stub_posts > 0, "origin=current: backend no consulto el stub HTTP"
+        assert status == 200, (
+            f"origin=current, HTTP={status}, error_type={_error_type(body)}, "
+            f"stub_posts={stub_posts}"
+        )
         assert _count_rows(db_container, "ejecuciones") == before_exec + 1
         assert _count_rows(db_container, "predicciones_celda") == before_pred + 50
         stored_origin = _psql(db_container, "SELECT firms_origin FROM ejecuciones ORDER BY id DESC LIMIT 1;")
@@ -227,14 +262,20 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
         # 7) Evidencia: SHA, config, conteos SQL, resultados.
         head = subprocess.run(["git", "rev-parse", "HEAD"], cwd=REPO_ROOT, capture_output=True, text=True).stdout.strip()
         (evidence / "git_identity.txt").write_text(f"head: {head}\nproject: {project}\n", encoding="utf-8")
-        (evidence / "results.json").write_text(json.dumps(results, indent=2), encoding="utf-8")
         (evidence / "sql_counts.txt").write_text(
             f"before: ejecuciones={before_exec} predicciones={before_pred}\n"
             f"after: ejecuciones={before_exec + 1} predicciones={before_pred + 50}\n",
             encoding="utf-8",
         )
     finally:
-        subprocess.run(["docker", "rm", "-f", probe_container], capture_output=True)
-        stub.shutdown()
-        down = compose("down")
-        (evidence / "compose_down.log").write_text(down.stdout + down.stderr, encoding="utf-8")
+        try:
+            (evidence / "results.json").write_text(
+                json.dumps(results, indent=2), encoding="utf-8"
+            )
+        finally:
+            subprocess.run(["docker", "rm", "-f", probe_container], capture_output=True)
+            stub.shutdown()
+            down = compose("down")
+            (evidence / "compose_down.log").write_text(
+                down.stdout + down.stderr, encoding="utf-8"
+            )
