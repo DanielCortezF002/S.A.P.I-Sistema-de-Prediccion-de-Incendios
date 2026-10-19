@@ -95,6 +95,68 @@ CONTRACT_PINS = {
     ),
 }
 
+# F4: Excepciones de contenido congelado autorizadas formalmente (Directiva OCC-003A).
+# Cada excepción está fijada de forma inmutable tanto por su Git Blob SHA como
+# por el SHA-256 de su contenido canonical (LF). Cualquier cambio posterior,
+# incluso de un solo byte o en cualquier otra ruta congelada, invalida el gate (FAIL).
+F4_AUTHORIZED_EXCEPTIONS = {
+    "src/inference/scoring_inputs.py": {
+        "authorized_commit": "7dcd0b666e05bb5efd64c1c98685902e8b4908bf",
+        "blob_sha": "2dcb470886f6d2ea1a1f300854e20d4e545cc041",
+        "content_sha256": "1aa419fdda5ccdd4834970ecf0e7d613abdba9efb951b028bb2dca1596a2c221",
+        "defect_id": "B2",
+        "author": "DanielCortezF002",
+        "reason": (
+            "Manejo defensivo de excepciones en decodificación DMC "
+            "(UnicodeDecodeError, JSONDecodeError -> PinnedInputError)"
+        ),
+        "evidence": "docs/evidence/b1-b2-b3-estado-real-20261015/README.md",
+        "scope": "_read_versioned_months (L154-159)",
+    },
+    "src/procesamiento/firms_source.py": {
+        "authorized_commit": "7dcd0b666e05bb5efd64c1c98685902e8b4908bf",
+        "blob_sha": "211c0a8fa897d644cf8520a2789f083ba235ba62",
+        "content_sha256": "90daeff030f3561107ff084fce852c5761116ed010ec279e4eeea4c8d8ebfbef",
+        "defect_id": "B1",
+        "author": "DanielCortezF002",
+        "reason": (
+            "Extracción de validate_pointer_dict para validación en memoria "
+            "desacoplada del filesystem (prevención TOCTOU)"
+        ),
+        "evidence": "docs/evidence/b1-b2-b3-estado-real-20261015/README.md",
+        "scope": "validate_pointer_dict (L166-195)",
+    },
+    "src/refresh/dmc_refresh.py": {
+        "authorized_commit": "7dcd0b666e05bb5efd64c1c98685902e8b4908bf",
+        "blob_sha": "3c67404247f67f13cad2533394f7e67cb1f03486",
+        "content_sha256": "6b3c51a71687651ba30ab4c1949b52c5f5499227b3c2b8cd021c0e53b445c84c",
+        "defect_id": "ADV-05",
+        "author": "DanielCortezF002",
+        "reason": (
+            "Invariante Write-Ahead Logging (WAL): registrar en historial "
+            "antes de actualizar puntero atómico en _publish()"
+        ),
+        "evidence": "docs/evidence/adv05-fix-validated-20261015/README.md",
+        "scope": "_publish (L586-589)",
+    },
+    "src/refresh/firms_refresh.py": {
+        "authorized_commit": "7dcd0b666e05bb5efd64c1c98685902e8b4908bf",
+        "blob_sha": "ebc67c74fce44801bf373795672c56ca6198628c",
+        "content_sha256": "d6031497246a4461b108c521a7d9dde2da77580d06bff00da985556f7f90d654",
+        "defect_id": "B1, B3, ADV-05",
+        "author": "DanielCortezF002",
+        "reason": (
+            "Invariante WAL en _publish(), preservación de FirmsRefreshError "
+            "en refresh(), y validación estricta de sidecar en rollback()"
+        ),
+        "evidence": (
+            "docs/evidence/adv05-fix-validated-20261015/README.md y "
+            "b1-b2-b3-estado-real-20261015/README.md"
+        ),
+        "scope": "_publish (L273-277), refresh (L316-317), rollback (L400-417)",
+    },
+}
+
 
 def _firms_reproducibility_csv() -> str:
     """Ruta del snapshot FIRMS R3, leída de su única fuente de verdad.
@@ -383,11 +445,49 @@ def check_readiness(report: Report) -> None:
 def check_frozen_paths(report: Report) -> None:
     paths = list(FROZEN_PATHS)
     committed = git("diff", "--name-only", BASELINE, "HEAD", "--", *paths)
+    committed_files = [line.strip() for line in committed.splitlines() if line.strip()]
+
+    unauthorized: list[str] = []
+    authorized_applied: list[str] = []
+
+    for rel_path in committed_files:
+        if rel_path in F4_AUTHORIZED_EXCEPTIONS:
+            exc = F4_AUTHORIZED_EXCEPTIONS[rel_path]
+            try:
+                head_blob = git("rev-parse", f"HEAD:{rel_path}")
+                head_bytes = git_bytes("HEAD", rel_path)
+                head_sha256 = hashlib.sha256(head_bytes).hexdigest()
+            except Exception as e:
+                unauthorized.append(f"{rel_path} (read_error: {e})")
+                continue
+
+            if head_blob == exc["blob_sha"] and head_sha256 == exc["content_sha256"]:
+                authorized_applied.append(f"{rel_path} ({exc['defect_id']})")
+            else:
+                unauthorized.append(
+                    f"{rel_path} (drift: blob={head_blob[:12]} expected={exc['blob_sha'][:12]})"
+                )
+        else:
+            unauthorized.append(rel_path)
+
+    if unauthorized:
+        f4_status = "FAIL"
+        f4_detail = f"archivos no autorizados o alterados: {', '.join(unauthorized)}"
+    else:
+        f4_status = "PASS"
+        if authorized_applied:
+            f4_detail = (
+                f"sin cambios salvo {len(authorized_applied)} excepciones F4 autorizadas: "
+                f"{', '.join(authorized_applied)}"
+            )
+        else:
+            f4_detail = "sin cambios"
+
     report.add(
         "F4 congelados (commits)",
-        "FAIL" if committed else "PASS",
-        "sin cambios desde baseline",
-        committed.replace("\n", ", ") or "sin cambios",
+        f4_status,
+        "sin cambios desde baseline (salvo excepciones F4 autorizadas)",
+        f4_detail,
     )
     uncommitted = git("diff", "--name-only", "HEAD", "--", *paths)
     staged = git("diff", "--cached", "--name-only", "--", *paths)
