@@ -203,15 +203,100 @@ def freeze_command(json_path: Path, allowed_tags: tuple[str, ...]) -> list[str]:
     return command
 
 
+# Controles obligatorios que scripts/freeze_check.py debe emitir en modo gate.
+# Si falta cualquiera de ellos, o si existen duplicados, el gate falla.
+MANDATORY_FREEZE_CHECKS = (
+    "F1 HEAD",
+    "F1 tags locales",
+    "F1 tags remotos",
+    "F1 origin/main",
+    "F2 fingerprint Modelo D",
+    "F3 readiness (baseline)",
+    "F3 readiness (HEAD)",
+    "F3 readiness (worktree)",
+    "F4 congelados (commits)",
+    "F4 congelados (worktree)",
+    "F4 congelados (archivos nuevos)",
+    "F4b contratos aditivos",
+    "F4c servicio ML",
+    "F5 verify_reproducibility",
+    "F5 contrato CRLF (.gitattributes)",
+    "F6 db/migration",
+    "F6/F9 db/migration/V001__enable_postgis.sql",
+    "F6/F9 db/migration/V002__create_sapi_v2_schema.sql",
+    "F6/F9 db/migration/V003__seed_celdas_geom.sql",
+    "F6/F9 models/prototype_model_d.pkl",
+    "F6/F9 models/prototype_model_d_metadata.json",
+    "F6/F9 artifacts/hito1/reproducibility/manifest.json",
+    "F7 contratos v0",
+    "F8 worktree limpio",
+    "F8 ignorados inesperados",
+    "F8 stash/worktrees",
+    "F9 models/",
+)
+
+
 def freeze_gate_status(report: dict) -> tuple[str, list[str]]:
-    """Modo gate: cualquier FAIL o SKIP del freeze check es FAIL."""
-    problems = [
-        f"{row['check']}={row['status']}"
-        for row in report.get("checks", [])
-        if row.get("status") != PASS
-    ]
-    if not report.get("checks"):
-        problems.append("reporte sin checks")
+    """Modo gate: valida integridad completa, controles obligatorios y estado.
+
+    Criterios:
+    1. El reporte debe ser un diccionario con lista 'checks' no vacía.
+    2. Todos los controles de MANDATORY_FREEZE_CHECKS deben estar presentes.
+    3. No se permiten controles duplicados ni contradictorios.
+    4. F7 contratos v0 puede ser INFO únicamente si F4b contratos aditivos es PASS.
+    5. Cualquier otro control con INFO es FAIL.
+    6. Cualquier control con FAIL, SKIP, WARN o estado desconocido es FAIL.
+    """
+    if not isinstance(report, dict) or not report.get("checks"):
+        return FAIL, ["reporte sin checks o malformado"]
+
+    checks = report["checks"]
+    seen_checks = set()
+    problems = []
+
+    for row in checks:
+        if not isinstance(row, dict):
+            problems.append("fila de check malformada")
+            continue
+        name = row.get("check")
+        status = row.get("status")
+
+        if not name:
+            problems.append("check sin nombre")
+            continue
+
+        if name in seen_checks:
+            problems.append(f"control duplicado o contradictorio: {name}")
+            continue
+        seen_checks.add(name)
+
+        if status == PASS:
+            continue
+        elif status == "INFO":
+            continue
+        else:
+            problems.append(f"{name}={status}")
+
+    missing = sorted(set(MANDATORY_FREEZE_CHECKS) - seen_checks)
+    if missing:
+        problems.append(f"controles obligatorios ausentes: {', '.join(missing)}")
+
+    status_map = {
+        row["check"]: row.get("status")
+        for row in checks
+        if isinstance(row, dict) and "check" in row
+    }
+    if status_map.get("F7 contratos v0") == "INFO":
+        if status_map.get("F4b contratos aditivos") != PASS:
+            problems.append(
+                "F7 contratos v0=INFO no admisible: "
+                f"F4b contratos aditivos={status_map.get('F4b contratos aditivos')}"
+            )
+
+    for name, status in status_map.items():
+        if status == "INFO" and name != "F7 contratos v0":
+            problems.append(f"{name}=INFO no autorizado")
+
     return (FAIL if problems else PASS), problems
 
 
