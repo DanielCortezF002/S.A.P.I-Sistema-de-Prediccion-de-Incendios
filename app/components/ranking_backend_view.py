@@ -304,7 +304,9 @@ def _inject_css() -> None:
         .sapi-v2-header {
             display: flex; flex-wrap: wrap; justify-content: space-between;
             gap: 1.25rem; align-items: flex-start; margin: 0 0 1rem 0;
-            font-family: var(--sapi-font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif);
+            font-family: var(
+                --sapi-font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
+            );
         }
         .sapi-v2-title {
             font-size: 2.1rem; font-weight: 850; letter-spacing: -0.03em;
@@ -315,25 +317,35 @@ def _inject_css() -> None:
             color: var(--sapi-text-primary); font-weight: 500;
         }
         .sapi-v2-status {
-            display: flex; flex-wrap: wrap; gap: 0.55rem; justify-content: flex-end; align-items: center;
+            display: flex; flex-wrap: wrap; gap: 0.55rem;
+            justify-content: flex-end; align-items: center;
         }
         .sapi-v2-badge {
             display: inline-flex; align-items: center; padding: 0.38rem 0.85rem;
             border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em;
             text-transform: uppercase; border: 1px solid rgba(127,127,127,0.35);
         }
-        .sapi-v2-badge--violet { background: #3b2a6d; border-color: #8b5cf6; color: #ede9fe; box-shadow: 0 2px 6px rgba(139,92,246,0.25); }
-        .sapi-v2-badge--hist { background: #7f1d1d; border-color: #ef4444; color: #fee2e2; box-shadow: 0 2px 6px rgba(239,68,68,0.25); }
-        .sapi-v2-badge--rest { background: #064e3b; border-color: #10b981; color: #d1fae5; box-shadow: 0 2px 6px rgba(16,185,129,0.25); }
+        .sapi-v2-badge--violet {
+            background: #3b2a6d; border-color: #8b5cf6; color: #ede9fe;
+            box-shadow: 0 2px 6px rgba(139,92,246,0.25);
+        }
+        .sapi-v2-badge--hist {
+            background: #7f1d1d; border-color: #ef4444; color: #fee2e2;
+            box-shadow: 0 2px 6px rgba(239,68,68,0.25);
+        }
+        .sapi-v2-badge--rest {
+            background: #064e3b; border-color: #10b981; color: #d1fae5;
+            box-shadow: 0 2px 6px rgba(16,185,129,0.25);
+        }
         .sapi-v2-badge--postgis { background: #0c4a6e; border-color: #38bdf8; color: #e0f2fe; }
         .sapi-v2-badge--model { background: #262626; border-color: #737373; color: #f5f5f5; }
-        
+
         .sapi-v2-meta {
             margin-top: 0.6rem; font-size: 0.95rem; opacity: 0.95;
             text-align: right; line-height: 1.6; color: var(--sapi-text-primary);
             font-variant-numeric: tabular-nums;
         }
-        
+
         .sapi-v2-kpi-row {
             display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 0.65rem; margin: 0.4rem 0 0.65rem 0;
@@ -364,7 +376,7 @@ def _inject_css() -> None:
             text-transform: uppercase; letter-spacing: 0.04em;
             color: var(--sapi-text-primary);
         }
-        
+
         .sapi-v2-panel {
             background: var(--sapi-surface-card);
             border: 1px solid var(--sapi-border-card);
@@ -399,7 +411,7 @@ def _inject_css() -> None:
         .sapi-v2-kv li:last-child { border-bottom: none; }
         .sapi-v2-kv span { opacity: 0.75; font-weight: 550; }
         .sapi-v2-kv b { font-weight: 750; }
-        
+
         .sapi-v2-legend {
             margin: 0.45rem 0 0.65rem 0;
             background: var(--sapi-surface-card);
@@ -407,7 +419,8 @@ def _inject_css() -> None:
             border-radius: 10px; padding: 0.55rem 0.95rem;
             color: var(--sapi-text-primary);
             box-shadow: 0 2px 6px rgba(0,0,0,0.14);
-            display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem;
+            display: flex; flex-wrap: wrap; justify-content: space-between;
+            align-items: center; gap: 0.5rem;
         }
         .sapi-v2-legend__header {
             display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
@@ -430,7 +443,8 @@ def _inject_css() -> None:
             width: 13px; height: 13px; border-radius: 50%; display: inline-block;
             border: 2px solid rgba(255,255,255,0.45); flex-shrink: 0;
         }
-        
+
+
         .sapi-v2-disclaimer {
             font-size: 0.88rem; opacity: 0.95; margin: 0.45rem 0 0.65rem 0;
             padding: 0.65rem 1rem; border-radius: 8px;
@@ -480,7 +494,8 @@ def _render_header(view: RankingView) -> None:
     st.markdown(
         '<div class="sapi-v2-header"><div>'
         '<div class="sapi-v2-title">S.A.P.I.</div>'
-        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios · Defensa Académica Sprint 2</div>'
+        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios '
+        "· Defensa Académica Sprint 2</div>"
         "</div>"
         '<div class="sapi-v2-status">'
         '<span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>'
@@ -543,8 +558,11 @@ def _render_kpi_strip(view: RankingView) -> None:
     )
     if m is None:
         st.caption(
-            "ℹ **Variables meteorológicas:** Procesadas por el Modelo D en inferencia (`temperatura`, `humedad`, `viento`). "
-            "El endpoint v0 proyecta el ranking relativo de celdas; la exposición de telemetría instantánea está catalogada como mejora aditiva para el contrato v1."
+            "ℹ **Variables meteorológicas:** Procesadas por el Modelo D en inferencia "
+            "(`temperatura`, `humedad`, `viento`). "
+            "El endpoint v0 proyecta el ranking relativo de celdas; "
+            "la exposición de telemetría instantánea está catalogada "
+            "como mejora aditiva para el contrato v1."
         )
 
 
@@ -555,9 +573,10 @@ def _render_disclaimer(view: RankingView) -> None:
     if text and FIXED_DISCLAIMER not in text:
         st.markdown(
             f'<div class="sapi-v2-disclaimer">'
-            f'<div>{_esc(text)}</div>'
-            f'<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">{FIXED_DISCLAIMER}</div>'
-            '</div>',
+            f"<div>{_esc(text)}</div>"
+            '<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">'
+            f"{FIXED_DISCLAIMER}</div>"
+            "</div>",
             unsafe_allow_html=True,
         )
     else:
@@ -581,9 +600,9 @@ def _render_map_legend(group_by_score: dict[float, int]) -> None:
         '<div class="sapi-v2-legend__header">'
         '<div class="sapi-v2-legend__title">Prioridad relativa</div>'
         '<div class="sapi-v2-legend__note">Score relativo (no representa alertas oficiales).</div>'
-        '</div>'
+        "</div>"
         f'<div class="sapi-v2-legend__items">{"".join(rows)}</div>'
-        '</div>',
+        "</div>",
         unsafe_allow_html=True,
     )
 
@@ -722,7 +741,9 @@ def _prepare_ranking_display(
     if filter_str.startswith("Grupo "):
         try:
             target_group = int(filter_str.split()[1])
-            filtered_cells = [c for c in cells if group_map.get(c.score) == target_group]
+            filtered_cells = [
+                c for c in cells if group_map.get(c.score) == target_group
+            ]
         except (IndexError, ValueError):
             filtered_cells = list(cells)
     else:
@@ -859,8 +880,10 @@ def _render_tech_expander(view: RankingView) -> None:
             + "- **Fuente de detecciones:** NASA FIRMS\n"
             + f"- **Procedencia FIRMS:** {firms_detail}"
             + (
-                "\n  *(Sincronía FIRMS evaluada respecto a fecha T; cumple umbral operacional ≤3 días)*"
-                if view.firms_provenance_available and view.firms_status == "FIRMS AL DÍA"
+                "\n  *(Sincronía FIRMS evaluada respecto a fecha T; "
+                "cumple umbral operacional ≤3 días)*"
+                if view.firms_provenance_available
+                and view.firms_status == "FIRMS AL DÍA"
                 else ""
             )
         ),
