@@ -62,7 +62,7 @@ def test_map_selection_of_unknown_level_keeps_the_colour_it_was_given():
 
 
 def test_stylesheet_sets_touch_targets_without_dataframe_checkbox_hack() -> None:
-    """Fase 3: selección por tarjetas; el MutationObserver de checkboxes ya no existe."""
+    """Fase 3: selección por tarjetas, manteniendo el estilo visual del DataFrame."""
     from app.theme.css import build_stylesheet
     from app.theme.tokens import TOUCH_TARGET_PX
 
@@ -70,4 +70,7 @@ def test_stylesheet_sets_touch_targets_without_dataframe_checkbox_hack() -> None
     assert f"--sapi-touch-target: {TOUCH_TARGET_PX}px" in css
     assert "min-height: var(--sapi-touch-target)" in css
     assert "MutationObserver" not in css
-    assert 'data-testid="stDataFrame"' not in css
+    # El contenedor puede tener bordes y contraste, no controles de selección ocultos.
+    assert 'div[data-testid="stDataFrame"] {' in css
+    assert 'input[type="checkbox"]' not in css
+    assert '[role="checkbox"]' not in css

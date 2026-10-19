@@ -27,11 +27,18 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from selenium import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.edge.options import Options
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+try:
+    from selenium import webdriver
+    from selenium.webdriver.common.by import By
+    from selenium.webdriver.edge.options import Options
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import WebDriverWait
+except ImportError:
+    webdriver = None
+    By = None
+    Options = None
+    EC = None
+    WebDriverWait = None
 
 
 def get_git_identities(repo_root: Path) -> tuple[str, str]:
@@ -80,6 +87,8 @@ def get_container_identities(project_name: str = "sapi-v2") -> dict[str, str]:
 
 
 def create_driver() -> webdriver.Edge:
+    if webdriver is None or Options is None:
+        raise RuntimeError("Selenium no está instalado en este entorno.")
     options = Options()
     options.add_argument("--headless=new")
     options.add_argument("--disable-gpu")
