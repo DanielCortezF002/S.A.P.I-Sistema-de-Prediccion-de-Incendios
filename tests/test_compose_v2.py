@@ -105,14 +105,60 @@ def test_http_healthchecks_bypass_any_injected_proxy() -> None:
     assert "ProxyHandler({})" in _healthcheck_command("ml-api")
 
 
+def _db_secret_script() -> str:
+    entrypoint = SERVICES["db-v2"]["entrypoint"]
+    assert entrypoint[:2] == ["sh", "-ec"]
+    return entrypoint[2]
+
+
 def test_ca3_database_password_has_no_default() -> None:
-    required = re.compile(r"^\$\{SAPI_DB_PASSWORD:\?")
-    assert required.match(SERVICES["db-v2"]["environment"]["POSTGRES_PASSWORD"])
-    assert required.match(
-        SERVICES["backend"]["environment"]["SPRING_DATASOURCE_PASSWORD"]
-    )
+    """SAPI-66.CA5: la contraseña viaja como archivo del volumen, nunca con un valor fijo."""
+    db = SERVICES["db-v2"]["environment"]
+    backend = SERVICES["backend"]["environment"]
+    assert "POSTGRES_PASSWORD" not in db
+    assert db["POSTGRES_PASSWORD_FILE"] == "/run/sapi-secrets/db_password"
+    # Solo semilla opcional: vacía si el operador no la define.
+    assert db["SAPI_DB_PASSWORD_SEED"] == "${SAPI_DB_PASSWORD:-}"
+    assert backend["SPRING_CONFIG_IMPORT"] == "configtree:/run/sapi-secrets/"
+    # `$${...}` es un placeholder de Spring, no una variable de Compose.
+    assert backend["SPRING_DATASOURCE_PASSWORD"] == "$${db_password}"
     for service in V2_SERVICES:
         assert "sapi_secret" not in " ".join(_strings(SERVICES[service]))
+
+
+def test_ca5_secret_volume_is_writable_only_by_the_database() -> None:
+    assert "sapi_v2_secrets:/run/sapi-secrets" in SERVICES["db-v2"]["volumes"]
+    assert "sapi_v2_secrets:/run/sapi-secrets:ro" in SERVICES["backend"]["volumes"]
+    assert "sapi_v2_secrets" in COMPOSE["volumes"]
+    for service in ("ml-api", "web-v2"):
+        assert not any("sapi_v2_secrets" in v for v in SERVICES[service].get("volumes", []))
+
+
+def test_ca5_secret_init_is_restrictive_and_never_prints_the_password() -> None:
+    script = _db_secret_script()
+    assert "umask 077" in script
+    assert 'chmod 0440 "$$tmp"' in script
+    assert "chmod 0750 /run/sapi-secrets" in script
+    assert "/dev/urandom" in script
+    assert "set -x" not in script
+    # El valor solo va a archivos: ningún echo/printf lo manda a la salida.
+    for line in script.splitlines():
+        if "SAPI_DB_PASSWORD_SEED" in line and ("echo" in line or "printf" in line):
+            assert line.rstrip().endswith('> "$$tmp"'), line
+        assert not re.search(r"echo[^\n]*\$\$\(cat", line), line
+    assert script.rstrip().endswith('exec docker-entrypoint.sh "$$@"')
+
+
+def test_ca5_secret_init_fails_closed_instead_of_inventing_a_password() -> None:
+    script = _db_secret_script()
+    # Base ya inicializada sin contraseña recuperable: no genera otra.
+    lost = script.index('[ -s "$$PGDATA/PG_VERSION" ] && [ -z "$$SAPI_DB_PASSWORD_SEED" ]')
+    assert "exit 1" in script[lost : script.index("umask 077")]
+    # Semilla distinta de la guardada: no la reemplaza.
+    mismatch = script.index('[ "$$(cat "$$secret")" != "$$SAPI_DB_PASSWORD_SEED" ]')
+    assert "exit 1" in script[mismatch : script.index("else", mismatch)]
+    assert SERVICES["db-v2"]["command"] == ["postgres"]
+    assert "restart" not in SERVICES["db-v2"]
 
 
 def test_ca3_env_example_defines_every_variable_of_the_v2_services() -> None:
@@ -129,12 +175,12 @@ def test_ca3_env_example_defines_every_variable_of_the_v2_services() -> None:
     assert sorted(used - defined) == []
 
 
-def test_ca3_env_example_password_is_a_non_empty_placeholder() -> None:
+def test_ca3_env_example_has_no_functional_database_password() -> None:
+    """G0/CA3: copiar .env.example no fija una contraseña pública; db-v2 genera una."""
     values = dict(
         line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line
     )
-    assert values["SAPI_DB_PASSWORD"].strip()
-    assert values["SAPI_DB_PASSWORD"] != "sapi_secret"
+    assert values["SAPI_DB_PASSWORD"].strip() == ""
 
 
 def test_ca3_real_env_file_is_ignored_by_git() -> None:
@@ -143,7 +189,10 @@ def test_ca3_real_env_file_is_ignored_by_git() -> None:
 
 
 def test_ca4_v2_database_uses_its_own_volume_without_legacy_initdb() -> None:
-    assert SERVICES["db-v2"]["volumes"] == ["sapi_v2_pgdata:/var/lib/postgresql/data"]
+    assert SERVICES["db-v2"]["volumes"] == [
+        "sapi_v2_pgdata:/var/lib/postgresql/data",
+        "sapi_v2_secrets:/run/sapi-secrets",  # SAPI-66.CA5
+    ]
     assert "sapi_v2_pgdata" in COMPOSE["volumes"]
     # H4: la base legacy sigue declarada y nadie de la ruta v2 la usa.
     assert "sapi_pgdata" in COMPOSE["volumes"]
@@ -181,7 +230,10 @@ def test_backend_reaches_ml_and_database_by_service_name() -> None:
 
 def test_backend_runs_flyway_on_the_canonical_migrations_read_only() -> None:
     backend = SERVICES["backend"]
-    assert backend["volumes"] == ["./db/migration:/app/db/migration:ro"]
+    assert backend["volumes"] == [
+        "./db/migration:/app/db/migration:ro",
+        "sapi_v2_secrets:/run/sapi-secrets:ro",  # SAPI-66.CA5
+    ]
     assert (
         backend["environment"]["SAPI_FLYWAY_LOCATIONS"]
         == "filesystem:/app/db/migration"

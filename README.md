@@ -171,18 +171,23 @@ con un solo comando:
 ```bash
 git clone https://github.com/DanielCortezF002/S.A.P.I-Sistema-de-Prediccion-de-Incendios.git
 cd S.A.P.I-Sistema-de-Prediccion-de-Incendios
-cp .env.example .env            # Windows (PowerShell): Copy-Item .env.example .env
 docker compose up --build       # con -d --wait queda en segundo plano y espera a que todo esté healthy
 ```
 
-`.env` nunca se versiona. `SAPI_DB_PASSWORD` no tiene valor por defecto en
-`docker-compose.yml` (sin `.env`, Compose no arranca); el valor de
-`.env.example` es solo para desarrollo local y conviene cambiarlo antes del
-primer arranque, porque después queda fijado en el volumen. **Si ya existe un
-`.env` de Hito 1** (por ejemplo con credenciales reales de NASA FIRMS u
-OpenTopography), no lo reemplaces: agrega el bloque SAPI-60 de `.env.example`.
-Compose interpola todo el archivo, así que desde SAPI-60 también los comandos
-de los servicios de Hito 1 necesitan `SAPI_DB_PASSWORD`.
+No hace falta `.env` ni escribir contraseñas (SAPI-66.CA5). En el primer
+arranque `db-v2` genera una contraseña aleatoria para la base y la guarda en el
+volumen `sapi_v2_secrets` (archivo de solo lectura para la base y el backend);
+el backend la lee de ahí. No se imprime ni se versiona, y en los siguientes
+arranques se reutiliza. Si el volumen de la base existe pero falta su
+contraseña, `db-v2` se detiene con un mensaje en vez de inventar otra: los dos
+volúmenes se conservan o se eliminan juntos.
+
+`.env` es opcional y nunca se versiona: sirve para mover puertos o para fijar
+`SAPI_DB_PASSWORD` antes del primer arranque. Un volumen creado con la
+contraseña de un `.env` anterior sigue funcionando si ese `.env` se conserva.
+**Si ya existe un `.env` de Hito 1** (por ejemplo con credenciales reales de
+NASA FIRMS u OpenTopography), no lo reemplaces: agrega solo los bloques que le
+falten de `.env.example`.
 
 | Servicio | Dirección en el equipo | Health check |
 |---|---|---|
@@ -192,7 +197,7 @@ de los servicios de Hito 1 necesitan `SAPI_DB_PASSWORD`.
 
 `docker compose ps` muestra cada servicio como `healthy`. Los puertos se
 publican solo en `127.0.0.1`; si alguno está ocupado, cambiar
-`SAPI_BACKEND_PORT`, `SAPI_ML_PORT` o `SAPI_DB_PORT` en `.env`.
+`SAPI_BACKEND_PORT`, `SAPI_ML_PORT` o `SAPI_DB_PORT` en un `.env`.
 
 ```bash
 curl http://localhost:8080/health
