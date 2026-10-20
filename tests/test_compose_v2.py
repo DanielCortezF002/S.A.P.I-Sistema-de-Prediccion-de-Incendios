@@ -188,6 +188,33 @@ def test_ca3_real_env_file_is_ignored_by_git() -> None:
     assert ".env" in [line.strip() for line in gitignore]
 
 
+def test_g0_legacy_database_password_has_no_default() -> None:
+    """G0: ningún servicio (tampoco legacy) trae una contraseña de base por defecto."""
+    raw = (REPO_ROOT / "docker-compose.yml").read_text(encoding="utf-8")
+    assert "sapi_secret" not in raw
+    defaults = re.findall(r"\$\{POSTGRES_PASSWORD(:?[-?])([^}]*)\}", raw)
+    assert defaults, "el profile legacy sigue leyendo POSTGRES_PASSWORD"
+    # Vacío explícito, no `:?`: Compose interpola todo el archivo y la ruta v2
+    # arranca sin .env (SAPI-66.CA5).
+    assert set(defaults) == {(":-", "")}
+
+
+def test_g0_database_ports_are_published_only_on_loopback() -> None:
+    for name, spec in SERVICES.items():
+        for port in spec.get("ports", []):
+            if str(port).endswith(":5432"):
+                assert str(port).startswith("127.0.0.1:"), (name, port)
+
+
+def test_g0_env_example_has_no_functional_legacy_password() -> None:
+    values = dict(
+        line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line and not line.startswith("#")
+    )
+    assert values["POSTGRES_PASSWORD"] == ""
+    for key in ("DATABASE_URL", "DATABASE_URL_DIRECT"):
+        assert re.match(r"^postgresql://[^:/@]+:@", values[key]), key
+
+
 def test_ca4_v2_database_uses_its_own_volume_without_legacy_initdb() -> None:
     assert SERVICES["db-v2"]["volumes"] == [
         "sapi_v2_pgdata:/var/lib/postgresql/data",
