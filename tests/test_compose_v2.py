@@ -131,7 +131,9 @@ def test_ca5_secret_volume_is_writable_only_by_the_database() -> None:
     assert "sapi_v2_secrets:/run/sapi-secrets:ro" in SERVICES["backend"]["volumes"]
     assert "sapi_v2_secrets" in COMPOSE["volumes"]
     for service in ("ml-api", "web-v2"):
-        assert not any("sapi_v2_secrets" in v for v in SERVICES[service].get("volumes", []))
+        assert not any(
+            "sapi_v2_secrets" in v for v in SERVICES[service].get("volumes", [])
+        )
 
 
 def test_ca5_secret_init_is_restrictive_and_never_prints_the_password() -> None:
@@ -152,7 +154,9 @@ def test_ca5_secret_init_is_restrictive_and_never_prints_the_password() -> None:
 def test_ca5_secret_init_fails_closed_instead_of_inventing_a_password() -> None:
     script = _db_secret_script()
     # Base ya inicializada sin contraseña recuperable: no genera otra.
-    lost = script.index('[ -s "$$PGDATA/PG_VERSION" ] && [ -z "$$SAPI_DB_PASSWORD_SEED" ]')
+    lost = script.index(
+        '[ -s "$$PGDATA/PG_VERSION" ] && [ -z "$$SAPI_DB_PASSWORD_SEED" ]'
+    )
     assert "exit 1" in script[lost : script.index("umask 077")]
     # Semilla distinta de la guardada: no la reemplaza.
     mismatch = script.index('[ "$$(cat "$$secret")" != "$$SAPI_DB_PASSWORD_SEED" ]')
@@ -208,7 +212,9 @@ def test_g0_database_ports_are_published_only_on_loopback() -> None:
 
 def test_g0_env_example_has_no_functional_legacy_password() -> None:
     values = dict(
-        line.split("=", 1) for line in ENV_EXAMPLE.splitlines() if "=" in line and not line.startswith("#")
+        line.split("=", 1)
+        for line in ENV_EXAMPLE.splitlines()
+        if "=" in line and not line.startswith("#")
     )
     assert values["POSTGRES_PASSWORD"] == ""
     for key in ("DATABASE_URL", "DATABASE_URL_DIRECT"):

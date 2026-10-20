@@ -159,7 +159,9 @@ def active_profiles(env_file: Path = REPO_ROOT / ".env") -> list[str]:
 
 def expected_services(profiles: list[str]) -> list[str]:
     """V2_SERVICES más los servicios de los profiles admitidos que estén activos."""
-    extra = [service for profile in profiles for service in PROFILE_SERVICES.get(profile, ())]
+    extra = [
+        service for profile in profiles for service in PROFILE_SERVICES.get(profile, ())
+    ]
     return sorted(set(V2_SERVICES) | set(extra))
 
 
