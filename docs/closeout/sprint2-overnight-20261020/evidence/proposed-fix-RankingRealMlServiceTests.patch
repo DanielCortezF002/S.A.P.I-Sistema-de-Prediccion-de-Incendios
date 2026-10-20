@@ -1,0 +1,49 @@
+diff --git a/services/backend/src/test/java/cl/sapi/backend/ranking/RankingRealMlServiceTests.java b/services/backend/src/test/java/cl/sapi/backend/ranking/RankingRealMlServiceTests.java
+index 5cb91cb..cdf4a2f 100644
+--- a/services/backend/src/test/java/cl/sapi/backend/ranking/RankingRealMlServiceTests.java
++++ b/services/backend/src/test/java/cl/sapi/backend/ranking/RankingRealMlServiceTests.java
+@@ -51,7 +51,7 @@ class RankingRealMlServiceTests {
+         HttpResponse<byte[]> response = get("/api/v1/ranking");
+ 
+         assertThat(response.statusCode()).isEqualTo(200);
+-        assertThat(response.body()).isEqualTo(direct);
++        assertThat(stable(response.body())).isEqualTo(stable(direct));
+         assertThat(BackendContract.validate(200, response.body())).isEmpty();
+         JsonNode ranking = Fixtures.MAPPER.readTree(response.body());
+         assertThat(ranking.get("cells")).hasSize(50);
+@@ -73,7 +73,7 @@ class RankingRealMlServiceTests {
+                 + URLEncoder.encode(forecastTime, StandardCharsets.UTF_8));
+ 
+         assertThat(response.statusCode()).isEqualTo(200);
+-        assertThat(response.body()).isEqualTo(direct).isNotEqualTo(latest);
++        assertThat(stable(response.body())).isEqualTo(stable(direct)).isNotEqualTo(stable(latest));
+         assertThat(OffsetDateTime.parse(Fixtures.MAPPER.readTree(response.body()).get("forecast_time").stringValue())
+                 .toInstant()).isEqualTo(earlier.toInstant());
+     }
+@@ -93,7 +93,7 @@ class RankingRealMlServiceTests {
+ 
+         assertThat(withOffset).contains("+03:00");
+         assertThat(response.statusCode()).isEqualTo(200);
+-        assertThat(response.body()).isEqualTo(direct);
++        assertThat(stable(response.body())).isEqualTo(stable(direct));
+     }
+ 
+     @Test
+@@ -108,6 +108,17 @@ class RankingRealMlServiceTests {
+                 .isEqualTo("prototype_unavailable");
+     }
+ 
++    /**
++     * {@code age_hours} (y la {@code freshness} derivada) se miden contra el reloj en cada evaluación, así que dos
++     * llamadas al ML real nunca coinciden byte a byte. Se comparan sin esos dos campos dinámicos.
++     */
++    private static JsonNode stable(byte[] body) throws Exception {
++        tools.jackson.databind.node.ObjectNode node = (tools.jackson.databind.node.ObjectNode) Fixtures.MAPPER.readTree(body);
++        node.remove("age_hours");
++        node.remove("freshness");
++        return node;
++    }
++
+     private HttpResponse<byte[]> get(String path) throws Exception {
+         try (HttpClient client = HttpClient.newHttpClient()) {
+             return client.send(HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path)).GET().build(),

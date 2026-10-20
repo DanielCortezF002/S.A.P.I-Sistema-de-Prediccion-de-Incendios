@@ -1,0 +1,12 @@
+[ERROR] Tests run: 4, Failures: 3, Errors: 0, Skipped: 0, Time elapsed: 22.63 s <<< FAILURE! -- in cl.sapi.backend.ranking.RankingRealMlServiceTests
+[ERROR] cl.sapi.backend.ranking.RankingRealMlServiceTests.explicitEarlierForecastTimeRoundTrips -- Time elapsed: 6.903 s <<< FAILURE!
+[ERROR] cl.sapi.backend.ranking.RankingRealMlServiceTests.backendReturnsSameBytesAsMlService -- Time elapsed: 4.847 s <<< FAILURE!
+[ERROR] cl.sapi.backend.ranking.RankingRealMlServiceTests.positiveOffsetRoundTrips -- Time elapsed: 7.384 s <<< FAILURE!
+[ERROR] Failures: 
+[ERROR]   RankingRealMlServiceTests.backendReturnsSameBytesAsMlService:54 
+[ERROR]   RankingRealMlServiceTests.explicitEarlierForecastTimeRoundTrips:76 
+[ERROR]   RankingRealMlServiceTests.positiveOffsetRoundTrips:96 
+[ERROR] Tests run: 4, Failures: 3, Errors: 0, Skipped: 0
+[INFO] BUILD FAILURE
+[ERROR] Failed to execute goal org.apache.maven.plugins:maven-surefire-plugin:3.5.6:test (default-test) on project backend: There are test failures.
+[ERROR] 
