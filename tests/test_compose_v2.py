@@ -294,6 +294,20 @@ def test_f1_operational_overlay_pins_the_persistence_policy_to_current_only() ->
     assert backend_override["SAPI_PERSISTENCE_ALLOWED_FIRMS_ORIGINS"] == "current"
 
 
+def test_ca5_operational_overlay_keeps_the_database_secret_mount() -> None:
+    """`volumes: !override` reemplaza la lista entera de db-v2: sin repetir el
+    montaje, la base operacional arrancaría sin /run/sapi-secrets (SAPI-66.CA5)."""
+    overlay = yaml.load(
+        (REPO_ROOT / "docker-compose.operational.yml").read_text(encoding="utf-8"),
+        Loader=_ComposeOverrideTolerantLoader,
+    )
+    db_volumes = overlay["services"]["db-v2"]["volumes"]
+    assert "sapi_v2_secrets:/run/sapi-secrets" in db_volumes
+    assert "sapi_v2_operational_pgdata:/var/lib/postgresql/data" in db_volumes
+    # El backend no se redefine en el overlay: hereda el montaje de solo lectura.
+    assert "volumes" not in overlay["services"]["backend"]
+
+
 def test_f1_persistence_policy_allows_current_and_reproducibility_in_base_route() -> (
     None
 ):
