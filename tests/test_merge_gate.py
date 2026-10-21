@@ -121,15 +121,16 @@ def test_freeze_gate_status_full_pass():
     assert problems == []
 
 
-def test_freeze_gate_status_f7_info_with_f4b_pass():
-    """Reporte completo válido con F7=INFO y F4b=PASS -> PASS."""
+def test_freeze_gate_status_f7_info_is_rejected_even_with_f4b_pass():
+    """GOV-F4F7-R1: F7 estricto. F7=INFO (contrato distinto de CONTRACT_PINS) -> FAIL,
+    aunque F4b confirme que el cambio es solo aditivo."""
     rows = [
         {"check": c, "status": "INFO" if c == "F7 contratos v0" else "PASS"}
         for c in mg.MANDATORY_FREEZE_CHECKS
     ]
     status, problems = mg.freeze_gate_status({"checks": rows})
-    assert status == "PASS"
-    assert problems == []
+    assert status == "FAIL"
+    assert problems == ["F7 contratos v0=INFO no autorizado"]
 
 
 @pytest.mark.parametrize(

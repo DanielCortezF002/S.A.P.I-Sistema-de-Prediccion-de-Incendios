@@ -243,9 +243,9 @@ def freeze_gate_status(report: dict) -> tuple[str, list[str]]:
     1. El reporte debe ser un diccionario con lista 'checks' no vacía.
     2. Todos los controles de MANDATORY_FREEZE_CHECKS deben estar presentes.
     3. No se permiten controles duplicados ni contradictorios.
-    4. F7 contratos v0 puede ser INFO únicamente si F4b contratos aditivos es PASS.
-    5. Cualquier otro control con INFO es FAIL.
-    6. Cualquier control con FAIL, SKIP, WARN o estado desconocido es FAIL.
+    4. Cualquier control con INFO es FAIL, incluido F7 contratos v0: los
+       contratos deben coincidir con CONTRACT_PINS (GOV-F4F7-R1).
+    5. Cualquier control con FAIL, SKIP, WARN o estado desconocido es FAIL.
     """
     if not isinstance(report, dict) or not report.get("checks"):
         return FAIL, ["reporte sin checks o malformado"]
@@ -273,29 +273,13 @@ def freeze_gate_status(report: dict) -> tuple[str, list[str]]:
         if status == PASS:
             continue
         elif status == "INFO":
-            continue
+            problems.append(f"{name}=INFO no autorizado")
         else:
             problems.append(f"{name}={status}")
 
     missing = sorted(set(MANDATORY_FREEZE_CHECKS) - seen_checks)
     if missing:
         problems.append(f"controles obligatorios ausentes: {', '.join(missing)}")
-
-    status_map = {
-        row["check"]: row.get("status")
-        for row in checks
-        if isinstance(row, dict) and "check" in row
-    }
-    if status_map.get("F7 contratos v0") == "INFO":
-        if status_map.get("F4b contratos aditivos") != PASS:
-            problems.append(
-                "F7 contratos v0=INFO no admisible: "
-                f"F4b contratos aditivos={status_map.get('F4b contratos aditivos')}"
-            )
-
-    for name, status in status_map.items():
-        if status == "INFO" and name != "F7 contratos v0":
-            problems.append(f"{name}=INFO no autorizado")
 
     return (FAIL if problems else PASS), problems
 

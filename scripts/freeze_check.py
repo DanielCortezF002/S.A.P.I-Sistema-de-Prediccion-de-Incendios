@@ -91,7 +91,8 @@ CONTRACT_PINS = {
         "f3ea2916d589731852502917baa30b104d61380fccd083187b1498a2dc93531b"
     ),
     "contracts/openapi/ml-service.v0.yaml": (
-        "4ca85a8719b2ea7c3516cd9ca710cb514010c10df422049da8383bbd50af49c7"
+        # Re-pin GOV-F4F7-R1 (2026-10-20): contrato ratificado (+9 campos opcionales).
+        "a553b7ae138f8566e9fd6dc707e57fdcebd2cb9a2a817780886b4ce9828916ff"
     ),
 }
 
@@ -539,8 +540,41 @@ def _removed_or_changed(base, head, path, errors) -> None:
         errors.append(f"cambiado: {'/'.join(map(str, path))}")
 
 
+CONTRACT_SUFFIXES = (".yaml", ".yml", ".json")
+
+
+def contract_sha256(rel: str) -> str:
+    """sha256 del contrato con fin de línea normalizado a LF (un checkout CRLF == LF)."""
+    data = (REPO_ROOT / rel).read_bytes().replace(b"\r\n", b"\n")
+    return hashlib.sha256(data).hexdigest()
+
+
 def check_contracts(report: Report) -> None:
-    changed = [rel for rel, pin in CONTRACT_PINS.items() if sha256_file(rel) != pin]
+    # GOV-F4F7-R1: solo se admiten los contratos fijados en CONTRACT_PINS, con su
+    # contenido exacto. Un contrato nuevo (aunque no esté versionado, y sin importar
+    # mayúsculas en la extensión: .YAML, .Yml, .JSON) o uno ausente es FAIL.
+    present = sorted(
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in (REPO_ROOT / "contracts").rglob("*")
+        if path.is_file() and path.suffix.lower() in CONTRACT_SUFFIXES
+    )
+    unpinned = [rel for rel in present if rel not in CONTRACT_PINS]
+    missing = [rel for rel in CONTRACT_PINS if not (REPO_ROOT / rel).is_file()]
+    if unpinned or missing:
+        report.add(
+            "F7 contratos v0",
+            "FAIL",
+            "solo contratos fijados",
+            f"sin pin: {', '.join(unpinned) or '-'}; ausentes: {', '.join(missing) or '-'}",
+        )
+        report.add(
+            "F4b contratos aditivos",
+            "FAIL",
+            "contratos fijados presentes",
+            "no evaluable",
+        )
+        return
+    changed = [rel for rel, pin in CONTRACT_PINS.items() if contract_sha256(rel) != pin]
     if not changed:
         report.add("F7 contratos v0", "PASS", "sha256 fijados", "idénticos")
         report.add("F4b contratos aditivos", "PASS", "solo adiciones", "sin cambios")
