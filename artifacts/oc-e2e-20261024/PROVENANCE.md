@@ -18,8 +18,8 @@ objetivo es que ninguna medición se atribuya al commit equivocado.
 | Commit de aplicación evaluado | `2a71c7e1160ab87ef7c0ec5e2dfaf3b06c1b4876` | Mismos árboles que `2a71c7e` (base `eb1b370`) |
 | Tree de aplicación | `655ad33db79b5ba98e06df770595ed916d660036` | `404518eb9c5982452ec74c93efffd17b52e4c462` (incluye arnés R2) |
 | HEAD al capturar | `2a71c7e` (arnés sin commitear) | `eb1b37030d206462878a785a8f4a67edba7b2c98` (arnés sin commitear) |
-| Commit que incorpora el arnés | `426605f86a98939cd5124ef0e9cea5aa0fc271d1` | Commit de evidencia R2 (ver §5) |
-| Commit de evidencia | `426605f` (PR #41) | Commit de evidencia R2 (ver §5) |
+| Commit que incorpora el arnés | `426605f86a98939cd5124ef0e9cea5aa0fc271d1` | `449ccfdfcd02a5955ea8242898351c6c2da8790c` (E1) |
+| Commit de evidencia | `426605f` (PR #41) | `449ccfdfcd02a5955ea8242898351c6c2da8790c` (E1) |
 
 ### 1.1 Árboles de aplicación
 
@@ -81,7 +81,7 @@ el log de la corrida y el commit `426605f`, cuyo blob de CA4 es `3b750d8b`.
 | `e2e/browser-verification.json`, `e2e/health-hops.json`, `e2e/idempotency.json`, `e2e/ml-service-log*.json/txt`, `e2e/openapi-conformance.json`, `e2e/postgis-verification.json`, `e2e/ranking-http.json`, `e2e/streamlit-ranking.png` | R1 | Arnés browser R1 (blob `a71286d7`) |
 | `e2e/contracts-r2.json` | R2 | Arnés contratos R2 (blob `635212c7`) |
 | `negative/*` | R1 | Arnés negativo (blob `eefb2f5d`) |
-| `timings/*` (incluye `ca4-raw-*.log` y `ca4-request-correlation.json`) | R2 | Arnés CA4 R2 (blob `fe0b046d`) |
+| `timings/*` (incluye `ca4-raw-*.log` y `ca4-request-correlation.json`) | R2 | Arnés CA4 R2 (blob `22828600`) |
 | `logs/04`–`09`, `12`–`14`, `22`, `24`, `26`, `28`, `31`, `33`, `35`, `36` | R1 | pytest / Maven R1 |
 | `logs/41-r2-contracts.log`, `logs/42-r2-ca4.log` | R2 | pytest R2 |
 | `logs/40-r2-compose-up.log`, `logs/43-r2-compose-config.log` | R2 | Docker Compose R2 |
@@ -101,9 +101,9 @@ identificatorios descrita en `REDACTION-NOTICE.md`; sus hashes vigentes están e
 | Evidencia | Commit de aplicación | Arnés | Commit de publicación |
 |---|---|---|---|
 | R1 (e2e, negative, CA4, logs 01–39) | `2a71c7e` | Blobs R1 de §2 | `426605f` |
-| R2 CA4 (`timings/*`, logs 42) | `2a71c7e` (árboles idénticos en `eb1b370`) | `fe0b046d` | Commit de evidencia R2 |
-| R2 contratos (`e2e/contracts-r2.json`, logs 41) | `2a71c7e` (árboles idénticos en `eb1b370`) | `635212c7` | Commit de evidencia R2 |
-| R2 entorno/estado (logs 40, 43, `r2-*`, `environment.txt`) | `2a71c7e` (árboles idénticos en `eb1b370`) | N/A (comandos) | Commit de evidencia R2 |
+| R2 CA4 (`timings/*`, logs 42) | `2a71c7e` (árboles idénticos en `eb1b370`) | `22828600` | `449ccfdf` (E1) |
+| R2 contratos (`e2e/contracts-r2.json`, logs 41) | `2a71c7e` (árboles idénticos en `eb1b370`) | `635212c7` | `449ccfdf` (E1) |
+| R2 entorno/estado (logs 40, 43, `r2-*`, `environment.txt`) | `2a71c7e` (árboles idénticos en `eb1b370`) | N/A (comandos) | `449ccfdf` (E1) |
 
 El commit de evidencia R2 se registra en §5 y en el cuerpo del PR de
 sustitución. No se reescribió la historia de R1.
@@ -116,18 +116,21 @@ sustitución. No se reescribió la historia de R1.
   (draft). Contiene los valores identificatorios originales en su historia; ver
   `REDACTION-NOTICE.md` §4.
 - **R2:** rama `test/oc-fullstack-e2e-r2-20261024`, PR de sustitución (draft)
-  contra `recovery/s2-academic-20261024` (`eb1b370`). Un commit de evidencia con
-  este paquete y un commit posterior que registra su SHA.
-- **Commit de evidencia R2:** se completa en el segundo commit y en el PR. La
-  verificación reproducible es:
+  contra `recovery/s2-academic-20261024` (`eb1b370`). El paquete se incorporó en
+  el commit de evidencia `449ccfdfcd02a5955ea8242898351c6c2da8790c` (E1); un
+  segundo commit de solo documentación registra ese SHA sin alterar el paquete.
+- **Commit de evidencia R2 (E1):**
+  `449ccfdfcd02a5955ea8242898351c6c2da8790c`.
+- **Verificación reproducible:** los blobs publicados en E1 coinciden con los
+  hashes registrados en la evidencia y el manifiesto verifica 91/91.
 
 ```powershell
-# El blob del arnés en el commit de evidencia debe ser fe0b046d...
-git show <commit-evidencia-r2>:tests/e2e/test_full_stack_timings.py | git hash-object --stdin
-# El manifiesto debe verificar 100 %
-python - <<'PY'
-# (o el bloque PowerShell de SHA256SUMS.txt)
-PY
+# Blob del arnés CA4 en el commit de evidencia (debe ser 22828600...)
+git rev-parse 449ccfdfcd02a5955ea8242898351c6c2da8790c:tests/e2e/test_full_stack_timings.py
+# Blob del arnés de contratos (debe ser 635212c7...)
+git rev-parse 449ccfdfcd02a5955ea8242898351c6c2da8790c:tests/e2e/test_full_stack_contracts.py
+# Manifiesto contra los blobs commiteados: 91 entradas, 0 discrepancias
+# (usar el bloque de verificación de README §8 o un script equivalente)
 ```
 
 ---

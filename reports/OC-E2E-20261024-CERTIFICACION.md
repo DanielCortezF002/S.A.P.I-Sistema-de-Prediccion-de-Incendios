@@ -7,7 +7,7 @@
 **Código de aplicación evaluado:** `2a71c7e1160ab87ef7c0ec5e2dfaf3b06c1b4876` — árboles `services`, `app`, `contracts` y `db` idénticos en R1 y R2.  
 **Arnés CA4 R2:** `tests/e2e/test_full_stack_timings.py` — blob `22828600e01e27bade5b430fc2174eebeaa26b36`, SHA-256 `e7169f4e178dc9208c5c9d9bb83c884806f9f3065d106b7a6bea5abd8fd20015`.  
 **Arnés contratos R2:** `tests/e2e/test_full_stack_contracts.py` — blob `635212c73e01af86bcc657d2542f0ac6c485db45`, SHA-256 `f8796b6ad0e15add4962b16cf27103460d54d05e2b99aaa75f832184d360b613`.  
-**Commit de evidencia R2:** el commit que introduce este informe; su SHA se registra en el segundo commit y en el PR de sustitución.  
+**Commit de evidencia R2:** `449ccfdfcd02a5955ea8242898351c6c2da8790c` (E1). El commit de registro de este SHA no altera el paquete.  
 **R1 (histórico):** rama `test/oc-fullstack-e2e-20261024`, commit `426605f86a98939cd5124ef0e9cea5aa0fc271d1`, PR #41 (draft). Sus mediciones CA4 están **superadas** y no se reutilizan.  
 **Candidato protegido:** `51ec3c06b67959d3daad6349c962a1be643906b4` — **no modificado**.  
 **Evidencia:** `artifacts/oc-e2e-20261024/` (índice y SHA-256 en `SHA256SUMS.txt`; procedencia en `PROVENANCE.md`; redacción en `REDACTION-NOTICE.md`).
@@ -565,7 +565,7 @@ requiere una decisión humana posterior.
 | Aplicación probada | `2a71c7e` | Mismos árboles en `eb1b370` |
 | Arnés CA4 | blob `3b750d8b` / SHA-256 `26877fbf` | blob `22828600` / SHA-256 `e7169f4e` |
 | Arnés contratos | no existía | blob `635212c7` / SHA-256 `f8796b6a` |
-| Commit de evidencia | `426605f` (PR #41) | commit de evidencia R2 + commit de registro |
+| Commit de evidencia | `426605f` (PR #41) | E1 `449ccfdf`; registro en commit posterior |
 
 - **R1 no registró autohash del arnés.** Su vínculo es documental: el log de la
   corrida y el commit `426605f`, cuyo blob de CA4 es `3b750d8b`.
