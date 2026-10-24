@@ -1,0 +1,103 @@
+{
+  "captured_at": "2026-10-24T23:50:17.353847+00:00",
+  "backend_container": "sapi-oc-e2e-20261024-backend-1",
+  "ml_container": "sapi-oc-e2e-20261024-ml-api-1",
+  "web_container": "sapi-oc-e2e-20261024-web-v2-1",
+  "cache_establishment": {
+    "method": "docker restart de web-v2 (solo este contenedor)",
+    "container": "sapi-oc-e2e-20261024-web-v2-1",
+    "container_id": "3ce5a389d7f0258cb28a72e7a15b2f53ffb014ca3c263297a18fe024db20ad7f",
+    "restarted_at_utc": "2026-10-24T23:49:40.775120+00:00",
+    "ready_ms": 4115.89,
+    "health_status": 200,
+    "assertion": "cache de Streamlit vacia por reinicio del proceso"
+  },
+  "actions": {
+    "cold_ui": {
+      "window_started_at_utc": "2026-10-24T23:49:46.281999+00:00",
+      "window_ended_at_utc": "2026-10-24T23:49:58.584168+00:00",
+      "new_predicts": [
+        {
+          "timestamp": "2026-10-24T23:49:51.721123994Z",
+          "request_id": "fa05e014-4228-4ed9-92b6-53a2a9c6fc1e",
+          "ml_responded": "true",
+          "ml_http_status": "200",
+          "ml_latency_ms": "2820",
+          "outcome": "ok",
+          "backend_http_status": "200",
+          "model_version": "prototype_model_d_v1",
+          "forecast_time": "2026-09-01T00:00:00Z",
+          "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+          "ejecucion_id": "1",
+          "raw": "2026-10-24T23:49:51.721123994Z 2026-10-24T23:49:51.719Z  INFO 1 --- [sapi-backend] [nio-8080-exec-4] sapi.backend.ml                          : ml_predict request_id=fa05e014-4228-4ed9-92b6-53a2a9c6fc1e forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=2820 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3 ejecucion_id=1"
+        }
+      ],
+      "new_ml_200": [
+        "2026-10-24T23:49:51.697886325Z INFO:     10.99.99.4:50372 - \"POST /predict HTTP/1.1\" 200 OK"
+      ],
+      "predict_delta": 1,
+      "ml_predict_delta": 1
+    },
+    "update": {
+      "window_started_at_utc": "2026-10-24T23:49:59.362130+00:00",
+      "window_ended_at_utc": "2026-10-24T23:50:08.736668+00:00",
+      "new_predicts": [
+        {
+          "timestamp": "2026-10-24T23:50:02.774906218Z",
+          "request_id": "b197bbe3-0646-4876-be9e-f55d30fa0892",
+          "ml_responded": "true",
+          "ml_http_status": "200",
+          "ml_latency_ms": "3338",
+          "outcome": "ok",
+          "backend_http_status": "200",
+          "model_version": "prototype_model_d_v1",
+          "forecast_time": "2026-09-01T00:00:00Z",
+          "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+          "ejecucion_id": "1",
+          "raw": "2026-10-24T23:50:02.774906218Z 2026-10-24T23:50:02.774Z  INFO 1 --- [sapi-backend] [nio-8080-exec-8] sapi.backend.ml                          : ml_predict request_id=b197bbe3-0646-4876-be9e-f55d30fa0892 forecast_time_requested=latest ml_responded=true ml_http_status=200 ml_latency_ms=3338 outcome=ok backend_http_status=200 model_version=prototype_model_d_v1 forecast_time=2026-09-01T00:00:00Z inputs_fingerprint=09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3 ejecucion_id=1"
+        }
+      ],
+      "new_ml_200": [
+        "2026-10-24T23:50:02.765541927Z INFO:     10.99.99.4:41352 - \"POST /predict HTTP/1.1\" 200 OK"
+      ],
+      "predict_delta": 1,
+      "ml_predict_delta": 1
+    },
+    "cached": {
+      "window_started_at_utc": "2026-10-24T23:50:10.533694+00:00",
+      "window_ended_at_utc": "2026-10-24T23:50:16.210981+00:00",
+      "new_predicts": [],
+      "new_ml_200": [],
+      "predict_delta": 0,
+      "ml_predict_delta": 0
+    }
+  },
+  "raw_logs": {
+    "backend": "artifacts\\oc-e2e-20261024\\timings\\ca4-raw-backend.log",
+    "ml": "artifacts\\oc-e2e-20261024\\timings\\ca4-raw-ml.log"
+  },
+  "provenance": {
+    "harness_path": "tests/e2e/test_full_stack_timings.py",
+    "harness_sha256": "e7169f4e178dc9208c5c9d9bb83c884806f9f3065d106b7a6bea5abd8fd20015",
+    "harness_git_blob": "22828600e01e27bade5b430fc2174eebeaa26b36",
+    "repo_head_at_capture": "eb1b37030d206462878a785a8f4a67edba7b2c98",
+    "repo_head_subject": "fix(F1-CA8): stabilize probe connection handling in operational overlay dynamic test",
+    "app_code_commit": "b102ca39889bedd7c1152d7b0016b26cc3e8b00c",
+    "app_code_commit_subject": "test(sapi57): compare real-ML relay against the same evaluation via RecordingMlProxy",
+    "app_trees": {
+      "services": "9cd77f12a2f9b9353923ed8567b7b7f7a539ca08",
+      "app": "82e9d30a23cda053c44599f6e579e4b1eaa67f93",
+      "contracts": "e4c6874cf86939384ad3cd76ce09d4aadd2c4abb"
+    },
+    "worktree_dirty_count": 7,
+    "worktree_dirty_sample": [
+      "?? artifacts/oc-e2e-20261024/",
+      "?? reports/OC-E2E-20261024-CERTIFICACION.md",
+      "?? tests/e2e/docker-compose.e2e-oc.yml",
+      "?? tests/e2e/test_full_stack_browser.py",
+      "?? tests/e2e/test_full_stack_contracts.py",
+      "?? tests/e2e/test_full_stack_negative.py",
+      "?? tests/e2e/test_full_stack_timings.py"
+    ]
+  }
+}

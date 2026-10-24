@@ -1,0 +1,12 @@
+captured_at=2026-10-24T22:27:33.1693489Z
+branch=test/oc-fullstack-e2e-20261024
+head=2a71c7e1160ab87ef7c0ec5e2dfaf3b06c1b4876
+tree=655ad33db79b5ba98e06df770595ed916d660036
+commit_date=2026-10-24T18:09:04-03:00
+status_porcelain:
+?? artifacts/oc-e2e-20261024/
+?? reports/OC-E2E-20261024-CERTIFICACION.md
+?? tests/e2e/docker-compose.e2e-oc.yml
+?? tests/e2e/test_full_stack_browser.py
+?? tests/e2e/test_full_stack_negative.py
+?? tests/e2e/test_full_stack_timings.py

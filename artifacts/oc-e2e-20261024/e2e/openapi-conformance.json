@@ -1,0 +1,9 @@
+{
+  "captured_at": "2026-10-24T22:17:30.004948+00:00",
+  "contracts": [
+    "contracts/openapi/ml-service.v0.yaml#/components/schemas/RankingResult",
+    "contracts/openapi/backend.v0.yaml#/paths/~1api~1v1~1ranking/get/responses/200"
+  ],
+  "result": "valid",
+  "cells": 50
+}

@@ -1,0 +1,73 @@
+{
+  "captured_at": "2026-10-24T23:39:25.451387+00:00",
+  "run_label": "R2-evidence-remediation",
+  "ml_url": "http://127.0.0.1:58000",
+  "backend_url": "http://127.0.0.1:58080",
+  "forecast_time": "2026-09-01T00:00:00Z",
+  "results": {
+    "ml_health": {
+      "status": 200,
+      "body": {
+        "status": "ok",
+        "model_version": "prototype_model_d_v1"
+      }
+    },
+    "ml_predict_200": {
+      "status": 200,
+      "cells": 50,
+      "schema_version": "sapi-ranking-v0",
+      "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3"
+    },
+    "ml_predict_422": {
+      "status": 422,
+      "body": {
+        "status": "error",
+        "error_type": "invalid_request",
+        "message": "La petición no cumple el contrato: solo se admite forecast_time, como fecha-hora ISO 8601 con zona horaria."
+      }
+    },
+    "backend_health": {
+      "status": 200,
+      "body": {
+        "status": "UP"
+      }
+    },
+    "backend_ranking_200": {
+      "status": 200,
+      "cells": 50,
+      "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3"
+    },
+    "backend_ranking_422": {
+      "status": 422,
+      "body": {
+        "status": "error",
+        "error_type": "invalid_request",
+        "message": "La petición no cumple el contrato: forecast_time debe ser una fecha-hora RFC 3339 con zona horaria."
+      }
+    }
+  },
+  "provenance": {
+    "harness_path": "tests/e2e/test_full_stack_contracts.py",
+    "harness_sha256": "f8796b6ad0e15add4962b16cf27103460d54d05e2b99aaa75f832184d360b613",
+    "harness_git_blob": "635212c73e01af86bcc657d2542f0ac6c485db45",
+    "repo_head_at_capture": "eb1b37030d206462878a785a8f4a67edba7b2c98",
+    "repo_head_subject": "fix(F1-CA8): stabilize probe connection handling in operational overlay dynamic test",
+    "app_trees": {
+      "services": "9cd77f12a2f9b9353923ed8567b7b7f7a539ca08",
+      "app": "82e9d30a23cda053c44599f6e579e4b1eaa67f93",
+      "contracts": "e4c6874cf86939384ad3cd76ce09d4aadd2c4abb"
+    },
+    "worktree_dirty_count": 7
+  },
+  "coverage": {
+    "ml_response_200_schema": "verificado (llamada directa real)",
+    "ml_response_422_schema": "verificado (llamada directa real)",
+    "backend_response_200_schema": "verificado (llamada directa real)",
+    "backend_response_422_schema": "verificado (llamada directa real)",
+    "ml_health_schema": "verificado",
+    "backend_health_schema": "verificado",
+    "backend_to_ml_wire_request": "no observado (sin proxy/tap)",
+    "streamlit_to_backend_wire_request": "no observado (sin proxy/tap)",
+    "per_hop_contract_validation": "PARCIAL"
+  }
+}

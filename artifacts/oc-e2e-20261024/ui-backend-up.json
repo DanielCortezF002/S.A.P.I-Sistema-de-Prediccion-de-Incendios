@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-10-24T21:39:53.727163+00:00",
+  "mode": "up",
+  "url": "http://127.0.0.1:58501",
+  "screenshot": "C:\\SAPI-OC-E2E-20261024\\artifacts\\oc-e2e-20261024\\screenshots\\streamlit-backend-up.png",
+  "screenshot_sha256": "bf06dc434c02c910464c3a341c0f00522d2505200fe5182490c558438d826dcb",
+  "body_excerpt": "Modo de datos\n\nPrototipo (datos reales)\n\nDemo (escenario sembrado)\n\nActualizar ranking\n\nkeyboard_double_arrow_right\nS.A.P.I.\nSistema de Alerta y Priorización de Riesgo de Incendios · Defensa Académica Sprint 2\nPROTOTIPO EXPLORATORIO\nBACKEND REST\nDATOS HISTÓRICOS\n01 sep 2026\n00:00 → 06:00 UTC\nDMC Rodelillo · 330007\nObtenido del backend: 21:39 UTC\n\n☀️\n\n🌙\n\n⚠\n\nDATOS HISTÓRICOS · última observación hace 1294 h (antigüedad medida por el servicio al evaluar)\n\nEl ranking corresponde al instante indicado y NO representa el riesgo actual.\n\nno informado por el backend\nTEMPERATURA\nno informado por el backend\nHUMEDAD\nno informado por el backend\nVIENTO\nno informado por el backend\nREGLA 30-30-30\n50\nCELDAS EVALUADAS\n\nℹ Variables meteorológicas: Procesadas por el Modelo D en inferencia (temperatura, humedad, viento). El endpoint v0 proyecta el ranking relativo de celdas; la exposición de telemetría instantánea está catalogada como mejora aditiva para el contrato v1.\n\nPROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, NO una probabilidad calibrada de incendio. No usar para decisiones operacionales. Ver docs/auditoria-consistencia-2026-09-06.md para el estado metodológico completo.\nEl",
+  "has_traceback": false,
+  "has_backend_host": false
+}

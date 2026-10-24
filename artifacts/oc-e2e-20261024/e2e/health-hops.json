@@ -1,0 +1,25 @@
+{
+  "captured_at": "2026-10-24T22:17:25.019350+00:00",
+  "ml": {
+    "url": "http://127.0.0.1:58000/health",
+    "status": 200,
+    "elapsed_ms": 6.13,
+    "json": {
+      "status": "ok",
+      "model_version": "prototype_model_d_v1"
+    }
+  },
+  "backend": {
+    "url": "http://127.0.0.1:58080/health",
+    "status": 200,
+    "elapsed_ms": 6.19,
+    "json": {
+      "status": "UP"
+    }
+  },
+  "web": {
+    "url": "http://127.0.0.1:58501/_stcore/health",
+    "status": 200,
+    "elapsed_ms": 28.9
+  }
+}

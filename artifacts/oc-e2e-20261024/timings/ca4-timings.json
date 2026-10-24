@@ -1,0 +1,151 @@
+{
+  "captured_at": "2026-10-24T23:50:17.353847+00:00",
+  "run_label": "R2-evidence-remediation",
+  "url": "http://127.0.0.1:58501",
+  "browser": "chromium channel=msedge headless",
+  "viewport": "1600x1000",
+  "health_before": {
+    "ml": {
+      "url": "http://127.0.0.1:58000/health",
+      "status": 200,
+      "elapsed_ms": 11.19
+    },
+    "backend": {
+      "url": "http://127.0.0.1:58080/health",
+      "status": 200,
+      "elapsed_ms": 7.97
+    },
+    "web": {
+      "url": "http://127.0.0.1:58501/_stcore/health",
+      "status": 200,
+      "elapsed_ms": 14.47
+    }
+  },
+  "cache_establishment": {
+    "method": "docker restart de web-v2 (solo este contenedor)",
+    "container": "sapi-oc-e2e-20261024-web-v2-1",
+    "container_id": "3ce5a389d7f0258cb28a72e7a15b2f53ffb014ca3c263297a18fe024db20ad7f",
+    "restarted_at_utc": "2026-10-24T23:49:40.775120+00:00",
+    "ready_ms": 4115.89,
+    "health_status": 200,
+    "assertion": "cache de Streamlit vacia por reinicio del proceso"
+  },
+  "health_after_restart": {
+    "ml": {
+      "url": "http://127.0.0.1:58000/health",
+      "status": 200,
+      "elapsed_ms": 6.84
+    },
+    "backend": {
+      "url": "http://127.0.0.1:58080/health",
+      "status": 200,
+      "elapsed_ms": 10.29
+    },
+    "web": {
+      "url": "http://127.0.0.1:58501/_stcore/health",
+      "status": 200,
+      "elapsed_ms": 7.87
+    }
+  },
+  "actions": [
+    {
+      "action": "cold_ui",
+      "started_at_utc": "2026-10-24T23:49:46.281999+00:00",
+      "elapsed_ms": 6867.9,
+      "elapsed_to_header_ms": 5791.92,
+      "elapsed_to_backend_ms": null,
+      "navigation_type": "navigate",
+      "backend_predict_delta": 1,
+      "ml_predict_delta": 1,
+      "new_request_ids": [
+        "fa05e014-4228-4ed9-92b6-53a2a9c6fc1e"
+      ],
+      "ml_latency_ms": 2820,
+      "fetched_at_text": "23:49 UTC",
+      "screenshot": "artifacts\\oc-e2e-20261024\\timings\\ca4-cold-ui.png",
+      "screenshot_sha256": "db471446fc824ca9ae83beef720a1e68a6c935c321f2506403072482b59e44a5",
+      "notes": "web-v2 reiniciado antes de medir; se exige llamada real al backend y a FastAPI."
+    },
+    {
+      "action": "update",
+      "started_at_utc": "2026-10-24T23:49:59.362130+00:00",
+      "elapsed_ms": 3723.47,
+      "elapsed_to_header_ms": null,
+      "elapsed_to_backend_ms": 3576.28,
+      "navigation_type": "streamlit-rerun-cache-clear",
+      "backend_predict_delta": 1,
+      "ml_predict_delta": 1,
+      "new_request_ids": [
+        "b197bbe3-0646-4876-be9e-f55d30fa0892"
+      ],
+      "ml_latency_ms": 3338,
+      "fetched_at_text": "23:50 UTC",
+      "screenshot": "artifacts\\oc-e2e-20261024\\timings\\ca4-update.png",
+      "screenshot_sha256": "49b67479d56888ea1740a185c1fcb6c2af87317db7376d0fb9aebf417a9e8ebe",
+      "notes": "Boton Actualizar ranking: st.cache_data.clear() + backend; se exige request_id nuevo y respuesta ML 200."
+    },
+    {
+      "action": "cached",
+      "started_at_utc": "2026-10-24T23:50:10.533694+00:00",
+      "elapsed_ms": 424.06,
+      "elapsed_to_header_ms": null,
+      "elapsed_to_backend_ms": null,
+      "navigation_type": "streamlit-rerun-cache-hit",
+      "backend_predict_delta": 0,
+      "ml_predict_delta": 0,
+      "new_request_ids": [],
+      "ml_latency_ms": null,
+      "fetched_at_text": "23:50 UTC",
+      "screenshot": "artifacts\\oc-e2e-20261024\\timings\\ca4-cached.png",
+      "screenshot_sha256": "bfa8799a956158122c54b17498bcb9e5b7d15637a4d4515010b33f772cd9cf20",
+      "notes": "Cambio de orden: rerun de Streamlit con cache vigente; se exige cero inferencia nueva."
+    }
+  ],
+  "console_errors": [],
+  "provenance": {
+    "harness_path": "tests/e2e/test_full_stack_timings.py",
+    "harness_sha256": "e7169f4e178dc9208c5c9d9bb83c884806f9f3065d106b7a6bea5abd8fd20015",
+    "harness_git_blob": "22828600e01e27bade5b430fc2174eebeaa26b36",
+    "repo_head_at_capture": "eb1b37030d206462878a785a8f4a67edba7b2c98",
+    "repo_head_subject": "fix(F1-CA8): stabilize probe connection handling in operational overlay dynamic test",
+    "app_code_commit": "b102ca39889bedd7c1152d7b0016b26cc3e8b00c",
+    "app_code_commit_subject": "test(sapi57): compare real-ML relay against the same evaluation via RecordingMlProxy",
+    "app_trees": {
+      "services": "9cd77f12a2f9b9353923ed8567b7b7f7a539ca08",
+      "app": "82e9d30a23cda053c44599f6e579e4b1eaa67f93",
+      "contracts": "e4c6874cf86939384ad3cd76ce09d4aadd2c4abb"
+    },
+    "worktree_dirty_count": 7,
+    "worktree_dirty_sample": [
+      "?? artifacts/oc-e2e-20261024/",
+      "?? reports/OC-E2E-20261024-CERTIFICACION.md",
+      "?? tests/e2e/docker-compose.e2e-oc.yml",
+      "?? tests/e2e/test_full_stack_browser.py",
+      "?? tests/e2e/test_full_stack_contracts.py",
+      "?? tests/e2e/test_full_stack_negative.py",
+      "?? tests/e2e/test_full_stack_timings.py"
+    ]
+  },
+  "raw_logs": {
+    "backend": "artifacts\\oc-e2e-20261024\\timings\\ca4-raw-backend.log",
+    "ml": "artifacts\\oc-e2e-20261024\\timings\\ca4-raw-ml.log"
+  },
+  "gates": {
+    "cold_requires_backend_call": true,
+    "cold_backend_predicts": 1,
+    "cold_ml_predicts_200": 1,
+    "update_requires_new_request_id": true,
+    "update_backend_predicts": 1,
+    "update_ml_predicts_200": 1,
+    "update_fingerprint_unchanged": true,
+    "cached_requires_zero_inference": true,
+    "cached_backend_predicts": 0,
+    "cached_ml_predicts_200": 0
+  },
+  "notes": [
+    "cold_ui se mide despues de reiniciar solo web-v2; si no hay llamada real al backend el test falla.",
+    "update exige request_id nuevo con ml_responded=true y ml_http_status=200.",
+    "cached exige cero ml_predict y cero POST /predict nuevos.",
+    "La cabecera solo muestra HH:MM; el discriminador real es la correlacion de request_id y los deltas de logs."
+  ]
+}
