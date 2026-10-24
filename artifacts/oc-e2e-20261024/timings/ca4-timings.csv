@@ -1,0 +1,4 @@
+action,started_at_utc,elapsed_ms,elapsed_to_header_ms,elapsed_to_backend_ms,navigation_type,ml_predict_delta,ml_latency_ms,fetched_at_text,screenshot,screenshot_sha256,notes
+cold_ui,2026-10-24T22:16:56.929145+00:00,6065.26,5500.46,,navigate,1,1987,22:17 UTC,artifacts\oc-e2e-20261024\timings\ca4-cold-ui.png,2b8bf4291ea99b1f25283903b01a52e4c695a06f2e0ebccb1d90ce846a7c4e6d,Navegador nuevo; ml_predict_delta=1 (cache fria).
+update,2026-10-24T22:17:08.954532+00:00,2649.82,,2552.69,streamlit-rerun-cache-clear,1,2267,22:17 UTC,artifacts\oc-e2e-20261024\timings\ca4-update.png,5f0ea03ce1e8c3efbf49b08b2e3e3d6ef8f2f4360558b8b1aafd70844dbb3f60,Boton Actualizar ranking: st.cache_data.clear() + backend.
+cached,2026-10-24T22:17:18.573455+00:00,893.25,,,streamlit-rerun-cache-hit,0,,22:17 UTC,artifacts\oc-e2e-20261024\timings\ca4-cached.png,32076760ebacbaa856587ceca22043be3049e1775f90d27885c50fb3412fedf2,Cambio de orden: rerun de Streamlit con cache vigente.

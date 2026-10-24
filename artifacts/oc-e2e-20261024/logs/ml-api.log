@@ -1,0 +1,127 @@
+﻿INFO:     127.0.0.1:54522 - "GET /health HTTP/1.1" 200 OK
+docker : INFO:     Shutting down
+En línea: 9 Carácter: 10
++   $raw = docker logs --tail 120 $containers[$k] 2>&1 | Out-String
++          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (INFO:     Shutting down:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1]
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:53522 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46370 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45146 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:34680 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59416 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35442 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55340 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59680 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60944 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:45284 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:52630 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:55664 - "POST /predict HTTP/1.1" 200 OK
+INFO:     10.99.99.4:55664 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40870 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47092 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58208 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42440 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44870 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:60390 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:34270 - "POST /predict HTTP/1.1" 200 OK
+INFO:     10.99.99.4:34270 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54324 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33100 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58072 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:54770 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     10.99.99.1:54770 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     127.0.0.1:46744 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:47082 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:46476 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:37480 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57144 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:50994 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51810 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:35126 - "POST /predict HTTP/1.1" 200 OK
+INFO:     10.99.99.4:42934 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48918 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:42948 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39164 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:53168 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46878 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:45270 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49982 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54510 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:53936 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49706 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52418 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38696 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39050 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.4:45838 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60436 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40844 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46822 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:48620 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:35134 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42538 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:34512 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:59614 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:58734 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46372 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53862 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42116 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51008 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:50080 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     10.99.99.1:50092 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     10.99.99.1:50098 - "POST /predict HTTP/1.1" 422 Unprocessable Content
+INFO:     10.99.99.1:53342 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38798 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53448 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:47856 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36842 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:47856 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51304 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53030 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:40326 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:60302 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44048 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42820 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52474 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:46034 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:46006 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54904 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:42310 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57836 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:33498 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:36514 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:41308 - "POST /predict HTTP/1.1" 200 OK
+INFO:     10.99.99.5:41308 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44400 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49574 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:53096 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52472 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39522 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:39370 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.1:47420 - "GET /health HTTP/1.1" 200 OK
+INFO:     10.99.99.5:57220 - "POST /predict HTTP/1.1" 200 OK
+INFO:     10.99.99.5:57220 - "POST /predict HTTP/1.1" 200 OK
+INFO:     127.0.0.1:38254 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:49204 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:51310 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60884 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33554 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:44798 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:52596 - "GET /health HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1]
+INFO:     Started server process [1]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+
