@@ -1,0 +1,74 @@
+{
+  "captured_at": "2026-10-24T22:17:24.974115+00:00",
+  "url": "http://127.0.0.1:58501",
+  "browser": "chromium channel=msedge headless",
+  "viewport": "1600x1000",
+  "health": {
+    "ml": {
+      "url": "http://127.0.0.1:58000/health",
+      "status": 200,
+      "elapsed_ms": 10.21
+    },
+    "backend": {
+      "url": "http://127.0.0.1:58080/health",
+      "status": 200,
+      "elapsed_ms": 29.11
+    },
+    "web": {
+      "url": "http://127.0.0.1:58501/_stcore/health",
+      "status": 200,
+      "elapsed_ms": 5.21
+    }
+  },
+  "actions": [
+    {
+      "action": "cold_ui",
+      "started_at_utc": "2026-10-24T22:16:56.929145+00:00",
+      "elapsed_ms": 6065.26,
+      "elapsed_to_header_ms": 5500.46,
+      "elapsed_to_backend_ms": null,
+      "navigation_type": "navigate",
+      "ml_predict_delta": 1,
+      "ml_latency_ms": 1987,
+      "fetched_at_text": "22:17 UTC",
+      "screenshot": "artifacts\\oc-e2e-20261024\\timings\\ca4-cold-ui.png",
+      "screenshot_sha256": "2b8bf4291ea99b1f25283903b01a52e4c695a06f2e0ebccb1d90ce846a7c4e6d",
+      "notes": "Navegador nuevo; ml_predict_delta=1 (cache fria)."
+    },
+    {
+      "action": "update",
+      "started_at_utc": "2026-10-24T22:17:08.954532+00:00",
+      "elapsed_ms": 2649.82,
+      "elapsed_to_header_ms": null,
+      "elapsed_to_backend_ms": 2552.69,
+      "navigation_type": "streamlit-rerun-cache-clear",
+      "ml_predict_delta": 1,
+      "ml_latency_ms": 2267,
+      "fetched_at_text": "22:17 UTC",
+      "screenshot": "artifacts\\oc-e2e-20261024\\timings\\ca4-update.png",
+      "screenshot_sha256": "5f0ea03ce1e8c3efbf49b08b2e3e3d6ef8f2f4360558b8b1aafd70844dbb3f60",
+      "notes": "Boton Actualizar ranking: st.cache_data.clear() + backend."
+    },
+    {
+      "action": "cached",
+      "started_at_utc": "2026-10-24T22:17:18.573455+00:00",
+      "elapsed_ms": 893.25,
+      "elapsed_to_header_ms": null,
+      "elapsed_to_backend_ms": null,
+      "navigation_type": "streamlit-rerun-cache-hit",
+      "ml_predict_delta": 0,
+      "ml_latency_ms": null,
+      "fetched_at_text": "22:17 UTC",
+      "screenshot": "artifacts\\oc-e2e-20261024\\timings\\ca4-cached.png",
+      "screenshot_sha256": "32076760ebacbaa856587ceca22043be3049e1775f90d27885c50fb3412fedf2",
+      "notes": "Cambio de orden: rerun de Streamlit con cache vigente."
+    }
+  ],
+  "console_errors": [],
+  "notes": [
+    "elapsed_ms de cold_ui incluye cabecera y mapa Leaflet con 50 celdas.",
+    "update invalida st.cache_data y debe producir >=1 ml_predict.",
+    "cached es un rerun de Streamlit y debe producir 0 ml_predict.",
+    "La cabecera solo muestra HH:MM; el discriminador real es ml_predict_delta."
+  ]
+}

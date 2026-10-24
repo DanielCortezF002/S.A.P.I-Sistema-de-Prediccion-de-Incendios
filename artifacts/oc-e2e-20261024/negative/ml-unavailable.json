@@ -1,0 +1,17 @@
+{
+  "captured_at": "2026-10-24T22:18:36.205282+00:00",
+  "down": {
+    "status": 503,
+    "elapsed_ms": 4015.48,
+    "json": {
+      "status": "error",
+      "error_type": "upstream_unavailable",
+      "message": "El servicio ML no está disponible."
+    }
+  },
+  "counts_before": "1/50",
+  "counts_after": "1/50",
+  "recovered_status": 200,
+  "recovered_ms": 4531.23,
+  "note": "Tras reiniciar ml-api el backend puede devolver 503 durante unos segundos (conexion/DNS en cache); se reintenta hasta 120 s."
+}

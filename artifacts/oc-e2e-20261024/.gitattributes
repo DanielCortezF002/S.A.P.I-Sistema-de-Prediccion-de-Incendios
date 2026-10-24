@@ -1,0 +1,5 @@
+# Evidencia congelada de la certificación E2E (2026-10-24).
+# Sin conversión de fin de línea: el blob versionado es exactamente el archivo
+# cuyo SHA-256 se publica en SHA256SUMS.txt, idéntico en Windows, Linux y macOS.
+# Patrón limitado a este directorio; no afecta código ni artefactos previos.
+* -text

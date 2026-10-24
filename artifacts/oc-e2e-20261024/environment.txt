@@ -1,0 +1,13 @@
+﻿captured_at=2026-10-24T22:20:56.0234670Z
+worktree=C:\SAPI-OC-E2E-20261024
+branch=test/oc-fullstack-e2e-20261024
+head=2a71c7e1160ab87ef7c0ec5e2dfaf3b06c1b4876
+tree=655ad33db79b5ba98e06df770595ed916d660036
+windows=Microsoft Windows NT 10.0.26200.0
+python=Python 3.14.7
+pytest=pytest 9.1.1
+playwright=1.64.1
+docker_client=29.8.1
+docker_server=29.8.1
+compose=Docker Compose version v5.5.1
+edge=156.0.4314.42
