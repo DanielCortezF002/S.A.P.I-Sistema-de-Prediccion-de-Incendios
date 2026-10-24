@@ -48,6 +48,7 @@ def _free_port() -> int:
 
 
 class _StubHandler(http.server.BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
     body: bytes = b"{}"
 
     def do_POST(self) -> None:  # noqa: N802
@@ -57,8 +58,10 @@ class _StubHandler(http.server.BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
         self.end_headers()
         self.wfile.write(body)
+        self.close_connection = True
 
     def log_message(self, fmt, *args) -> None:  # noqa: A002
         pass
@@ -171,6 +174,8 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
              "--network", f"{project}_sapi-v2-net",
              "--add-host", "host.docker.internal:host-gateway",
              "-e", f"SAPI_ML_BASE_URL=http://host.docker.internal:{stub_port}",
+             "-e", "SAPI_ML_CONNECT_TIMEOUT=10s",
+             "-e", "SAPI_ML_READ_TIMEOUT=60s",
              "-e", "SPRING_DATASOURCE_URL=jdbc:postgresql://db-v2:5432/sapi_v2",
              "-e", "SPRING_DATASOURCE_USERNAME=sapi",
              "-e", f"SPRING_DATASOURCE_PASSWORD={compose_env['SAPI_DB_PASSWORD']}",
@@ -183,13 +188,13 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
              f"{project}-backend"],
             check=True, capture_output=True, text=True,
         )
-        for _ in range(30):
-            ready = _http_ready(f"http://127.0.0.1:{probe_port}/api/v1/ranking")
-            if ready is not None:
+        for _ in range(60):
+            ready = _http_ready(f"http://127.0.0.1:{probe_port}/health")
+            if ready is not None and ready[0] == 200:
                 break
-            time.sleep(2)
+            time.sleep(1)
         else:
-            pytest.fail("contenedor-sonda no respondio a tiempo")
+            pytest.fail("contenedor-sonda no respondio a tiempo en /health")
 
         results = {}
 
@@ -198,9 +203,13 @@ def test_f1_operational_overlay_real_stack_enforces_current_only_gate() -> None:
         for origin, fingerprint in reject_fingerprints.items():
             _StubHandler.body = _ranking_with("2026-10-14T11:00:00Z", fingerprint, origin)
             status, body = _http(f"http://127.0.0.1:{probe_port}/api/v1/ranking")
+            if status == 503:
+                time.sleep(1)
+                status, body = _http(f"http://127.0.0.1:{probe_port}/api/v1/ranking")
             payload = json.loads(body)
             results[f"reject_{origin}"] = {"status": status, "body": payload}
-            assert status == 500
+            msg = f"Expected 500 for origin={origin}, got {status}: {body[:100]}"
+            assert status == 500, msg
             assert payload.get("error_type") == "internal_error"
             assert _count_rows(db_container, "ejecuciones") == before_exec
             assert _count_rows(db_container, "predicciones_celda") == before_pred
