@@ -11,12 +11,15 @@ Cierre definitivo de hallazgos Astra:
    (/api/v1/ranking) y el KPI strip del DOM, eliminando cualquier constante hardcodeada ('return 50').
 7. Registro de identidades: SHA, tree, fecha UTC, URL, y parámetros del stack.
 8. Salida a carpeta de evidencia designada (artifacts/hito2/d26).
+9. Evidencia discriminante por captura: SHA-256 del PNG y tipo de navegación del
+   navegador; RUN-04 no asume `content_verified=True`, exige grilla visible.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
 import re
 import subprocess
@@ -84,6 +87,59 @@ def get_container_identities(project_name: str = "sapi-v2") -> dict[str, str]:
     except Exception:
         pass
     return {}
+
+
+_GRID_SELECTOR = "div[data-testid='stDataFrame'], [data-testid='stTable']"
+
+
+def sha256_file(path: Path) -> str:
+    """SHA-256 en mayúsculas del archivo indicado (evidencia reproducible)."""
+    digest = hashlib.sha256()
+    with Path(path).open("rb") as fh:
+        for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest().upper()
+
+
+def get_browser_navigation_type(driver: webdriver.Edge) -> str:
+    """Tipo de navegación del documento actual ('navigate', 'reload', 'unknown').
+
+    Permite distinguir una recarga real de navegador (RUN-03) de un rerun de
+    Streamlit disparado por un botón (RUN-02), que no crea una nueva entrada de
+    navegación.
+    """
+    script = (
+        "const nav = performance.getEntriesByType('navigation')[0];"
+        "return nav && nav.type ? nav.type : 'unknown';"
+    )
+    try:
+        value = driver.execute_script(script)
+    except Exception:
+        return "unknown"
+    return str(value) if value else "unknown"
+
+
+def _is_displayed(element) -> bool:
+    try:
+        return bool(element.is_displayed())
+    except Exception:
+        return False
+
+
+def verify_expanded_grid(driver: webdriver.Edge) -> tuple[bool, str]:
+    """Verifica que la grilla expandida esté realmente visible.
+
+    No asume True por haber encontrado el expander: exige al menos un
+    stDataFrame/stTable visible. Devuelve (ok, detalle).
+    """
+    try:
+        grids = driver.find_elements("css selector", _GRID_SELECTOR)
+    except Exception as ex:
+        return False, f"Error comprobando grilla: {ex}"
+    visible = [grid for grid in grids if _is_displayed(grid)]
+    if not visible:
+        return False, f"Grillas encontradas={len(grids)}, visibles=0"
+    return True, f"Grillas visibles={len(visible)} de {len(grids)}"
 
 
 def create_driver() -> webdriver.Edge:
@@ -412,9 +468,12 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
             "post_timestamp": ts_cold,
             "element_verified": "Celda VP / Grupo prioritario",
             "content_verified": has_cell and has_priority and kpi_50_ok,
+            "action": "driver.get",
+            "browser_navigation_type": get_browser_navigation_type(driver),
             "commit_sha": commit_sha,
             "tree_sha": tree_sha,
             "screenshot": shot_cold.name,
+            "screenshot_sha256": sha256_file(shot_cold),
             "notes": f"Navegación inicial en frío con backend Spring+FastAPI. 50 celdas validadas. Visible: {t_total_cold:.1f} ms."
         })
 
@@ -469,9 +528,12 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
             "post_timestamp": post_click_ts,
             "element_verified": "Celda VP / Grupo prioritario (nuevo timestamp verificado)",
             "content_verified": kpi_upd_ok and (post_click_ts != pre_click_ts.raw),
+            "action": "click:Actualizar ranking",
+            "browser_navigation_type": "n/a (rerun Streamlit, sin navegación)",
             "commit_sha": commit_sha,
             "tree_sha": tree_sha,
             "screenshot": shot_upd.name,
+            "screenshot_sha256": sha256_file(shot_upd),
             "notes": f"Re-ejecución tras clic en Actualizar ranking con confirmación de nuevo timestamp ({pre_click_ts.raw} -> {post_click_ts}). Latencia real: {duration_upd:.1f} ms."
         })
 
@@ -485,6 +547,9 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
 
         duration_cached, match_cached = wait_for_ranking_visible(driver, timeout=30.0)
         t_total_cached = (time.perf_counter() - t0_cached) * 1000.0
+        nav_cached = get_browser_navigation_type(driver)
+        if nav_cached != "reload":
+            print(f"[WARN] Tipo de navegación tras refresh: {nav_cached!r} (se esperaba 'reload')")
         ts_cached_struct = extract_backend_timestamp(driver)
         ts_cached = ts_cached_struct.raw if ts_cached_struct else "N/D"
         kpi_cached_ok, _ = verify_50_cells_integrity(driver, backend_url=backend_url)
@@ -502,10 +567,13 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
             "pre_timestamp": post_click_ts,
             "post_timestamp": ts_cached,
             "element_verified": "Celda VP / Grupo prioritario (caché)",
-            "content_verified": kpi_cached_ok,
+            "content_verified": kpi_cached_ok and nav_cached == "reload",
+            "action": "driver.refresh",
+            "browser_navigation_type": nav_cached,
             "commit_sha": commit_sha,
             "tree_sha": tree_sha,
             "screenshot": shot_cached.name,
+            "screenshot_sha256": sha256_file(shot_cached),
             "notes": f"Recarga completa de navegador con respuesta de backend en caché. Visible: {t_total_cached:.1f} ms."
         })
 
@@ -524,6 +592,10 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
                 )
                 t_exp = (time.perf_counter() - t0_exp) * 1000.0
                 print(f"[OK RUN-04] Grilla st.dataframe visible en {t_exp:.1f} ms")
+                grid_ok, grid_msg = verify_expanded_grid(driver)
+                kpi_exp_ok, kpi_exp_msg = verify_50_cells_integrity(driver, backend_url=backend_url)
+                print(f"            - Grilla visible: {grid_msg} (PASS={grid_ok})")
+                print(f"            - Integridad 50 celdas: {kpi_exp_msg} (PASS={kpi_exp_ok})")
                 print("            - Nota de virtualización: Glide Data Grid renderiza filas bajo demanda en canvas/virtual list")
                 print("            - Total de registros respaldados: 50 celdas (verificadas vía contrato y KPI)")
 
@@ -538,11 +610,14 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
                     "ui_visible_latency_ms": round(t_exp, 2),
                     "pre_timestamp": ts_cached,
                     "post_timestamp": ts_cached,
-                    "element_verified": "stDataFrame (Glide Data Grid, 50 registros totales)",
-                    "content_verified": True,
+                    "element_verified": f"stDataFrame ({grid_msg})",
+                    "content_verified": grid_ok and kpi_exp_ok,
+                    "action": "click:Ver ranking completo",
+                    "browser_navigation_type": "n/a (expander, sin navegación)",
                     "commit_sha": commit_sha,
                     "tree_sha": tree_sha,
                     "screenshot": shot_exp.name,
+                    "screenshot_sha256": sha256_file(shot_exp),
                     "notes": f"Apertura del expander interactivo y render de Glide Data Grid virtualizado. Visible: {t_exp:.1f} ms."
                 })
         except Exception as ex:
@@ -553,7 +628,8 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
         fieldnames = [
             "run_id", "scenario", "start_time_iso", "ui_visible_latency_ms",
             "pre_timestamp", "post_timestamp", "element_verified", "content_verified",
-            "commit_sha", "tree_sha", "screenshot", "notes"
+            "action", "browser_navigation_type",
+            "commit_sha", "tree_sha", "screenshot", "screenshot_sha256", "notes"
         ]
         with open(csv_path, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -567,7 +643,8 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
         print(f"{'Run ID':<8} | {'Escenario':<42} | {'Latencia (ms)':<16} | {'Estado':<6}")
         print("-" * 78)
         for r in records:
-            print(f"{r['run_id']:<8} | {r['scenario']:<42} | {r['ui_visible_latency_ms']:>12.1f} ms | PASS")
+            status = "PASS" if r["content_verified"] else "FAIL"
+            print(f"{r['run_id']:<8} | {r['scenario']:<42} | {r['ui_visible_latency_ms']:>12.1f} ms | {status}")
         print("=================================================================\n")
 
     finally:
