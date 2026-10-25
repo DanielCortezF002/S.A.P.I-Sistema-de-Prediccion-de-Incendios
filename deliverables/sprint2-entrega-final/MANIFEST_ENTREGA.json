@@ -1,0 +1,40 @@
+{
+  "dossier": "S.A.P.I. Sprint 2 / Hito 2 Final Delivery Dossier",
+  "consolidated_candidate_sha": "8010e4421cf91b80e6dc66d732ef6e98dfd1e4d8",
+  "protected_base_candidate_f7": "51ec3c06b67959d3daad6349c962a1be643906b4",
+  "timestamp": "2026-10-24T23:56:00-03:00",
+  "files": {
+    "EVIDENCIAS_E2E_R2_Y_CI.md": {
+      "size_bytes": 2338,
+      "sha256": "540f41f1d9f1cd3230d91d5905f49a781aa74dadb648d77b7247c9aac2ce213c"
+    },
+    "GUION_MATIAS_20MIN.md": {
+      "size_bytes": 5826,
+      "sha256": "c0f9e12edad5b6d292c3df10caf95ccc4b2682ef4fcc1c91bd3b3825400391b0"
+    },
+    "INFORME_CESAR_HITO2_FINAL.md": {
+      "size_bytes": 27388,
+      "sha256": "ac564fb4830990cda970ca8def2fb0d2b04462c77e5111953e9e7f9cef534f6b"
+    },
+    "LIMITACIONES_OPERACIONALES_Y_GATE_B.md": {
+      "size_bytes": 2531,
+      "sha256": "e08148057c3ddbb612f134ee4e1ed7515c443ba29833922588a14f94d43f94a6"
+    },
+    "MATRIZ_RIESGOS_SPRINT2.md": {
+      "size_bytes": 8278,
+      "sha256": "c6e0eb8c5594761e47a4bac63168f7bf90a65afe9ab821b70f0faa0e93d4c1ac"
+    },
+    "MATRIZ_TRAZABILIDAD_HU_CA_EVIDENCIAS.md": {
+      "size_bytes": 4922,
+      "sha256": "bc213fabd75a674095e32ee4b291684a889895daf1aa7e30637bc982d01cbd33"
+    },
+    "PRESENTACION_MATIAS_SLIDES.html": {
+      "size_bytes": 29104,
+      "sha256": "d9fe6877f0c952fbe506727a4ce1bad0f01662548072c82ddd3902b9b1c3086b"
+    },
+    "RUNBOOK_DEMO_FUNCIONAL.md": {
+      "size_bytes": 6354,
+      "sha256": "e056950436f9cf11e5c940042029157c3b30c3c65f6849cf20bcf90a65be3786"
+    }
+  }
+}

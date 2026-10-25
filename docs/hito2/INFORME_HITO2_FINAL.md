@@ -39,6 +39,19 @@ datos real, confirmando el hallazgo negativo —LSTM es inviable con el
 desbalance de clases actual (1:3390)— sin reentrenar ni alterar el Modelo D
 congelado.
 
+
+
+### Matriz de Cumplimiento Normativo ? R?brica Seminario de Licenciatura (INSW421)
+
+| Criterio / Indicador de Logro | Ponderaci?n | Secci?n del Informe | Evidencia T?cnica Verificable en Repositorio |
+| :--- | :---: | :---: | :--- |
+| **C1. Propuesta de Soluci?n y Modelo de Investigaci?n (IL 2.1)** | 20% | ?? 2, 3, 5, 6, 10 | Definici?n territorial corredor Vi?a-Quilpu?-Villa Alemana, formulaci?n metodol?gica, tabla de operacionalizaci?n y fundamentaci?n de baseline tabular (`HistGradientBoostingClassifier`). |
+| **C2. An?lisis y Especificaci?n de Requerimientos (IL 2.2)** | 20% | ?? 5, 11 | Backlog comprometido de 14 Historias de Usuario / 58 Story Points, criterios de aceptaci?n, 9 HU DONE (37 SP) y 5 HU abiertas transparentemente delimitadas (21 SP). |
+| **C3. Dise?o de Arquitectura y Especificaci?n T?cnica (IL 2.3)** | 20% | ?? 7, 8 | Arquitectura en microservicios desacoplados (Streamlit, Spring Boot, FastAPI, PostgreSQL/PostGIS), contratos OpenAPI versionados y pol?ticas de resiliencia *fail-closed*. |
+| **C4. Implementaci?n y Verificaci?n del Incremento (IL 2.4)** | 20% | ?? 8, 9, 10 | Geometr?a de 50 celdas rectangulares (`src/geo/grid.py`), migraciones Flyway V001-V004, persistencia transaccional PostGIS con constraints de integridad (`scientific_model_validation=false`, `score_semantics=relative_rank`). |
+| **C5. Gesti?n del Sprint 2: Pruebas y Matriz de Riesgos** | 10% | ?? 9, 11 | Suite automatizada de 102 tests Python, 137 tests Java Surefire, 91 artefactos E2E R2 certificados con SHA-256 y Matriz de 19 Riesgos (`MATRIZ_RIESGOS_SPRINT2.md`) con mitigaciones activas. |
+| **C6. Calidad Documental del Informe 2 y Defensa Oral** | 10% | ?? 1?12, Referencias | Rigor metodol?gico, normas bibliogr?ficas APA 7? edici?n, citas formales y guion estructurado para la defensa de 20 minutos (`PRESENTACION_HITO2_GUION_20MIN.md`). |
+
 ## 2. Planteamiento del problema y contexto territorial
 
 La interfaz urbano-forestal de la Región de Valparaíso combina topografía

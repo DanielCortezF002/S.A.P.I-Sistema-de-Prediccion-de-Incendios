@@ -1,6 +1,8 @@
 # Guion de presentación Hito 2 — S.A.P.I. (20 minutos)
 
-Candidato: `d11428a6165dd0dd26f3440cb850ab08ab09f06a`. Estructura exigida por
+Candidato Consolidado: `8010e4421cf91b80e6dc66d732ef6e98dfd1e4d8` (Base F7: `51ec3c06b67959d3daad6349c962a1be643906b4`).
+Fecha de Consolidaci?n: 24 de octubre de 2026.
+Alineaci?n R?brica: Mat?as Vargas ? Proyecto de T?tulo Hito 2 (Criterios M1 a M8). Estructura exigida por
 la Directiva 33: 5 + 5 + 7 + 3 minutos. Reemplaza el borrador previo
 (placeholders `[ATTEMPT2_RESULT]` etc., ya resueltos en
 `docs/evidence/actualizacion-informe-y-guion-20261015/`).
@@ -66,7 +68,7 @@ requiere este paso).
 *Mostrar:* 4 contenedores `Up (healthy)`.
 
 **Minuto 11-13 — Navegación y ranking.**
-Abrir `http://localhost:8501`. Mostrar las 50 celdas H3, badge "Semántica:
+Abrir `http://localhost:8501`. Mostrar las 50 celdas rectangulares VP-001 a VP-050, badge "Semántica:
 relative_rank (no calibrado)", KPI "50 celdas evaluadas".
 
 **Minuto 13-15 — Actualización interactiva.**

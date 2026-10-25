@@ -1,6 +1,6 @@
 # Trazabilidad HU → CA → Código → Prueba → Evidencia — Sprint 2 / Hito 2
 
-Candidato base: `f9654834cec0e026cd8fc84d5af7d81f75da25e2` (Directiva 34; el commit que incorpora esta versión del documento es necesariamente posterior y se reporta en el entregable ejecutivo de esa directiva, no puede autorreferenciarse). Cubre las 14 historias
+Candidato consolidado: `8010e4421cf91b80e6dc66d732ef6e98dfd1e4d8` (Base F7: `51ec3c06b67959d3daad6349c962a1be643906b4`) (Directiva 34; el commit que incorpora esta versión del documento es necesariamente posterior y se reporta en el entregable ejecutivo de esa directiva, no puede autorreferenciarse). Cubre las 14 historias
 comprometidas (58 SP). Para las 9 DONE se muestra el amarre código↔prueba
 representativo (no se reabrió investigación); para las 5 abiertas se detalla
 el estado exacto por CA.
