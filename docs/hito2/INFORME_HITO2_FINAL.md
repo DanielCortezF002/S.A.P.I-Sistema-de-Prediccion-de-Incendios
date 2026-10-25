@@ -80,7 +80,7 @@ no sustentan?
    duplicar o mezclar el origen de los datos (`firms_origin`)? (IL2.4)
 3. Dado el desbalance de clases observado (1:3390 positivo:negativo) y el
    volumen de datos reales disponibles, ¿es una arquitectura secuencial
-   (LSTM/RNN) superior a un modelo tabular (XGBoost) para este dominio, o la
+   (LSTM/RNN) superior a un modelo tabular de gradient boosting (HistGradientBoostingClassifier) para este dominio, o la
    evidencia experimental indica lo contrario? (Sección 10 / SAPI-63)
 
 ## 4. Estado del arte
@@ -97,7 +97,7 @@ XGBoost, Random Forest, perceptrón multicapa y regresión logística— y repor
 que XGBoost obtiene el mejor desempeño discriminativo (AUC más alto) sobre
 datos estructurados espaciotemporales (*Forests*,
 https://doi.org/10.3390/f13071050). Ambos hallazgos sustentan la elección de
-un modelo tabular (Modelo D, XGBoost) como baseline de S.A.P.I., coherente
+un modelo tabular de gradient boosting (Modelo D, implementado con HistGradientBoostingClassifier de scikit-learn) como baseline de S.A.P.I., coherente
 con el tipo de insumos disponibles (variables meteorológicas y topográficas
 tabulares por celda y timestamp).
 
@@ -153,7 +153,7 @@ para la evaluación de fuentes alternativas, CONAF/CIREN, diferida a Hito 3).
 flowchart LR
     U[Usuario / Brigadista] --> ST["Streamlit v2 (web-v2)"]
     ST -->|"GET /api/v1/ranking"| BE["Spring Boot 3.x (backend)"]
-    BE -->|"POST /predict"| ML["FastAPI (ml-api) + Modelo D (XGBoost)"]
+    BE -->|"POST /predict"| ML["FastAPI (ml-api) + Modelo D (HistGradientBoosting)"]
     BE -->|"JDBC (HikariCP)"| DB[("PostgreSQL 15 + PostGIS 3.4")]
     BE -. "FirmsOriginPolicy (gate de procedencia)" .- DB
 ```
@@ -267,7 +267,7 @@ change-control arquitectónico.
 
 ## 10. Evaluación científica del Modelo D y experimento secuencial SAPI-63
 
-El Modelo D (XGBoost 1.7+) se mantiene **congelado** desde Hito 1: no fue
+El Modelo D (HistGradientBoostingClassifier de scikit-learn) se mantiene **congelado** desde Hito 1: no fue
 reentrenado en este sprint. Su fingerprint de reproducibilidad
 (`33c2eacc49bd0cc130928b5bd182ec523e63614f0e3dd97a129a8d4657f231ff`) se
 verifica en cada corrida del freeze (`F2`), confirmando que el modelo

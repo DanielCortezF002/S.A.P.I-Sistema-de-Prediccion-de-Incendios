@@ -90,7 +90,7 @@ muestro sin filtrar." (señalar la tabla de `INFORME_HITO2_FINAL.md` §9).
 "Reproduje este experimento yo mismo hoy, contra el dato real: 107 positivos
 en 362 883 filas, 26 de 49 folds de prueba sin ningún positivo. Una LSTM no
 es viable con este volumen — y la literatura revisada confirma el mismo
-patrón en dominios comparables. Mantenemos XGBoost."
+patrón en dominios comparables. Mantenemos el baseline tabular con HistGradientBoostingClassifier."
 
 **Minuto 19-20 — Cierre honesto.**
 "Lo que falta no es ingeniería oculta: es autorización humana para el primer
