@@ -275,7 +275,7 @@ def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(
 ) -> None:
     view_mod._render_kpi_strip(v0_view())
     text = _markdown_blob(mock_st)
-    assert ">50<" in text and "Celdas evaluadas" in text
+    assert "50" in text and "Celdas evaluadas" in text
     assert "Grupo prioritario" in text and "#1" in text
     assert "Score relativo (top)" in text and "0.1313" in text
     assert "Territorio" in text and "317 m" in text
@@ -286,7 +286,7 @@ def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(
 def test_kpi_strip_extended_shows_backend_meteo_verbatim(mock_st: MagicMock) -> None:
     view_mod._render_kpi_strip(extended_view())
     text = _markdown_blob(mock_st)
-    assert ">50<" in text and "Celdas evaluadas" in text
+    assert "50" in text and "Celdas evaluadas" in text
     assert "#1" in text
     assert "Score relativo (top)" in text
 

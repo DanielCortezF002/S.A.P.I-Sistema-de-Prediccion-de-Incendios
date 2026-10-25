@@ -233,7 +233,18 @@ def build_map(
             f"Pendiente {slope_txt} (ref.){topo_note}<br>"
             f"Historial FIRMS: {NOT_IN_CONTRACT}"
         )
-        folium.Rectangle(
+        popup_html = (
+            f"<div style='font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#f1f5f9;font-size:12px;line-height:1.45;'>"
+            f"<div style='font-size:13px;font-weight:800;color:#ffffff;border-bottom:1px solid #334155;padding-bottom:3px;margin-bottom:5px;'>{_esc(c.cell_id)}</div>"
+            f"<div>Prioridad: <b style='color:#f87171;'>#{c.display_rank}</b></div>"
+            f"<div>Score: <b style='font-family:monospace;'>{c.score:.6f}</b></div>"
+            f"<div style='margin-top:4px;color:#94a3b8;font-size:11px;border-top:1px solid #334155;padding-top:4px;'>"
+            f"Elevación: {elev_txt} (ref.){topo_note}<br>"
+            f"Pendiente: {slope_txt} (ref.){topo_note}"
+            f"</div>"
+            f"</div>"
+        )
+        rect = folium.Rectangle(
             bounds=[[g["min_lat"], g["min_lon"]], [g["max_lat"], g["max_lon"]]],
             color=edge,
             fill=True,
@@ -241,7 +252,48 @@ def build_map(
             fill_opacity=fill_opacity,
             weight=weight,
             tooltip=tooltip,
-        ).add_to(fmap)
+        )
+        rect.add_child(folium.Popup(popup_html, max_width=220))
+        rect.add_to(fmap)
+
+    dark_leaflet_css = """
+    <style>
+    .leaflet-popup-content-wrapper, .leaflet-popup-tip {
+        background: #131b24 !important;
+        color: #f1f5f9 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45) !important;
+    }
+    .leaflet-popup-content {
+        margin: 8px 12px !important;
+        line-height: 1.4 !important;
+    }
+    .leaflet-container a.leaflet-popup-close-button {
+        color: #94a3b8 !important;
+        padding: 4px 4px 0 0 !important;
+    }
+    .leaflet-container a.leaflet-popup-close-button:hover {
+        color: #f87171 !important;
+    }
+    .leaflet-tooltip {
+        background: #131b24 !important;
+        color: #f1f5f9 !important;
+        border: 1px solid #334155 !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+        font-size: 11px !important;
+        line-height: 1.35 !important;
+        padding: 6px 10px !important;
+    }
+    .leaflet-tooltip-top:before, .leaflet-tooltip-bottom:before,
+    .leaflet-tooltip-left:before, .leaflet-tooltip-right:before {
+        border-top-color: #131b24 !important;
+        border-bottom-color: #131b24 !important;
+    }
+    </style>
+    """
+    fmap.get_root().header.add_child(folium.Element(dark_leaflet_css))
 
     north_html = """
     <div style="position: absolute; top: 12px; left: 12px; z-index: 1000;
@@ -293,9 +345,20 @@ def _inject_css() -> None:
         """
         <style>
         .block-container {
-            padding-top: 1.15rem !important;
-            padding-bottom: 2rem !important;
+            padding-top: 0.80rem !important;
+            padding-bottom: 1.5rem !important;
             max-width: 1720px !important;
+        }
+
+        div[data-testid="stAlert"] {
+            padding: 0.45rem 0.85rem !important;
+            margin-top: 0.15rem !important;
+            margin-bottom: 0.40rem !important;
+        }
+        div[data-testid="stAlert"] p {
+            font-size: 0.82rem !important;
+            line-height: 1.35 !important;
+            margin: 0 !important;
         }
 
         .sapi-v2-header {
@@ -303,9 +366,9 @@ def _inject_css() -> None:
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            gap: 1rem;
-            padding: 0.6rem 0.2rem 0.75rem 0.2rem;
-            margin-bottom: 0.5rem;
+            gap: 0.75rem;
+            padding: 0.35rem 0.2rem 0.45rem 0.2rem;
+            margin-bottom: 0.30rem;
             border-bottom: 1px solid var(--sapi-border-card, #223040);
         }
         .sapi-header-left {
@@ -401,15 +464,15 @@ def _inject_css() -> None:
         .sapi-kpi-grid {
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.75rem;
-            margin-bottom: 0.85rem;
+            gap: 0.65rem;
+            margin-bottom: 0.50rem;
         }
         .sapi-card-kpi {
             background: #131b24;
             border: 1px solid #223040;
             border-radius: 10px;
-            padding: 0.70rem 0.90rem;
-            min-height: 4.8rem;
+            padding: 0.55rem 0.80rem;
+            min-height: 4.4rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -795,14 +858,27 @@ def _inject_css() -> None:
         }
 
         .sapi-v2-disclaimer {
-            font-size: 0.84rem;
-            line-height: 1.45;
+            font-size: 0.82rem;
+            line-height: 1.40;
             color: #cbd5e1;
             background: #0f1620;
             border-left: 3px solid #38bdf8;
             border-radius: 6px;
-            padding: 0.65rem 0.95rem;
-            margin: 0.75rem 0 1rem 0;
+            padding: 0.50rem 0.85rem;
+            margin: 0.40rem 0 0.55rem 0;
+        }
+
+        details[data-testid="stExpander"] {
+            background: #131b24 !important;
+            border: 1px solid #223040 !important;
+            border-radius: 8px !important;
+            margin-top: 0.25rem !important;
+        }
+        details[data-testid="stExpander"] summary {
+            font-size: 0.85rem !important;
+            font-weight: 700 !important;
+            color: #e2e8f0 !important;
+            padding: 0.45rem 0.75rem !important;
         }
         </style>
         """,
@@ -840,8 +916,8 @@ def _render_header(view: RankingView) -> None:
         <div class="sapi-v2-header">
             <div class="sapi-header-left">
                 <div class="sapi-v2-title">S.A.P.I.</div>
-                <div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios · Defensa Académica Sprint 2</div>
-                <div class="sapi-v2-academic">Defensa Académica - Sprint 2</div>
+                <div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios</div>
+                <div class="sapi-v2-academic">Defensa Académica · Sprint 2</div>
             </div>
             <div class="sapi-v2-status">
                 <span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>
@@ -906,7 +982,7 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
                     <span class="sapi-card-kpi__label">Celdas evaluadas</span>
                     <span class="sapi-card-kpi__icon">🔥</span>
                 </div>
-                <div class="sapi-card-kpi__val">>{len(view.cells)}<</div>
+                <div class="sapi-card-kpi__val">{len(view.cells)}</div>
                 <div class="sapi-card-kpi__sub">en la ventana analizada</div>
             </div>
             <div class="sapi-card-kpi sapi-card-kpi--red">
@@ -1011,8 +1087,8 @@ def _render_priority_panel(view: RankingView) -> None:
         </div>
         <p class="sapi-narrative-text">
             Las celdas del grupo #{top[0].display_rank} presentan el mayor score relativo
-            ({top[0].score:.4f}), con empate entre {len(top)} celdas, ubicadas principalmente
-            en el corredor Viña del Mar – Quilpué.
+            ({top[0].score:.4f}) dentro del territorio evaluado, con un empate simultáneo
+            de {len(top)} celdas bajo el Modelo D.
         </p>
         <div style="margin-top:0.45rem">{chips}</div>
         {tie_note}
@@ -1170,7 +1246,7 @@ def _cell_num(cell_id: str) -> int:
 
 def _render_ranking_expander(view: RankingView) -> None:
     """Tabla completa de ranking expandible con filtros."""
-    with st.expander("Ver ranking completo (50 celdas)", expanded=False):
+    with st.expander("Ver ranking completo (50 celdas) y filtros", expanded=False):
         order_mode = st.radio(
             "Criterio de ordenación",
             options=[
@@ -1280,7 +1356,7 @@ def _render_tech_expander(view: RankingView) -> None:
             "- **Metadata opcional no informada por el backend:** "
             + ", ".join(f"`{name}`" for name in missing)
         )
-    with st.expander("Información técnica y fuentes", expanded=False):
+    with st.expander("Ver detalle técnico y metadatos completos", expanded=False):
         st.markdown("\n\n".join(sections))
         st.caption(FIXED_DISCLAIMER)
 
@@ -1295,8 +1371,8 @@ def _render_bottom_modules(view: RankingView) -> None:
             <div class="sapi-module-card">
                 <div class="sapi-module-header">
                     <div class="sapi-module-title">
-                        <span>📄</span>
-                        <span>Información técnica y fuentes</span>
+                        <span>⚙</span>
+                        <span>Trazabilidad técnica y fuentes</span>
                     </div>
                 </div>
                 <div class="sapi-info-grid">
@@ -1360,8 +1436,8 @@ def _render_bottom_modules(view: RankingView) -> None:
             <div class="sapi-module-card">
                 <div class="sapi-module-header">
                     <div class="sapi-module-title">
-                        <span>🏆</span>
-                        <span>Ranking completo de celdas</span>
+                        <span>📊</span>
+                        <span>Vista previa del ranking (Top 5)</span>
                     </div>
                 </div>
                 <table class="sapi-mini-table">
@@ -1473,7 +1549,6 @@ def render_ranking_backend_dashboard() -> None:
 
     # 4. Sección principal: Mapa protagonista + Panel Hallazgo principal
     if is_expanded:
-        st.markdown('<div class="sapi-map-card">', unsafe_allow_html=True)
         m_head_left, m_head_right = st.columns([7.5, 2.5])
         with m_head_left:
             st.markdown(
@@ -1496,7 +1571,7 @@ def render_ranking_backend_dashboard() -> None:
         fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
         event = st_folium(
             fmap,
-            height=660,
+            height=700,
             use_container_width=True,
             key="ranking_v2_map_expanded",
             returned_objects=["last_clicked"],
@@ -1507,13 +1582,11 @@ def render_ranking_backend_dashboard() -> None:
             st.rerun()
 
         _render_map_legend_bar()
-        st.markdown("</div>", unsafe_allow_html=True)
 
     else:
         map_col, side_col = st.columns([2.12, 1], gap="medium")
 
         with map_col:
-            st.markdown('<div class="sapi-map-card">', unsafe_allow_html=True)
             m_head_left, m_head_right = st.columns([6.8, 3.2])
             with m_head_left:
                 st.markdown(
@@ -1549,7 +1622,7 @@ def render_ranking_backend_dashboard() -> None:
             fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
             event = st_folium(
                 fmap,
-                height=520,
+                height=600,
                 use_container_width=True,
                 key="ranking_v2_map_compact",
                 returned_objects=["last_clicked"],
@@ -1560,14 +1633,11 @@ def render_ranking_backend_dashboard() -> None:
                 st.rerun()
 
             _render_map_legend_bar()
-            st.markdown("</div>", unsafe_allow_html=True)
 
         with side_col:
-            st.markdown('<div class="sapi-panel-right">', unsafe_allow_html=True)
             st.markdown(
                 """
                 <div class="sapi-panel-title-row">
-                    <span style="font-size: 1.15rem; color:#ef4444">🎯</span>
                     <div class="sapi-panel-title">Hallazgo principal</div>
                 </div>
                 """,
@@ -1592,7 +1662,6 @@ def render_ranking_backend_dashboard() -> None:
                 st.rerun()
 
             _render_selected_panel(view, st.session_state[_SESSION_SELECTED])
-            st.markdown("</div>", unsafe_allow_html=True)
 
     # 5. Disclaimer científico explícito
     _render_disclaimer(view)
