@@ -569,9 +569,15 @@ def _inject_css(mode: str | None = None) -> None:
             --sapi-map-tag-color: {map_tag_color};
         }}
 
+        [data-testid="stHeader"] {{
+            background: transparent !important;
+            height: 2.85rem !important;
+            z-index: 50 !important;
+        }}
+
         .block-container {{
-            padding-top: 0.35rem !important;
-            padding-bottom: 1.0rem !important;
+            padding-top: 3.40rem !important;
+            padding-bottom: 0.85rem !important;
             max-width: 1720px !important;
         }}
 
@@ -605,34 +611,42 @@ def _inject_css(mode: str | None = None) -> None:
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            gap: 0.60rem;
-            padding: 0.15rem 0.2rem 0.25rem 0.2rem;
+            gap: 0.75rem;
+            padding: 0.20rem 0.2rem 0.35rem 0.2rem;
             margin-bottom: 0.20rem;
             border-bottom: 1px solid var(--sapi-border-card);
+            overflow: visible !important;
         }}
         .sapi-header-left {{
             display: flex;
             flex-direction: column;
             gap: 0.05rem;
+            overflow: visible !important;
         }}
         .sapi-v2-title {{
             font-size: 1.85rem;
             font-weight: 900;
-            letter-spacing: -0.03em;
-            line-height: 1.05;
+            letter-spacing: -0.02em;
+            line-height: 1.25;
             color: var(--sapi-text-title) !important;
             margin: 0;
+            padding: 2px 0 0 0;
+            overflow: visible !important;
         }}
         .sapi-v2-sub {{
             font-size: 0.88rem;
             font-weight: 600;
             color: var(--sapi-text-body) !important;
             margin-top: 0.08rem;
+            line-height: 1.25;
+            overflow: visible !important;
         }}
         .sapi-v2-academic {{
             font-size: 0.74rem;
             font-weight: 500;
             color: var(--sapi-text-muted) !important;
+            line-height: 1.25;
+            overflow: visible !important;
         }}
 
         .sapi-v2-status {{
@@ -640,6 +654,7 @@ def _inject_css(mode: str | None = None) -> None:
             align-items: center;
             gap: 0.40rem;
             flex-wrap: wrap;
+            overflow: visible !important;
         }}
         .sapi-v2-badge {{
             display: inline-flex;
@@ -671,14 +686,28 @@ def _inject_css(mode: str | None = None) -> None:
         }}
 
         .sapi-v2-meta {{
-            font-size: 0.75rem;
-            line-height: 1.30;
+            font-size: 0.74rem;
+            line-height: 1.35;
             color: var(--sapi-text-muted) !important;
             text-align: right;
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: visible !important;
+        }}
+        .sapi-v2-meta div {{
+            margin-bottom: 2px;
         }}
         .sapi-v2-meta b {{
             color: var(--sapi-text-title) !important;
+        }}
+
+        /* Botón de cambio de tema alineado con la cabecera */
+        button[key="sapi_theme_toggle_btn"] {{
+            margin-top: 0.35rem !important;
+            min-height: 2.2rem !important;
+            height: 2.2rem !important;
+            padding: 0 0.5rem !important;
+            border-radius: 8px !important;
         }}
 
         /* Barra resumen DMC superior en primera pantalla */
@@ -1299,10 +1328,10 @@ def _render_header(view: RankingView) -> None:
                 {hist_badge}
             </div>
             <div class="sapi-v2-meta">
-                <b>Ranking histórico T: {date_line}</b><br>
-                Ventana de análisis: {window_line}<br>
-                {_SVG_SERVER} {station_line}<br>
-                <span style="color:#10b981">●</span> Obtenido del backend: {_human_hm(view.fetched_at)} UTC (Consulta REST)
+                <div><b>Ranking histórico T: {date_line}</b></div>
+                <div>Ventana de análisis: {window_line}</div>
+                <div>{_SVG_SERVER} {station_line}</div>
+                <div><span style="color:#10b981">●</span> Obtenido del backend: {_human_hm(view.fetched_at)} UTC (Consulta REST)</div>
             </div>
         </div>
         """,
@@ -2092,7 +2121,7 @@ def render_ranking_backend_dashboard() -> None:
     is_expanded = st.session_state[_SESSION_EXPANDED]
 
     # 1. Cabecera compacta con toggle de tema (TAREA A y E)
-    head_col, toggle_col = st.columns([0.965, 0.035], gap="small")
+    head_col, toggle_col = st.columns([0.94, 0.06], gap="small")
     with head_col:
         _render_header(view)
     with toggle_col:
