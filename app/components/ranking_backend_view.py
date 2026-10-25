@@ -1,23 +1,21 @@
 """Vista PROTOTIPO v2: ranking servido por el backend Spring Boot (SAPI-61 / Sprint 2 Final).
 
-Implementación definitiva de la interfaz aprobada para la Defensa Académica:
+Implementación definitiva de la interfaz aprobada para la Defensa Académica (OCC-UI-FINAL-DENSITY-AND-MAP):
 - Cabecera compacta integrada con estados, metadatos y selector de tema (sin logo de fuego).
 - Fila de 5 tarjetas de indicadores clave (Celdas evaluadas, Grupo prioritario, Score relativo top, Territorio, Ventana de análisis).
-- Área principal con distribución ~68/32:
-  * Mapa protagonista con Folium, norte cardinal en esquina superior derecha, escala métrica, colores de riesgo relativo y celda destacada.
-  * Encuadre enfocado en las 50 celdas territoriales de Valparaíso y Viña del Mar sin exceso de océano.
-  * Botón funcional "Expandir mapa / Restaurar vista".
-  * Barra de leyenda y gradiente de score exploratorio integrado bajo el mapa.
-  * Panel lateral "Hallazgo principal" equilibrado en 3 bloques compactos:
-    1. Grupo prioritario con empates del modelo y selector de celda (50 disponibles).
-    2. Variables esenciales de la celda seleccionada (elevación, pendiente, meteorología regional T).
-    3. Módulo de consulta DMC Rodelillo (330007) de solo lectura con botón y trazabilidad temporal.
-- Resumen DMC en primera pantalla sin scroll con botón de consulta inmediata.
+- Área principal con distribución ~68/32 y densidad vertical optimizada:
+  * Fila principal:
+    - Izquierda: Mapa protagonista Folium enfocado en las 50 celdas, norte cardinal SVG (top-right), controles y barra de leyenda.
+    - Derecha: Hallazgo principal con grupo prioritario, selector de celda (50 disponibles) y resumen territorial de la celda seleccionada.
+  * Módulo DMC Rodelillo (330007) consolidado:
+    - Resumen meteorológico activo en barra superior con acción única de consulta.
+    - Detalle extendido en expander secundario plegado por defecto (expanded=False) para evitar vacíos verticales.
+  * Encuadre geográfico riguroso centrado en las 50 celdas (Viña del Mar, Quilpué, Villa Alemana, Limache) sin exceso de océano.
 - Separación estricta y trazabilidad de las 3 marcas de tiempo:
-  1. Instante T del ranking histórico (01 sep 2026 00:00 UTC).
-  2. Última observación DMC Rodelillo (hora de Chile y UTC).
+  1. Instante T del ranking histórico (01 sep 2026 00:00 UTC, T+6h).
+  2. Última observación DMC Rodelillo (hora efectiva Chile y UTC).
   3. Momento de consulta REST al backend.
-- Sección inferior con dos módulos balanceados (~50/50):
+- Fila secundaria con dos módulos balanceados (~50/50):
   * Izquierda: Información técnica y fuentes (resumen en cuadrícula + expander detallado).
   * Derecha: Ranking completo de celdas (tabla resumen de top celdas + expander con ordenación y filtros).
 - Advertencia explícita de datos históricos y disclaimer científico permanente.
@@ -75,7 +73,7 @@ FIXED_DISCLAIMER = (
 
 # ── Iconos SVG sobrios y profesionales (reemplazan emojis en la interfaz) ──
 _SVG_GRID = (
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<rect x="3" y="3" width="7" height="7"></rect>'
     '<rect x="14" y="3" width="7" height="7"></rect>'
@@ -84,7 +82,7 @@ _SVG_GRID = (
     '</svg>'
 )
 _SVG_PRIORITY = (
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>'
     '<line x1="12" y1="9" x2="12" y2="13"></line>'
@@ -92,7 +90,7 @@ _SVG_PRIORITY = (
     '</svg>'
 )
 _SVG_CHART = (
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<line x1="18" y1="20" x2="18" y2="10"></line>'
     '<line x1="12" y1="20" x2="12" y2="4"></line>'
@@ -100,22 +98,22 @@ _SVG_CHART = (
     '</svg>'
 )
 _SVG_MOUNTAIN = (
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<path d="m8 3 4 8 5-5 5 15H2L8 3z"></path>'
     '</svg>'
 )
 _SVG_CLOCK = (
-    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<circle cx="12" cy="12" r="10"></circle>'
     '<polyline points="12 6 12 12 16 14"></polyline>'
     '</svg>'
 )
 _SVG_SERVER = (
-    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-    'style="vertical-align:-1px;margin-right:4px;">'
+    'style="vertical-align:-1px;margin-right:3px;">'
     '<rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>'
     '<rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>'
     '<line x1="6" y1="6" x2="6.01" y2="6"></line>'
@@ -123,16 +121,16 @@ _SVG_SERVER = (
     '</svg>'
 )
 _SVG_WEATHER = (
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-    'style="vertical-align:-1px;margin-right:4px;">'
+    'style="vertical-align:-1px;margin-right:3px;">'
     '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>'
     '</svg>'
 )
 _SVG_CPU = (
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-    'style="vertical-align:-2px;margin-right:4px;">'
+    'style="vertical-align:-2px;margin-right:3px;">'
     '<rect x="4" y="4" width="16" height="16" rx="2"></rect>'
     '<rect x="9" y="9" width="6" height="6"></rect>'
     '<line x1="9" y1="1" x2="9" y2="4"></line>'
@@ -146,18 +144,18 @@ _SVG_CPU = (
     '</svg>'
 )
 _SVG_SATELLITE = (
-    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-    'style="vertical-align:-2px;margin-right:4px;">'
+    'style="vertical-align:-2px;margin-right:3px;">'
     '<path d="M4.93 19.07A10 10 0 0 1 19.07 4.93"></path>'
     '<path d="M7.76 16.24a6 6 0 0 1 8.48-8.48"></path>'
     '<circle cx="12" cy="12" r="2"></circle>'
     '</svg>'
 )
 _SVG_MAP = (
-    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
-    'style="vertical-align:-2px;margin-right:5px;">'
+    'style="vertical-align:-2px;margin-right:4px;">'
     '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>'
     '<line x1="8" y1="2" x2="8" y2="18"></line>'
     '<line x1="16" y1="6" x2="16" y2="22"></line>'
@@ -295,17 +293,22 @@ def build_map(
     group_by_score = _score_group_map(view.cells)
     top_rank = min((c.display_rank for c in view.cells), default=1)
 
-    # Centro de la grilla de las 50 celdas
-    center_lat = -33.0525
-    center_lon = -71.3745
+    # Límites geográficos reales calculados directamente desde la geometría fuente de las celdas
+    min_lat = min(g["min_lat"] for g in geometry.values())
+    max_lat = max(g["max_lat"] for g in geometry.values())
+    min_lon = min(g["min_lon"] for g in geometry.values())
+    max_lon = max(g["max_lon"] for g in geometry.values())
+    center_lat = (min_lat + max_lat) / 2
+    center_lon = (min_lon + max_lon) / 2
+
     fmap = folium.Map(
         location=[center_lat, center_lon],
         zoom_start=11,
         tiles="OpenStreetMap",
         control_scale=True,
     )
-    # Encuadre exacto en la zona de las celdas sin exceso de océano
-    fmap.fit_bounds([[-33.14, -71.58], [-32.965, -71.169]], padding=[16, 16], max_zoom=12)
+    # Encuadre exacto en la zona de las celdas con padding equilibrado
+    fmap.fit_bounds([[min_lat, min_lon], [max_lat, max_lon]], padding=[8, 8])
 
     for c in view.cells:
         g = geometry[c.cell_id]
@@ -445,7 +448,7 @@ def refresh_ranking_cache() -> None:
     _cached_ranking.clear()
 
 
-# ── inyección CSS con soporte claro / oscuro ────────────────────────────────────
+# ── inyección CSS con soporte claro / oscuro y densidad compacta ────────────────
 
 
 def _inject_css(mode: str | None = None) -> None:
@@ -567,19 +570,19 @@ def _inject_css(mode: str | None = None) -> None:
         }}
 
         .block-container {{
-            padding-top: 0.70rem !important;
-            padding-bottom: 1.5rem !important;
+            padding-top: 0.35rem !important;
+            padding-bottom: 1.0rem !important;
             max-width: 1720px !important;
         }}
 
         div[data-testid="stAlert"] {{
-            padding: 0.45rem 0.85rem !important;
-            margin-top: 0.15rem !important;
-            margin-bottom: 0.40rem !important;
+            padding: 0.28rem 0.65rem !important;
+            margin-top: 0.10rem !important;
+            margin-bottom: 0.25rem !important;
         }}
         div[data-testid="stAlert"] p {{
-            font-size: 0.82rem !important;
-            line-height: 1.35 !important;
+            font-size: 0.78rem !important;
+            line-height: 1.30 !important;
             margin: 0 !important;
         }}
 
@@ -602,18 +605,18 @@ def _inject_css(mode: str | None = None) -> None:
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
-            padding: 0.25rem 0.2rem 0.40rem 0.2rem;
-            margin-bottom: 0.25rem;
+            gap: 0.60rem;
+            padding: 0.15rem 0.2rem 0.25rem 0.2rem;
+            margin-bottom: 0.20rem;
             border-bottom: 1px solid var(--sapi-border-card);
         }}
         .sapi-header-left {{
             display: flex;
             flex-direction: column;
-            gap: 0.10rem;
+            gap: 0.05rem;
         }}
         .sapi-v2-title {{
-            font-size: 2.15rem;
+            font-size: 1.85rem;
             font-weight: 900;
             letter-spacing: -0.03em;
             line-height: 1.05;
@@ -621,13 +624,13 @@ def _inject_css(mode: str | None = None) -> None:
             margin: 0;
         }}
         .sapi-v2-sub {{
-            font-size: 0.98rem;
+            font-size: 0.88rem;
             font-weight: 600;
             color: var(--sapi-text-body) !important;
-            margin-top: 0.12rem;
+            margin-top: 0.08rem;
         }}
         .sapi-v2-academic {{
-            font-size: 0.82rem;
+            font-size: 0.74rem;
             font-weight: 500;
             color: var(--sapi-text-muted) !important;
         }}
@@ -635,15 +638,15 @@ def _inject_css(mode: str | None = None) -> None:
         .sapi-v2-status {{
             display: flex;
             align-items: center;
-            gap: 0.50rem;
+            gap: 0.40rem;
             flex-wrap: wrap;
         }}
         .sapi-v2-badge {{
             display: inline-flex;
             align-items: center;
-            padding: 0.30rem 0.75rem;
+            padding: 0.25rem 0.65rem;
             border-radius: 999px;
-            font-size: 0.70rem;
+            font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.05em;
             text-transform: uppercase;
@@ -668,8 +671,8 @@ def _inject_css(mode: str | None = None) -> None:
         }}
 
         .sapi-v2-meta {{
-            font-size: 0.80rem;
-            line-height: 1.40;
+            font-size: 0.75rem;
+            line-height: 1.30;
             color: var(--sapi-text-muted) !important;
             text-align: right;
             font-variant-numeric: tabular-nums;
@@ -685,23 +688,23 @@ def _inject_css(mode: str | None = None) -> None:
             justify-content: space-between;
             background: var(--sapi-dmc-top-bg);
             border: 1px solid var(--sapi-dmc-top-border);
-            border-radius: 8px;
-            padding: 0.35rem 0.75rem;
-            margin-bottom: 0.45rem;
-            font-size: 0.80rem;
+            border-radius: 6px;
+            padding: 0.25rem 0.65rem;
+            margin-bottom: 0.30rem;
+            font-size: 0.76rem;
             color: var(--sapi-dmc-top-text);
             flex-wrap: wrap;
-            gap: 0.5rem;
+            gap: 0.4rem;
         }}
         .sapi-dmc-top-left {{
             display: flex;
             align-items: center;
-            gap: 0.55rem;
+            gap: 0.50rem;
             flex-wrap: wrap;
         }}
         .sapi-dmc-top-tag {{
             font-weight: 750;
-            font-size: 0.74rem;
+            font-size: 0.72rem;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: #38bdf8;
@@ -711,40 +714,40 @@ def _inject_css(mode: str | None = None) -> None:
         .sapi-dmc-top-sep {{
             color: var(--sapi-border-card);
             opacity: 0.6;
-            font-size: 0.85rem;
+            font-size: 0.80rem;
         }}
         .sapi-dmc-top-metric b {{
             color: var(--sapi-text-title);
         }}
         .sapi-dmc-top-time {{
-            font-size: 0.74rem;
+            font-size: 0.72rem;
             color: var(--sapi-text-muted);
         }}
         .sapi-dmc-top-notice {{
-            font-size: 0.74rem;
+            font-size: 0.72rem;
             font-weight: 600;
             color: var(--sapi-dmc-top-notice);
             border-left: 2px solid #ef4444;
-            padding-left: 0.45rem;
+            padding-left: 0.40rem;
         }}
 
-        /* Tarjetas de indicadores KPI */
+        /* Tarjetas de indicadores KPI compactas */
         .sapi-kpi-grid {{
             display: grid;
             grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.60rem;
-            margin-bottom: 0.45rem;
+            gap: 0.50rem;
+            margin-bottom: 0.35rem;
         }}
         .sapi-card-kpi {{
             background: var(--sapi-bg-card);
             border: 1px solid var(--sapi-border-card);
-            border-radius: 10px;
-            padding: 0.50rem 0.75rem;
-            min-height: 4.2rem;
+            border-radius: 8px;
+            padding: 0.35rem 0.65rem;
+            min-height: 3.6rem;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.06);
             transition: border-color 0.15s ease, transform 0.12s ease;
         }}
         .sapi-card-kpi:hover {{
@@ -761,56 +764,49 @@ def _inject_css(mode: str | None = None) -> None:
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.15rem;
+            margin-bottom: 0.10rem;
         }}
         .sapi-card-kpi__label {{
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: var(--sapi-text-muted);
         }}
         .sapi-card-kpi__icon {{
-            font-size: 0.90rem;
+            font-size: 0.85rem;
             opacity: 0.88;
         }}
         .sapi-card-kpi__val {{
-            font-size: 1.50rem;
+            font-size: 1.35rem;
             font-weight: 850;
-            line-height: 1.1;
+            line-height: 1.05;
             letter-spacing: -0.02em;
             color: var(--sapi-kpi-val);
             font-variant-numeric: tabular-nums;
         }}
         .sapi-card-kpi__val--red {{ color: #ef4444; }}
         .sapi-card-kpi__sub {{
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             color: var(--sapi-text-sub);
-            margin-top: 0.15rem;
+            margin-top: 0.08rem;
             font-weight: 500;
         }}
 
         /* Mapa y cabecera */
-        .sapi-map-card {{
-            background: var(--sapi-bg-card);
-            border: 1px solid var(--sapi-border-card);
-            border-radius: 12px;
-            padding: 0.75rem 0.95rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-            margin-bottom: 0.75rem;
-        }}
         .sapi-map-title-row {{
             display: flex;
             align-items: center;
-            gap: 0.55rem;
+            gap: 0.50rem;
+            margin-bottom: 0.15rem;
         }}
         .sapi-map-icon {{
-            font-size: 1.20rem;
+            font-size: 1.15rem;
             color: #38bdf8;
             flex-shrink: 0;
         }}
         .sapi-map-title {{
-            font-size: 1.0rem;
+            font-size: 0.94rem;
             font-weight: 800;
             letter-spacing: -0.01em;
             color: var(--sapi-text-title);
@@ -822,41 +818,41 @@ def _inject_css(mode: str | None = None) -> None:
             border: 1px solid var(--sapi-map-tag-border);
             color: var(--sapi-map-tag-color);
             border-radius: 4px;
-            font-size: 0.68rem;
+            font-size: 0.66rem;
             font-weight: 800;
             letter-spacing: 0.04em;
-            padding: 0.18rem 0.48rem;
+            padding: 0.15rem 0.42rem;
             text-transform: uppercase;
         }}
         .sapi-map-sub {{
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             color: var(--sapi-text-muted);
-            margin-top: 0.1rem;
+            margin-top: 0.05rem;
         }}
         .sapi-map-risk-widget {{
             display: flex;
             flex-direction: column;
             align-items: flex-end;
-            gap: 0.18rem;
+            gap: 0.15rem;
         }}
         .sapi-map-risk-label {{
-            font-size: 0.68rem;
+            font-size: 0.65rem;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             color: var(--sapi-text-muted);
         }}
         .sapi-map-risk-bar {{
-            width: 130px;
-            height: 6px;
-            border-radius: 4px;
+            width: 120px;
+            height: 5px;
+            border-radius: 3px;
             background: linear-gradient(90deg, #fef08a 0%, #f59e0b 35%, #ea580c 70%, #dc2626 100%);
         }}
         .sapi-map-risk-scale {{
             display: flex;
             justify-content: space-between;
-            width: 130px;
-            font-size: 0.65rem;
+            width: 120px;
+            font-size: 0.62rem;
             color: var(--sapi-text-sub);
             font-weight: 600;
         }}
@@ -866,36 +862,36 @@ def _inject_css(mode: str | None = None) -> None:
             flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            gap: 0.75rem;
+            gap: 0.65rem;
             background: var(--sapi-bg-subtle);
             border: 1px solid var(--sapi-border-subtle);
-            border-radius: 8px;
-            padding: 0.45rem 0.80rem;
-            margin-top: 0.50rem;
+            border-radius: 6px;
+            padding: 0.35rem 0.65rem;
+            margin-top: 0.35rem;
         }}
         .sapi-legend-gradient-wrap {{
             display: flex;
             flex-direction: column;
-            gap: 0.18rem;
+            gap: 0.15rem;
         }}
         .sapi-legend-gradient-title {{
-            font-size: 0.70rem;
+            font-size: 0.68rem;
             font-weight: 750;
             text-transform: uppercase;
             letter-spacing: 0.04em;
             color: var(--sapi-text-body);
         }}
         .sapi-legend-gradient-strip {{
-            width: 200px;
-            height: 7px;
-            border-radius: 4px;
+            width: 180px;
+            height: 6px;
+            border-radius: 3px;
             background: linear-gradient(90deg, #fef08a 0%, #f59e0b 25%, #ea580c 50%, #dc2626 75%, #991b1b 100%);
         }}
         .sapi-legend-ticks {{
             display: flex;
             justify-content: space-between;
-            width: 200px;
-            font-size: 0.65rem;
+            width: 180px;
+            font-size: 0.62rem;
             color: var(--sapi-text-sub);
             font-variant-numeric: tabular-nums;
             font-weight: 600;
@@ -903,49 +899,49 @@ def _inject_css(mode: str | None = None) -> None:
         .sapi-legend-markers {{
             display: flex;
             align-items: center;
-            gap: 0.90rem;
+            gap: 0.80rem;
             flex-wrap: wrap;
         }}
         .sapi-legend-marker-item {{
             display: flex;
             align-items: center;
-            gap: 0.40rem;
-            font-size: 0.76rem;
+            gap: 0.35rem;
+            font-size: 0.74rem;
             color: var(--sapi-text-body);
             font-weight: 600;
         }}
         .sapi-swatch-box {{
-            width: 12px;
-            height: 12px;
-            border-radius: 3px;
+            width: 11px;
+            height: 11px;
+            border-radius: 2px;
             display: inline-block;
             flex-shrink: 0;
         }}
         .sapi-legend-temporal-notice {{
-            font-size: 0.72rem;
+            font-size: 0.70rem;
             font-weight: 600;
             color: var(--sapi-dmc-top-notice);
             border-left: 2px solid #ef4444;
-            padding-left: 0.40rem;
+            padding-left: 0.35rem;
         }}
 
         /* Panel lateral derecho (3 bloques equilibrados) */
         .sapi-panel-right {{
             background: var(--sapi-bg-card);
             border: 1px solid var(--sapi-border-card);
-            border-radius: 12px;
-            padding: 0.75rem 0.90rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-            margin-bottom: 0.75rem;
+            border-radius: 10px;
+            padding: 0.60rem 0.75rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 0.45rem;
         }}
         .sapi-panel-title-row {{
             display: flex;
             align-items: center;
-            gap: 0.50rem;
-            margin-bottom: 0.45rem;
+            gap: 0.45rem;
+            margin-bottom: 0.30rem;
         }}
         .sapi-panel-title {{
-            font-size: 1.0rem;
+            font-size: 0.94rem;
             font-weight: 800;
             letter-spacing: -0.01em;
             color: var(--sapi-text-title);
@@ -955,72 +951,72 @@ def _inject_css(mode: str | None = None) -> None:
         .sapi-priority-banner {{
             background: var(--sapi-prio-bg);
             border: 1px solid var(--sapi-prio-border);
-            border-radius: 8px;
-            padding: 0.65rem 0.85rem;
+            border-radius: 6px;
+            padding: 0.45rem 0.65rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.65rem;
-            margin-bottom: 0.55rem;
+            gap: 0.50rem;
+            margin-bottom: 0.35rem;
         }}
         .sapi-priority-banner__icon {{
-            width: 28px;
-            height: 28px;
-            border-radius: 5px;
+            width: 24px;
+            height: 24px;
+            border-radius: 4px;
             background: #ef4444;
             color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: 0.95rem;
+            font-size: 0.85rem;
             flex-shrink: 0;
         }}
         .sapi-priority-banner__content {{
             flex-grow: 1;
         }}
         .sapi-priority-banner__title {{
-            font-size: 0.98rem;
+            font-size: 0.90rem;
             font-weight: 850;
             color: var(--sapi-prio-title);
             line-height: 1.15;
         }}
         .sapi-priority-banner__sub {{
-            font-size: 0.74rem;
+            font-size: 0.70rem;
             color: var(--sapi-prio-sub);
             opacity: 0.95;
-            margin-top: 0.10rem;
+            margin-top: 0.05rem;
         }}
         .sapi-priority-banner__arrow {{
             color: var(--sapi-prio-title);
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             font-weight: 700;
         }}
 
         .sapi-narrative-text {{
-            font-size: 0.82rem;
-            line-height: 1.40;
+            font-size: 0.78rem;
+            line-height: 1.35;
             color: var(--sapi-text-body);
-            margin: 0.20rem 0 0.55rem 0;
+            margin: 0.15rem 0 0.35rem 0;
             font-weight: 450;
         }}
 
         .sapi-v2-chip {{
             display: inline-block;
-            padding: 0.16rem 0.45rem;
-            margin: 0.12rem 0.12rem 0 0;
-            border-radius: 4px;
+            padding: 0.12rem 0.38rem;
+            margin: 0.08rem 0.08rem 0 0;
+            border-radius: 3px;
             background: var(--sapi-chip-bg);
             border: 1px solid var(--sapi-chip-border);
-            font-size: 0.78rem;
+            font-size: 0.72rem;
             font-weight: 750;
             color: var(--sapi-chip-color);
         }}
 
         .sapi-v2-note {{
-            font-size: 0.76rem;
+            font-size: 0.72rem;
             opacity: 0.85;
-            margin-top: 0.25rem;
+            margin-top: 0.15rem;
             color: var(--sapi-text-muted);
             font-style: italic;
         }}
@@ -1030,69 +1026,69 @@ def _inject_css(mode: str | None = None) -> None:
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 0.35rem;
+            margin-top: 0.20rem;
         }}
         .sapi-selected-cell-id {{
-            font-size: 1.25rem;
+            font-size: 1.10rem;
             font-weight: 850;
             color: var(--sapi-text-title);
         }}
         .sapi-selected-rank-badge {{
             display: inline-flex;
             align-items: center;
-            padding: 0.20rem 0.55rem;
+            padding: 0.15rem 0.45rem;
             border-radius: 4px;
             background: #ef4444;
             color: #ffffff;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 800;
             letter-spacing: 0.04em;
         }}
         .sapi-selected-sub {{
-            font-size: 0.80rem;
+            font-size: 0.75rem;
             color: var(--sapi-text-muted);
-            margin-bottom: 0.45rem;
+            margin-bottom: 0.30rem;
         }}
         .sapi-quick-metrics-grid {{
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.45rem;
-            margin-bottom: 0.55rem;
+            gap: 0.35rem;
+            margin-bottom: 0.35rem;
         }}
         .sapi-quick-metric-card {{
             background: var(--sapi-quick-bg);
             border: 1px solid var(--sapi-quick-border);
-            border-radius: 6px;
-            padding: 0.35rem 0.55rem;
+            border-radius: 5px;
+            padding: 0.25rem 0.45rem;
             display: flex;
             flex-direction: column;
         }}
         .sapi-quick-metric-label {{
-            font-size: 0.68rem;
+            font-size: 0.64rem;
             font-weight: 700;
             text-transform: uppercase;
             color: var(--sapi-text-muted);
         }}
         .sapi-quick-metric-val {{
-            font-size: 0.92rem;
+            font-size: 0.84rem;
             font-weight: 800;
             color: var(--sapi-text-title);
-            margin-top: 0.10rem;
+            margin-top: 0.05rem;
             font-variant-numeric: tabular-nums;
         }}
 
         .sapi-kv-table {{
             list-style: none;
             padding: 0;
-            margin: 0.20rem 0 0.55rem 0;
+            margin: 0.10rem 0 0.30rem 0;
         }}
         .sapi-kv-table li {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.25rem 0;
+            padding: 0.15rem 0;
             border-bottom: 1px solid var(--sapi-border-subtle);
-            font-size: 0.80rem;
+            font-size: 0.76rem;
         }}
         .sapi-kv-table li:last-child {{
             border-bottom: none;
@@ -1112,22 +1108,22 @@ def _inject_css(mode: str | None = None) -> None:
         .sapi-module-card {{
             background: var(--sapi-bg-card);
             border: 1px solid var(--sapi-border-card);
-            border-radius: 12px;
-            padding: 0.75rem 0.95rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+            border-radius: 10px;
+            padding: 0.60rem 0.80rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
             height: 100%;
         }}
         .sapi-module-header {{
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 0.55rem;
+            margin-bottom: 0.45rem;
         }}
         .sapi-module-title {{
             display: flex;
             align-items: center;
-            gap: 0.50rem;
-            font-size: 0.95rem;
+            gap: 0.45rem;
+            font-size: 0.90rem;
             font-weight: 800;
             color: var(--sapi-text-title);
             margin: 0;
@@ -1136,58 +1132,58 @@ def _inject_css(mode: str | None = None) -> None:
         .sapi-info-grid {{
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.55rem;
-            margin-bottom: 0.55rem;
+            gap: 0.45rem;
+            margin-bottom: 0.45rem;
         }}
         .sapi-info-item {{
             background: var(--sapi-bg-subtle);
             border: 1px solid var(--sapi-border-subtle);
-            border-radius: 8px;
-            padding: 0.45rem 0.65rem;
+            border-radius: 6px;
+            padding: 0.35rem 0.55rem;
             display: flex;
             align-items: flex-start;
-            gap: 0.50rem;
+            gap: 0.40rem;
         }}
         .sapi-info-item__icon {{
-            font-size: 1.05rem;
+            font-size: 0.95rem;
             opacity: 0.90;
-            margin-top: 0.1rem;
+            margin-top: 0.05rem;
         }}
         .sapi-info-item__title {{
-            font-size: 0.70rem;
+            font-size: 0.66rem;
             font-weight: 700;
             text-transform: uppercase;
             color: var(--sapi-text-muted);
             letter-spacing: 0.04em;
         }}
         .sapi-info-item__val {{
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 750;
             color: var(--sapi-text-title);
-            margin-top: 0.1rem;
+            margin-top: 0.05rem;
         }}
         .sapi-info-item__sub {{
-            font-size: 0.70rem;
+            font-size: 0.66rem;
             color: var(--sapi-text-sub);
         }}
 
         .sapi-mini-table {{
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.80rem;
-            margin-bottom: 0.55rem;
+            font-size: 0.76rem;
+            margin-bottom: 0.45rem;
         }}
         .sapi-mini-table th {{
             text-align: left;
-            padding: 0.35rem 0.45rem;
+            padding: 0.28rem 0.40rem;
             border-bottom: 1px solid var(--sapi-table-border);
             color: var(--sapi-table-th);
-            font-size: 0.70rem;
+            font-size: 0.66rem;
             text-transform: uppercase;
             font-weight: 750;
         }}
         .sapi-mini-table td {{
-            padding: 0.32rem 0.45rem;
+            padding: 0.25rem 0.40rem;
             border-bottom: 1px solid var(--sapi-table-border);
             color: var(--sapi-table-td);
             font-variant-numeric: tabular-nums;
@@ -1197,43 +1193,43 @@ def _inject_css(mode: str | None = None) -> None:
         }}
 
         .sapi-v2-disclaimer {{
-            font-size: 0.80rem;
-            line-height: 1.35;
+            font-size: 0.76rem;
+            line-height: 1.30;
             color: var(--sapi-disc-color);
             background: var(--sapi-disc-bg);
             border-left: 3px solid var(--sapi-disc-border);
-            border-radius: 6px;
-            padding: 0.45rem 0.80rem;
-            margin: 0.35rem 0 0.50rem 0;
+            border-radius: 5px;
+            padding: 0.35rem 0.65rem;
+            margin: 0.25rem 0 0.40rem 0;
         }}
 
         details[data-testid="stExpander"] {{
             background: var(--sapi-bg-card) !important;
             border: 1px solid var(--sapi-border-card) !important;
-            border-radius: 8px !important;
-            margin-top: 0.20rem !important;
+            border-radius: 6px !important;
+            margin-top: 0.15rem !important;
         }}
         details[data-testid="stExpander"] summary {{
-            font-size: 0.82rem !important;
+            font-size: 0.78rem !important;
             font-weight: 700 !important;
             color: var(--sapi-text-title) !important;
-            padding: 0.40rem 0.65rem !important;
+            padding: 0.32rem 0.55rem !important;
         }}
 
         .sapi-dmc-box {{
             background: var(--sapi-dmc-bg);
             border: 1px solid var(--sapi-dmc-border);
-            border-radius: 8px;
-            padding: 0.55rem 0.80rem;
-            margin-top: 0.45rem;
-            margin-bottom: 0.45rem;
+            border-radius: 6px;
+            padding: 0.45rem 0.65rem;
+            margin-top: 0.30rem;
+            margin-bottom: 0.30rem;
         }}
         .sapi-dmc-badge {{
             display: inline-flex;
             align-items: center;
-            padding: 0.16rem 0.45rem;
-            border-radius: 4px;
-            font-size: 0.66rem;
+            padding: 0.12rem 0.38rem;
+            border-radius: 3px;
+            font-size: 0.64rem;
             font-weight: 800;
             letter-spacing: 0.04em;
             text-transform: uppercase;
@@ -1303,8 +1299,8 @@ def _render_header(view: RankingView) -> None:
                 {hist_badge}
             </div>
             <div class="sapi-v2-meta">
-                <b>Predicción histórica T: {date_line}</b><br>
-                Ventana de predicción: {window_line}<br>
+                <b>Ranking histórico T: {date_line}</b><br>
+                Ventana de análisis: {window_line}<br>
                 {_SVG_SERVER} {station_line}<br>
                 <span style="color:#10b981">●</span> Obtenido del backend: {_human_hm(view.fetched_at)} UTC (Consulta REST)
             </div>
@@ -1370,7 +1366,7 @@ def _render_dmc_top_strip() -> None:
     else:
         obs_time = "Sin lectura"
 
-    c_strip, c_btn = st.columns([0.82, 0.18], gap="small")
+    c_strip, c_btn = st.columns([0.83, 0.17], gap="small")
     with c_strip:
         st.markdown(
             f"""
@@ -1401,7 +1397,6 @@ def _render_dmc_top_strip() -> None:
             help="Consulta la última observación meteorológica de DMC Rodelillo (330007)",
         ):
             st.session_state["sapi_dmc_data"] = refresh_rodelillo_live()
-            st.session_state["sapi_dmc_open"] = True
             st.rerun()
 
 
@@ -1538,7 +1533,7 @@ def _render_priority_panel(view: RankingView) -> None:
             </div>
             <div class="sapi-priority-banner__arrow">›</div>
         </div>
-        <div style="font-size:0.88rem; margin-top:0.30rem">
+        <div style="font-size:0.84rem; margin-top:0.20rem">
             Score relativo: <b style="font-variant-numeric:tabular-nums">{top[0].score:.6f}</b>
         </div>
         <p class="sapi-narrative-text">
@@ -1546,7 +1541,7 @@ def _render_priority_panel(view: RankingView) -> None:
             ({top[0].score:.4f}) dentro del territorio evaluado, con un empate simultáneo
             de {len(top)} celdas bajo el Modelo D.
         </p>
-        <div style="margin-top:0.35rem">{chips}</div>
+        <div style="margin-top:0.25rem">{chips}</div>
         {tie_note}
         """,
         unsafe_allow_html=True,
@@ -1635,9 +1630,9 @@ def _render_selected_panel(
             </div>
         </div>
 
-        <div class="sapi-panel-title-row" style="margin-top:0.55rem">
+        <div class="sapi-panel-title-row" style="margin-top:0.45rem">
             <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_MOUNTAIN}</span>
-            <span style="font-weight:750;color:#38bdf8;font-size:0.80rem;text-transform:uppercase">Territorio (referencia)</span>
+            <span style="font-weight:750;color:#38bdf8;font-size:0.78rem;text-transform:uppercase">Territorio (referencia)</span>
         </div>
         <ul class="sapi-kv-table">
             <li><span>Elevación</span><b>{elev}</b></li>
@@ -1647,17 +1642,17 @@ def _render_selected_panel(
         {dem_note}
         <div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>
 
-        <div class="sapi-panel-title-row" style="margin-top:0.60rem">
+        <div class="sapi-panel-title-row" style="margin-top:0.50rem">
             <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_WEATHER}</span>
-            <span style="font-weight:750;color:#38bdf8;font-size:0.80rem;text-transform:uppercase">Meteorología regional</span>
+            <span style="font-weight:750;color:#38bdf8;font-size:0.78rem;text-transform:uppercase">Meteorología regional</span>
         </div>
         <ul class="sapi-kv-table">
             {meteo_rows}
         </ul>
 
-        <div class="sapi-panel-title-row" style="margin-top:0.60rem">
+        <div class="sapi-panel-title-row" style="margin-top:0.50rem">
             <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CLOCK}</span>
-            <span style="font-weight:750;color:#38bdf8;font-size:0.80rem;text-transform:uppercase">Ventana</span>
+            <span style="font-weight:750;color:#38bdf8;font-size:0.78rem;text-transform:uppercase">Ventana</span>
         </div>
         <ul class="sapi-kv-table">
             <li><span>T</span><b>{_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC</b></li>
@@ -1669,44 +1664,26 @@ def _render_selected_panel(
 
 
 def _render_dmc_observation_panel() -> None:
-    """Panel con la última observación DMC de Rodelillo (330007)."""
+    """Panel secundario con el detalle meteorológico DMC de Rodelillo (330007), plegado por defecto."""
     from app.utils.dmc_live import (
         STATUS_CON_RETRASO,
         STATUS_DESACTUALIZADO,
         STATUS_NO_DISPONIBLE,
         STATUS_RECIENTE,
         fetch_rodelillo_live,
-        refresh_rodelillo_live,
     )
-
-    col_btn_title, col_btn_action = st.columns([1.4, 1.6], gap="small")
-    with col_btn_title:
-        st.markdown(
-            f"""
-            <div style="font-weight:750;color:#38bdf8;font-size:0.82rem;text-transform:uppercase;margin-top:0.45rem;display:flex;align-items:center;">
-                {_SVG_WEATHER} <span style="margin-left:4px;">Observación DMC</span>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-    with col_btn_action:
-        if st.button("Consultar DMC", key="sapi_btn_dmc_query", use_container_width=True, help="Consulta la última observación meteorológica de DMC Rodelillo (330007)"):
-            st.session_state["sapi_dmc_data"] = refresh_rodelillo_live()
-            st.session_state["sapi_dmc_open"] = True
-            st.rerun()
-
-    is_open = st.session_state.get("sapi_dmc_open", True)
 
     if "sapi_dmc_data" not in st.session_state:
         st.session_state["sapi_dmc_data"] = fetch_rodelillo_live()
 
     data = st.session_state.get("sapi_dmc_data", {})
 
-    with st.expander("Última observación DMC Rodelillo (330007)", expanded=is_open):
+    with st.expander("Detalle meteorológico DMC Rodelillo (330007)", expanded=False):
         if not data:
             st.markdown(
-                '<div style="font-size:0.82rem;color:var(--sapi-text-muted);padding:0.4rem 0;">'
-                'Haga clic en <b>«Consultar DMC»</b> para obtener la última medición de la estación Rodelillo (330007).'
+                '<div style="font-size:0.78rem;color:var(--sapi-text-muted);padding:0.3rem 0;">'
+                'Haga clic en <b>«Consultar última lectura»</b> en la barra superior para actualizar '
+                'la medición de la estación Rodelillo (330007).'
                 '</div>',
                 unsafe_allow_html=True,
             )
@@ -1745,18 +1722,18 @@ def _render_dmc_observation_panel() -> None:
 
         error_msg = data.get("error")
         error_html = (
-            f'<div style="font-size:0.78rem;color:#fca5a5;margin-top:0.35rem;">{_esc(error_msg)}</div>'
+            f'<div style="font-size:0.76rem;color:#fca5a5;margin-top:0.25rem;">{_esc(error_msg)}</div>'
             if error_msg and not data.get("ok")
             else ""
         )
 
         st.markdown(
             f'<div class="sapi-dmc-box">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.45rem">'
-            f'<span style="font-weight:700;font-size:0.84rem;color:var(--sapi-text-title)">Estación 330007 · Rodelillo</span>'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">'
+            f'<span style="font-weight:700;font-size:0.82rem;color:var(--sapi-text-title)">Estación 330007 · Rodelillo</span>'
             f'<span class="sapi-dmc-badge sapi-dmc-badge--{badge_class}">{status}</span>'
             f'</div>'
-            f'<ul class="sapi-kv-table" style="margin-bottom:0.35rem;">'
+            f'<ul class="sapi-kv-table" style="margin-bottom:0.30rem;">'
             f'<li><span>Temperatura</span><b>{temp_str}</b></li>'
             f'<li><span>Humedad relativa</span><b>{hum_str}</b></li>'
             f'<li><span>Viento</span><b>{viento_str}</b></li>'
@@ -1765,7 +1742,7 @@ def _render_dmc_observation_panel() -> None:
             f'<li><span>Consulta efectuada</span><b>{_esc(checked_str)}</b></li>'
             f'</ul>'
             f'{error_html}'
-            f'<div class="sapi-v2-note" style="margin-top:0.40rem;color:var(--sapi-dmc-top-notice);border-left:2px solid #ef4444;padding-left:0.45rem;font-style:normal;">'
+            f'<div class="sapi-v2-note" style="margin-top:0.35rem;color:var(--sapi-dmc-top-notice);border-left:2px solid #ef4444;padding-left:0.40rem;font-style:normal;">'
             f'<b>Aviso:</b> Ranking histórico: 01-09-2026.<br>'
             f'La meteorología DMC reciente no se utilizó para calcular el ranking histórico.'
             f'</div>'
@@ -2061,7 +2038,7 @@ def _render_disclaimer(view: RankingView) -> None:
         st.markdown(
             f'<div class="sapi-v2-disclaimer">'
             f"<div>{_esc(text)}</div>"
-            '<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">'
+            '<div style="margin-top:0.25rem;opacity:0.85;font-size:0.76rem">'
             f"{FIXED_DISCLAIMER}</div>"
             "</div>",
             unsafe_allow_html=True,
@@ -2114,7 +2091,7 @@ def render_ranking_backend_dashboard() -> None:
 
     is_expanded = st.session_state[_SESSION_EXPANDED]
 
-    # 1. Cabecera compacta con toggle de tema (TAREA A)
+    # 1. Cabecera compacta con toggle de tema (TAREA A y E)
     head_col, toggle_col = st.columns([0.965, 0.035], gap="small")
     with head_col:
         _render_header(view)
@@ -2135,13 +2112,13 @@ def render_ranking_backend_dashboard() -> None:
     # 2. Alerta histórica obligatoria
     _render_freshness_state(view)
 
-    # 3. Resumen DMC en primera pantalla sin scroll (TAREA 3)
+    # 3. Resumen DMC en primera pantalla sin scroll (TAREA C y D)
     _render_dmc_top_strip()
 
-    # 4. Fila de 5 tarjetas de indicadores superiores (TAREA B)
+    # 4. Fila de 5 tarjetas de indicadores superiores (TAREA C)
     _render_kpi_strip(view, st.session_state[_SESSION_SELECTED])
 
-    # 5. Sección principal: Mapa protagonista (~68%) + Panel Hallazgo principal (~32%)
+    # 5. Fila principal: Mapa protagonista (~68%) + Panel Hallazgo principal (~32%) (TAREA A y B)
     if is_expanded:
         m_head_left, m_head_right = st.columns([7.5, 2.5])
         with m_head_left:
@@ -2150,7 +2127,7 @@ def render_ranking_backend_dashboard() -> None:
                 <div class="sapi-map-title-row">
                     <span class="sapi-map-icon">{_SVG_MAP}</span>
                     <div style="flex-grow:1;">
-                        <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                             <div class="sapi-map-title">Mapa de riesgo relativo de incendio (Vista ampliada)</div>
                             <span class="sapi-map-historical-tag">RANKING HISTÓRICO · T: {_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC · HORIZONTE: {view.horizon_hours or 6} h</span>
                         </div>
@@ -2191,7 +2168,7 @@ def render_ranking_backend_dashboard() -> None:
                     <div class="sapi-map-title-row">
                         <span class="sapi-map-icon">{_SVG_MAP}</span>
                         <div style="flex-grow:1;">
-                            <div style="display:flex;align-items:center;gap:0.6rem;flex-wrap:wrap;">
+                            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
                                 <div class="sapi-map-title">Mapa de riesgo relativo de incendio</div>
                                 <span class="sapi-map-historical-tag">RANKING HISTÓRICO · T: {_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC · HORIZONTE: {view.horizon_hours or 6} h</span>
                             </div>
@@ -2222,7 +2199,7 @@ def render_ranking_backend_dashboard() -> None:
             fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
             event = st_folium(
                 fmap,
-                height=600,
+                height=500,
                 use_container_width=True,
                 key="ranking_v2_map_compact",
                 returned_objects=["last_clicked"],
@@ -2262,14 +2239,14 @@ def render_ranking_backend_dashboard() -> None:
                 st.session_state[_SESSION_SELECTED] = new_selection
                 st.rerun()
 
-            # BLOQUE 2: Atributos esenciales celda seleccionada
+            # BLOQUE 2: Atributos esenciales y resumen territorial de celda seleccionada
             _render_selected_panel(view, st.session_state[_SESSION_SELECTED])
 
-            # BLOQUE 3: Última observación DMC Rodelillo
+            # BLOQUE 3: Detalle meteorológico DMC secundario (plegado por defecto)
             _render_dmc_observation_panel()
 
-    # 6. Disclaimer científico explícito
+    # 6. Disclaimer científico explícito (transición inmediata sin vacío estructural)
     _render_disclaimer(view)
 
-    # 7. Módulos inferiores balanceados (~50/50): Información técnica y Ranking
+    # 7. Fila secundaria con módulos balanceados (~50/50): Información técnica y Ranking completo
     _render_bottom_modules(view)
