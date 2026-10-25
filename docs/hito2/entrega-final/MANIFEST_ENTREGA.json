@@ -4,8 +4,8 @@
   "timestamp": "2026-10-25T00:07:00-03:00",
   "files": {
     "EVIDENCIAS_E2E_R2_Y_CI.md": {
-      "size_bytes": 2338,
-      "sha256": "540f41f1d9f1cd3230d91d5905f49a781aa74dadb648d77b7247c9aac2ce213c"
+      "size_bytes": 2294,
+      "sha256": "30865cf3ebccc0bdac16f9507a9a762019954bf040a8ce54bcfa2cda7002683a"
     },
     "GUION_MATIAS_20MIN.md": {
       "size_bytes": 7506,
@@ -16,8 +16,8 @@
       "sha256": "ac564fb4830990cda970ca8def2fb0d2b04462c77e5111953e9e7f9cef534f6b"
     },
     "LIMITACIONES_OPERACIONALES_Y_GATE_B.md": {
-      "size_bytes": 2531,
-      "sha256": "e08148057c3ddbb612f134ee4e1ed7515c443ba29833922588a14f94d43f94a6"
+      "size_bytes": 2500,
+      "sha256": "6fb4c3d349c7d02637c3827e3b28bc74dbbe4ba4b99f6b2f729977c47b4b8f2d"
     },
     "MATRIZ_RIESGOS_SPRINT2.md": {
       "size_bytes": 8278,
