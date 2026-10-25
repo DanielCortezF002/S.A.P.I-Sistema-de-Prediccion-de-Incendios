@@ -178,6 +178,8 @@ services:
     environment:
       SAPI_BACKEND_BASE_URL: http://backend:8080
       SAPI_UI_LEGACY_MODES: "0"
+      DMC_USUARIO: ${DMC_USUARIO:-}
+      DMC_TOKEN: ${DMC_TOKEN:-}
     ports:
       - "127.0.0.1:${SAPI_WEB_PORT:-8501}:8501"
     depends_on:

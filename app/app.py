@@ -287,12 +287,12 @@ def main() -> None:
     """Punto de entrada de la aplicación Streamlit."""
     st.set_page_config(
         page_title="S.A.P.I. - Sistema de Alerta y Predicción de Incendios",
-        page_icon="🔥",
+        page_icon=None,
         layout="wide",
         initial_sidebar_state="collapsed",
     )
     init_session()
-    # El interruptor ☀️/🌙 vive en el header (ver más abajo), no en el
+    # El interruptor claro/oscuro vive en el header (ver más abajo), no en el
     # sidebar colapsado: el modo ya está en session_state desde init_session,
     # así que el CSS no necesita esperar a que el widget se monte.
     _inject_css(appearance())

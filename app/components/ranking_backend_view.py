@@ -64,6 +64,98 @@ FIXED_DISCLAIMER = (
     "y no a una probabilidad calibrada de incendio."
 )
 
+# ── Iconos SVG sobrios y profesionales (reemplazan emojis en la interfaz) ──
+_SVG_GRID = (
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<rect x="3" y="3" width="7" height="7"></rect>'
+    '<rect x="14" y="3" width="7" height="7"></rect>'
+    '<rect x="14" y="14" width="7" height="7"></rect>'
+    '<rect x="3" y="14" width="7" height="7"></rect>'
+    '</svg>'
+)
+_SVG_PRIORITY = (
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>'
+    '<line x1="12" y1="9" x2="12" y2="13"></line>'
+    '<line x1="12" y1="17" x2="12.01" y2="17"></line>'
+    '</svg>'
+)
+_SVG_CHART = (
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<line x1="18" y1="20" x2="18" y2="10"></line>'
+    '<line x1="12" y1="20" x2="12" y2="4"></line>'
+    '<line x1="6" y1="20" x2="6" y2="14"></line>'
+    '</svg>'
+)
+_SVG_MOUNTAIN = (
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<path d="m8 3 4 8 5-5 5 15H2L8 3z"></path>'
+    '</svg>'
+)
+_SVG_CLOCK = (
+    '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+    '<circle cx="12" cy="12" r="10"></circle>'
+    '<polyline points="12 6 12 12 16 14"></polyline>'
+    '</svg>'
+)
+_SVG_SERVER = (
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'style="vertical-align:-1px;margin-right:4px;">'
+    '<rect x="2" y="2" width="20" height="8" rx="2" ry="2"></rect>'
+    '<rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>'
+    '<line x1="6" y1="6" x2="6.01" y2="6"></line>'
+    '<line x1="6" y1="18" x2="6.01" y2="18"></line>'
+    '</svg>'
+)
+_SVG_WEATHER = (
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'style="vertical-align:-1px;margin-right:4px;">'
+    '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>'
+    '</svg>'
+)
+_SVG_CPU = (
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'style="vertical-align:-2px;margin-right:4px;">'
+    '<rect x="4" y="4" width="16" height="16" rx="2"></rect>'
+    '<rect x="9" y="9" width="6" height="6"></rect>'
+    '<line x1="9" y1="1" x2="9" y2="4"></line>'
+    '<line x1="15" y1="1" x2="15" y2="4"></line>'
+    '<line x1="9" y1="20" x2="9" y2="23"></line>'
+    '<line x1="15" y1="20" x2="15" y2="23"></line>'
+    '<line x1="20" y1="9" x2="23" y2="9"></line>'
+    '<line x1="20" y1="14" x2="23" y2="14"></line>'
+    '<line x1="1" y1="9" x2="4" y2="9"></line>'
+    '<line x1="1" y1="14" x2="4" y2="14"></line>'
+    '</svg>'
+)
+_SVG_SATELLITE = (
+    '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'style="vertical-align:-2px;margin-right:4px;">'
+    '<path d="M4.93 19.07A10 10 0 0 1 19.07 4.93"></path>'
+    '<path d="M7.76 16.24a6 6 0 0 1 8.48-8.48"></path>'
+    '<circle cx="12" cy="12" r="2"></circle>'
+    '</svg>'
+)
+_SVG_MAP = (
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'style="vertical-align:-2px;margin-right:5px;">'
+    '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>'
+    '<line x1="8" y1="2" x2="8" y2="18"></line>'
+    '<line x1="16" y1="6" x2="16" y2="22"></line>'
+    '</svg>'
+)
+
+
 _GROUP_VISUAL = {
     1: {
         "label": "Grupo 1",
@@ -880,6 +972,46 @@ def _inject_css() -> None:
             color: #e2e8f0 !important;
             padding: 0.45rem 0.75rem !important;
         }
+
+        .sapi-dmc-box {
+            background: #111923;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 0.60rem 0.85rem;
+            margin-top: 0.50rem;
+            margin-bottom: 0.50rem;
+        }
+        .sapi-dmc-badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 0.18rem 0.50rem;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+        .sapi-dmc-badge--reciente {
+            background: #064e3b;
+            border: 1px solid #10b981;
+            color: #d1fae5;
+        }
+        .sapi-dmc-badge--con_retraso {
+            background: #451a03;
+            border: 1px solid #f59e0b;
+            color: #fef3c7;
+        }
+        .sapi-dmc-badge--desactualizado {
+            background: #4c0519;
+            border: 1px solid #f43f5e;
+            color: #ffe4e6;
+        }
+        .sapi-dmc-badge--no_disponible {
+            background: #1e293b;
+            border: 1px solid #64748b;
+            color: #cbd5e1;
+        }
+
         </style>
         """,
         unsafe_allow_html=True,
@@ -927,7 +1059,7 @@ def _render_header(view: RankingView) -> None:
             <div class="sapi-v2-meta">
                 <b>{date_line}</b><br>
                 {window_line}<br>
-                🗄 {station_line}<br>
+                {_SVG_SERVER} {station_line}<br>
                 <span style="color:#10b981">●</span> Obtenido del backend: {_human_hm(view.fetched_at)} UTC
             </div>
         </div>
@@ -946,7 +1078,7 @@ def _render_freshness_state(view: RankingView) -> None:
         return
     if view.freshness == FRESHNESS_HISTORICAL_LABEL:
         st.warning(
-            f"⚠ DATOS HISTÓRICOS · última observación hace {view.age_hours:.0f} h "
+            f"DATOS HISTÓRICOS · última observación hace {view.age_hours:.0f} h "
             "(antigüedad medida por el servicio al evaluar)\n\n"
             "El ranking corresponde al instante indicado y NO representa el riesgo actual."
         )
@@ -980,7 +1112,7 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
             <div class="sapi-card-kpi sapi-card-kpi--orange">
                 <div class="sapi-card-kpi__top">
                     <span class="sapi-card-kpi__label">Celdas evaluadas</span>
-                    <span class="sapi-card-kpi__icon">🔥</span>
+                    <span class="sapi-card-kpi__icon">{_SVG_GRID}</span>
                 </div>
                 <div class="sapi-card-kpi__val">{len(view.cells)}</div>
                 <div class="sapi-card-kpi__sub">en la ventana analizada</div>
@@ -988,7 +1120,7 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
             <div class="sapi-card-kpi sapi-card-kpi--red">
                 <div class="sapi-card-kpi__top">
                     <span class="sapi-card-kpi__label">Grupo prioritario</span>
-                    <span class="sapi-card-kpi__icon">▲</span>
+                    <span class="sapi-card-kpi__icon">{_SVG_PRIORITY}</span>
                 </div>
                 <div class="sapi-card-kpi__val sapi-card-kpi__val--red">#{top_rank_num}</div>
                 <div class="sapi-card-kpi__sub">{len(top)} celdas (empate)</div>
@@ -996,7 +1128,7 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
             <div class="sapi-card-kpi sapi-card-kpi--blue">
                 <div class="sapi-card-kpi__top">
                     <span class="sapi-card-kpi__label">Score relativo (top)</span>
-                    <span class="sapi-card-kpi__icon">📊</span>
+                    <span class="sapi-card-kpi__icon">{_SVG_CHART}</span>
                 </div>
                 <div class="sapi-card-kpi__val">{top_score:.4f}</div>
                 <div class="sapi-card-kpi__sub">{top_id} (empate x{top_ties})</div>
@@ -1004,7 +1136,7 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
             <div class="sapi-card-kpi sapi-card-kpi--cyan">
                 <div class="sapi-card-kpi__top">
                     <span class="sapi-card-kpi__label">Territorio</span>
-                    <span class="sapi-card-kpi__icon">⛰</span>
+                    <span class="sapi-card-kpi__icon">{_SVG_MOUNTAIN}</span>
                 </div>
                 <div class="sapi-card-kpi__val">{elev_str}</div>
                 <div class="sapi-card-kpi__sub">Elevación ({target_id})</div>
@@ -1012,7 +1144,7 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
             <div class="sapi-card-kpi sapi-card-kpi--purple">
                 <div class="sapi-card-kpi__top">
                     <span class="sapi-card-kpi__label">Ventana de análisis</span>
-                    <span class="sapi-card-kpi__icon">🕒</span>
+                    <span class="sapi-card-kpi__icon">{_SVG_CLOCK}</span>
                 </div>
                 <div class="sapi-card-kpi__val">{date_str}</div>
                 <div class="sapi-card-kpi__sub">{window_sub}</div>
@@ -1097,6 +1229,124 @@ def _render_priority_panel(view: RankingView) -> None:
     )
 
 
+
+def _render_dmc_observation_panel() -> None:
+    """Panel desplegable con la última observación DMC de Rodelillo (330007).
+
+    Implementa OCC-UI-DMC-LATEST-OBSERVATION de forma estrictamente de solo lectura:
+    - No escribe archivos de ingesta, snapshots ni punteros CURRENT.
+    - No altera el ranking ni recalcula scores del modelo.
+    - Maneja credenciales exclusivamente en el servidor sin exponer secretos.
+    - Cache de 5 minutos con botón «Consultar DMC» para actualización forzada.
+    - Distingue estados de frescura: RECIENTE, CON RETRASO, DESACTUALIZADO, NO DISPONIBLE.
+    """
+    from app.utils.dmc_live import (
+        RODELILLO_CODIGO,
+        RODELILLO_NOMBRE,
+        STATUS_CON_RETRASO,
+        STATUS_DESACTUALIZADO,
+        STATUS_NO_DISPONIBLE,
+        STATUS_RECIENTE,
+        fetch_rodelillo_live,
+        refresh_rodelillo_live,
+    )
+
+    col_btn_title, col_btn_action = st.columns([1.5, 1.5], gap="small")
+    with col_btn_title:
+        st.markdown(
+            f"""
+            <div style="font-weight:750;color:#38bdf8;font-size:0.82rem;text-transform:uppercase;margin-top:0.45rem;display:flex;align-items:center;">
+                {_SVG_WEATHER} <span style="margin-left:4px;">Observación DMC</span>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+    with col_btn_action:
+        if st.button("Consultar DMC", key="sapi_btn_dmc_query", use_container_width=True, help="Consulta la última observación meteorológica de DMC Rodelillo (330007)"):
+            st.session_state["sapi_dmc_data"] = refresh_rodelillo_live()
+            st.session_state["sapi_dmc_open"] = True
+            st.rerun()
+
+    is_open = st.session_state.get("sapi_dmc_open", False)
+
+    # Si el panel está abierto pero no hay datos todavía en session_state, consultar con caché
+    if is_open and "sapi_dmc_data" not in st.session_state:
+        st.session_state["sapi_dmc_data"] = fetch_rodelillo_live()
+
+    data = st.session_state.get("sapi_dmc_data")
+
+    with st.expander("Última observación DMC Rodelillo (330007)", expanded=is_open):
+        if not data:
+            st.markdown(
+                '<div style="font-size:0.82rem;color:#94a3b8;padding:0.4rem 0;">'
+                'Haga clic en <b>«Consultar DMC»</b> para obtener la última medición de la estación Rodelillo (330007).'
+                '</div>',
+                unsafe_allow_html=True,
+            )
+            return
+
+        status = data.get("status", STATUS_NO_DISPONIBLE)
+        if status == STATUS_RECIENTE:
+            badge_class = "reciente"
+        elif status == STATUS_CON_RETRASO:
+            badge_class = "con_retraso"
+        elif status == STATUS_DESACTUALIZADO:
+            badge_class = "desactualizado"
+        else:
+            badge_class = "no_disponible"
+
+        temp = data.get("temperatura_c")
+        temp_str = f"{temp:.1f} °C" if temp is not None else "No disponible"
+
+        hum = data.get("humedad_pct")
+        hum_str = f"{int(round(hum))} %" if hum is not None else "No disponible"
+
+        viento_kmh = data.get("viento_kmh")
+        viento_kt = data.get("viento_kt")
+        if viento_kmh is not None and viento_kt is not None:
+            viento_str = f"{viento_kmh:.1f} km/h ({viento_kt:.1f} kt)"
+        elif viento_kmh is not None:
+            viento_str = f"{viento_kmh:.1f} km/h"
+        else:
+            viento_str = "No disponible"
+
+        momento_cl = data.get("momento_cl") or "No disponible"
+        momento_utc = data.get("momento_utc") or "No disponible"
+        checked_cl = data.get("checked_at_cl") or "No disponible"
+        checked_utc = data.get("checked_at_utc") or ""
+        checked_str = f"{checked_cl} ({checked_utc})" if checked_utc else checked_cl
+
+        error_msg = data.get("error")
+        error_html = (
+            f'<div style="font-size:0.78rem;color:#fca5a5;margin-top:0.35rem;">{_esc(error_msg)}</div>'
+            if error_msg and not data.get("ok")
+            else ""
+        )
+
+        st.markdown(
+            f'<div class="sapi-dmc-box">'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem">'
+            f'<span style="font-weight:700;font-size:0.84rem;color:#f1f5f9">Estación 330007 · Rodelillo</span>'
+            f'<span class="sapi-dmc-badge sapi-dmc-badge--{badge_class}">{status}</span>'
+            f'</div>'
+            f'<ul class="sapi-kv-table" style="margin-bottom:0.4rem;">'
+            f'<li><span>Temperatura</span><b>{temp_str}</b></li>'
+            f'<li><span>Humedad relativa</span><b>{hum_str}</b></li>'
+            f'<li><span>Viento</span><b>{viento_str}</b></li>'
+            f'<li><span>Lectura (Chile)</span><b>{_esc(momento_cl)}</b></li>'
+            f'<li><span>Lectura (UTC)</span><b>{_esc(momento_utc)}</b></li>'
+            f'<li><span>Consulta efectuada</span><b>{_esc(checked_str)}</b></li>'
+            f'</ul>'
+            f'{error_html}'
+            f'<div class="sapi-v2-note" style="margin-top:0.45rem;color:#fca5a5;border-left:2px solid #ef4444;padding-left:0.5rem;font-style:normal;">'
+            f'<b>Aviso:</b> Ranking histórico: 01-09-2026.<br>'
+            f'Estas observaciones no se han utilizado para recalcular el ranking mostrado.'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
+
 def _render_selected_panel(
     view: RankingView,
     cell_id: str,
@@ -1151,7 +1401,7 @@ def _render_selected_panel(
             Prioridad #{cell.display_rank} · Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>{tie_badge}
         </div>
         <div class="sapi-panel-title-row" style="margin-top:0.6rem">
-            <span style="font-size: 0.95rem;">⛰</span>
+            <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_MOUNTAIN}</span>
             <span style="font-weight:750;color:#38bdf8;font-size:0.84rem;text-transform:uppercase">Territorio (referencia)</span>
         </div>
         <ul class="sapi-kv-table">
@@ -1163,7 +1413,7 @@ def _render_selected_panel(
         <div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>
 
         <div class="sapi-panel-title-row" style="margin-top:0.75rem">
-            <span style="font-size: 0.95rem;">🌤</span>
+            <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_WEATHER}</span>
             <span style="font-weight:750;color:#38bdf8;font-size:0.84rem;text-transform:uppercase">Meteorología regional</span>
         </div>
         <ul class="sapi-kv-table">
@@ -1171,7 +1421,7 @@ def _render_selected_panel(
         </ul>
 
         <div class="sapi-panel-title-row" style="margin-top:0.75rem">
-            <span style="font-size: 0.95rem;">🕒</span>
+            <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CLOCK}</span>
             <span style="font-weight:750;color:#38bdf8;font-size:0.84rem;text-transform:uppercase">Ventana</span>
         </div>
         <ul class="sapi-kv-table">
@@ -1367,17 +1617,17 @@ def _render_bottom_modules(view: RankingView) -> None:
 
     with left_col:
         st.markdown(
-            """
+            f"""
             <div class="sapi-module-card">
                 <div class="sapi-module-header">
                     <div class="sapi-module-title">
-                        <span>⚙</span>
+                        {_SVG_CPU}
                         <span>Trazabilidad técnica y fuentes</span>
                     </div>
                 </div>
                 <div class="sapi-info-grid">
                     <div class="sapi-info-item">
-                        <span class="sapi-info-item__icon">⚙</span>
+                        <span class="sapi-info-item__icon">{_SVG_CPU}</span>
                         <div>
                             <div class="sapi-info-item__title">Modelo</div>
                             <div class="sapi-info-item__val">prototype_model_d_v1</div>
@@ -1385,7 +1635,7 @@ def _render_bottom_modules(view: RankingView) -> None:
                         </div>
                     </div>
                     <div class="sapi-info-item">
-                        <span class="sapi-info-item__icon">🗄</span>
+                        <span class="sapi-info-item__icon">{_SVG_SERVER}</span>
                         <div>
                             <div class="sapi-info-item__title">Origen del ranking</div>
                             <div class="sapi-info-item__val">GET /api/v1/ranking</div>
@@ -1393,7 +1643,7 @@ def _render_bottom_modules(view: RankingView) -> None:
                         </div>
                     </div>
                     <div class="sapi-info-item">
-                        <span class="sapi-info-item__icon">🕒</span>
+                        <span class="sapi-info-item__icon">{_SVG_CLOCK}</span>
                         <div>
                             <div class="sapi-info-item__title">Forecast time</div>
                             <div class="sapi-info-item__val">2026-09-01 00:00 UTC</div>
@@ -1401,7 +1651,7 @@ def _render_bottom_modules(view: RankingView) -> None:
                         </div>
                     </div>
                     <div class="sapi-info-item">
-                        <span class="sapi-info-item__icon">📡</span>
+                        <span class="sapi-info-item__icon">{_SVG_SATELLITE}</span>
                         <div>
                             <div class="sapi-info-item__title">Fuente de datos</div>
                             <div class="sapi-info-item__val">NASA FIRMS</div>
@@ -1436,7 +1686,7 @@ def _render_bottom_modules(view: RankingView) -> None:
             <div class="sapi-module-card">
                 <div class="sapi-module-header">
                     <div class="sapi-module-title">
-                        <span>📊</span>
+                        {_SVG_CHART}
                         <span>Vista previa del ranking (Top 5)</span>
                     </div>
                 </div>
@@ -1529,11 +1779,11 @@ def render_ranking_backend_dashboard() -> None:
     with toggle_col:
         curr_mode = appearance()
         if curr_mode == APPEARANCE_OSCURO:
-            if st.button("☀️", key="sapi_theme_toggle_btn", help="Cambiar a modo claro"):
+            if st.button("◐", key="sapi_theme_toggle_btn", help="Cambiar a modo claro"):
                 set_appearance(APPEARANCE_CLARO)
                 st.rerun()
         else:
-            if st.button("🌙", key="sapi_theme_toggle_btn", help="Cambiar a modo oscuro"):
+            if st.button("◑", key="sapi_theme_toggle_btn", help="Cambiar a modo oscuro"):
                 set_appearance(APPEARANCE_OSCURO)
                 st.rerun()
 
@@ -1552,9 +1802,9 @@ def render_ranking_backend_dashboard() -> None:
         m_head_left, m_head_right = st.columns([7.5, 2.5])
         with m_head_left:
             st.markdown(
-                """
+            f"""
                 <div class="sapi-map-title-row">
-                    <span class="sapi-map-icon">🗺</span>
+                    <span class="sapi-map-icon">{_SVG_MAP}</span>
                     <div>
                         <div class="sapi-map-title">Mapa de riesgo relativo de incendio (Vista ampliada)</div>
                         <div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>
@@ -1590,9 +1840,9 @@ def render_ranking_backend_dashboard() -> None:
             m_head_left, m_head_right = st.columns([6.8, 3.2])
             with m_head_left:
                 st.markdown(
-                    """
+            f"""
                     <div class="sapi-map-title-row">
-                        <span class="sapi-map-icon">🗺</span>
+                        <span class="sapi-map-icon">{_SVG_MAP}</span>
                         <div>
                             <div class="sapi-map-title">Mapa de riesgo relativo de incendio</div>
                             <div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>
@@ -1662,6 +1912,7 @@ def render_ranking_backend_dashboard() -> None:
                 st.rerun()
 
             _render_selected_panel(view, st.session_state[_SESSION_SELECTED])
+            _render_dmc_observation_panel()
 
     # 5. Disclaimer científico explícito
     _render_disclaimer(view)
