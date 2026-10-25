@@ -24,6 +24,7 @@ Implementación definitiva de la interfaz aprobada para la Defensa Académica (O
 from __future__ import annotations
 
 import html
+import textwrap
 from datetime import datetime, timezone
 from typing import Any, Mapping, Optional
 
@@ -606,6 +607,26 @@ def _inject_css(mode: str | None = None) -> None:
             border: 0 !important;
         }}
 
+        div[data-testid="stSelectbox"] {{
+            margin-top: 0.10rem !important;
+            margin-bottom: 0.20rem !important;
+        }}
+        div[data-testid="stSelectbox"] label {{
+            min-height: 0 !important;
+            padding-bottom: 0.15rem !important;
+        }}
+        div[data-testid="stSelectbox"] label p {{
+            font-size: 0.74rem !important;
+            font-weight: 700 !important;
+            margin: 0 !important;
+        }}
+        div[data-testid="stSelectbox"] div[data-baseweb="select"] > div {{
+            min-height: 2.1rem !important;
+            height: 2.1rem !important;
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }}
+
         .sapi-v2-header {{
             display: flex;
             flex-wrap: wrap;
@@ -981,16 +1002,16 @@ def _inject_css(mode: str | None = None) -> None:
             background: var(--sapi-prio-bg);
             border: 1px solid var(--sapi-prio-border);
             border-radius: 6px;
-            padding: 0.45rem 0.65rem;
+            padding: 0.30rem 0.50rem;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 0.50rem;
-            margin-bottom: 0.35rem;
+            gap: 0.45rem;
+            margin-bottom: 0.15rem;
         }}
         .sapi-priority-banner__icon {{
-            width: 24px;
-            height: 24px;
+            width: 22px;
+            height: 22px;
             border-radius: 4px;
             background: #ef4444;
             color: #ffffff;
@@ -998,35 +1019,35 @@ def _inject_css(mode: str | None = None) -> None:
             align-items: center;
             justify-content: center;
             font-weight: 900;
-            font-size: 0.85rem;
+            font-size: 0.80rem;
             flex-shrink: 0;
         }}
         .sapi-priority-banner__content {{
             flex-grow: 1;
         }}
         .sapi-priority-banner__title {{
-            font-size: 0.90rem;
+            font-size: 0.86rem;
             font-weight: 850;
             color: var(--sapi-prio-title);
             line-height: 1.15;
         }}
         .sapi-priority-banner__sub {{
-            font-size: 0.70rem;
+            font-size: 0.68rem;
             color: var(--sapi-prio-sub);
             opacity: 0.95;
-            margin-top: 0.05rem;
+            margin-top: 0.03rem;
         }}
         .sapi-priority-banner__arrow {{
             color: var(--sapi-prio-title);
-            font-size: 1.15rem;
+            font-size: 1.05rem;
             font-weight: 700;
         }}
 
         .sapi-narrative-text {{
-            font-size: 0.78rem;
-            line-height: 1.35;
+            font-size: 0.72rem;
+            line-height: 1.25;
             color: var(--sapi-text-body);
-            margin: 0.15rem 0 0.35rem 0;
+            margin: 0.10rem 0 0.15rem 0;
             font-weight: 450;
         }}
 
@@ -1080,47 +1101,75 @@ def _inject_css(mode: str | None = None) -> None:
         }}
         .sapi-quick-metrics-grid {{
             display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 0.35rem;
-            margin-bottom: 0.35rem;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 0.30rem;
+            margin-bottom: 0.25rem;
         }}
         .sapi-quick-metric-card {{
             background: var(--sapi-quick-bg);
             border: 1px solid var(--sapi-quick-border);
             border-radius: 5px;
-            padding: 0.25rem 0.45rem;
+            padding: 0.20rem 0.30rem;
             display: flex;
             flex-direction: column;
+            text-align: center;
         }}
         .sapi-quick-metric-label {{
-            font-size: 0.64rem;
+            font-size: 0.58rem;
             font-weight: 700;
             text-transform: uppercase;
             color: var(--sapi-text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }}
         .sapi-quick-metric-val {{
-            font-size: 0.84rem;
+            font-size: 0.78rem;
             font-weight: 800;
             color: var(--sapi-text-title);
             margin-top: 0.05rem;
             font-variant-numeric: tabular-nums;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }}
 
+        .sapi-kv-two-col {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.50rem;
+            margin-top: 0.15rem;
+        }}
+        .sapi-kv-subcol {{
+            display: flex;
+            flex-direction: column;
+        }}
         .sapi-kv-table {{
             list-style: none;
             padding: 0;
-            margin: 0.10rem 0 0.30rem 0;
+            margin: 0.05rem 0 0.15rem 0;
         }}
         .sapi-kv-table li {{
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.15rem 0;
+            padding: 0.08rem 0;
             border-bottom: 1px solid var(--sapi-border-subtle);
-            font-size: 0.76rem;
+            font-size: 0.70rem;
+            line-height: 1.25;
         }}
         .sapi-kv-table li:last-child {{
             border-bottom: none;
+        }}
+        .sapi-kv-table--inline {{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.50rem;
+            margin-bottom: 0.10rem;
+        }}
+        .sapi-kv-table--inline li {{
+            border-bottom: none;
+            padding: 0.05rem 0;
         }}
         .sapi-kv-label {{
             color: var(--sapi-text-muted);
@@ -1552,29 +1601,27 @@ def _render_priority_panel(view: RankingView) -> None:
         if top[0].tie_group_size > 1
         else ""
     )
-    st.markdown(
-        f"""
-        <div class="sapi-priority-banner">
-            <div class="sapi-priority-banner__icon">▲</div>
-            <div class="sapi-priority-banner__content">
-                <div class="sapi-priority-banner__title">Grupo prioritario #{top[0].display_rank}</div>
-                <div class="sapi-priority-banner__sub"><b>{len(top)} celdas</b> empatadas con mayor riesgo relativo</div>
-            </div>
-            <div class="sapi-priority-banner__arrow">›</div>
-        </div>
-        <div style="font-size:0.84rem; margin-top:0.20rem">
-            Score relativo: <b style="font-variant-numeric:tabular-nums">{top[0].score:.6f}</b>
-        </div>
-        <p class="sapi-narrative-text">
-            Las celdas del grupo #{top[0].display_rank} presentan el mayor score relativo
-            ({top[0].score:.4f}) dentro del territorio evaluado, con un empate simultáneo
-            de {len(top)} celdas bajo el Modelo D.
-        </p>
-        <div style="margin-top:0.25rem">{chips}</div>
-        {tie_note}
-        """,
-        unsafe_allow_html=True,
+    priority_html = (
+        f'<div class="sapi-priority-banner">'
+        f'<div class="sapi-priority-banner__icon">▲</div>'
+        f'<div class="sapi-priority-banner__content">'
+        f'<div class="sapi-priority-banner__title">Grupo prioritario #{top[0].display_rank}</div>'
+        f'<div class="sapi-priority-banner__sub"><b>{len(top)} celdas</b> empatadas con mayor riesgo relativo</div>'
+        f'</div>'
+        f'<div class="sapi-priority-banner__arrow">›</div>'
+        f'</div>'
+        f'<div style="font-size:0.78rem; margin-top:0.10rem">'
+        f'Score relativo: <b style="font-variant-numeric:tabular-nums">{top[0].score:.6f}</b>'
+        f'</div>'
+        f'<p class="sapi-narrative-text">'
+        f'Las celdas del grupo #{top[0].display_rank} presentan el mayor score relativo '
+        f'({top[0].score:.4f}) dentro del territorio evaluado, con un empate simultáneo '
+        f'de {len(top)} celdas bajo el Modelo D.'
+        f'</p>'
+        f'<div style="margin-top:0.10rem">{chips}</div>'
+        f'{tie_note}'
     )
+    st.markdown(priority_html, unsafe_allow_html=True)
 
 
 def _render_selected_panel(
@@ -1630,66 +1677,45 @@ def _render_selected_panel(
 
     tie_badge = f" · empate ×{cell.tie_group_size}" if cell.tie_group_size > 1 else ""
 
-    st.markdown(
-        f"""
-        <div class="sapi-selected-header">
-            <span class="sapi-selected-cell-id">{_esc(cell.cell_id)}</span>
-            <span class="sapi-selected-rank-badge">Prioridad #{cell.display_rank}</span>
-        </div>
-        <div class="sapi-selected-sub">
-            Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>{tie_badge}
-        </div>
-
-        <div class="sapi-quick-metrics-grid">
-            <div class="sapi-quick-metric-card">
-                <span class="sapi-quick-metric-label">Elevación</span>
-                <span class="sapi-quick-metric-val">{elev}</span>
-            </div>
-            <div class="sapi-quick-metric-card">
-                <span class="sapi-quick-metric-label">Pendiente</span>
-                <span class="sapi-quick-metric-val">{slope}</span>
-            </div>
-            <div class="sapi-quick-metric-card">
-                <span class="sapi-quick-metric-label">Temp. reg. T</span>
-                <span class="sapi-quick-metric-val">{temp_val}</span>
-            </div>
-            <div class="sapi-quick-metric-card">
-                <span class="sapi-quick-metric-label">Viento reg. T</span>
-                <span class="sapi-quick-metric-val">{viento_val}</span>
-            </div>
-        </div>
-
-        <div class="sapi-panel-title-row" style="margin-top:0.45rem">
-            <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_MOUNTAIN}</span>
-            <span style="font-weight:750;color:#38bdf8;font-size:0.78rem;text-transform:uppercase">Territorio (referencia)</span>
-        </div>
-        <ul class="sapi-kv-table">
-            <li><span>Elevación</span><b>{elev}</b></li>
-            <li><span>Pendiente</span><b>{slope}</b></li>
-            <li><span>Historial FIRMS</span><b>{_esc(NOT_IN_CONTRACT)}</b></li>
-        </ul>
-        {dem_note}
-        <div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>
-
-        <div class="sapi-panel-title-row" style="margin-top:0.50rem">
-            <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_WEATHER}</span>
-            <span style="font-weight:750;color:#38bdf8;font-size:0.78rem;text-transform:uppercase">Meteorología regional</span>
-        </div>
-        <ul class="sapi-kv-table">
-            {meteo_rows}
-        </ul>
-
-        <div class="sapi-panel-title-row" style="margin-top:0.50rem">
-            <span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CLOCK}</span>
-            <span style="font-weight:750;color:#38bdf8;font-size:0.78rem;text-transform:uppercase">Ventana</span>
-        </div>
-        <ul class="sapi-kv-table">
-            <li><span>T</span><b>{_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC</b></li>
-            {window_rows}
-        </ul>
-        """,
-        unsafe_allow_html=True,
+    selected_html = (
+        f'<div class="sapi-selected-header">'
+        f'<span class="sapi-selected-cell-id">{_esc(cell.cell_id)}</span>'
+        f'<span class="sapi-selected-rank-badge">Prioridad #{cell.display_rank}</span>'
+        f'</div>'
+        f'<div class="sapi-selected-sub">'
+        f'Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>{tie_badge}'
+        f'</div>'
+        f'<div class="sapi-quick-metrics-grid">'
+        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Elevación</span><span class="sapi-quick-metric-val">{elev}</span></div>'
+        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Pendiente</span><span class="sapi-quick-metric-val">{slope}</span></div>'
+        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Temp. reg. T</span><span class="sapi-quick-metric-val">{temp_val}</span></div>'
+        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Viento reg. T</span><span class="sapi-quick-metric-val">{viento_val}</span></div>'
+        f'</div>'
+        f'<div class="sapi-kv-two-col">'
+        f'<div class="sapi-kv-subcol">'
+        f'<div class="sapi-panel-title-row" style="margin-top:0.15rem"><span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_MOUNTAIN}</span><span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">Territorio (referencia)</span></div>'
+        f'<ul class="sapi-kv-table">'
+        f'<li><span>Elevación</span><b>{elev}</b></li>'
+        f'<li><span>Pendiente</span><b>{slope}</b></li>'
+        f'<li><span>Historial FIRMS</span><b>{_esc(NOT_IN_CONTRACT)}</b></li>'
+        f'</ul>'
+        f'{dem_note}'
+        f'<div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>'
+        f'</div>'
+        f'<div class="sapi-kv-subcol">'
+        f'<div class="sapi-panel-title-row" style="margin-top:0.15rem"><span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_WEATHER}</span><span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">Meteorología reg.</span></div>'
+        f'<ul class="sapi-kv-table">'
+        f'{meteo_rows}'
+        f'</ul>'
+        f'</div>'
+        f'</div>'
+        f'<div class="sapi-panel-title-row" style="margin-top:0.20rem"><span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CLOCK}</span><span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">Ventana</span></div>'
+        f'<ul class="sapi-kv-table sapi-kv-table--inline">'
+        f'<li><span>T</span><b>{_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC</b></li>'
+        f'{window_rows}'
+        f'</ul>'
     )
+    st.markdown(selected_html, unsafe_allow_html=True)
 
 
 def _render_dmc_observation_panel() -> None:
@@ -2228,7 +2254,7 @@ def render_ranking_backend_dashboard() -> None:
             fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
             event = st_folium(
                 fmap,
-                height=500,
+                height=450,
                 use_container_width=True,
                 key="ranking_v2_map_compact",
                 returned_objects=["last_clicked"],
