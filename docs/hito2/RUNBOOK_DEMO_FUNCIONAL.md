@@ -64,23 +64,28 @@ docker compose ps
 ### A. Prueba de Actualizaci?n Interactiva (CA4)
 1. Hacer clic en el bot?n **"Actualizar ranking"** en la interfaz.
 2. Observar el refresco instant?neo del DOM.
-3. Declarar el resultado de ingenier?a: Latencia interactiva promedio de **1.709,5 ms** certificada con Selenium sobre Microsoft Edge real (por debajo del l?mite SLA de 3.000 ms).
+3. Declarar el resultado de ingenier?a: Latencias operacionales certificadas en el arn?s R2 (`tests/e2e/test_full_stack_timings.py`):
+     - **Cold (Carga inicial en fr?o):** `6.867,90 ms`
+     - **Update (Actualizaci?n interactiva):** `3.723,47 ms`
+     - **Cached (Lectura en caliente):** `424,06 ms`
+     *(Dato real reproducido en `artifacts/oc-e2e-20261024/timings/ca4-timings.json`).*
 
-### B. Demostraci?n de Pol?tica Fail-Closed ante Ca?da de ML
-1. Abrir una terminal auxiliar y detener el servicio de machine learning:
-   ```powershell
-   docker stop sapi-ml-api-v2
-   ```
-2. Volver al navegador y hacer clic nuevamente en "Actualizar ranking".
-3. **Comportamiento Esperado:**
-   - Spring Boot recibe un timeout/error de conexi?n hacia `http://ml-api:8000/predict`.
-   - El backend retorna inmediatamente un c?digo de error controlado (`HTTP 503 Service Unavailable` o `HTTP 504 Gateway Timeout`).
-   - Streamlit presenta una alerta de contingencia clara al operador: *"Servicio de inferencia no disponible; manteni?ndose en modo seguro"*.
-   - **No hay crasheo, no hay pantalla blanca y no se generan predicciones falsas.**
-4. Restaurar el servicio:
-   ```powershell
-   docker start sapi-ml-api-v2
-   ```
+### B. Demostraci?n de Pol?tica Fail-Closed ante Ca?da de ML (Entorno Seguro)
+Para garantizar la estabilidad de la presentaci?n y no interrumpir los contenedores compartidos, la demostraci?n de resiliencia fail-closed se apoya en evidencias pre-certificadas o en un stack aislado:
+
+1. **Procedimiento Principal (Evidencia Certificada R2):**
+   - Proyectar la captura de contingencia: `artifacts/oc-e2e-20261024/negative/ui-backend-down.png`.
+   - Mostrar el payload de error estructurado `artifacts/oc-e2e-20261024/negative/ml-unavailable.json`.
+   - Explicar el comportamiento auditado: Spring Boot intercepta la indisponibilidad de `ml-api` y degrada de forma controlada a `HTTP 503 / 504`, impidiendo que Streamlit colapse o invente scores aleatorios.
+
+2. **Procedimiento Opcional en Vivo (Exclusivo en Stack Aislado):**
+   - Si la comisi?n exige una detenci?n en vivo, **nunca detener el stack principal de la demo**. Ejecutar sobre el arn?s aislado de pruebas R2 en subred privada:
+     ```powershell
+     # Terminal aislada:
+     docker compose -f tests/e2e/docker-compose.e2e-oc.yml stop ml-api
+     python -m pytest tests/e2e/test_full_stack_negative.py -k test_ml_service_down_returns_503
+     docker compose -f tests/e2e/docker-compose.e2e-oc.yml start ml-api
+     ```
 
 ---
 

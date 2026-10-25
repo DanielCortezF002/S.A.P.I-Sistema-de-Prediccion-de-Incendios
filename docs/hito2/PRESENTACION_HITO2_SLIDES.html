@@ -134,8 +134,8 @@
                         <div class="kpi"><div class="kpi-num">58</div><div class="kpi-label">Story Points Totales</div></div>
                     </div>
                     <ul>
-                        <li><strong>37 SP (9 Historias) DONE:</strong> Verificadas con c?digo y pruebas reproducibles (SAPI-55 a 62, SAPI-64).</li>
-                        <li><strong>21 SP (5 Historias) Abiertas:</strong> Brechas reales delimitadas honestamente (SAPI-43, 49, 63, 66, 67).</li>
+                        <li><strong>Jira Administrativo:</strong> 12 historias Finalizadas (52 SP), SAPI-64 Por hacer (3 SP) y SAPI-67 Pendiente a validaci?n (3 SP).</li>
+                        <li><strong>Cumplimiento Operacional:</strong> 9 historias con cierre t?cnico completo (37 SP) y 5 historias con brechas operacionales de datos en vivo transparentemente documentadas (21 SP).</li>
                     </ul>
                 </div>
                 <div class="card">
@@ -315,18 +315,20 @@ ALTER TABLE ejecuciones ADD CONSTRAINT
                 <div class="card">
                     <h3>Latencia Interactiva (CA4)</h3>
                     <ul>
-                        <li>Medici?n con Selenium sobre Microsoft Edge real: <strong>1709.5 ms</strong>.</li>
-                        <li>Cron?metro monot?nico desde el clic del usuario hasta el redibujo completo del DOM.</li>
-                        <li>Prueba negativa que falla si la latencia supera el SLA de 3.000 ms.</li>
+                        <li><strong>Cold (Carga inicial):</strong> <code>6.867,90 ms</code> (inicializaci?n de capas).</li>
+                        <li><strong>Update (Interactivo):</strong> <code>3.723,47 ms</code> (refresco din?mico de celdas).</li>
+                        <li><strong>Cached (En memoria):</strong> <code>424,06 ms</code> (lectura optimizada).</li>
+                        <li><em>Certificado en:</em> <code>artifacts/oc-e2e-20261024/timings/ca4-timings.json</code>.</li>
                     </ul>
                 </div>
                 <div class="card">
                     <h3>Resiliencia Fail-Closed (Prueba Negativa)</h3>
                     <p>Detenci?n controlada de <code>ml-api</code>:</p>
-                    <div class="code-box">docker stop sapi-ml-api-v2</div>
+                    <p>Demostraci?n basada en capturas certificadas y stack aislado:</p>
                     <ul>
-                        <li>Spring Boot detecta timeout/ca?da y retorna HTTP 503/504 estructurado.</li>
-                        <li>Streamlit muestra alerta operativa amigable, sin crashear ni mostrar datos viejos como nuevos.</li>
+                        <li>Spring Boot detecta timeout/ca?da y retorna <code>HTTP 503/504</code> estructurado.</li>
+                        <li>Streamlit muestra alerta operativa amigable, sin crasheo ni datos espurios.</li>
+                        <li><em>Evidencia auditada:</em> <code>artifacts/oc-e2e-20261024/negative/ui-backend-down.png</code>.</li>
                     </ul>
                 </div>
             </div>
