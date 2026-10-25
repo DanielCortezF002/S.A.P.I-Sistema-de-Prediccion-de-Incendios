@@ -1,0 +1,36 @@
+{
+  "captured_at": "2026-10-24T22:17:27.739823+00:00",
+  "container": "sapi-oc-e2e-20261024-db-v2-1",
+  "flyway": [
+    [
+      "001|enable postgis|success"
+    ],
+    [
+      "002|create sapi v2 schema|success"
+    ],
+    [
+      "003|seed celdas geom|success"
+    ],
+    [
+      "004|add firms origin|success"
+    ]
+  ],
+  "celdas_geom": [
+    [
+      "50",
+      "50",
+      "POLYGON"
+    ]
+  ],
+  "ejecucion": {
+    "id": "1",
+    "forecast_time": "2026-09-01T00:00:00Z",
+    "model_version": "prototype_model_d_v1",
+    "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+    "score_semantics": "relative_rank",
+    "scientific_model_validation": "false",
+    "firms_origin": "reproducibility"
+  },
+  "predicciones": 50,
+  "comparison": "1:1 exacta (cell_id, score, rank, display_rank, tie_group_size)"
+}

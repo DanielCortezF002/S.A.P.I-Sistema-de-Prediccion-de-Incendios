@@ -1,0 +1,14 @@
+{
+  "captured_at": "2026-10-24T22:17:42.886809+00:00",
+  "browser": "chromium channel=msedge headless",
+  "viewport": "1600x1000",
+  "url": "http://127.0.0.1:58501",
+  "load_ms": 7246.58,
+  "screenshot": "artifacts\\oc-e2e-20261024\\e2e\\streamlit-ranking.png",
+  "screenshot_sha256": "10980c8ac05f227716d1089fd0c39ef8f2780eed79985814e3e8afbc15ddbafe",
+  "leaflet_rectangles": {
+    "http://127.0.0.1:58501/component/streamlit_folium.st_folium/index.html?streamlitUrl=http%3A%2F%2F127.0.0.1%3A58501%2F": 50
+  },
+  "fingerprint_seen_in_ui": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+  "console_errors": []
+}

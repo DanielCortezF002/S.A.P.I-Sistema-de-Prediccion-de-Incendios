@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-10-24T22:17:29.743813+00:00",
+  "first_body_sha256": "ca8a79ede367538da22b00a4c9b014a9491c6c3751ad06b42f7df6d9ca6db3b5",
+  "second_body_sha256": "4a2cebe87c16a7ede524698f553dbda3a74b5e4846f089781c3114b9aa06ce7a",
+  "cells_equal": true,
+  "ejecuciones_before": "1",
+  "ejecuciones_after": "1",
+  "age_hours_first": 1294.2902932577776,
+  "age_hours_second": 1294.2910862836113,
+  "note": "age_hours se calcula contra el reloj de evaluacion; puede variar entre repeticiones aunque la clave natural persistida sea la misma."
+}

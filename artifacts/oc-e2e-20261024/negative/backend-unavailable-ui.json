@@ -1,0 +1,15 @@
+{
+  "captured_at": "2026-10-24T22:19:52.517357+00:00",
+  "down": {
+    "screenshot": "artifacts\\oc-e2e-20261024\\negative\\ui-backend-down.png",
+    "screenshot_sha256": "afc34ba0ac67f5a0f5102d40254f778f8d078a19f09f39e29b542de6c9a02ae4",
+    "controlled_error_seen": true,
+    "traceback_present": false,
+    "host_leaked": false
+  },
+  "up": {
+    "screenshot": "artifacts\\oc-e2e-20261024\\negative\\ui-backend-up.png",
+    "screenshot_sha256": "4cd46988fab4067ed3ae14dd8d490ce202d589f6a749496146dfc71371a94fee",
+    "ranking_visible": true
+  }
+}

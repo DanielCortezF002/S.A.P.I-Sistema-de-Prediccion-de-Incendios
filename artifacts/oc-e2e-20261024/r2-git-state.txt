@@ -1,0 +1,22 @@
+captured_at=2026-10-24T23:41:23.6299820Z
+run_label=R2-evidence-remediation
+branch=test/oc-fullstack-e2e-r2-20261024
+head=eb1b37030d206462878a785a8f4a67edba7b2c98
+head_subject=fix(F1-CA8): stabilize probe connection handling in operational overlay dynamic test
+tree=404518eb9c5982452ec74c93efffd17b52e4c462
+base=origin/recovery/s2-academic-20261024
+base_sha=eb1b37030d206462878a785a8f4a67edba7b2c98
+app_code_commit_tested=2a71c7e1160ab87ef7c0ec5e2dfaf3b06c1b4876
+app_tree_services=9cd77f12a2f9b9353923ed8567b7b7f7a539ca08
+app_tree_app=82e9d30a23cda053c44599f6e579e4b1eaa67f93
+app_tree_contracts=e4c6874cf86939384ad3cd76ce09d4aadd2c4abb
+app_tree_db=6dff056d733f01594d0917cd7df9a11f1b8efae9
+status_porcelain:
+?? artifacts/oc-e2e-20261024/
+?? reports/OC-E2E-20261024-CERTIFICACION.md
+?? tests/e2e/docker-compose.e2e-oc.yml
+?? tests/e2e/test_full_stack_browser.py
+?? tests/e2e/test_full_stack_contracts.py
+?? tests/e2e/test_full_stack_negative.py
+?? tests/e2e/test_full_stack_timings.py
+note=HEAD al capturar es la base; el arnes R2 y la evidencia estaban sin commitear y se incorporan en el commit de evidencia R2.

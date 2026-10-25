@@ -1,0 +1,6 @@
+{
+  "captured_at": "2026-10-24T22:17:43.019254+00:00",
+  "container": "sapi-oc-e2e-20261024-ml-api-1",
+  "tail_file": "artifacts\\oc-e2e-20261024\\e2e\\ml-service-log-tail.txt",
+  "tail_sha256": "f1616ee8aea596aef59eadadfde67f36090c6e685c10752e34427ac952073612"
+}

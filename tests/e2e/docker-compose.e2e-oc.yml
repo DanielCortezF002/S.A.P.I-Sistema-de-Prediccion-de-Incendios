@@ -1,0 +1,16 @@
+# Overlay de aislamiento para la certificacion E2E OCC-OC-A2 (2026-10-24).
+#
+# Motivo: el daemon tenia agotados los pools de direcciones por defecto
+# ("all predefined address pools have been fully subnetted") por las ~30 redes
+# preexistentes de otros entornos. Este overlay NO toca esas redes: solo fija
+# una subred privada explicita para la red sapi-v2-net de ESTE proyecto
+# Compose, levantado con `-p sapi-oc-e2e-20261024`.
+#
+# No se usa en la ruta operacional ni en la ruta por defecto:
+#   docker compose -f docker-compose.yml -f tests/e2e/docker-compose.e2e-oc.yml \
+#     -p sapi-oc-e2e-20261024 --profile presentation up -d
+networks:
+  sapi-v2-net:
+    ipam:
+      config:
+        - subnet: 10.99.99.0/24
