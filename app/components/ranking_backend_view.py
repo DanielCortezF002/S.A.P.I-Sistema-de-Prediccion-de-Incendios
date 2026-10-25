@@ -111,6 +111,16 @@ _SVG_CLOCK = (
     '<polyline points="12 6 12 12 16 14"></polyline>'
     '</svg>'
 )
+_SVG_CALENDAR = (
+    '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
+    'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
+    'style="vertical-align:-1px;margin-right:4px;">'
+    '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>'
+    '<line x1="16" y1="2" x2="16" y2="6"></line>'
+    '<line x1="8" y1="2" x2="8" y2="6"></line>'
+    '<line x1="3" y1="10" x2="21" y2="10"></line>'
+    '</svg>'
+)
 _SVG_SERVER = (
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
@@ -491,9 +501,12 @@ def _inject_css(mode: str | None = None) -> None:
         disclaimer_color = "#0369a1"
         quick_card_bg = "#f8fafc"
         quick_card_border = "#cbd5e1"
-        map_tag_bg = "#fee2e2"
-        map_tag_border = "#ef4444"
-        map_tag_color = "#991b1b"
+        map_tag_bg = "linear-gradient(90deg, #f0f9ff 0%, #e0f2fe 100%)"
+        map_tag_border = "#0284c7"
+        map_tag_color = "#0369a1"
+        map_tag_highlight = "#0c4a6e"
+        map_tag_inner_bg = "rgba(2, 132, 199, 0.12)"
+        map_tag_inner_border = "rgba(2, 132, 199, 0.35)"
     else:
         bg_card = "#131b24"
         bg_card_subtle = "#0f1620"
@@ -526,9 +539,12 @@ def _inject_css(mode: str | None = None) -> None:
         disclaimer_color = "#cbd5e1"
         quick_card_bg = "#0f1620"
         quick_card_border = "#1e293b"
-        map_tag_bg = "rgba(127, 29, 29, 0.45)"
-        map_tag_border = "#ef4444"
-        map_tag_color = "#fecaca"
+        map_tag_bg = "linear-gradient(90deg, rgba(12, 45, 72, 0.95) 0%, rgba(15, 57, 89, 0.95) 100%)"
+        map_tag_border = "#0284c7"
+        map_tag_color = "#93c5fd"
+        map_tag_highlight = "#ffffff"
+        map_tag_inner_bg = "rgba(2, 132, 199, 0.25)"
+        map_tag_inner_border = "rgba(56, 189, 248, 0.40)"
 
     st.markdown(
         f"""
@@ -568,6 +584,9 @@ def _inject_css(mode: str | None = None) -> None:
             --sapi-map-tag-bg: {map_tag_bg};
             --sapi-map-tag-border: {map_tag_border};
             --sapi-map-tag-color: {map_tag_color};
+            --sapi-map-tag-highlight: {map_tag_highlight};
+            --sapi-map-tag-inner-bg: {map_tag_inner_bg};
+            --sapi-map-tag-inner-border: {map_tag_inner_border};
         }}
 
         [data-testid="stHeader"] {{
@@ -863,16 +882,52 @@ def _inject_css(mode: str | None = None) -> None:
             margin: 0;
         }}
         .sapi-map-historical-tag {{
-            display: inline-block;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.30rem;
             background: var(--sapi-map-tag-bg);
             border: 1px solid var(--sapi-map-tag-border);
             color: var(--sapi-map-tag-color);
             border-radius: 4px;
-            font-size: 0.66rem;
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            padding: 0.15rem 0.42rem;
+            font-size: 0.68rem;
+            font-weight: 700;
+            letter-spacing: 0.03em;
+            padding: 0.20rem 0.50rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
             text-transform: uppercase;
+        }}
+        .sapi-map-tag-date {{
+            font-weight: 850;
+            color: var(--sapi-map-tag-highlight);
+            letter-spacing: 0.03em;
+        }}
+        .sapi-map-tag-badge {{
+            background: var(--sapi-map-tag-inner-bg);
+            border: 1px solid var(--sapi-map-tag-inner-border);
+            border-radius: 3px;
+            padding: 0.05rem 0.30rem;
+            font-size: 0.62rem;
+            font-weight: 800;
+            color: var(--sapi-map-tag-color);
+        }}
+        .sapi-table-date-banner {{
+            background: var(--sapi-bg-inset);
+            border: 1px solid var(--sapi-border-card);
+            border-left: 3px solid #0284c7;
+            border-radius: 4px;
+            padding: 0.35rem 0.65rem;
+            margin-bottom: 0.50rem;
+        }}
+        .sapi-table-date-badge {{
+            display: inline-block;
+            background: var(--sapi-bg-subtle);
+            border: 1px solid var(--sapi-border-subtle);
+            color: var(--sapi-text-muted);
+            border-radius: 3px;
+            font-size: 0.63rem;
+            font-weight: 750;
+            padding: 0.10rem 0.35rem;
+            letter-spacing: 0.03em;
         }}
         .sapi-map-sub {{
             font-size: 0.74rem;
@@ -1870,6 +1925,28 @@ def _cell_num(cell_id: str) -> int:
 def _render_ranking_expander(view: RankingView) -> None:
     """Tabla completa de ranking expandible con filtros."""
     with st.expander("Ver ranking completo (50 celdas) y filtros", expanded=False):
+        date_line = _human_date(view.forecast_time)
+        time_line = f"{_human_hm(view.forecast_time)} UTC"
+        horizon_line = f"+{view.horizon_hours} h" if view.horizon_hours else "+6 h"
+        window_end_line = f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+
+        st.markdown(
+            f'<div class="sapi-table-date-banner">'
+            f'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;">'
+            f'<div style="display:flex;align-items:center;gap:0.45rem;">'
+            f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CALENDAR}</span>'
+            f'<span style="font-weight:700;font-size:0.75rem;color:var(--sapi-text-body);letter-spacing:0.02em;">CORTE TEMPORAL DE LA MATRIZ:</span>'
+            f'<span style="font-weight:850;font-size:0.78rem;color:var(--sapi-text-title);letter-spacing:0.02em;">{date_line} · {time_line}</span>'
+            f'</div>'
+            f'<div style="display:flex;align-items:center;gap:0.4rem;">'
+            f'<span class="sapi-table-date-badge">VENTANA: T{horizon_line}{window_end_line}</span>'
+            f'<span class="sapi-table-date-badge" style="color:#10b981;border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);">50 CELDAS EVALUADAS</span>'
+            f'</div>'
+            f'</div>'
+            f'</div>',
+            unsafe_allow_html=True,
+        )
+
         order_mode = st.radio(
             "Criterio de ordenación",
             options=[
@@ -2177,19 +2254,24 @@ def render_ranking_backend_dashboard() -> None:
     if is_expanded:
         m_head_left, m_head_right = st.columns([7.5, 2.5])
         with m_head_left:
+            horizon_str = f"T+{view.horizon_hours}h" if view.horizon_hours else "T+6h"
+            window_end_str = f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
             st.markdown(
-                f"""
-                <div class="sapi-map-title-row">
-                    <span class="sapi-map-icon">{_SVG_MAP}</span>
-                    <div style="flex-grow:1;">
-                        <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                            <div class="sapi-map-title">Mapa de riesgo relativo de incendio (Vista ampliada)</div>
-                            <span class="sapi-map-historical-tag">RANKING HISTÓRICO · T: {_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC · HORIZONTE: {view.horizon_hours or 6} h</span>
-                        </div>
-                        <div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>
-                    </div>
-                </div>
-                """,
+                f'<div class="sapi-map-title-row">'
+                f'<span class="sapi-map-icon">{_SVG_MAP}</span>'
+                f'<div style="flex-grow:1;">'
+                f'<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">'
+                f'<div class="sapi-map-title">Mapa de riesgo relativo de incendio (Vista ampliada)</div>'
+                f'<span class="sapi-map-historical-tag">'
+                f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CALENDAR}</span>'
+                f'<span>CORTE DE MATRIZ:</span>'
+                f'<span class="sapi-map-tag-date">{_human_date(view.forecast_time)} · {_human_hm(view.forecast_time)} UTC</span>'
+                f'<span class="sapi-map-tag-badge">VENTANA: {horizon_str}{window_end_str}</span>'
+                f'</span>'
+                f'</div>'
+                f'<div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>'
+                f'</div>'
+                f'</div>',
                 unsafe_allow_html=True,
             )
         with m_head_right:
@@ -2218,19 +2300,24 @@ def render_ranking_backend_dashboard() -> None:
         with map_col:
             m_head_left, m_head_right = st.columns([6.8, 3.2])
             with m_head_left:
+                horizon_str = f"T+{view.horizon_hours}h" if view.horizon_hours else "T+6h"
+                window_end_str = f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
                 st.markdown(
-                    f"""
-                    <div class="sapi-map-title-row">
-                        <span class="sapi-map-icon">{_SVG_MAP}</span>
-                        <div style="flex-grow:1;">
-                            <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
-                                <div class="sapi-map-title">Mapa de riesgo relativo de incendio</div>
-                                <span class="sapi-map-historical-tag">RANKING HISTÓRICO · T: {_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC · HORIZONTE: {view.horizon_hours or 6} h</span>
-                            </div>
-                            <div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>
-                        </div>
-                    </div>
-                    """,
+                    f'<div class="sapi-map-title-row">'
+                    f'<span class="sapi-map-icon">{_SVG_MAP}</span>'
+                    f'<div style="flex-grow:1;">'
+                    f'<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">'
+                    f'<div class="sapi-map-title">Mapa de riesgo relativo de incendio</div>'
+                    f'<span class="sapi-map-historical-tag">'
+                    f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CALENDAR}</span>'
+                    f'<span>CORTE DE MATRIZ:</span>'
+                    f'<span class="sapi-map-tag-date">{_human_date(view.forecast_time)} · {_human_hm(view.forecast_time)} UTC</span>'
+                    f'<span class="sapi-map-tag-badge">VENTANA: {horizon_str}{window_end_str}</span>'
+                    f'</span>'
+                    f'</div>'
+                    f'<div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>'
+                    f'</div>'
+                    f'</div>',
                     unsafe_allow_html=True,
                 )
             with m_head_right:
