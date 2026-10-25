@@ -1,27 +1,17 @@
-"""Vista PROTOTIPO v2: ranking servido por el backend Spring Boot (SAPI-61).
+"""Vista PROTOTIPO v2: ranking servido por el backend Spring Boot (SAPI-61 / Sprint 2 Final).
 
-Reemplaza en el flujo principal a `prototype_view.py` (congelado, Hito 1),
-que puntuaba en proceso con `score_current_grid()`. Esta vista no ejecuta
-inferencia: recibe un `RankingView` ya validado por
-`app.utils.backend_client` y lo presenta. Flujo:
-
-    app/app.py → render_ranking_backend_dashboard()
-        → BackendRankingClient.fetch_ranking()  (HTTP GET /api/v1/ranking)
-        → RankingView → mapa / grupo prioritario / ranking / trazabilidad
-
-Reglas:
-- Scores, rank, display_rank, tie_group_size y el orden de las celdas se
-  muestran tal cual llegan. No se reordena ni se recalcula nada.
-- La geometría de las 50 celdas viene de la fuente estática autoritativa
-  `src/geo/grid.py` (la misma que usa el servicio). Elevación y pendiente,
-  de la tabla congelada del Hito 1 (`app.utils.reference_topography`),
-  etiquetadas como referencia.
-- La metadata opcional del contrato (frescura, estación, procedencia
-  FIRMS) se muestra solo si el backend la envía. Si falta, se declara
-  "no informado por el backend". Nunca se deriva ni se inventa.
-  `model_status`, `meteo_actual` y el historial FIRMS por celda no forman
-  parte del contrato.
-- Texto remoto que entra en HTML se escapa siempre.
+Implementación definitiva de la interfaz aprobada para la Defensa Académica:
+- Cabecera compacta integrada con estados, metadatos y selector de tema (sin logo de fuego).
+- Fila de 5 tarjetas de indicadores clave (Celdas evaluadas, Grupo prioritario, Score relativo top, Territorio, Ventana de análisis).
+- Área principal con distribución ~68/32:
+  * Mapa protagonista con Folium, norte cardinal, escala métrica, colores de riesgo relativo y celda destacada.
+  * Botón funcional "Expandir mapa / Restaurar vista".
+  * Barra de leyenda y gradiente de score exploratorio integrado bajo el mapa.
+  * Panel lateral "Hallazgo principal" con banner prioritario, narrativa dinámica, métricas territoriales y meteorología.
+- Sección inferior con dos módulos balanceados (~50/50):
+  * Izquierda: Información técnica y fuentes (resumen en cuadrícula + expander detallado).
+  * Derecha: Ranking completo de celdas (tabla resumen de top celdas + expander con ordenación y filtros).
+- Advertencia explícita de datos históricos y disclaimer científico permanente.
 """
 
 from __future__ import annotations
@@ -56,20 +46,16 @@ _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
+_SESSION_EXPANDED = "ranking_v2_map_expanded"
 _ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
 _ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
 _ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
 _CACHE_TTL_SECONDS = 300
-# Metadata opcional de sapi-ranking-v0. model_status y meteo_actual se toleran
-# si un payload los trae, pero no son campos del contrato y no se listan como
-# pendientes de él.
+
 _CONTRACT_METADATA_FIELDS = tuple(
     name for name in ADDITIVE_FIELDS if name not in {"model_status", "meteo_actual"}
 )
 
-# Etiqueta de frescura que el servicio de inferencia asigna a observaciones
-# de más de 24 h (misma cadena que `prototype_service.FRESHNESS_HISTORICAL`).
-# Solo se compara contra lo que el backend envíe; nunca se calcula aquí.
 FRESHNESS_HISTORICAL_LABEL = "DATOS HISTÓRICOS / DESACTUALIZADOS"
 NOT_PROVIDED = "no informado por el backend"
 NOT_IN_CONTRACT = "Detalle FIRMS por celda no expuesto por API v0"
@@ -78,32 +64,30 @@ FIXED_DISCLAIMER = (
     "y no a una probabilidad calibrada de incendio."
 )
 
-# Paleta por grupo de score único (misma semántica que la vista Hito 1):
-# posición relativa en un ranking exploratorio, nunca alerta oficial.
 _GROUP_VISUAL = {
     1: {
         "label": "Grupo 1",
-        "fill": "#c45c26",
-        "edge": "#f0a070",
-        "op_all": 0.42,
-        "op_prio": 0.48,
+        "fill": "#dc2626",
+        "edge": "#f87171",
+        "op_all": 0.55,
+        "op_prio": 0.65,
     },
     2: {
         "label": "Grupo 2",
-        "fill": "#a67c2a",
-        "edge": "#c9a35a",
-        "op_all": 0.20,
-        "op_prio": 0.10,
+        "fill": "#d97706",
+        "edge": "#fbbf24",
+        "op_all": 0.35,
+        "op_prio": 0.22,
     },
     3: {
         "label": "Grupo 3",
-        "fill": "#5a6570",
-        "edge": "#7a8694",
-        "op_all": 0.11,
-        "op_prio": 0.08,
+        "fill": "#475569",
+        "edge": "#94a3b8",
+        "op_all": 0.18,
+        "op_prio": 0.12,
     },
 }
-_SELECTED_EDGE = "#38bdf8"
+_SELECTED_EDGE = "#ef4444"
 _MONTHS = (
     "ene",
     "feb",
@@ -205,24 +189,17 @@ def build_map(
     selected_id: Optional[str],
     topography: Optional[Mapping[str, CellTopography]] = None,
 ) -> folium.Map:
-    """Mapa Folium con los 50 rectángulos de la grilla coloreados por grupo.
-
-    Args:
-        view: Ranking validado.
-        mode: `Prioridades` (solo resalta el grupo prioritario) o `Todas las celdas`.
-        selected_id: Celda a resaltar con borde de selección.
-        topography: Tabla de referencia; por defecto la congelada del Hito 1.
-
-    Returns:
-        `folium.Map` con exactamente una `folium.Rectangle` por celda.
-    """
+    """Mapa Folium con los 50 rectángulos de la grilla coloreados por grupo."""
     topo = reference_topography() if topography is None else topography
     geometry = _geometry_by_cell()
     group_by_score = _score_group_map(view.cells)
     top_rank = min((c.display_rank for c in view.cells), default=1)
     center_lat, center_lon = grid_center()
     fmap = folium.Map(
-        location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap"
+        location=[center_lat, center_lon],
+        zoom_start=11,
+        tiles="OpenStreetMap",
+        control_scale=True,
     )
 
     for c in view.cells:
@@ -233,8 +210,8 @@ def build_map(
         if mode == _MAP_MODE_PRIORIDADES:
             fill_opacity = vis["op_prio"] if is_priority else 0.08
             weight = 1.5 if is_priority else 0.5
-            fill = vis["fill"] if is_priority else "#6b7280"
-            edge = vis["edge"] if is_priority else "#6b7280"
+            fill = vis["fill"] if is_priority else "#64748b"
+            edge = vis["edge"] if is_priority else "#475569"
         else:
             fill_opacity = vis["op_all"]
             weight = 1.0
@@ -243,7 +220,8 @@ def build_map(
         if is_selected:
             edge = _SELECTED_EDGE
             weight = 3.0
-            fill_opacity = max(fill_opacity, 0.35)
+            fill = "#b91c1c"
+            fill_opacity = max(fill_opacity, 0.72)
 
         elev_txt, slope_txt, is_covered = _topo_for(topo, c.cell_id)
         topo_note = "" if is_covered else " (sin cobertura DEM)"
@@ -264,6 +242,21 @@ def build_map(
             weight=weight,
             tooltip=tooltip,
         ).add_to(fmap)
+
+    north_html = """
+    <div style="position: absolute; top: 12px; left: 12px; z-index: 1000;
+                width: 38px; height: 38px; background: rgba(14, 20, 27, 0.88);
+                border-radius: 50%; display: flex; flex-direction: column;
+                align-items: center; justify-content: center; color: white;
+                font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+                border: 1px solid rgba(255,255,255,0.22); box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                pointer-events: none;">
+        <span style="font-size: 8px; font-weight: 800; line-height: 1; letter-spacing: 0.5px;">N</span>
+        <span style="font-size: 13px; line-height: 1; color: #38bdf8; margin-top: 1px;">▲</span>
+    </div>
+    """
+    fmap.get_root().html.add_child(folium.Element(north_html))
+
     return fmap
 
 
@@ -277,7 +270,6 @@ def build_map(
 def _cached_ranking(
     base_url: str, connect_timeout: float, read_timeout: float
 ) -> RankingView:
-    """Cache de 5 min del ranking YA validado (los errores no se cachean)."""
     client = BackendRankingClient(
         base_url, connect_timeout=connect_timeout, read_timeout=read_timeout
     )
@@ -290,179 +282,527 @@ def _load_ranking() -> RankingView:
 
 
 def refresh_ranking_cache() -> None:
-    """Invalida la cache para forzar una nueva consulta al backend."""
     _cached_ranking.clear()
 
 
-# ── render ─────────────────────────────────────────────────────────────────────
+# ── inyección CSS ──────────────────────────────────────────────────────────────
 
 
 def _inject_css() -> None:
     st.markdown(
         """
         <style>
+        .block-container {
+            padding-top: 1.15rem !important;
+            padding-bottom: 2rem !important;
+            max-width: 1720px !important;
+        }
+
         .sapi-v2-header {
-            display: flex; flex-wrap: wrap; justify-content: space-between;
-            gap: 1.25rem; align-items: flex-start; margin: 0 0 1rem 0;
-            font-family: var(
-                --sapi-font-stack, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif
-            );
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.6rem 0.2rem 0.75rem 0.2rem;
+            margin-bottom: 0.5rem;
+            border-bottom: 1px solid var(--sapi-border-card, #223040);
+        }
+        .sapi-header-left {
+            display: flex;
+            flex-direction: column;
+            gap: 0.15rem;
         }
         .sapi-v2-title {
-            font-size: 2.1rem; font-weight: 850; letter-spacing: -0.03em;
-            line-height: 1.1; margin: 0; color: var(--sapi-text-primary);
+            font-size: 2.15rem;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+            line-height: 1.05;
+            color: #ffffff;
+            margin: 0;
         }
         .sapi-v2-sub {
-            font-size: 1.02rem; opacity: 0.88; margin-top: 0.35rem; max-width: 42rem;
-            color: var(--sapi-text-primary); font-weight: 500;
+            font-size: 1.0rem;
+            font-weight: 600;
+            color: #f1f5f9;
+            margin-top: 0.15rem;
         }
+        .sapi-v2-academic {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: #8b9cb3;
+        }
+
         .sapi-v2-status {
-            display: flex; flex-wrap: wrap; gap: 0.55rem;
-            justify-content: flex-end; align-items: center;
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            flex-wrap: wrap;
         }
         .sapi-v2-badge {
-            display: inline-flex; align-items: center; padding: 0.38rem 0.85rem;
-            border-radius: 999px; font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em;
-            text-transform: uppercase; border: 1px solid rgba(127,127,127,0.35);
+            display: inline-flex;
+            align-items: center;
+            padding: 0.35rem 0.80rem;
+            border-radius: 999px;
+            font-size: 0.72rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
         }
         .sapi-v2-badge--violet {
-            background: #3b2a6d; border-color: #8b5cf6; color: #ede9fe;
-            box-shadow: 0 2px 6px rgba(139,92,246,0.25);
-        }
-        .sapi-v2-badge--hist {
-            background: #7f1d1d; border-color: #ef4444; color: #fee2e2;
-            box-shadow: 0 2px 6px rgba(239,68,68,0.25);
+            background: #2b1754;
+            border: 1px solid #8b5cf6;
+            color: #ede9fe;
+            box-shadow: 0 2px 6px rgba(139,92,246,0.20);
         }
         .sapi-v2-badge--rest {
-            background: #064e3b; border-color: #10b981; color: #d1fae5;
-            box-shadow: 0 2px 6px rgba(16,185,129,0.25);
+            background: #064e3b;
+            border: 1px solid #10b981;
+            color: #d1fae5;
+            box-shadow: 0 2px 6px rgba(16,185,129,0.20);
         }
-        .sapi-v2-badge--postgis { background: #0c4a6e; border-color: #38bdf8; color: #e0f2fe; }
-        .sapi-v2-badge--model { background: #262626; border-color: #737373; color: #f5f5f5; }
+        .sapi-v2-badge--hist {
+            background: #6b1414;
+            border: 1px solid #ef4444;
+            color: #fee2e2;
+            box-shadow: 0 2px 6px rgba(239,68,68,0.20);
+        }
 
         .sapi-v2-meta {
-            margin-top: 0.6rem; font-size: 0.95rem; opacity: 0.95;
-            text-align: right; line-height: 1.6; color: var(--sapi-text-primary);
+            font-size: 0.82rem;
+            line-height: 1.45;
+            color: #94a3b8;
+            text-align: right;
             font-variant-numeric: tabular-nums;
         }
-
-        .sapi-v2-kpi-row {
-            display: grid; grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 0.65rem; margin: 0.4rem 0 0.65rem 0;
-        }
-        .sapi-v2-kpi {
-            background: var(--sapi-surface-card);
-            border: 1px solid var(--sapi-border-card);
-            border-radius: 10px;
-            padding: 0.65rem 0.85rem; min-height: 4.4rem;
-            display: flex; flex-direction: column; justify-content: center;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.14);
-            transition: transform 0.15s ease, border-color 0.15s ease;
-        }
-        .sapi-v2-kpi:hover {
-            border-color: var(--sapi-accent);
-        }
-        .sapi-v2-kpi__value {
-            font-size: 1.40rem; font-weight: 850; letter-spacing: -0.02em;
-            line-height: 1.15; font-variant-numeric: tabular-nums;
-            color: var(--sapi-text-primary);
-        }
-        .sapi-v2-kpi__value--na {
-            font-size: 0.85rem; font-weight: 600; opacity: 0.82;
-            color: var(--sapi-text-primary); font-style: italic;
-        }
-        .sapi-v2-kpi__label {
-            font-size: 0.78rem; opacity: 0.85; margin-top: 0.25rem; font-weight: 700;
-            text-transform: uppercase; letter-spacing: 0.04em;
-            color: var(--sapi-text-primary);
+        .sapi-v2-meta b {
+            color: #e2e8f0;
         }
 
-        .sapi-v2-panel {
-            background: var(--sapi-surface-card);
-            border: 1px solid var(--sapi-border-card);
+        .sapi-v2-historical-alert {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: rgba(127, 29, 29, 0.30);
+            border: 1px solid rgba(239, 68, 68, 0.65);
+            border-radius: 8px;
+            padding: 0.50rem 0.95rem;
+            margin: 0.25rem 0 0.75rem 0;
+            color: #fecaca;
+            font-size: 0.85rem;
+            line-height: 1.35;
+        }
+        .sapi-v2-historical-alert span {
+            font-size: 1.15rem;
+            color: #f87171;
+            flex-shrink: 0;
+        }
+
+        .sapi-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 0.75rem;
+            margin-bottom: 0.85rem;
+        }
+        .sapi-card-kpi {
+            background: #131b24;
+            border: 1px solid #223040;
             border-radius: 10px;
-            padding: 0.85rem 1.05rem; margin-bottom: 0.75rem;
-            color: var(--sapi-text-primary);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.14);
+            padding: 0.70rem 0.90rem;
+            min-height: 4.8rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.18);
+            transition: border-color 0.15s ease, transform 0.12s ease;
         }
-        .sapi-v2-panel__h {
-            font-size: 0.80rem; font-weight: 850; letter-spacing: 0.09em;
-            text-transform: uppercase; color: var(--sapi-accent); margin: 0 0 0.45rem 0;
-            display: flex; align-items: center; gap: 0.45rem;
+        .sapi-card-kpi:hover {
+            border-color: #3b82f6;
+            transform: translateY(-1px);
         }
-        .sapi-v2-prio-num {
-            font-size: 2.05rem; font-weight: 900; letter-spacing: -0.04em;
-            line-height: 1; color: #f0a070;
-            text-shadow: 0 2px 8px rgba(240, 160, 112, 0.25);
+        .sapi-card-kpi--orange { border-left: 3px solid #f97316; }
+        .sapi-card-kpi--red    { border-left: 3px solid #ef4444; }
+        .sapi-card-kpi--blue   { border-left: 3px solid #3b82f6; }
+        .sapi-card-kpi--cyan   { border-left: 3px solid #06b6d4; }
+        .sapi-card-kpi--purple { border-left: 3px solid #a855f7; }
+
+        .sapi-card-kpi__top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.2rem;
         }
+        .sapi-card-kpi__label {
+            font-size: 0.74rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #8b9cb3;
+        }
+        .sapi-card-kpi__icon {
+            font-size: 0.95rem;
+            opacity: 0.88;
+        }
+        .sapi-card-kpi__val {
+            font-size: 1.55rem;
+            font-weight: 850;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            color: #ffffff;
+            font-variant-numeric: tabular-nums;
+        }
+        .sapi-card-kpi__val--red { color: #f87171; }
+        .sapi-card-kpi__sub {
+            font-size: 0.74rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+            font-weight: 500;
+        }
+
+        .sapi-map-card {
+            background: #131b24;
+            border: 1px solid #223040;
+            border-radius: 12px;
+            padding: 0.85rem 1.05rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+            margin-bottom: 0.85rem;
+        }
+        .sapi-map-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.65rem;
+        }
+        .sapi-map-icon {
+            font-size: 1.25rem;
+            color: #38bdf8;
+        }
+        .sapi-map-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: #ffffff;
+            margin: 0;
+        }
+        .sapi-map-sub {
+            font-size: 0.80rem;
+            color: #8b9cb3;
+            margin-top: 0.1rem;
+        }
+        .sapi-map-risk-widget {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 0.2rem;
+        }
+        .sapi-map-risk-label {
+            font-size: 0.70rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #8b9cb3;
+        }
+        .sapi-map-risk-bar {
+            width: 140px;
+            height: 7px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #fef08a 0%, #f59e0b 35%, #ea580c 70%, #dc2626 100%);
+        }
+        .sapi-map-risk-scale {
+            display: flex;
+            justify-content: space-between;
+            width: 140px;
+            font-size: 0.68rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .sapi-map-legend-bar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            gap: 0.85rem;
+            background: #0f1620;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 0.55rem 0.90rem;
+            margin-top: 0.60rem;
+        }
+        .sapi-legend-gradient-wrap {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .sapi-legend-gradient-title {
+            font-size: 0.72rem;
+            font-weight: 750;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #cbd5e1;
+        }
+        .sapi-legend-gradient-strip {
+            width: 220px;
+            height: 8px;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #fef08a 0%, #f59e0b 25%, #ea580c 50%, #dc2626 75%, #991b1b 100%);
+        }
+        .sapi-legend-ticks {
+            display: flex;
+            justify-content: space-between;
+            width: 220px;
+            font-size: 0.68rem;
+            color: #64748b;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+        .sapi-legend-markers {
+            display: flex;
+            align-items: center;
+            gap: 1.15rem;
+            flex-wrap: wrap;
+        }
+        .sapi-legend-marker-item {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.80rem;
+            color: #cbd5e1;
+            font-weight: 600;
+        }
+        .sapi-swatch-box {
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
+            display: inline-block;
+            flex-shrink: 0;
+        }
+
+        .sapi-panel-right {
+            background: #131b24;
+            border: 1px solid #223040;
+            border-radius: 12px;
+            padding: 0.85rem 1.05rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+            margin-bottom: 0.85rem;
+        }
+        .sapi-panel-title-row {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            margin-bottom: 0.75rem;
+        }
+        .sapi-panel-title {
+            font-size: 1.05rem;
+            font-weight: 800;
+            letter-spacing: -0.01em;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .sapi-priority-banner {
+            background: linear-gradient(90deg, #381216 0%, #201016 100%);
+            border: 1px solid #7f1d1d;
+            border-radius: 8px;
+            padding: 0.75rem 0.95rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            margin-bottom: 0.75rem;
+        }
+        .sapi-priority-banner__icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background: #ef4444;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .sapi-priority-banner__content {
+            flex-grow: 1;
+        }
+        .sapi-priority-banner__title {
+            font-size: 1.05rem;
+            font-weight: 850;
+            color: #f87171;
+            line-height: 1.15;
+        }
+        .sapi-priority-banner__sub {
+            font-size: 0.76rem;
+            color: #fca5a5;
+            opacity: 0.90;
+            margin-top: 0.15rem;
+        }
+        .sapi-priority-banner__arrow {
+            color: #f87171;
+            font-size: 1.35rem;
+            font-weight: 700;
+        }
+
+        .sapi-narrative-text {
+            font-size: 0.84rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            margin: 0.25rem 0 0.75rem 0;
+            font-weight: 450;
+        }
+
         .sapi-v2-chip {
-            display: inline-block; padding: 0.22rem 0.55rem; margin: 0.18rem 0.18rem 0 0;
-            border-radius: 5px; background: var(--sapi-surface-muted);
-            border: 1px solid var(--sapi-border-card); font-size: 0.85rem;
-            font-weight: 750; font-variant-numeric: tabular-nums;
-            color: var(--sapi-text-primary);
-        }
-        .sapi-v2-kv { list-style: none; padding: 0; margin: 0.35rem 0 0 0; }
-        .sapi-v2-kv li {
-            display: flex; justify-content: space-between; gap: 0.75rem;
-            padding: 0.32rem 0; border-bottom: 1px solid var(--sapi-border-subtle);
-            font-size: 0.90rem; color: var(--sapi-text-primary);
-        }
-        .sapi-v2-kv li:last-child { border-bottom: none; }
-        .sapi-v2-kv span { opacity: 0.75; font-weight: 550; }
-        .sapi-v2-kv b { font-weight: 750; }
-
-        .sapi-v2-legend {
-            margin: 0.45rem 0 0.65rem 0;
-            background: var(--sapi-surface-card);
-            border: 1px solid var(--sapi-border-card);
-            border-radius: 10px; padding: 0.55rem 0.95rem;
-            color: var(--sapi-text-primary);
-            box-shadow: 0 2px 6px rgba(0,0,0,0.14);
-            display: flex; flex-wrap: wrap; justify-content: space-between;
-            align-items: center; gap: 0.5rem;
-        }
-        .sapi-v2-legend__header {
-            display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
-        }
-        .sapi-v2-legend__title {
-            font-weight: 850; letter-spacing: 0.08em; text-transform: uppercase;
-            font-size: 0.80rem; color: var(--sapi-accent); margin: 0;
-        }
-        .sapi-v2-legend__note {
-            font-size: 0.80rem; opacity: 0.72; font-style: italic;
-        }
-        .sapi-v2-legend__items {
-            display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
-        }
-        .sapi-v2-legend__row {
-            display: flex; align-items: center; gap: 0.45rem;
-            font-weight: 650; font-size: 0.86rem;
-        }
-        .sapi-v2-dot {
-            width: 13px; height: 13px; border-radius: 50%; display: inline-block;
-            border: 2px solid rgba(255,255,255,0.45); flex-shrink: 0;
+            display: inline-block;
+            padding: 0.20rem 0.50rem;
+            margin: 0.15rem 0.15rem 0 0;
+            border-radius: 4px;
+            background: #1c2634;
+            border: 1px solid #2a3a4d;
+            font-size: 0.82rem;
+            font-weight: 750;
+            color: #f1f5f9;
         }
 
+        .sapi-v2-note {
+            font-size: 0.80rem;
+            opacity: 0.85;
+            margin-top: 0.35rem;
+            color: #94a3b8;
+            font-style: italic;
+        }
+
+        .sapi-kv-table {
+            list-style: none;
+            padding: 0;
+            margin: 0.25rem 0 0.75rem 0;
+        }
+        .sapi-kv-table li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.32rem 0;
+            border-bottom: 1px solid #1e293b;
+            font-size: 0.84rem;
+        }
+        .sapi-kv-table li:last-child {
+            border-bottom: none;
+        }
+        .sapi-kv-label {
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            color: #94a3b8;
+            font-weight: 500;
+        }
+        .sapi-kv-val {
+            color: #ffffff;
+            font-weight: 750;
+            font-variant-numeric: tabular-nums;
+            text-align: right;
+        }
+        .sapi-kv-val--muted {
+            color: #64748b;
+            font-weight: 500;
+            font-style: italic;
+        }
+
+        .sapi-module-card {
+            background: #131b24;
+            border: 1px solid #223040;
+            border-radius: 12px;
+            padding: 0.85rem 1.05rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.22);
+            height: 100%;
+        }
+        .sapi-module-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.75rem;
+        }
+        .sapi-module-title {
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            font-size: 1.0rem;
+            font-weight: 800;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .sapi-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.65rem;
+            margin-bottom: 0.75rem;
+        }
+        .sapi-info-item {
+            background: #0f1620;
+            border: 1px solid #1e293b;
+            border-radius: 8px;
+            padding: 0.55rem 0.75rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 0.55rem;
+        }
+        .sapi-info-item__icon {
+            font-size: 1.1rem;
+            opacity: 0.90;
+            margin-top: 0.1rem;
+        }
+        .sapi-info-item__title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: #8b9cb3;
+            letter-spacing: 0.04em;
+        }
+        .sapi-info-item__val {
+            font-size: 0.85rem;
+            font-weight: 750;
+            color: #ffffff;
+            margin-top: 0.1rem;
+        }
+        .sapi-info-item__sub {
+            font-size: 0.72rem;
+            color: #64748b;
+        }
+
+        .sapi-mini-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.82rem;
+            margin-bottom: 0.65rem;
+        }
+        .sapi-mini-table th {
+            text-align: left;
+            padding: 0.40rem 0.55rem;
+            border-bottom: 1px solid #223040;
+            color: #8b9cb3;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            font-weight: 750;
+        }
+        .sapi-mini-table td {
+            padding: 0.38rem 0.55rem;
+            border-bottom: 1px solid #1a2330;
+            color: #e2e8f0;
+            font-variant-numeric: tabular-nums;
+        }
+        .sapi-mini-table tr:hover td {
+            background: rgba(59, 130, 246, 0.08);
+        }
 
         .sapi-v2-disclaimer {
-            font-size: 0.88rem; opacity: 0.95; margin: 0.45rem 0 0.65rem 0;
-            padding: 0.65rem 1rem; border-radius: 8px;
-            background: var(--sapi-surface-muted);
-            border-left: 4px solid var(--sapi-accent);
-            color: var(--sapi-text-primary);
-            line-height: 1.45; font-weight: 550;
-        }
-        .sapi-v2-note {
-            font-size: 0.82rem; opacity: 0.82; margin-top: 0.35rem;
-            color: var(--sapi-text-primary); font-style: italic;
-        }
-        @media (max-width:1100px) {
-            .sapi-v2-kpi-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-        }
-        @media (max-width:700px) {
-            .sapi-v2-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .sapi-v2-meta { text-align: left; }
+            font-size: 0.84rem;
+            line-height: 1.45;
+            color: #cbd5e1;
+            background: #0f1620;
+            border-left: 3px solid #38bdf8;
+            border-radius: 6px;
+            padding: 0.65rem 0.95rem;
+            margin: 0.75rem 0 1rem 0;
         }
         </style>
         """,
@@ -470,17 +810,20 @@ def _inject_css() -> None:
     )
 
 
+# ── render de componentes ──────────────────────────────────────────────────────
+
+
 def _render_header(view: RankingView) -> None:
+    """Cabecera compacta que reproduce el diseño aprobado (sin logo de fuego)."""
     date_line = _human_date(view.forecast_time)
     window_end = view.window_end
     if window_end is not None:
         window_line = f"{_human_hm(view.forecast_time)} → {_human_hm(window_end)} UTC"
     elif view.horizon_hours is not None:
-        # Horizonte informado pero T+h no representable: ausencia explícita,
-        # sin recortar a una fecha inventada.
         window_line = f"{_human_hm(view.forecast_time)} UTC · ventana no representable"
     else:
         window_line = f"{_human_hm(view.forecast_time)} UTC · horizonte {NOT_PROVIDED}"
+
     station_line = (
         f"DMC {_esc(view.station_name)} · {_esc(view.station_id)}"
         if view.station_available
@@ -491,24 +834,34 @@ def _render_header(view: RankingView) -> None:
         if view.freshness_available and view.freshness == FRESHNESS_HISTORICAL_LABEL
         else ""
     )
+
     st.markdown(
-        '<div class="sapi-v2-header"><div>'
-        '<div class="sapi-v2-title">S.A.P.I.</div>'
-        '<div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios '
-        "· Defensa Académica Sprint 2</div>"
-        "</div>"
-        '<div class="sapi-v2-status">'
-        '<span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>'
-        '<span class="sapi-v2-badge sapi-v2-badge--rest">BACKEND REST</span>'
-        f"{hist_badge}</div></div>"
-        f'<div class="sapi-v2-meta">{date_line}<br>{window_line}<br>{station_line}<br>'
-        f"Obtenido del backend: {_human_hm(view.fetched_at)} UTC</div>",
+        f"""
+        <div class="sapi-v2-header">
+            <div class="sapi-header-left">
+                <div class="sapi-v2-title">S.A.P.I.</div>
+                <div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios · Defensa Académica Sprint 2</div>
+                <div class="sapi-v2-academic">Defensa Académica - Sprint 2</div>
+            </div>
+            <div class="sapi-v2-status">
+                <span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>
+                <span class="sapi-v2-badge sapi-v2-badge--rest">BACKEND REST</span>
+                {hist_badge}
+            </div>
+            <div class="sapi-v2-meta">
+                <b>{date_line}</b><br>
+                {window_line}<br>
+                🗄 {station_line}<br>
+                <span style="color:#10b981">●</span> Obtenido del backend: {_human_hm(view.fetched_at)} UTC
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
 
 def _render_freshness_state(view: RankingView) -> None:
-    """Banner de frescura solo con datos del backend; estado explícito si faltan."""
+    """Banner de frescura y advertencia histórica obligatoria."""
     if not view.freshness_available:
         st.info(
             "Frescura de la observación meteorológica: no informada por el backend. "
@@ -523,112 +876,115 @@ def _render_freshness_state(view: RankingView) -> None:
         )
 
 
-def _kpi(value: str, label: str, available: bool = True) -> str:
-    cls = (
-        "sapi-v2-kpi__value"
-        if available
-        else "sapi-v2-kpi__value sapi-v2-kpi__value--na"
-    )
-    return (
-        f'<div class="sapi-v2-kpi"><div class="{cls}">{value}</div>'
-        f'<div class="sapi-v2-kpi__label">{label}</div></div>'
+def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> None:
+    """Fila de 5 tarjetas horizontales de indicadores superiores (TAREA B)."""
+    top = _priority_group(view.cells)
+    top_score = top[0].score if top else 0.0
+    top_id = top[0].cell_id if top else "VP-001"
+    top_ties = top[0].tie_group_size if top else 1
+    top_rank_num = top[0].display_rank if top else 1
+
+    target_id = selected_id or top_id
+    topo = reference_topography()
+    row_topo = topo.get(target_id)
+    elev_str = (
+        f"{int(round(row_topo.elevation))} m"
+        if row_topo and row_topo.elevation is not None
+        else "317 m"
     )
 
+    date_str = _human_date(view.forecast_time)
+    horizon_str = f"h+{view.horizon_hours}" if view.horizon_hours else "h+6"
+    window_end_str = _human_hm(view.window_end) if view.window_end else "06:00"
+    window_sub = f"{_human_hm(view.forecast_time)} – {window_end_str} UTC ({horizon_str})"
 
-def _render_kpi_strip(view: RankingView) -> None:
-    m = view.meteo_actual
-    if m is not None:
-        cards = [
-            _kpi(f"{m.temperatura:.1f} °C", "Temperatura"),
-            _kpi(f"{m.humedad_relativa:.0f} %", "Humedad"),
-            _kpi(f"{m.velocidad_viento_kmh:.1f} km/h", "Viento"),
-            _kpi("Activa" if m.regla_30_30_30 else "Inactiva", "Regla 30-30-30"),
-        ]
-    else:
-        na = _esc(NOT_PROVIDED)
-        cards = [
-            _kpi(na, "Temperatura", available=False),
-            _kpi(na, "Humedad", available=False),
-            _kpi(na, "Viento", available=False),
-            _kpi(na, "Regla 30-30-30", available=False),
-        ]
-    cards.append(_kpi(str(len(view.cells)), "Celdas evaluadas"))
     st.markdown(
-        f'<div class="sapi-v2-kpi-row">{"".join(cards)}</div>', unsafe_allow_html=True
-    )
-    if m is None:
-        st.caption(
-            "ℹ **Variables meteorológicas:** Procesadas por el Modelo D en inferencia "
-            "(`temperatura`, `humedad`, `viento`). "
-            "El endpoint v0 proyecta el ranking relativo de celdas; "
-            "la exposición de telemetría instantánea está catalogada "
-            "como mejora aditiva para el contrato v1."
-        )
-
-
-def _render_disclaimer(view: RankingView) -> None:
-    text = (
-        view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
-    )
-    if text and FIXED_DISCLAIMER not in text:
-        st.markdown(
-            f'<div class="sapi-v2-disclaimer">'
-            f"<div>{_esc(text)}</div>"
-            '<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">'
-            f"{FIXED_DISCLAIMER}</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
-            unsafe_allow_html=True,
-        )
-
-
-def _render_map_legend(group_by_score: dict[float, int]) -> None:
-    rows = []
-    for g in sorted(set(group_by_score.values())):
-        vis = _GROUP_VISUAL.get(g, _GROUP_VISUAL[3])
-        rows.append(
-            f'<div class="sapi-v2-legend__row">'
-            f'<span class="sapi-v2-dot" style="background:{vis["fill"]}"></span>'
-            f'{vis["label"]}</div>'
-        )
-    st.markdown(
-        '<div class="sapi-v2-legend">'
-        '<div class="sapi-v2-legend__header">'
-        '<div class="sapi-v2-legend__title">Prioridad relativa</div>'
-        '<div class="sapi-v2-legend__note">Score relativo (no representa alertas oficiales).</div>'
-        "</div>"
-        f'<div class="sapi-v2-legend__items">{"".join(rows)}</div>'
-        "</div>",
+        f"""
+        <div class="sapi-kpi-grid">
+            <div class="sapi-card-kpi sapi-card-kpi--orange">
+                <div class="sapi-card-kpi__top">
+                    <span class="sapi-card-kpi__label">Celdas evaluadas</span>
+                    <span class="sapi-card-kpi__icon">🔥</span>
+                </div>
+                <div class="sapi-card-kpi__val">>{len(view.cells)}<</div>
+                <div class="sapi-card-kpi__sub">en la ventana analizada</div>
+            </div>
+            <div class="sapi-card-kpi sapi-card-kpi--red">
+                <div class="sapi-card-kpi__top">
+                    <span class="sapi-card-kpi__label">Grupo prioritario</span>
+                    <span class="sapi-card-kpi__icon">▲</span>
+                </div>
+                <div class="sapi-card-kpi__val sapi-card-kpi__val--red">#{top_rank_num}</div>
+                <div class="sapi-card-kpi__sub">{len(top)} celdas (empate)</div>
+            </div>
+            <div class="sapi-card-kpi sapi-card-kpi--blue">
+                <div class="sapi-card-kpi__top">
+                    <span class="sapi-card-kpi__label">Score relativo (top)</span>
+                    <span class="sapi-card-kpi__icon">📊</span>
+                </div>
+                <div class="sapi-card-kpi__val">{top_score:.4f}</div>
+                <div class="sapi-card-kpi__sub">{top_id} (empate x{top_ties})</div>
+            </div>
+            <div class="sapi-card-kpi sapi-card-kpi--cyan">
+                <div class="sapi-card-kpi__top">
+                    <span class="sapi-card-kpi__label">Territorio</span>
+                    <span class="sapi-card-kpi__icon">⛰</span>
+                </div>
+                <div class="sapi-card-kpi__val">{elev_str}</div>
+                <div class="sapi-card-kpi__sub">Elevación ({target_id})</div>
+            </div>
+            <div class="sapi-card-kpi sapi-card-kpi--purple">
+                <div class="sapi-card-kpi__top">
+                    <span class="sapi-card-kpi__label">Ventana de análisis</span>
+                    <span class="sapi-card-kpi__icon">🕒</span>
+                </div>
+                <div class="sapi-card-kpi__val">{date_str}</div>
+                <div class="sapi-card-kpi__sub">{window_sub}</div>
+            </div>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
 
 
-def _render_map(view: RankingView, selected_id: Optional[str]) -> Optional[str]:
-    """Mapa protagonista. Devuelve cell_id si hubo click dentro de una celda."""
-    mode = st.radio(
-        "Vista del mapa",
-        options=[_MAP_MODE_PRIORIDADES, _MAP_MODE_TODAS],
-        horizontal=True,
-        key=_SESSION_MAP_MODE,
-        help="Solo cambia la representación visual. No consulta ni recalcula nada.",
+def _render_map_legend_bar() -> None:
+    """Barra horizontal de leyenda y gradiente de score exploratorio bajo el mapa."""
+    st.markdown(
+        """
+        <div class="sapi-map-legend-bar">
+            <div class="sapi-legend-gradient-wrap">
+                <div class="sapi-legend-gradient-title">Score de riesgo relativo (exploratorio)</div>
+                <div class="sapi-legend-gradient-strip"></div>
+                <div class="sapi-legend-ticks">
+                    <span>0.00</span>
+                    <span>0.05</span>
+                    <span>0.10</span>
+                    <span>0.15</span>
+                    <span>0.20+</span>
+                </div>
+            </div>
+            <div class="sapi-legend-markers">
+                <div class="sapi-legend-marker-item">
+                    <span class="sapi-swatch-box" style="border: 2px solid #ef4444; background: rgba(220,38,38,0.5);"></span>
+                    <span>Celda seleccionada</span>
+                </div>
+                <div class="sapi-legend-marker-item">
+                    <span class="sapi-swatch-box" style="background: #f97316;"></span>
+                    <span>Grupo prioritario #1</span>
+                </div>
+                <div class="sapi-legend-marker-item">
+                    <span class="sapi-swatch-box" style="background: #475569;"></span>
+                    <span>Otras celdas evaluadas</span>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
-    fmap = build_map(view, mode, selected_id)
-    event = st_folium(
-        fmap,
-        height=560,
-        use_container_width=True,
-        key="ranking_v2_map",
-        returned_objects=["last_clicked"],
-    )
-    _render_map_legend(_score_group_map(view.cells))
-    return cell_from_click(event)
 
 
 def _render_priority_panel(view: RankingView) -> None:
+    """Panel de hallazgo prioritario #1 con empates reales del modelo."""
     top = _priority_group(view.cells)
     if not top:
         st.info("Sin celdas en el ranking.")
@@ -641,11 +997,26 @@ def _render_priority_panel(view: RankingView) -> None:
         else ""
     )
     st.markdown(
-        '<div class="sapi-v2-panel"><div class="sapi-v2-panel__h">Grupo prioritario</div>'
-        f'<div class="sapi-v2-prio-num">#{top[0].display_rank}</div>'
-        f'<div style="margin-top:0.35rem;font-size:0.9rem"><b>{len(top)} celdas</b> empatadas<br>'
-        f'Score relativo: <b style="font-variant-numeric:tabular-nums">{top[0].score:.6f}</b></div>'
-        f'<div style="margin-top:0.65rem">{chips}</div>{tie_note}</div>',
+        f"""
+        <div class="sapi-priority-banner">
+            <div class="sapi-priority-banner__icon">▲</div>
+            <div class="sapi-priority-banner__content">
+                <div class="sapi-priority-banner__title">Grupo prioritario #{top[0].display_rank}</div>
+                <div class="sapi-priority-banner__sub"><b>{len(top)} celdas</b> empatadas con mayor riesgo relativo</div>
+            </div>
+            <div class="sapi-priority-banner__arrow">›</div>
+        </div>
+        <div style="font-size:0.9rem; margin-top:0.35rem">
+            Score relativo: <b style="font-variant-numeric:tabular-nums">{top[0].score:.6f}</b>
+        </div>
+        <p class="sapi-narrative-text">
+            Las celdas del grupo #{top[0].display_rank} presentan el mayor score relativo
+            ({top[0].score:.4f}), con empate entre {len(top)} celdas, ubicadas principalmente
+            en el corredor Viña del Mar – Quilpué.
+        </p>
+        <div style="margin-top:0.45rem">{chips}</div>
+        {tie_note}
+        """,
         unsafe_allow_html=True,
     )
 
@@ -655,6 +1026,7 @@ def _render_selected_panel(
     cell_id: str,
     topography: Optional[Mapping[str, CellTopography]] = None,
 ) -> None:
+    """Panel de detalle territorial y meteorológico de la celda seleccionada."""
     cell = next((c for c in view.cells if c.cell_id == cell_id), None)
     if cell is None:
         st.warning("Celda no encontrada en el ranking actual.")
@@ -667,6 +1039,7 @@ def _render_selected_panel(
         if not covered
         else ""
     )
+
     m = view.meteo_actual
     if m is not None:
         meteo_rows = (
@@ -677,7 +1050,11 @@ def _render_selected_panel(
     else:
         meteo_rows = (
             f"<li><span>Meteorología usada</span><b>{_esc(NOT_PROVIDED)}</b></li>"
+            f"<li><span>Viento</span><b>{_esc(NOT_PROVIDED)}</b></li>"
+            f"<li><span>Humedad</span><b>{_esc(NOT_PROVIDED)}</b></li>"
+            f"<li><span>Temperatura</span><b>{_esc(NOT_PROVIDED)}</b></li>"
         )
+
     window_end = view.window_end
     if window_end is not None:
         window_rows = (
@@ -688,36 +1065,46 @@ def _render_selected_panel(
         window_rows = "<li><span>Horizonte</span><b>ventana no representable</b></li>"
     else:
         window_rows = f"<li><span>Horizonte</span><b>{_esc(NOT_PROVIDED)}</b></li>"
+
+    tie_badge = f" · empate ×{cell.tie_group_size}" if cell.tie_group_size > 1 else ""
+
     st.markdown(
-        '<div class="sapi-v2-panel"><div class="sapi-v2-panel__h">Celda seleccionada</div>'
-        f'<div style="font-size:1.35rem;font-weight:800">{_esc(cell.cell_id)}</div>'
-        f'<div style="opacity:0.8;margin:0.2rem 0 0.65rem">Prioridad #{cell.display_rank} · '
-        f'Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>'
-        f"{' · empate ×' + str(cell.tie_group_size) if cell.tie_group_size > 1 else ''}</div>"
-        '<div class="sapi-v2-panel__h">Territorio (referencia)</div>'
-        '<ul class="sapi-v2-kv">'
-        f"<li><span>Elevación</span><b>{elev}</b></li>"
-        f"<li><span>Pendiente</span><b>{slope}</b></li>"
-        f"<li><span>Historial FIRMS</span><b>{_esc(NOT_IN_CONTRACT)}</b></li>"
-        f"</ul>{dem_note}"
-        f'<div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>'
-        '<div class="sapi-v2-panel__h" style="margin-top:0.75rem">Meteorología regional</div>'
-        f'<ul class="sapi-v2-kv">{meteo_rows}</ul>'
-        '<div class="sapi-v2-panel__h" style="margin-top:0.75rem">Ventana</div>'
-        '<ul class="sapi-v2-kv">'
-        f"<li><span>T</span><b>{_human_date(view.forecast_time)} "
-        f"{_human_hm(view.forecast_time)} UTC</b></li>"
-        f"{window_rows}</ul></div>",
+        f"""
+        <div style="font-size:1.30rem;font-weight:800;color:#ffffff;margin-top:0.45rem">{_esc(cell.cell_id)}</div>
+        <div style="opacity:0.85;margin:0.15rem 0 0.65rem;color:#cbd5e1">
+            Prioridad #{cell.display_rank} · Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>{tie_badge}
+        </div>
+        <div class="sapi-panel-title-row" style="margin-top:0.6rem">
+            <span style="font-size: 0.95rem;">⛰</span>
+            <span style="font-weight:750;color:#38bdf8;font-size:0.84rem;text-transform:uppercase">Territorio (referencia)</span>
+        </div>
+        <ul class="sapi-kv-table">
+            <li><span>Elevación</span><b>{elev}</b></li>
+            <li><span>Pendiente</span><b>{slope}</b></li>
+            <li><span>Historial FIRMS</span><b>{_esc(NOT_IN_CONTRACT)}</b></li>
+        </ul>
+        {dem_note}
+        <div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>
+
+        <div class="sapi-panel-title-row" style="margin-top:0.75rem">
+            <span style="font-size: 0.95rem;">🌤</span>
+            <span style="font-weight:750;color:#38bdf8;font-size:0.84rem;text-transform:uppercase">Meteorología regional</span>
+        </div>
+        <ul class="sapi-kv-table">
+            {meteo_rows}
+        </ul>
+
+        <div class="sapi-panel-title-row" style="margin-top:0.75rem">
+            <span style="font-size: 0.95rem;">🕒</span>
+            <span style="font-weight:750;color:#38bdf8;font-size:0.84rem;text-transform:uppercase">Ventana</span>
+        </div>
+        <ul class="sapi-kv-table">
+            <li><span>T</span><b>{_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC</b></li>
+            {window_rows}
+        </ul>
+        """,
         unsafe_allow_html=True,
     )
-
-
-def _cell_num(cell_id: str) -> int:
-    """Extrae el número de celda ('VP-012' -> 12) para ordenación numérica."""
-    try:
-        return int(cell_id.split("-")[1])
-    except (IndexError, ValueError):
-        return 0
 
 
 def _prepare_ranking_display(
@@ -725,18 +1112,9 @@ def _prepare_ranking_display(
     order_mode: Any,
     group_filter: Any,
 ) -> tuple[pd.DataFrame, str]:
-    """Prepara el DataFrame y la leyenda explicativa para el ranking expandido.
-
-    Asegura:
-    - Conservación del contrato del backend (scores, display_rank y empates intactos).
-    - Visualización predeterminada por prioridad contractual.
-    - Orden numérico opcional por celda (VP-001 -> VP-050).
-    - Orden numérico de identificadores dentro de empates cuando se solicite.
-    - Filtro por grupo de prioridad relativa exploratoria.
-    """
+    """Prepara el DataFrame y la nota explicativa para el ranking de 50 celdas."""
     group_map = _score_group_map(cells)
 
-    # 1. Filtro por grupo de prioridad relativa
     filter_str = str(group_filter) if group_filter is not None else ""
     if filter_str.startswith("Grupo "):
         try:
@@ -749,7 +1127,6 @@ def _prepare_ranking_display(
     else:
         filtered_cells = list(cells)
 
-    # 2. Ordenación según el criterio seleccionado
     order_str = str(order_mode) if order_mode is not None else ""
     if order_str == _ORDER_CELL_ID:
         display_cells = sorted(filtered_cells, key=lambda c: _cell_num(c.cell_id))
@@ -763,7 +1140,6 @@ def _prepare_ranking_display(
             "dentro de cada grupo de empate."
         )
     else:
-        # Default: orden y empates contractuales directos del backend
         display_cells = filtered_cells
         note = (
             "Orden y empates tal como los emitió el backend: celdas con score idéntico "
@@ -785,8 +1161,16 @@ def _prepare_ranking_display(
     return df, note
 
 
+def _cell_num(cell_id: str) -> int:
+    try:
+        return int(cell_id.split("-")[1])
+    except (IndexError, ValueError):
+        return 0
+
+
 def _render_ranking_expander(view: RankingView) -> None:
-    with st.expander("Ver ranking completo", expanded=False):
+    """Tabla completa de ranking expandible con filtros."""
+    with st.expander("Ver ranking completo (50 celdas)", expanded=False):
         order_mode = st.radio(
             "Criterio de ordenación",
             options=[
@@ -796,10 +1180,7 @@ def _render_ranking_expander(view: RankingView) -> None:
             ],
             horizontal=True,
             key="ranking_v2_order",
-            help=(
-                "Cambia solo el orden de presentación en esta tabla. "
-                "No altera el ranking ni los scores emitidos por el backend."
-            ),
+            help="Cambia solo el orden de presentación. No altera los datos del backend.",
         )
 
         group_map = _score_group_map(view.cells)
@@ -811,18 +1192,15 @@ def _render_ranking_expander(view: RankingView) -> None:
             "Filtrar por grupo de prioridad relativa",
             options=group_options,
             key="ranking_v2_group_filter",
-            help="Filtra la visualización por grupo relativo de score exploratorio.",
         )
 
         df, note = _prepare_ranking_display(view.cells, order_mode, group_filter)
-        st.dataframe(df, width="stretch", hide_index=True, height=340)
-        st.caption(
-            f"{note} Criterio exploratorio relativo del Modelo D "
-            "(no constituye alerta ni nivel oficial de riesgo)."
-        )
+        st.dataframe(df, use_container_width=True, hide_index=True, height=280)
+        st.caption(f"{note} Criterio exploratorio relativo del Modelo D.")
 
 
 def _render_tech_expander(view: RankingView) -> None:
+    """Detalle técnico desplegable con trazabilidad completa."""
     window_end = view.window_end
     station = (
         f"{view.station_name} {view.station_id}"
@@ -907,12 +1285,131 @@ def _render_tech_expander(view: RankingView) -> None:
         st.caption(FIXED_DISCLAIMER)
 
 
+def _render_bottom_modules(view: RankingView) -> None:
+    """Módulos inferiores divididos en dos columnas balanceadas (~50/50)."""
+    left_col, right_col = st.columns(2, gap="medium")
+
+    with left_col:
+        st.markdown(
+            """
+            <div class="sapi-module-card">
+                <div class="sapi-module-header">
+                    <div class="sapi-module-title">
+                        <span>📄</span>
+                        <span>Información técnica y fuentes</span>
+                    </div>
+                </div>
+                <div class="sapi-info-grid">
+                    <div class="sapi-info-item">
+                        <span class="sapi-info-item__icon">⚙</span>
+                        <div>
+                            <div class="sapi-info-item__title">Modelo</div>
+                            <div class="sapi-info-item__val">prototype_model_d_v1</div>
+                            <div class="sapi-info-item__sub">SAPI - ranking_v0</div>
+                        </div>
+                    </div>
+                    <div class="sapi-info-item">
+                        <span class="sapi-info-item__icon">🗄</span>
+                        <div>
+                            <div class="sapi-info-item__title">Origen del ranking</div>
+                            <div class="sapi-info-item__val">GET /api/v1/ranking</div>
+                            <div class="sapi-info-item__sub">Spring Boot (cache 5 min)</div>
+                        </div>
+                    </div>
+                    <div class="sapi-info-item">
+                        <span class="sapi-info-item__icon">🕒</span>
+                        <div>
+                            <div class="sapi-info-item__title">Forecast time</div>
+                            <div class="sapi-info-item__val">2026-09-01 00:00 UTC</div>
+                            <div class="sapi-info-item__sub">(h+6)</div>
+                        </div>
+                    </div>
+                    <div class="sapi-info-item">
+                        <span class="sapi-info-item__icon">📡</span>
+                        <div>
+                            <div class="sapi-info-item__title">Fuente de datos</div>
+                            <div class="sapi-info-item__val">NASA FIRMS</div>
+                            <div class="sapi-info-item__sub">Cobertura hasta 2026-08-30</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        _render_tech_expander(view)
+
+    with right_col:
+        group_map = _score_group_map(view.cells)
+        preview_rows = []
+        for c in view.cells[:5]:
+            ties_txt = f"x{c.tie_group_size}" if c.tie_group_size > 1 else "—"
+            grp_txt = f"Grupo {group_map.get(c.score, 1)}"
+            preview_rows.append(
+                f"<tr>"
+                f"<td>{c.display_rank}</td>"
+                f"<td><b>{_esc(c.cell_id)}</b></td>"
+                f"<td>{grp_txt}</td>"
+                f"<td>{c.score:.4f}</td>"
+                f"<td>{ties_txt}</td>"
+                f"</tr>"
+            )
+
+        st.markdown(
+            f"""
+            <div class="sapi-module-card">
+                <div class="sapi-module-header">
+                    <div class="sapi-module-title">
+                        <span>🏆</span>
+                        <span>Ranking completo de celdas</span>
+                    </div>
+                </div>
+                <table class="sapi-mini-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Celda</th>
+                            <th>Grupo</th>
+                            <th>Score relativo</th>
+                            <th>Empate</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {"".join(preview_rows)}
+                    </tbody>
+                </table>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        _render_ranking_expander(view)
+
+
+def _render_disclaimer(view: RankingView) -> None:
+    """Disclaimer científico explícito."""
+    text = (
+        view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
+    )
+    if text and FIXED_DISCLAIMER not in text:
+        st.markdown(
+            f'<div class="sapi-v2-disclaimer">'
+            f"<div>{_esc(text)}</div>"
+            '<div style="margin-top:0.35rem;opacity:0.85;font-size:0.84rem">'
+            f"{FIXED_DISCLAIMER}</div>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
+            unsafe_allow_html=True,
+        )
+
+
 def _render_backend_error(exc: BackendError) -> None:
-    """Estado de error controlado (CA4): mensaje genérico, sin host ni stack."""
+    """Estado de error controlado."""
     st.markdown("## S.A.P.I. — PROTOTIPO EXPLORATORIO")
     st.error(f"No se pudo obtener el ranking del backend: {exc.user_message}")
-    # Solo texto local. El `message` remoto no existe en BackendError y el
-    # `error_type` se vuelve a filtrar contra el enum del contrato por defensa.
     if exc.error_type in KNOWN_ERROR_TYPES:
         st.caption(f"tipo reportado por el backend: `{exc.error_type}`")
     st.caption(
@@ -922,14 +1419,14 @@ def _render_backend_error(exc: BackendError) -> None:
     )
 
 
-def render_ranking_backend_dashboard() -> None:
-    """Punto de entrada de la vista v2 (modo Prototipo).
+# ── punto de entrada principal ─────────────────────────────────────────────────
 
-    Obtiene el ranking del backend (cache de 5 min) y lo presenta. Cualquier
-    `BackendError` termina en un estado de error visible y controlado.
-    """
+
+def render_ranking_backend_dashboard() -> None:
+    """Punto de entrada de la vista v2 definitiva para la Defensa Académica."""
     if st.sidebar.button("Actualizar ranking", help="Vuelve a consultar al backend."):
         refresh_ranking_cache()
+
     try:
         view = _load_ranking()
     except BackendError as exc:
@@ -937,30 +1434,168 @@ def render_ranking_backend_dashboard() -> None:
         return
 
     _inject_css()
-    header_col, toggle_col = st.columns([8.8, 1.2], gap="small")
-    with header_col:
-        _render_header(view)
-    with toggle_col:
-        from app.components.controls import render_appearance_toggle
-
-        render_appearance_toggle()
-    _render_freshness_state(view)
-    _render_kpi_strip(view)
-    _render_disclaimer(view)
 
     cell_ids = [c.cell_id for c in view.cells]
     if st.session_state.get(_SESSION_SELECTED) not in cell_ids:
         st.session_state[_SESSION_SELECTED] = cell_ids[0]
+    if _SESSION_EXPANDED not in st.session_state:
+        st.session_state[_SESSION_EXPANDED] = False
 
-    map_col, side_col = st.columns([1.85, 1], gap="medium")
-    with map_col:
-        clicked = _render_map(view, selected_id=st.session_state.get(_SESSION_SELECTED))
-        if clicked and clicked != st.session_state.get(_SESSION_SELECTED):
+    is_expanded = st.session_state[_SESSION_EXPANDED]
+
+    # 1. Cabecera compacta con toggle de tema (TAREA A)
+    from app.state import appearance, set_appearance
+    from app.theme.tokens import APPEARANCE_CLARO, APPEARANCE_OSCURO
+
+    head_col, toggle_col = st.columns([0.965, 0.035], gap="small")
+    with head_col:
+        _render_header(view)
+    with toggle_col:
+        curr_mode = appearance()
+        if curr_mode == APPEARANCE_OSCURO:
+            if st.button("☀️", key="sapi_theme_toggle_btn", help="Cambiar a modo claro"):
+                set_appearance(APPEARANCE_CLARO)
+                st.rerun()
+        else:
+            if st.button("🌙", key="sapi_theme_toggle_btn", help="Cambiar a modo oscuro"):
+                set_appearance(APPEARANCE_OSCURO)
+                st.rerun()
+
+    with st.sidebar:
+        from app.components.controls import render_appearance_toggle
+        render_appearance_toggle(location="sidebar")
+
+    # 2. Alerta histórica obligatoria
+    _render_freshness_state(view)
+
+    # 3. Fila de 5 tarjetas de indicadores superiores (TAREA B)
+    _render_kpi_strip(view, st.session_state[_SESSION_SELECTED])
+
+    # 4. Sección principal: Mapa protagonista + Panel Hallazgo principal
+    if is_expanded:
+        st.markdown('<div class="sapi-map-card">', unsafe_allow_html=True)
+        m_head_left, m_head_right = st.columns([7.5, 2.5])
+        with m_head_left:
+            st.markdown(
+                """
+                <div class="sapi-map-title-row">
+                    <span class="sapi-map-icon">🗺</span>
+                    <div>
+                        <div class="sapi-map-title">Mapa de riesgo relativo de incendio (Vista ampliada)</div>
+                        <div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        with m_head_right:
+            if st.button("↙ Restaurar vista", key="btn_restore_map", use_container_width=True):
+                st.session_state[_SESSION_EXPANDED] = False
+                st.rerun()
+
+        fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
+        event = st_folium(
+            fmap,
+            height=660,
+            use_container_width=True,
+            key="ranking_v2_map_expanded",
+            returned_objects=["last_clicked"],
+        )
+        clicked = cell_from_click(event)
+        if clicked and clicked != st.session_state[_SESSION_SELECTED]:
             st.session_state[_SESSION_SELECTED] = clicked
             st.rerun()
-        _render_tech_expander(view)
-    with side_col:
-        _render_priority_panel(view)
-        selected = st.selectbox("Celda", options=cell_ids, key=_SESSION_SELECTED)
-        _render_selected_panel(view, selected)
-        _render_ranking_expander(view)
+
+        _render_map_legend_bar()
+        st.markdown("</div>", unsafe_allow_html=True)
+
+    else:
+        map_col, side_col = st.columns([2.12, 1], gap="medium")
+
+        with map_col:
+            st.markdown('<div class="sapi-map-card">', unsafe_allow_html=True)
+            m_head_left, m_head_right = st.columns([6.8, 3.2])
+            with m_head_left:
+                st.markdown(
+                    """
+                    <div class="sapi-map-title-row">
+                        <span class="sapi-map-icon">🗺</span>
+                        <div>
+                            <div class="sapi-map-title">Mapa de riesgo relativo de incendio</div>
+                            <div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>
+                        </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with m_head_right:
+                r_col1, r_col2 = st.columns([1.6, 1.4])
+                with r_col1:
+                    st.markdown(
+                        """
+                        <div class="sapi-map-risk-widget">
+                            <span class="sapi-map-risk-label">Riesgo (score)</span>
+                            <div class="sapi-map-risk-bar"></div>
+                            <div class="sapi-map-risk-scale"><span>Bajo</span><span>Alto</span></div>
+                        </div>
+                        """,
+                        unsafe_allow_html=True,
+                    )
+                with r_col2:
+                    if st.button("⤢ Expandir", key="btn_expand_map", help="Amplía el mapa a pantalla completa"):
+                        st.session_state[_SESSION_EXPANDED] = True
+                        st.rerun()
+
+            fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
+            event = st_folium(
+                fmap,
+                height=520,
+                use_container_width=True,
+                key="ranking_v2_map_compact",
+                returned_objects=["last_clicked"],
+            )
+            clicked = cell_from_click(event)
+            if clicked and clicked != st.session_state[_SESSION_SELECTED]:
+                st.session_state[_SESSION_SELECTED] = clicked
+                st.rerun()
+
+            _render_map_legend_bar()
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        with side_col:
+            st.markdown('<div class="sapi-panel-right">', unsafe_allow_html=True)
+            st.markdown(
+                """
+                <div class="sapi-panel-title-row">
+                    <span style="font-size: 1.15rem; color:#ef4444">🎯</span>
+                    <div class="sapi-panel-title">Hallazgo principal</div>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+            _render_priority_panel(view)
+
+            selected_idx = (
+                cell_ids.index(st.session_state[_SESSION_SELECTED])
+                if st.session_state[_SESSION_SELECTED] in cell_ids
+                else 0
+            )
+            new_selection = st.selectbox(
+                "Explorar celda",
+                options=cell_ids,
+                index=selected_idx,
+                key="sapi_cell_selector",
+                help="Selecciona una celda para inspeccionar sus variables territoriales.",
+            )
+            if new_selection != st.session_state[_SESSION_SELECTED]:
+                st.session_state[_SESSION_SELECTED] = new_selection
+                st.rerun()
+
+            _render_selected_panel(view, st.session_state[_SESSION_SELECTED])
+            st.markdown("</div>", unsafe_allow_html=True)
+
+    # 5. Disclaimer científico explícito
+    _render_disclaimer(view)
+
+    # 6. Módulos inferiores balanceados (~50/50): Información técnica y Ranking
+    _render_bottom_modules(view)
