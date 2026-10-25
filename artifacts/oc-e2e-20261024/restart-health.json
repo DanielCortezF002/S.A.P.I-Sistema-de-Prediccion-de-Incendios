@@ -1,0 +1,24 @@
+{
+  "captured_at": "2026-10-24T22:04:48.306075+00:00",
+  "isolated_ports": {
+    "ml": 58000,
+    "backend": 58080,
+    "web": 58501,
+    "db": 55432
+  },
+  "health": {
+    "ml": {
+      "status": 200,
+      "body": "{\"status\":\"ok\",\"model_version\":\"prototype_model_d_v1\"}"
+    },
+    "backend": {
+      "status": 200,
+      "body": "{\"status\":\"UP\"}"
+    },
+    "web": {
+      "status": 200,
+      "body": "ok"
+    }
+  },
+  "all_healthy": true
+}

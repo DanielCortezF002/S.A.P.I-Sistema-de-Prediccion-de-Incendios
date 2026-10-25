@@ -1,0 +1,10 @@
+{
+  "captured_at": "2026-10-24T21:39:18.117535+00:00",
+  "mode": "down",
+  "url": "http://127.0.0.1:58501",
+  "screenshot": "C:\\SAPI-OC-E2E-20261024\\artifacts\\oc-e2e-20261024\\screenshots\\streamlit-backend-down.png",
+  "screenshot_sha256": "afc34ba0ac67f5a0f5102d40254f778f8d078a19f09f39e29b542de6c9a02ae4",
+  "body_excerpt": "Modo de datos\n\nPrototipo (datos reales)\n\nDemo (escenario sembrado)\n\nActualizar ranking\n\nkeyboard_double_arrow_right\nS.A.P.I. — PROTOTIPO EXPLORATORIO\n\nNo se pudo obtener el ranking del backend: No se pudo conectar con el backend de ranking. Verifica que el servicio esté en ejecución.\n\nLa vista consume únicamente GET /api/v1/ranking del backend Spring Boot (SAPI_BACKEND_BASE_URL). No se ejecuta inferencia local ni se muestran datos cacheados como actuales.",
+  "has_traceback": false,
+  "has_backend_host": false
+}

@@ -60,6 +60,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 PROJECT_PREFIX = "sapi60-preflight"
 V2_SERVICES = ("db-v2", "ml-api", "backend")
+# Servicios que añade cada profile admitido en la ruta v2. `.env.example` activa
+# `presentation` (COMPOSE_PROFILES) para que `docker compose up` incluya
+# Streamlit; cualquier otro profile activo (legacy, ops) sigue siendo un FAIL.
+PROFILE_SERVICES = {"presentation": ("web-v2",)}
 CA1_PORTS = {"backend": 8080, "ml-api": 8000, "db-v2": 5432}
 # flyway_schema_history guarda la versión tal como va en el archivo (V001 -> "001").
 EXPECTED_MIGRATIONS = ["001", "002", "003", "004"]
@@ -136,6 +140,29 @@ def secret_values(env_file: Path = REPO_ROOT / ".env") -> list[str]:
         os.environ.get(name, "") for name in ("SAPI_DB_PASSWORD", "POSTGRES_PASSWORD")
     ]
     return sorted({value for value in candidates if len(value) >= 4})
+
+
+def active_profiles(env_file: Path = REPO_ROOT / ".env") -> list[str]:
+    """COMPOSE_PROFILES efectivo: el entorno tiene prioridad sobre `.env`, como en Compose."""
+    value = os.environ.get("COMPOSE_PROFILES")
+    if value is None:
+        try:
+            lines = env_file.read_text(encoding="utf-8", errors="replace").splitlines()
+        except OSError:
+            lines = []
+        for line in lines:
+            name, sep, raw = line.strip().partition("=")
+            if sep and name == "COMPOSE_PROFILES":
+                value = raw.strip().strip("'\"")
+    return [profile.strip() for profile in (value or "").split(",") if profile.strip()]
+
+
+def expected_services(profiles: list[str]) -> list[str]:
+    """V2_SERVICES más los servicios de los profiles admitidos que estén activos."""
+    extra = [
+        service for profile in profiles for service in PROFILE_SERVICES.get(profile, ())
+    ]
+    return sorted(set(V2_SERVICES) | set(extra))
 
 
 def _user() -> str:
@@ -381,13 +408,14 @@ class Preflight:
         command = "docker compose config --services"
         code, out, err = self.compose_run("config", "--services")
         services = sorted(out.split()) if code == 0 else [err.strip()[:300]]
+        expected = expected_services(active_profiles())
         self.check(
             "compose.config.default_services",
             "CA1",
             command,
-            sorted(V2_SERVICES),
+            expected,
             services,
-            services == sorted(V2_SERVICES),
+            services == expected,
         )
 
     def build(self) -> bool:
@@ -743,7 +771,8 @@ class Preflight:
             or "Started BackendApplication" in line
         ]
         self.write("backend_log_excerpt.txt", "\n".join(keep) + "\n")
-        migrated = any("Successfully applied 3 migrations" in line for line in keep)
+        applied = f"Successfully applied {len(EXPECTED_MIGRATIONS)} migrations"
+        migrated = any(applied in line for line in keep)
         events = [line for line in keep if "ml_predict" in line]
         ranked = any(
             "outcome=ok" in line and "ml_http_status=200" in line for line in events
@@ -752,8 +781,9 @@ class Preflight:
             "backend.logs",
             "CA6 (Flyway) + SAPI-57.CA5",
             "docker compose logs backend",
-            "Flyway aplicó 3 migraciones; ml_predict outcome=ok ml_http_status=200",
-            {"flyway_3_migrations": migrated, "ml_predict_events": len(events)},
+            f"Flyway aplicó {len(EXPECTED_MIGRATIONS)} migraciones; "
+            "ml_predict outcome=ok ml_http_status=200",
+            {"flyway_all_migrations": migrated, "ml_predict_events": len(events)},
             migrated and ranked,
         )
 

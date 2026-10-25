@@ -1,11 +1,24 @@
 # Trazabilidad HU → CA → Código → Prueba → Evidencia — Sprint 2 / Hito 2
 
-Candidato base: `f9654834cec0e026cd8fc84d5af7d81f75da25e2` (Directiva 34; el commit que incorpora esta versión del documento es necesariamente posterior y se reporta en el entregable ejecutivo de esa directiva, no puede autorreferenciarse). Cubre las 14 historias
+Candidato consolidado: `8010e4421cf91b80e6dc66d732ef6e98dfd1e4d8` (Base F7: `51ec3c06b67959d3daad6349c962a1be643906b4`) (Directiva 34; el commit que incorpora esta versión del documento es necesariamente posterior y se reporta en el entregable ejecutivo de esa directiva, no puede autorreferenciarse). Cubre las 14 historias
 comprometidas (58 SP). Para las 9 DONE se muestra el amarre código↔prueba
 representativo (no se reabrió investigación); para las 5 abiertas se detalla
 el estado exacto por CA.
 
-## Historias DONE (37 SP) — sin cambios de investigación respecto a Directiva 30/31
+## Conciliaci?n Oficial con Jira Administrativo (Sprint 2)
+
+El tablero Jira registra formalmente para el Sprint 2 un total de **14 historias y 58 Story Points comprometidos**, distribuidos administrativamente en:
+- **12 historias en estado "Finalizada" (52 SP):** SAPI-55 (5), SAPI-56 (5), SAPI-57 (5), SAPI-58 (5), SAPI-59 (5), SAPI-60 (3), SAPI-61 (3), SAPI-62 (3), SAPI-66 (5), SAPI-43 (5), SAPI-49 (3) y SAPI-63 (5).
+- **1 historia en estado "Por hacer" (3 SP):** SAPI-64 (Marco de testing E2E en backend).
+- **1 historia en estado "Pendiente a validaci?n" (3 SP):** SAPI-67 (ADR Cloud Provider bajo presupuesto incremental de $0 CLP).
+
+> [!NOTE]
+> **Distinci?n entre Finalizado Administrativo y Cumplimiento Operacional:**
+> El estado "Finalizada" en Jira refleja el cierre del ciclo de desarrollo de software asignado al sprint con pruebas reproducibles sobre datos sint?ticos/snapshots. No debe confundirse con la certificaci?n de pase a producci?n en terreno (Gate B), la cual mantiene dependencias operacionales de datos vivos (NASA FIRMS / DMC) condicionadas y formalmente documentadas con comentarios en Jira (`#10156` a `#10161`).
+
+---
+
+## Detalle T?cnico de Historias y Criterios — sin cambios de investigación respecto a Directiva 30/31
 
 | HU | SP | CA clave | Código | Prueba | Resultado |
 |---|---:|---|---|---|---|

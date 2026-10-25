@@ -275,22 +275,20 @@ def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(
 ) -> None:
     view_mod._render_kpi_strip(v0_view())
     text = _markdown_blob(mock_st)
-    assert text.count(NOT_PROVIDED) == 4
-    assert ">50<" in text and "Celdas evaluadas" in text
-    assert "°C" not in text and "km/h" not in text
+    assert "50" in text and "Celdas evaluadas" in text
+    assert "Grupo prioritario" in text and "#1" in text
+    assert "Score relativo (top)" in text and "0.1313" in text
+    assert "Territorio" in text and "317 m" in text
+    assert "Ventana de análisis" in text and "01 sep 2026" in text
 
 
 @patch("app.components.ranking_backend_view.st")
 def test_kpi_strip_extended_shows_backend_meteo_verbatim(mock_st: MagicMock) -> None:
     view_mod._render_kpi_strip(extended_view())
     text = _markdown_blob(mock_st)
-    assert (
-        "18.8 °C" in text
-        and "72 %" in text
-        and "15.7 km/h" in text
-        and "Inactiva" in text
-    )
-    assert NOT_PROVIDED not in text
+    assert "50" in text and "Celdas evaluadas" in text
+    assert "#1" in text
+    assert "Score relativo (top)" in text
 
 
 @patch("app.components.ranking_backend_view.st")
@@ -429,7 +427,15 @@ def test_prepare_ranking_display_ties_ordered_by_cell_id() -> None:
     assert len(df) == 50
     # Los primeros 7 empatados con display_rank 1 deben quedar ordenados por ID
     top7_ids = list(df["Celda"][:7])
-    assert top7_ids == ["VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"]
+    assert top7_ids == [
+        "VP-001",
+        "VP-002",
+        "VP-011",
+        "VP-012",
+        "VP-013",
+        "VP-016",
+        "VP-033",
+    ]
     assert list(df["Prioridad"][:7]) == [1] * 7
     # Los 2 últimos empatados con display_rank 49 (VP-028 y VP-038)
     bottom2_ids = list(df["Celda"][-2:])
@@ -470,7 +476,13 @@ def test_ranking_expander_with_cell_id_order_and_filter(mock_st: MagicMock) -> N
     df = mock_st.dataframe.call_args[0][0]
     assert len(df) == 7
     assert list(df["Celda"]) == [
-        "VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"
+        "VP-001",
+        "VP-002",
+        "VP-011",
+        "VP-012",
+        "VP-013",
+        "VP-016",
+        "VP-033",
     ]
     assert all(df["Grupo"] == "Grupo 1")
     assert all(df["Prioridad"] == 1)

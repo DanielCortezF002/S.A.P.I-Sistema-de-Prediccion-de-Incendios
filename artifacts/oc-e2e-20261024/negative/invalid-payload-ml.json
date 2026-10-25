@@ -1,0 +1,42 @@
+{
+  "captured_at": "2026-10-24T22:18:12.191573+00:00",
+  "cases": [
+    {
+      "payload": {
+        "forecast_time": "invalid-timestamp"
+      },
+      "http": 422,
+      "body": {
+        "status": "error",
+        "error_type": "invalid_request",
+        "message": "La petición no cumple el contrato: solo se admite forecast_time, como fecha-hora ISO 8601 con zona horaria."
+      }
+    },
+    {
+      "payload": {
+        "features": [
+          1,
+          2,
+          3
+        ]
+      },
+      "http": 422,
+      "body": {
+        "status": "error",
+        "error_type": "invalid_request",
+        "message": "La petición no cumple el contrato: solo se admite forecast_time, como fecha-hora ISO 8601 con zona horaria."
+      }
+    },
+    {
+      "payload": {
+        "forecast_time": 123
+      },
+      "http": 422,
+      "body": {
+        "status": "error",
+        "error_type": "invalid_request",
+        "message": "La petición no cumple el contrato: solo se admite forecast_time, como fecha-hora ISO 8601 con zona horaria."
+      }
+    }
+  ]
+}

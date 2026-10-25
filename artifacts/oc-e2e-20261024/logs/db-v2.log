@@ -1,0 +1,137 @@
+﻿creating subdirectories ... ok
+docker : initdb: warning: enabling "trust" authentication for local connections
+En línea: 9 Carácter: 10
++   $raw = docker logs --tail 120 $containers[$k] 2>&1 | Out-String
++          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (initdb: warning...cal connections:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+initdb: hint: You can change this by editing pg_hba.conf or using the option -A, or --auth-local and --auth-host, the 
+next time you run initdb.
+2026-10-24 21:29:25.456 UTC [1] LOG:  starting PostgreSQL 15.8 (Debian 15.8-1.pgdg110+1) on x86_64-pc-linux-gnu, 
+compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+selecting dynamic shared memory implementation ... posix
+selecting default max_connections ... 100
+selecting default shared_buffers ... 128MB
+selecting default time zone ... Etc/UTC
+creating configuration files ... ok
+2026-10-24 21:29:25.458 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+running bootstrap script ... ok
+performing post-bootstrap initialization ... ok
+syncing data to disk ... ok
+
+
+Success. You can now start the database server using:
+
+    pg_ctl -D /var/lib/postgresql/data -l logfile start
+
+waiting for server to start....2026-10-24 21:29:21.508 UTC [59] LOG:  starting PostgreSQL 15.8 (Debian 15.8-1.pgdg110+1) on x86_64-pc-linux-gnu, compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+2026-10-24 21:29:21.512 UTC [59] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-10-24 21:29:21.525 UTC [62] LOG:  database system was shut down at 2026-10-24 21:29:19 UTC
+2026-10-24 21:29:21.537 UTC [59] LOG:  database system is ready to accept connections
+ done
+server started
+CREATE DATABASE
+
+
+/usr/local/bin/docker-entrypoint.sh: sourcing /docker-entrypoint-initdb.d/10_postgis.sh
+CREATE DATABASE
+Loading PostGIS extensions into template_postgis
+CREATE EXTENSION
+CREATE EXTENSION
+You are now connected to database "template_postgis" as user "sapi".
+CREATE EXTENSION
+CREATE EXTENSION
+Loading PostGIS extensions into sapi_v2
+CREATE EXTENSION
+CREATE EXTENSION
+You are now connected to database "sapi_v2" as user "sapi".
+CREATE EXTENSION
+CREATE EXTENSION
+
+2026-10-24 21:29:25.023 UTC [59] LOG:  received fast shutdown request
+waiting for server to shut down....2026-10-24 21:29:25.025 UTC [59] LOG:  aborting any active transactions
+2026-10-24 21:29:25.028 UTC [59] LOG:  background worker "logical replication launcher" (PID 65) exited with exit code 1
+2026-10-24 21:29:25.029 UTC [60] LOG:  shutting down
+2026-10-24 21:29:25.031 UTC [60] LOG:  checkpoint starting: shutdown immediate
+2026-10-24 21:29:25.401 UTC [60] LOG:  checkpoint complete: wrote 4473 buffers (27.3%); 0 WAL file(s) added, 0 removed, 2 recycled; write=0.107 s, sync=0.251 s, total=0.373 s; sync files=963, longest=0.004 s, average=0.001 s; distance=34925 kB, estimate=34925 kB
+2026-10-24 21:29:25.420 UTC [59] LOG:  database system is shut down
+ done
+server stopped
+
+PostgreSQL init process complete; ready for start up.
+
+2026-10-24 21:29:25.458 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-10-24 21:29:25.465 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-10-24 21:29:25.472 UTC [90] LOG:  database system was shut down at 2026-10-24 21:29:25 UTC
+2026-10-24 21:29:25.480 UTC [1] LOG:  database system is ready to accept connections
+2026-10-24 21:34:25.463 UTC [88] LOG:  checkpoint starting: time
+2026-10-24 21:35:08.748 UTC [88] LOG:  checkpoint complete: wrote 433 buffers (2.6%); 0 WAL file(s) added, 0 removed, 
+1 recycled; write=43.213 s, sync=0.056 s, total=43.285 s; sync files=152, longest=0.003 s, average=0.001 s; 
+distance=9763 kB, estimate=9763 kB
+2026-10-24 21:37:51.397 UTC [1] LOG:  received fast shutdown request
+2026-10-24 21:37:51.410 UTC [1] LOG:  aborting any active transactions
+2026-10-24 21:37:51.410 UTC [119] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.410 UTC [116] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.410 UTC [118] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.410 UTC [114] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.410 UTC [113] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.410 UTC [110] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.410 UTC [111] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.412 UTC [112] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.414 UTC [115] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.415 UTC [117] FATAL:  terminating connection due to administrator command
+2026-10-24 21:37:51.424 UTC [1] LOG:  background worker "logical replication launcher" (PID 93) exited with exit code 1
+2026-10-24 21:37:51.429 UTC [88] LOG:  shutting down
+2026-10-24 21:37:51.433 UTC [88] LOG:  checkpoint starting: shutdown immediate
+2026-10-24 21:37:51.465 UTC [88] LOG:  checkpoint complete: wrote 2 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 
+recycled; write=0.005 s, sync=0.004 s, total=0.036 s; sync files=2, longest=0.003 s, average=0.002 s; distance=0 kB, 
+estimate=8787 kB
+2026-10-24 21:37:51.483 UTC [1] LOG:  database system is shut down
+2026-10-24 21:38:30.055 UTC [1] LOG:  starting PostgreSQL 15.8 (Debian 15.8-1.pgdg110+1) on x86_64-pc-linux-gnu, 
+compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+2026-10-24 21:38:30.055 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-10-24 21:38:30.056 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-10-24 21:38:30.065 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-10-24 21:38:30.074 UTC [32] LOG:  database system was shut down at 2026-10-24 21:37:51 UTC
+2026-10-24 21:38:30.086 UTC [1] LOG:  database system is ready to accept connections
+2026-10-24 21:41:22.127 UTC [1] LOG:  received fast shutdown request
+2026-10-24 21:41:22.130 UTC [1] LOG:  aborting any active transactions
+2026-10-24 21:41:22.130 UTC [168] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.131 UTC [164] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.131 UTC [166] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.131 UTC [169] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.131 UTC [170] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.131 UTC [163] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.132 UTC [165] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.134 UTC [162] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.134 UTC [171] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.137 UTC [167] FATAL:  terminating connection due to administrator command
+2026-10-24 21:41:22.147 UTC [1] LOG:  background worker "logical replication launcher" (PID 35) exited with exit code 1
+2026-10-24 21:41:22.153 UTC [30] LOG:  shutting down
+2026-10-24 21:41:22.168 UTC [30] LOG:  checkpoint starting: shutdown immediate
+2026-10-24 21:41:22.226 UTC [30] LOG:  checkpoint complete: wrote 4 buffers (0.0%); 0 WAL file(s) added, 0 removed, 0 
+recycled; write=0.015 s, sync=0.014 s, total=0.074 s; sync files=3, longest=0.008 s, average=0.005 s; distance=0 kB, 
+estimate=0 kB
+sapi-db-secret=<REDACTED> reutiliza la contrase├▒a guardada.
+2026-10-24 21:41:22.235 UTC [1] LOG:  database system is shut down
+
+PostgreSQL Database directory appears to contain a database; Skipping initialization
+
+sapi-db-secret=<REDACTED> reutiliza la contrase├▒a guardada.
+
+PostgreSQL Database directory appears to contain a database; Skipping initialization
+
+2026-10-24 21:42:00.237 UTC [1] LOG:  starting PostgreSQL 15.8 (Debian 15.8-1.pgdg110+1) on x86_64-pc-linux-gnu, 
+compiled by gcc (Debian 10.2.1-6) 10.2.1 20210110, 64-bit
+2026-10-24 21:42:00.237 UTC [1] LOG:  listening on IPv4 address "0.0.0.0", port 5432
+2026-10-24 21:42:00.238 UTC [1] LOG:  listening on IPv6 address "::", port 5432
+2026-10-24 21:42:00.249 UTC [1] LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
+2026-10-24 21:42:00.270 UTC [31] LOG:  database system was shut down at 2026-10-24 21:41:22 UTC
+2026-10-24 21:42:00.287 UTC [1] LOG:  database system is ready to accept connections
+2026-10-24 21:45:18.616 UTC [491] ERROR:  syntax error at or near "?" at character 171
+2026-10-24 21:45:18.616 UTC [491] STATEMENT:  SELECT count(*) AS total,
+	       count(*) FILTER (WHERE ST_SRID(geom)=4326 AND ST_IsValid(geom)) AS validas_4326,
+	       ST_AsText(ST_Envelope(ST_Union(geom))) AS extensi?n
+	FROM celdas_geom;
+

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S.A.P.I. - Presentaci?n Hito 2 (Sprint 2)</title>
+    <style>
+        :root {
+            --bg-primary: #0f172a;
+            --bg-card: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-fire: #ef4444;
+            --accent-orange: #f97316;
+            --accent-green: #10b981;
+            --accent-blue: #3b82f6;
+            --border: #334155;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background: var(--bg-primary); color: var(--text-main); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+        header { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid var(--border); }
+        .logo { font-size: 1.25rem; font-weight: 800; color: var(--accent-orange); display: flex; align-items: center; gap: 8px; }
+        .badge-sprint { background: rgba(239, 68, 68, 0.2); color: var(--accent-fire); padding: 4px 10px; border-radius: 9999px; font-size: 0.8rem; font-weight: 600; border: 1px solid rgba(239, 68, 68, 0.4); }
+        .timer-box { font-size: 0.9rem; font-weight: 600; color: var(--text-muted); background: var(--bg-card); padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border); }
+        
+        main { flex: 1; display: flex; justify-content: center; align-items: center; padding: 20px; position: relative; }
+        .slide { display: none; width: 100%; max-width: 1100px; height: 85vh; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border); padding: 40px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); overflow-y: auto; flex-direction: column; }
+        .slide.active { display: flex; }
+        
+        .slide-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .slide-title { font-size: 1.8rem; font-weight: 700; color: #fff; }
+        .slide-subtitle { font-size: 1rem; color: var(--text-muted); margin-top: 4px; }
+        .rubric-tag { background: rgba(59, 130, 246, 0.2); color: #60a5fa; padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; font-weight: 600; border: 1px solid rgba(59, 130, 246, 0.4); }
+        
+        .content-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; flex: 1; }
+        .card { background: rgba(15, 23, 42, 0.6); padding: 20px; border-radius: 8px; border: 1px solid var(--border); }
+        .card h3 { color: var(--accent-orange); font-size: 1.1rem; margin-bottom: 12px; }
+        .card p, .card li { font-size: 0.95rem; line-height: 1.6; color: #cbd5e1; margin-bottom: 8px; }
+        .card ul { padding-left: 20px; }
+        
+        .code-box { background: #090d16; padding: 14px; border-radius: 6px; font-family: "Fira Code", monospace; font-size: 0.85rem; color: #38bdf8; border: 1px solid #1e293b; overflow-x: auto; margin-top: 10px; }
+        .highlight { color: #facc15; font-weight: 600; }
+        .kpi-row { display: flex; gap: 16px; margin: 16px 0; }
+        .kpi { flex: 1; background: #0f172a; padding: 14px; border-radius: 8px; border-left: 4px solid var(--accent-orange); }
+        .kpi-num { font-size: 1.6rem; font-weight: 700; color: #fff; }
+        .kpi-label { font-size: 0.8rem; color: var(--text-muted); }
+        
+        footer { display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; background: rgba(15, 23, 42, 0.95); border-top: 1px solid var(--border); }
+        .nav-btn { background: var(--bg-card); color: #fff; border: 1px solid var(--border); padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .nav-btn:hover { background: #334155; }
+        .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .slide-counter { color: var(--text-muted); font-size: 0.9rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">?? S.A.P.I. <span class="badge-sprint">Sprint 2 / Hito 2</span></div>
+        <div class="timer-box">?? Tiempo L?mite: 20 Minutos | Proyecto de T?tulo (Hito 2)</div>
+    </header>
+
+    <main>
+        <!-- Slide 1: Portada -->
+        <div class="slide active" id="slide-1">
+            <div class="slide-header">
+                <div>
+                    <h1 class="slide-title">S.A.P.I. ? Sistema de Alerta y Predicci?n de Incendios</h1>
+                    <div class="slide-subtitle">Defensa de Ingenier?a de Software ? Hito 2 (Sprint 2)</div>
+                </div>
+                <div class="rubric-tag">Alineaci?n: Mat?as Vargas (M1?M8)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Identificaci?n Acad?mica</h3>
+                    <ul>
+                        <li><strong>Proyecto:</strong> Proyecto de T?tulo (Hito 2) & Seminario de Licenciatura</li>
+                        <li><strong>Candidato Evaluado:</strong> Commit <code>8010e44</code> (Base F7: <code>51ec3c06</code>)</li>
+                        <li><strong>Dominio:</strong> Priorizaci?n de riesgo relativo de incendio forestal en interfaz urbano-forestal</li>
+                        <li><strong>Alcance Territorial:</strong> Corredor Vi?a del Mar ? Quilpu? ? Villa Alemana (Regi?n de Valpara?so)</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Estructura de la Defensa (20 Minutos)</h3>
+                    <ul>
+                        <li><strong>00?05 min:</strong> Problema territorial y an?lisis de requerimientos (M1, M2)</li>
+                        <li><strong>05?10 min:</strong> Arquitectura de microservicios y datos espaciales (M3, M4)</li>
+                        <li><strong>10?17 min:</strong> Demostraci?n t?cnica interactiva y resiliencia (M5, M6, M7)</li>
+                        <li><strong>17?20 min:</strong> Evidencias, gesti?n de riesgos y cierre de ingenier?a (M8)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 2: Problema y Contexto -->
+        <div class="slide" id="slide-2">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">1. Contexto Territorial y Definici?n del Problema</h2>
+                    <div class="slide-subtitle">Minuto 0 a 5 ? Problema Operacional Real</div>
+                </div>
+                <div class="rubric-tag">Criterio M2 (15%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>El Desaf?o en Valpara?so</h3>
+                    <p>La interfaz urbano-forestal de Vi?a del Mar, Quilpu? y Villa Alemana sufri? el megaincendio de febrero de 2024. Los organismos de emergencia disponen de datos satelitales (NASA FIRMS) y meteorolog?a (DMC), pero carecen de una herramienta que combine ambos insumos para priorizar la vigilancia preventiva.</p>
+                    <p><strong>Problema Clave:</strong> No es predecir con certeza determinista (ning?n modelo operacional lo resuelve sin calibraci?n biof?sica en terreno), sino <span class="highlight">ordenar relativamente 50 celdas territoriales</span> para focalizar recursos de patrullaje.</p>
+                </div>
+                <div class="card">
+                    <h3>Grilla Territorial Implementada</h3>
+                    <ul>
+                        <li><strong>Geometr?a:</strong> 50 celdas rectangulares (10 columnas ? 5 filas).</li>
+                        <li><strong>Identificadores:</strong> VP-001 a VP-050 (~1 km? por celda).</li>
+                        <li><strong>Cobertura:</strong> 74.7% de cobertura espacial sobre las 348 detecciones reales del incendio 2024.</li>
+                        <li><strong>Ubicaci?n en C?digo:</strong> <code>src/geo/grid.py</code>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 3: Requerimientos del Sprint 2 -->
+        <div class="slide" id="slide-3">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">2. An?lisis y Especificaci?n de Requerimientos</h2>
+                    <div class="slide-subtitle">Minuto 2 a 5 ? Backlog y Trazabilidad Transparente</div>
+                </div>
+                <div class="rubric-tag">Criterios M2 (15%) y M8 (5%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Compromiso del Sprint 2</h3>
+                    <div class="kpi-row">
+                        <div class="kpi"><div class="kpi-num">14</div><div class="kpi-label">Historias de Usuario</div></div>
+                        <div class="kpi"><div class="kpi-num">58</div><div class="kpi-label">Story Points Totales</div></div>
+                    </div>
+                    <ul>
+                        <li><strong>Jira Administrativo:</strong> 12 historias Finalizadas (52 SP), SAPI-64 Por hacer (3 SP) y SAPI-67 Pendiente a validaci?n (3 SP).</li>
+                        <li><strong>Cumplimiento Operacional:</strong> 9 historias con cierre t?cnico completo (37 SP) y 5 historias con brechas operacionales de datos en vivo transparentemente documentadas (21 SP).</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Superaci?n del Monolito (Hito 1)</h3>
+                    <p>En Hito 1 el sistema operaba como un script monol?tico de Streamlit con c?lculo en frontend y archivos locales. En Sprint 2 se refactoriz? hacia una arquitectura industrial de 4 microservicios con contratos versionados y persistencia PostGIS.</p>
+                    <p><em>Documento de trazabilidad:</em> <code>docs/hito2/TRAZABILIDAD_HU_CA_EVIDENCIAS.md</code>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 4: Arquitectura de Software -->
+        <div class="slide" id="slide-4">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">3. Arquitectura de Software Desacoplada</h2>
+                    <div class="slide-subtitle">Minuto 5 a 7 ? Microservicios en Docker y Red Privada</div>
+                </div>
+                <div class="rubric-tag">Criterios M3 (15%) y M7 (5%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Topolog?a de Microservicios</h3>
+                    <ul>
+                        <li><strong>web-v2:</strong> Streamlit (Frontend desacoplado, sin inferencia local).</li>
+                        <li><strong>backend:</strong> Spring Boot 3.x (Orquestador transaccional, HTTP REST).</li>
+                        <li><strong>ml-api:</strong> FastAPI (Servicio de inferencia puro, Python 3.11).</li>
+                        <li><strong>db-v2:</strong> PostgreSQL 15 + PostGIS 3.4 (Persistencia espacial).</li>
+                        <li><strong>Red:</strong> <code>sapi-v2-net</code> (Subred bridge aislada, sin exposici?n de DB al host).</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Contratos y Decisiones (ADR)</h3>
+                    <ul>
+                        <li>11 ADRs formalizados en <code>docs/adr/</code> (ADR-001 a ADR-011).</li>
+                        <li>Contratos OpenAPI fijados por hash SHA-256 (<code>contracts/openapi/</code>).</li>
+                        <li>Resiliencia <strong>Fail-Closed</strong>: Ante ca?da de ML, backend responde HTTP 503/504 controlado sin inventar predicciones.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 5: Persistencia y PostGIS -->
+        <div class="slide" id="slide-5">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">4. Dise?o de Datos y Procesos PostGIS</h2>
+                    <div class="slide-subtitle">Minuto 7 a 10 ? Integridad Transaccional e Idempotencia</div>
+                </div>
+                <div class="rubric-tag">Criterio M4 (15%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Modelo Relacional-Espacial</h3>
+                    <p>Gesti?n mediante migraciones Flyway V001 a V004:</p>
+                    <ul>
+                        <li><strong>Clave Natural Idempotente:</strong> <code>UNIQUE (forecast_time, model_version, inputs_fingerprint)</code> impide duplicar corridas id?nticas.</li>
+                        <li><strong>Invariante Cient?fico:</strong> Constraint SQL <code>CHECK (scientific_model_validation = false)</code> impide persistir scores como si fueran probabilidades calibradas.</li>
+                        <li><strong>Procedencia Obligatoria:</strong> Campo <code>firms_origin</code> (baseline, current, reproducibility) auditado.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Garant?a de Persistencia en C?digo</h3>
+                    <div class="code-box">
+-- Migraci?n Flyway V004 (Fragmento)
+ALTER TABLE ejecuciones ADD CONSTRAINT
+  ejecuciones_sin_validacion_cientifica
+  CHECK (scientific_model_validation = false);
+
+ALTER TABLE ejecuciones ADD CONSTRAINT
+  ejecuciones_score_semantics_ranking
+  CHECK (score_semantics = 'relative_rank');
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 6: Algoritmo y Sem?ntica Cient?fica -->
+        <div class="slide" id="slide-6">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">5. Modelo D y Hallazgo Negativo SAPI-63</h2>
+                    <div class="slide-subtitle">Minuto 9 a 10 ? Rigor Experimental y ?tica Cient?fica</div>
+                </div>
+                <div class="rubric-tag">Criterio M5 (15%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Modelo D Implementado</h3>
+                    <ul>
+                        <li><strong>Algoritmo:</strong> <code>HistGradientBoostingClassifier</code> de <code>scikit-learn</code>.</li>
+                        <li><strong>Configuraci?n:</strong> <code>max_depth=4</code>, <code>class_weight="balanced"</code>, <code>random_state=42</code>.</li>
+                        <li><strong>Sem?ntica:</strong> Ordenamiento heur?stico relativo (<code>relative_rank</code>), 50 scores normalizados 0?1.</li>
+                        <li><strong>Fingerprint Congelado:</strong> <code>33c2eacc49bd0cc130928b5...</code></li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Experimento SAPI-63 (LSTM Negativo)</h3>
+                    <p>Evaluaci?n de red neuronal recurrente LSTM vs. tabular:</p>
+                    <ul>
+                        <li>Desbalance de clases extremo: <strong>1:3390</strong> (107 positivos en 362.883 registros).</li>
+                        <li>26 de 49 folds walk-forward sin un solo caso positivo en test.</li>
+                        <li><strong>Conclusi?n Cient?fica:</strong> Las LSTM colapsan ante este volumen y desbalance. El resultado negativo justifica mantener el baseline tabular.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 7: Demostraci?n T?cnica - Arranque -->
+        <div class="slide" id="slide-7">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">6. Demostraci?n en Vivo: Arranque y Topolog?a</h2>
+                    <div class="slide-subtitle">Minuto 10 a 11 ? Orquestaci?n Controlada</div>
+                </div>
+                <div class="rubric-tag">Criterios M1 (20%) y M5 (15%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Comando de Arranque</h3>
+                    <p>Arranque secuencial con validaci?n de healthchecks:</p>
+                    <div class="code-box">python scripts/bootstrap_compose_v2.py</div>
+                    <p style="margin-top: 10px;"><em>Alternativa est?ndar con perfiles:</em></p>
+                    <div class="code-box">docker compose --profile presentation up -d</div>
+                    <p style="margin-top: 10px; font-size: 0.85rem; color: var(--text-muted);">
+                        *Nota CA5: Aprobado internamente por el PO (Jira #10156) para orquestar la secuencia de dependencias sin carreras.
+                    </p>
+                </div>
+                <div class="card">
+                    <h3>Endpoints de Servicio</h3>
+                    <ul>
+                        <li><strong>Streamlit UI:</strong> <code>http://localhost:8501</code></li>
+                        <li><strong>Spring Boot API:</strong> <code>http://localhost:8080/api/v1/ranking</code></li>
+                        <li><strong>FastAPI Docs:</strong> <code>http://localhost:8000/docs</code></li>
+                        <li><strong>PostgreSQL/PostGIS:</strong> <code>localhost:5432</code> (db: <code>sapi_v2</code>)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 8: Demostraci?n T?cnica - UI y Ranking -->
+        <div class="slide" id="slide-8">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">7. Demostraci?n en Vivo: Dashboard Streamlit</h2>
+                    <div class="slide-subtitle">Minuto 11 a 13 ? Visualizaci?n y Consumo REST</div>
+                </div>
+                <div class="rubric-tag">Criterio M1 (20%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Flujo de Pantalla</h3>
+                    <ul>
+                        <li>Carga inicial: Frontend consume <code>GET /api/v1/ranking</code> de Spring Boot.</li>
+                        <li>Visualizaci?n en mapa: 50 celdas poligonales coloreadas seg?n quintil de riesgo.</li>
+                        <li>Tabla de detalle interactiva con ID celda, comuna, score relativo y ranking 1 a 50.</li>
+                        <li>Badge expl?cito en interfaz: <span class="highlight">"Sem?ntica: relative_rank (no calibrado)"</span>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Aislamiento Estricto</h3>
+                    <p>Streamlit nunca importa <code>HistGradientBoostingClassifier</code> ni librer?as de entrenamiento. Todo el payload proviene como JSON inmutable validado contra el esquema OpenAPI.</p>
+                    <p><em>Evidencia de captura:</em> <code>artifacts/oc-e2e-20261024/screenshots/streamlit-ranking.png</code>.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 9: Demostraci?n T?cnica - Latencia y Fail-Closed -->
+        <div class="slide" id="slide-9">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">8. Demostraci?n en Vivo: Latencia y Fail-Closed</h2>
+                    <div class="slide-subtitle">Minuto 13 a 15 ? Rendimiento y Resiliencia</div>
+                </div>
+                <div class="rubric-tag">Criterios M5 (15%) y M7 (5%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Latencia Interactiva (CA4)</h3>
+                    <ul>
+                        <li><strong>Cold (Carga inicial):</strong> <code>6.867,90 ms</code> (inicializaci?n de capas).</li>
+                        <li><strong>Update (Interactivo):</strong> <code>3.723,47 ms</code> (refresco din?mico de celdas).</li>
+                        <li><strong>Cached (En memoria):</strong> <code>424,06 ms</code> (lectura optimizada).</li>
+                        <li><em>Certificado en:</em> <code>artifacts/oc-e2e-20261024/timings/ca4-timings.json</code>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Resiliencia Fail-Closed (Prueba Negativa)</h3>
+                    <p>Detenci?n controlada de <code>ml-api</code>:</p>
+                    <p>Demostraci?n basada en capturas certificadas y stack aislado:</p>
+                    <ul>
+                        <li>Spring Boot detecta timeout/ca?da y retorna <code>HTTP 503/504</code> estructurado.</li>
+                        <li>Streamlit muestra alerta operativa amigable, sin crasheo ni datos espurios.</li>
+                        <li><em>Evidencia auditada:</em> <code>artifacts/oc-e2e-20261024/negative/ui-backend-down.png</code>.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 10: Demostraci?n T?cnica - Persistencia PostGIS -->
+        <div class="slide" id="slide-10">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">9. Demostraci?n en Vivo: Persistencia e Idempotencia</h2>
+                    <div class="slide-subtitle">Minuto 15 a 17 ? Auditor?a de Base de Datos en Vivo</div>
+                </div>
+                <div class="rubric-tag">Criterios M1 (20%) y M4 (15%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Consulta SQL de Auditor?a</h3>
+                    <div class="code-box">
+SELECT id, forecast_time, model_version,
+       firms_origin, scientific_model_validation
+FROM ejecuciones ORDER BY id DESC LIMIT 1;
+                    </div>
+                    <p style="margin-top: 10px;">Comprobaci?n de que la fila se registr? con <code>scientific_model_validation = false</code> y <code>firms_origin = 'reproducibility'</code>.</p>
+                </div>
+                <div class="card">
+                    <h3>Verificaci?n de Idempotencia</h3>
+                    <p>M?ltiples peticiones sobre el mismo timestamp y fingerprint de insumos ejecutan una actualizaci?n write-through idempotente en PostGIS, sin duplicar registros de ejecuciones ni celdas.</p>
+                    <p><em>Evidencia de integraci?n:</em> 137 pruebas JUnit Surefire pasando 100%.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 11: Validaci?n y Pruebas del Incremento -->
+        <div class="slide" id="slide-11">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">10. Bater?a de Validaci?n y Pruebas E2E</h2>
+                    <div class="slide-subtitle">Minuto 17 a 18 ? Pruebas Reproducibles Verificadas</div>
+                </div>
+                <div class="rubric-tag">Criterio M6 (10%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Cobertura de Pruebas Automatizadas</h3>
+                    <div class="kpi-row">
+                        <div class="kpi"><div class="kpi-num">102</div><div class="kpi-label">Tests Python PASS</div></div>
+                        <div class="kpi"><div class="kpi-num">137</div><div class="kpi-label">Tests Java Surefire PASS</div></div>
+                    </div>
+                    <ul>
+                        <li>Suites OpenAPI, arquitectura de capas y no-regresi?n.</li>
+                        <li>Validaci?n de Flyway V001-V004 en contenedor PostGIS real.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Evidencias E2E R2 Certificadas</h3>
+                    <ul>
+                        <li><strong>91 artefactos SHA-256:</strong> Certificados contra <code>SHA256SUMS.txt</code> en <code>artifacts/oc-e2e-20261024/</code>.</li>
+                        <li>Capturas de pantalla completas, logs de contenedores y dumps JSON.</li>
+                        <li>Sanitizaci?n estricta de privacidad (cero exposici?n de secretos o IPs de host).</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 12: Matriz de Riesgos y Gate B -->
+        <div class="slide" id="slide-12">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">11. Matriz de Riesgos y Gobernanza Operacional</h2>
+                    <div class="slide-subtitle">Minuto 18 a 19 ? Estado de Madurez de Ingenier?a</div>
+                </div>
+                <div class="rubric-tag">Criterio M8 (5%)</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Matriz de 19 Riesgos del Sprint 2</h3>
+                    <ul>
+                        <li><strong>11 Riesgos Cerrados y Verificados:</strong> Correlaci?n PostGIS, latencia CA4, fail-closed, etc.</li>
+                        <li><strong>4 Riesgos Operacionales:</strong> Dependientes de decisi?n humana y llaves de API externas (NASA FIRMS / DMC).</li>
+                        <li><strong>1 Riesgo en Change-Control:</strong> ADV-05 (atomicidad de publicaci?n bajo fallo de IO).</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Dictamen Operacional: Gate B en NO GO</h3>
+                    <p>S.A.P.I. mantiene con total honestidad el <strong>Gate B en NO GO</strong>. El sistema no puede operar en terreno para despacho de emergencias sin calibraci?n emp?rica biof?sica y refresco en caliente.</p>
+                    <p><em>Principio ?tico:</em> Separar la madurez de software del Hito 2 de la certificaci?n de seguridad para la vida humana.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Slide 13: Cierre y Trabajo Futuro -->
+        <div class="slide" id="slide-13">
+            <div class="slide-header">
+                <div>
+                    <h2 class="slide-title">12. Cierre y Transici?n al Hito 3</h2>
+                    <div class="slide-subtitle">Minuto 19 a 20 ? Conclusiones de Ingenier?a</div>
+                </div>
+                <div class="rubric-tag">Criterios M1 a M8 Concluidos</div>
+            </div>
+            <div class="content-grid">
+                <div class="card">
+                    <h3>Conclusiones del Sprint 2</h3>
+                    <ul>
+                        <li>Incremento funcional 100% operativo en arquitectura desacoplada.</li>
+                        <li>Trazabilidad biun?voca entre historias de usuario, c?digo y pruebas.</li>
+                        <li>Rigor cient?fico evidenciado en el hallazgo negativo de SAPI-63.</li>
+                        <li>Higiene de c?digo certificada en el commit inmutable <code>8010e44</code>.</li>
+                    </ul>
+                </div>
+                <div class="card">
+                    <h3>Plan para Hito 3</h3>
+                    <ul>
+                        <li>Ejecuci?n del primer refresco controlado con datos satelitales en vivo (SAPI-71).</li>
+                        <li>Resoluci?n de ADV-05 bajo change-control arquitect?nico formal.</li>
+                        <li>Firma del ADR-011 (Proveedor Cloud) bajo presupuesto incremental de $0 CLP.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <button class="nav-btn" id="prev-btn" onclick="prevSlide()">? Anterior</button>
+        <span class="slide-counter" id="counter">Slide 1 de 13</span>
+        <button class="nav-btn" id="next-btn" onclick="nextSlide()">Siguiente ?</button>
+    </footer>
+
+    <script>
+        let currentSlide = 1;
+        const totalSlides = 13;
+
+        function updateSlide() {
+            document.querySelectorAll('.slide').forEach((s, idx) => {
+                s.classList.toggle('active', (idx + 1) === currentSlide);
+            });
+            document.getElementById('counter').innerText = `Slide ${currentSlide} de ${totalSlides}`;
+            document.getElementById('prev-btn').disabled = (currentSlide === 1);
+            document.getElementById('next-btn').disabled = (currentSlide === totalSlides);
+        }
+
+        function nextSlide() {
+            if (currentSlide < totalSlides) {
+                currentSlide++;
+                updateSlide();
+            }
+        }
+
+        function prevSlide() {
+            if (currentSlide > 1) {
+                currentSlide--;
+                updateSlide();
+            }
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+
+        updateSlide();
+    </script>
+</body>
+</html>

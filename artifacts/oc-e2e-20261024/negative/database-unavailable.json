@@ -1,0 +1,16 @@
+{
+  "captured_at": "2026-10-24T22:19:24.028282+00:00",
+  "down": {
+    "status": 500,
+    "elapsed_ms": 32734.5,
+    "json": {
+      "status": "error",
+      "error_type": "internal_error",
+      "message": "Error interno al generar el ranking."
+    }
+  },
+  "counts_before": "1/50",
+  "counts_after": "1/50",
+  "recovered_status": 200,
+  "recovered_ms": 5058.09
+}
