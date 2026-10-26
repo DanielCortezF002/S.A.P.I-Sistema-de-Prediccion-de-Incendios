@@ -521,7 +521,11 @@ def test_apptest_prototype_default_renders_ranking_from_backend(
     assert "Grupo prioritario" in text and "<b>7 celdas</b> empatadas" in text
     assert "Empate real del modelo · 7 celdas" in text
     assert real_payload()["inputs_fingerprint"] in text
-    selectors = [s for s in at.selectbox if s.label == "Celda"]
+    selectors = [
+        s
+        for s in at.selectbox
+        if s.label == "Celda" or s.label.startswith("Seleccionar celda")
+    ]
     assert selectors and len(selectors[0].options) == 50
     assert selectors[0].options == [c["cell_id"] for c in real_payload()["cells"]]
     assert not at.error
@@ -562,7 +566,11 @@ def test_apptest_selecting_a_cell_updates_the_detail_panel(
     stub: StubBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     at = run_app(monkeypatch, stub.base_url)
-    selector = next(s for s in at.selectbox if s.label == "Celda")
+    selector = next(
+        s
+        for s in at.selectbox
+        if s.label == "Celda" or s.label.startswith("Seleccionar celda")
+    )
     at = selector.set_value("VP-038").run()
     assert not at.exception
     text = markdown_blob(at)
@@ -574,9 +582,20 @@ def test_apptest_map_mode_toggle_does_not_refetch_or_break(
     stub: StubBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     at = run_app(monkeypatch, stub.base_url)
-    toggle = next(r for r in at.radio if r.label == "Vista del mapa")
+    toggle = next(
+        (
+            r
+            for r in at.radio
+            if r.label in ("Vista del mapa", "Criterio de ordenación")
+        ),
+        None,
+    )
+    assert (
+        toggle is not None
+    ), "debe existir un control radio interactivo de presentación"
     calls_before = len(stub.requests)
-    at = toggle.set_value("Todas las celdas").run()
+    new_val = toggle.options[1] if len(toggle.options) > 1 else toggle.options[0]
+    at = toggle.set_value(new_val).run()
     assert not at.exception
     assert len(stub.requests) == calls_before  # cache: la UI no vuelve a consultar
 

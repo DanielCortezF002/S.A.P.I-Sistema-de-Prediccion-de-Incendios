@@ -1,30 +1,32 @@
 """Vista PROTOTIPO v2: ranking servido por el backend Spring Boot (SAPI-61 / Sprint 2 Final).
 
-Implementación definitiva de la interfaz aprobada para la Defensa Académica (OCC-UI-FINAL-DENSITY-AND-MAP):
+Implementación definitiva de la interfaz aprobada para la Defensa Académica:
 - Cabecera compacta integrada con estados, metadatos y selector de tema (sin logo de fuego).
-- Fila de 5 tarjetas de indicadores clave (Celdas evaluadas, Grupo prioritario, Score relativo top, Territorio, Ventana de análisis).
+- Fila de 5 tarjetas de indicadores clave (Celdas, Grupo prioritario, Score, Territorio, Ventana).
 - Área principal con distribución ~68/32 y densidad vertical optimizada:
   * Fila principal:
-    - Izquierda: Mapa protagonista Folium enfocado en las 50 celdas, norte cardinal SVG (top-right), controles y barra de leyenda.
-    - Derecha: Hallazgo principal con grupo prioritario, selector de celda (50 disponibles) y resumen territorial de la celda seleccionada.
+    - Izquierda: Mapa protagonista Folium enfocado en las 50 celdas, norte cardinal SVG, controles
+      y barra de leyenda.
+    - Derecha: Hallazgo principal con grupo prioritario, selector de celda (50 disponibles) y
+      resumen territorial de la celda seleccionada.
   * Módulo DMC Rodelillo (330007) consolidado:
     - Resumen meteorológico activo en barra superior con acción única de consulta.
-    - Detalle extendido en expander secundario plegado por defecto (expanded=False) para evitar vacíos verticales.
-  * Encuadre geográfico riguroso centrado en las 50 celdas (Viña del Mar, Quilpué, Villa Alemana, Limache) sin exceso de océano.
+    - Detalle extendido en expander secundario plegado por defecto (expanded=False).
+  * Encuadre geográfico riguroso centrado en las 50 celdas (Viña del Mar, Quilpué, Villa Alemana,
+    Limache) sin exceso de océano.
 - Separación estricta y trazabilidad de las 3 marcas de tiempo:
   1. Instante T del ranking histórico (01 sep 2026 00:00 UTC, T+6h).
   2. Última observación DMC Rodelillo (hora efectiva Chile y UTC).
   3. Momento de consulta REST al backend.
 - Fila secundaria con dos módulos balanceados (~50/50):
   * Izquierda: Información técnica y fuentes (resumen en cuadrícula + expander detallado).
-  * Derecha: Ranking completo de celdas (tabla resumen de top celdas + expander con ordenación y filtros).
+  * Derecha: Ranking completo de celdas (tabla resumen de top celdas + expander con filtros).
 - Advertencia explícita de datos históricos y disclaimer científico permanente.
 """
 
 from __future__ import annotations
 
 import html
-import textwrap
 from datetime import datetime, timezone
 from typing import Any, Mapping, Optional
 
@@ -48,7 +50,7 @@ from app.utils.reference_topography import (
     reference_topography,
 )
 from src.config import get_backend_base_url, get_backend_timeouts
-from src.geo.grid import all_cells, assign_cell, grid_center
+from src.geo.grid import all_cells, assign_cell
 
 _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
@@ -80,15 +82,16 @@ _SVG_GRID = (
     '<rect x="14" y="3" width="7" height="7"></rect>'
     '<rect x="14" y="14" width="7" height="7"></rect>'
     '<rect x="3" y="14" width="7" height="7"></rect>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_PRIORITY = (
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
-    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>'
+    '<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86'
+    'a2 2 0 0 0-3.42 0z"></path>'
     '<line x1="12" y1="9" x2="12" y2="13"></line>'
     '<line x1="12" y1="17" x2="12.01" y2="17"></line>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_CHART = (
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -96,20 +99,20 @@ _SVG_CHART = (
     '<line x1="18" y1="20" x2="18" y2="10"></line>'
     '<line x1="12" y1="20" x2="12" y2="4"></line>'
     '<line x1="6" y1="20" x2="6" y2="14"></line>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_MOUNTAIN = (
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<path d="m8 3 4 8 5-5 5 15H2L8 3z"></path>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_CLOCK = (
     '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
     '<circle cx="12" cy="12" r="10"></circle>'
     '<polyline points="12 6 12 12 16 14"></polyline>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_CALENDAR = (
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -119,7 +122,7 @@ _SVG_CALENDAR = (
     '<line x1="16" y1="2" x2="16" y2="6"></line>'
     '<line x1="8" y1="2" x2="8" y2="6"></line>'
     '<line x1="3" y1="10" x2="21" y2="10"></line>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_SERVER = (
     '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -129,14 +132,14 @@ _SVG_SERVER = (
     '<rect x="2" y="14" width="20" height="8" rx="2" ry="2"></rect>'
     '<line x1="6" y1="6" x2="6.01" y2="6"></line>'
     '<line x1="6" y1="18" x2="6.01" y2="18"></line>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_WEATHER = (
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
     'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" '
     'style="vertical-align:-1px;margin-right:3px;">'
     '<path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_CPU = (
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -152,7 +155,7 @@ _SVG_CPU = (
     '<line x1="20" y1="14" x2="23" y2="14"></line>'
     '<line x1="1" y1="9" x2="4" y2="9"></line>'
     '<line x1="1" y1="14" x2="4" y2="14"></line>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_SATELLITE = (
     '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -161,7 +164,7 @@ _SVG_SATELLITE = (
     '<path d="M4.93 19.07A10 10 0 0 1 19.07 4.93"></path>'
     '<path d="M7.76 16.24a6 6 0 0 1 8.48-8.48"></path>'
     '<circle cx="12" cy="12" r="2"></circle>'
-    '</svg>'
+    "</svg>"
 )
 _SVG_MAP = (
     '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" '
@@ -170,7 +173,7 @@ _SVG_MAP = (
     '<polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>'
     '<line x1="8" y1="2" x2="8" y2="18"></line>'
     '<line x1="16" y1="6" x2="16" y2="22"></line>'
-    '</svg>'
+    "</svg>"
 )
 
 _GROUP_VISUAL = {
@@ -353,15 +356,19 @@ def build_map(
             f"Historial FIRMS: {NOT_IN_CONTRACT}"
         )
         popup_html = (
-            f"<div style='font-family:-apple-system,BlinkMacSystemFont,sans-serif;color:#f1f5f9;font-size:12px;line-height:1.45;'>"
-            f"<div style='font-size:13px;font-weight:800;color:#ffffff;border-bottom:1px solid #334155;padding-bottom:3px;margin-bottom:5px;'>{_esc(c.cell_id)}</div>"
+            "<div style='font-family:-apple-system,BlinkMacSystemFont,sans-serif;"
+            "color:#f1f5f9;font-size:12px;line-height:1.45;'>"
+            "<div style='font-size:13px;font-weight:800;color:#ffffff;"
+            "border-bottom:1px solid #334155;padding-bottom:3px;margin-bottom:5px;'>"
+            f"{_esc(c.cell_id)}</div>"
             f"<div>Prioridad: <b style='color:#f87171;'>#{c.display_rank}</b></div>"
             f"<div>Score: <b style='font-family:monospace;'>{c.score:.6f}</b></div>"
-            f"<div style='margin-top:4px;color:#94a3b8;font-size:11px;border-top:1px solid #334155;padding-top:4px;'>"
+            "<div style='margin-top:4px;color:#94a3b8;font-size:11px;"
+            "border-top:1px solid #334155;padding-top:4px;'>"
             f"Elevación: {elev_txt} (ref.){topo_note}<br>"
             f"Pendiente: {slope_txt} (ref.){topo_note}"
-            f"</div>"
-            f"</div>"
+            "</div>"
+            "</div>"
         )
         rect = folium.Rectangle(
             bounds=[[g["min_lat"], g["min_lon"]], [g["max_lat"], g["max_lon"]]],
@@ -414,7 +421,8 @@ def build_map(
     """
     fmap.get_root().header.add_child(folium.Element(dark_leaflet_css))
 
-    # Brújula en esquina superior derecha (top: 14px; right: 14px) separada de los controles zoom (+/- en top: 10px; left: 10px)
+    # Brújula en esquina superior derecha (top: 14px; right: 14px)
+    # separada de los controles zoom (+/- en top: 10px; left: 10px)
     north_html = """
     <div style="position: absolute; top: 14px; right: 14px; z-index: 1000;
                 width: 36px; height: 36px; background: rgba(15, 23, 42, 0.90);
@@ -423,7 +431,8 @@ def build_map(
                 font-family: -apple-system, BlinkMacSystemFont, sans-serif;
                 border: 1px solid rgba(255,255,255,0.25); box-shadow: 0 2px 8px rgba(0,0,0,0.45);
                 pointer-events: none;">
-        <span style="font-size: 8px; font-weight: 800; line-height: 1; letter-spacing: 0.5px; color: #f8fafc;">N</span>
+        <span style="font-size: 8px; font-weight: 800; line-height: 1;
+                     letter-spacing: 0.5px; color: #f8fafc;">N</span>
         <svg width="10" height="12" viewBox="0 0 10 12" style="margin-top: 1px;">
             <polygon points="5,0 9,10 5,7 1,10" fill="#38bdf8"/>
         </svg>
@@ -467,7 +476,7 @@ def _inject_css(mode: str | None = None) -> None:
     from app.theme.tokens import APPEARANCE_CLARO
 
     curr_mode = mode or appearance()
-    is_claro = (curr_mode == APPEARANCE_CLARO)
+    is_claro = curr_mode == APPEARANCE_CLARO
 
     if is_claro:
         bg_card = "#ffffff"
@@ -539,7 +548,10 @@ def _inject_css(mode: str | None = None) -> None:
         disclaimer_color = "#cbd5e1"
         quick_card_bg = "#0f1620"
         quick_card_border = "#1e293b"
-        map_tag_bg = "linear-gradient(90deg, rgba(12, 45, 72, 0.95) 0%, rgba(15, 57, 89, 0.95) 100%)"
+        map_tag_bg = (
+            "linear-gradient(90deg, rgba(12, 45, 72, 0.95) 0%, "
+            "rgba(15, 57, 89, 0.95) 100%)"
+        )
         map_tag_border = "#0284c7"
         map_tag_color = "#93c5fd"
         map_tag_highlight = "#ffffff"
@@ -990,7 +1002,9 @@ def _inject_css(mode: str | None = None) -> None:
             width: 180px;
             height: 6px;
             border-radius: 3px;
-            background: linear-gradient(90deg, #fef08a 0%, #f59e0b 25%, #ea580c 50%, #dc2626 75%, #991b1b 100%);
+            background: linear-gradient(
+                90deg, #fef08a 0%, #f59e0b 25%, #ea580c 50%, #dc2626 75%, #991b1b 100%
+            );
         }}
         .sapi-legend-ticks {{
             display: flex;
@@ -1423,7 +1437,9 @@ def _render_header(view: RankingView) -> None:
         <div class="sapi-v2-header">
             <div class="sapi-header-left">
                 <div class="sapi-v2-title">S.A.P.I.</div>
-                <div class="sapi-v2-sub">Sistema de Alerta y Priorización de Riesgo de Incendios</div>
+                <div class="sapi-v2-sub">
+                    Sistema de Alerta y Priorización de Riesgo de Incendios
+                </div>
                 <div class="sapi-v2-academic">Defensa Académica · Sprint 2</div>
             </div>
             <div class="sapi-v2-status">
@@ -1435,7 +1451,10 @@ def _render_header(view: RankingView) -> None:
                 <div><b>Ranking histórico T: {date_line}</b></div>
                 <div>Ventana de análisis: {window_line}</div>
                 <div>{_SVG_SERVER} {station_line}</div>
-                <div><span style="color:#10b981">●</span> Obtenido del backend: {_human_hm(view.fetched_at)} UTC (Consulta REST)</div>
+                <div>
+                    <span style="color:#10b981">●</span>
+                    Obtenido del backend: {_human_hm(view.fetched_at)} UTC (Consulta REST)
+                </div>
             </div>
         </div>
         """,
@@ -1505,7 +1524,9 @@ def _render_dmc_top_strip() -> None:
             f"""
             <div class="sapi-dmc-top-bar">
                 <div class="sapi-dmc-top-left">
-                    <span class="sapi-dmc-top-tag">{_SVG_WEATHER} ÚLTIMA OBSERVACIÓN DMC · RODELILLO (330007)</span>
+                    <span class="sapi-dmc-top-tag">
+                        {_SVG_WEATHER} ÚLTIMA OBSERVACIÓN DMC · RODELILLO (330007)
+                    </span>
                     <span class="sapi-dmc-badge sapi-dmc-badge--{badge_class}">{status}</span>
                     <span class="sapi-dmc-top-metric"><b>{temp_str}</b></span>
                     <span class="sapi-dmc-top-sep">|</span>
@@ -1553,7 +1574,9 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
     date_str = _human_date(view.forecast_time)
     horizon_str = f"h+{view.horizon_hours}" if view.horizon_hours else "h+6"
     window_end_str = _human_hm(view.window_end) if view.window_end else "06:00"
-    window_sub = f"{_human_hm(view.forecast_time)} – {window_end_str} UTC ({horizon_str})"
+    window_sub = (
+        f"{_human_hm(view.forecast_time)} – {window_end_str} UTC ({horizon_str})"
+    )
 
     st.markdown(
         f"""
@@ -1610,7 +1633,9 @@ def _render_map_legend_bar() -> None:
         """
         <div class="sapi-map-legend-bar">
             <div class="sapi-legend-gradient-wrap">
-                <div class="sapi-legend-gradient-title">Score de riesgo relativo (exploratorio)</div>
+                <div class="sapi-legend-gradient-title">
+                    Score de riesgo relativo (exploratorio)
+                </div>
                 <div class="sapi-legend-gradient-strip"></div>
                 <div class="sapi-legend-ticks">
                     <span>0.00</span>
@@ -1622,7 +1647,9 @@ def _render_map_legend_bar() -> None:
             </div>
             <div class="sapi-legend-markers">
                 <div class="sapi-legend-marker-item">
-                    <span class="sapi-swatch-box" style="border: 2px solid #ef4444; background: rgba(220,38,38,0.5);"></span>
+                    <span class="sapi-swatch-box"
+                          style="border: 2px solid #ef4444;
+                                 background: rgba(220,38,38,0.5);"></span>
                     <span>Celda seleccionada</span>
                 </div>
                 <div class="sapi-legend-marker-item">
@@ -1661,20 +1688,21 @@ def _render_priority_panel(view: RankingView) -> None:
         f'<div class="sapi-priority-banner__icon">▲</div>'
         f'<div class="sapi-priority-banner__content">'
         f'<div class="sapi-priority-banner__title">Grupo prioritario #{top[0].display_rank}</div>'
-        f'<div class="sapi-priority-banner__sub"><b>{len(top)} celdas</b> empatadas con mayor riesgo relativo</div>'
-        f'</div>'
+        f'<div class="sapi-priority-banner__sub">'
+        f"<b>{len(top)} celdas</b> empatadas con mayor riesgo relativo</div>"
+        f"</div>"
         f'<div class="sapi-priority-banner__arrow">›</div>'
-        f'</div>'
+        f"</div>"
         f'<div style="font-size:0.78rem; margin-top:0.10rem">'
         f'Score relativo: <b style="font-variant-numeric:tabular-nums">{top[0].score:.6f}</b>'
-        f'</div>'
+        f"</div>"
         f'<p class="sapi-narrative-text">'
-        f'Las celdas del grupo #{top[0].display_rank} presentan el mayor score relativo '
-        f'({top[0].score:.4f}) dentro del territorio evaluado, con un empate simultáneo '
-        f'de {len(top)} celdas bajo el Modelo D.'
-        f'</p>'
+        f"Las celdas del grupo #{top[0].display_rank} presentan el mayor score relativo "
+        f"({top[0].score:.4f}) dentro del territorio evaluado, con un empate simultáneo "
+        f"de {len(top)} celdas bajo el Modelo D."
+        f"</p>"
         f'<div style="margin-top:0.10rem">{chips}</div>'
-        f'{tie_note}'
+        f"{tie_note}"
     )
     st.markdown(priority_html, unsafe_allow_html=True)
 
@@ -1736,45 +1764,64 @@ def _render_selected_panel(
         f'<div class="sapi-selected-header">'
         f'<span class="sapi-selected-cell-id">{_esc(cell.cell_id)}</span>'
         f'<span class="sapi-selected-rank-badge">Prioridad #{cell.display_rank}</span>'
-        f'</div>'
+        f"</div>"
         f'<div class="sapi-selected-sub">'
-        f'Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>{tie_badge}'
-        f'</div>'
+        f'Score relativo: <b style="font-variant-numeric:tabular-nums">{cell.score:.6f}</b>'
+        f"{tie_badge}</div>"
         f'<div class="sapi-quick-metrics-grid">'
-        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Elevación</span><span class="sapi-quick-metric-val">{elev}</span></div>'
-        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Pendiente</span><span class="sapi-quick-metric-val">{slope}</span></div>'
-        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Temp. reg. T</span><span class="sapi-quick-metric-val">{temp_val}</span></div>'
-        f'<div class="sapi-quick-metric-card"><span class="sapi-quick-metric-label">Viento reg. T</span><span class="sapi-quick-metric-val">{viento_val}</span></div>'
-        f'</div>'
+        f'<div class="sapi-quick-metric-card">'
+        f'<span class="sapi-quick-metric-label">Elevación</span>'
+        f'<span class="sapi-quick-metric-val">{elev}</span></div>'
+        f'<div class="sapi-quick-metric-card">'
+        f'<span class="sapi-quick-metric-label">Pendiente</span>'
+        f'<span class="sapi-quick-metric-val">{slope}</span></div>'
+        f'<div class="sapi-quick-metric-card">'
+        f'<span class="sapi-quick-metric-label">Temp. reg. T</span>'
+        f'<span class="sapi-quick-metric-val">{temp_val}</span></div>'
+        f'<div class="sapi-quick-metric-card">'
+        f'<span class="sapi-quick-metric-label">Viento reg. T</span>'
+        f'<span class="sapi-quick-metric-val">{viento_val}</span></div>'
+        f"</div>"
         f'<div class="sapi-kv-two-col">'
         f'<div class="sapi-kv-subcol">'
-        f'<div class="sapi-panel-title-row" style="margin-top:0.15rem"><span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_MOUNTAIN}</span><span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">Territorio (referencia)</span></div>'
+        f'<div class="sapi-panel-title-row" style="margin-top:0.15rem">'
+        f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">'
+        f"{_SVG_MOUNTAIN}</span>"
+        f'<span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">'
+        f"Territorio (referencia)</span></div>"
         f'<ul class="sapi-kv-table">'
-        f'<li><span>Elevación</span><b>{elev}</b></li>'
-        f'<li><span>Pendiente</span><b>{slope}</b></li>'
-        f'<li><span>Historial FIRMS</span><b>{_esc(NOT_IN_CONTRACT)}</b></li>'
-        f'</ul>'
-        f'{dem_note}'
+        f"<li><span>Elevación</span><b>{elev}</b></li>"
+        f"<li><span>Pendiente</span><b>{slope}</b></li>"
+        f"<li><span>Historial FIRMS</span><b>{_esc(NOT_IN_CONTRACT)}</b></li>"
+        f"</ul>"
+        f"{dem_note}"
         f'<div class="sapi-v2-note">{_esc(REFERENCE_TOPOGRAPHY_LABEL)}</div>'
-        f'</div>'
+        f"</div>"
         f'<div class="sapi-kv-subcol">'
-        f'<div class="sapi-panel-title-row" style="margin-top:0.15rem"><span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_WEATHER}</span><span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">Meteorología reg.</span></div>'
+        f'<div class="sapi-panel-title-row" style="margin-top:0.15rem">'
+        f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_WEATHER}</span>'
+        f'<span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">'
+        f"Meteorología reg.</span></div>"
         f'<ul class="sapi-kv-table">'
-        f'{meteo_rows}'
-        f'</ul>'
-        f'</div>'
-        f'</div>'
-        f'<div class="sapi-panel-title-row" style="margin-top:0.20rem"><span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CLOCK}</span><span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">Ventana</span></div>'
+        f"{meteo_rows}"
+        f"</ul>"
+        f"</div>"
+        f"</div>"
+        f'<div class="sapi-panel-title-row" style="margin-top:0.20rem">'
+        f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CLOCK}</span>'
+        f'<span style="font-weight:750;color:#38bdf8;font-size:0.72rem;text-transform:uppercase">'
+        f"Ventana</span></div>"
         f'<ul class="sapi-kv-table sapi-kv-table--inline">'
-        f'<li><span>T</span><b>{_human_date(view.forecast_time)} {_human_hm(view.forecast_time)} UTC</b></li>'
-        f'{window_rows}'
-        f'</ul>'
+        f"<li><span>T</span><b>{_human_date(view.forecast_time)} "
+        f"{_human_hm(view.forecast_time)} UTC</b></li>"
+        f"{window_rows}"
+        f"</ul>"
     )
     st.markdown(selected_html, unsafe_allow_html=True)
 
 
 def _render_dmc_observation_panel() -> None:
-    """Panel secundario con el detalle meteorológico DMC de Rodelillo (330007), plegado por defecto."""
+    """Panel secundario con el detalle meteorológico DMC de Rodelillo (330007)."""
     from app.utils.dmc_live import (
         STATUS_CON_RETRASO,
         STATUS_DESACTUALIZADO,
@@ -1792,9 +1839,9 @@ def _render_dmc_observation_panel() -> None:
         if not data:
             st.markdown(
                 '<div style="font-size:0.78rem;color:var(--sapi-text-muted);padding:0.3rem 0;">'
-                'Haga clic en <b>«Consultar última lectura»</b> en la barra superior para actualizar '
-                'la medición de la estación Rodelillo (330007).'
-                '</div>',
+                "Haga clic en <b>«Consultar última lectura»</b> en la barra superior para "
+                "actualizar la medición de la estación Rodelillo (330007)."
+                "</div>",
                 unsafe_allow_html=True,
             )
             return
@@ -1832,31 +1879,36 @@ def _render_dmc_observation_panel() -> None:
 
         error_msg = data.get("error")
         error_html = (
-            f'<div style="font-size:0.76rem;color:#fca5a5;margin-top:0.25rem;">{_esc(error_msg)}</div>'
+            f'<div style="font-size:0.76rem;color:#fca5a5;margin-top:0.25rem;">'
+            f"{_esc(error_msg)}</div>"
             if error_msg and not data.get("ok")
             else ""
         )
 
         st.markdown(
             f'<div class="sapi-dmc-box">'
-            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.35rem">'
-            f'<span style="font-weight:700;font-size:0.82rem;color:var(--sapi-text-title)">Estación 330007 · Rodelillo</span>'
+            f'<div style="display:flex;justify-content:space-between;align-items:center;'
+            f'margin-bottom:0.35rem">'
+            f'<span style="font-weight:700;font-size:0.82rem;color:var(--sapi-text-title)">'
+            f"Estación 330007 · Rodelillo</span>"
             f'<span class="sapi-dmc-badge sapi-dmc-badge--{badge_class}">{status}</span>'
-            f'</div>'
+            f"</div>"
             f'<ul class="sapi-kv-table" style="margin-bottom:0.30rem;">'
-            f'<li><span>Temperatura</span><b>{temp_str}</b></li>'
-            f'<li><span>Humedad relativa</span><b>{hum_str}</b></li>'
-            f'<li><span>Viento</span><b>{viento_str}</b></li>'
-            f'<li><span>Lectura (Chile)</span><b>{_esc(momento_cl)}</b></li>'
-            f'<li><span>Lectura (UTC)</span><b>{_esc(momento_utc)}</b></li>'
-            f'<li><span>Consulta efectuada</span><b>{_esc(checked_str)}</b></li>'
-            f'</ul>'
-            f'{error_html}'
-            f'<div class="sapi-v2-note" style="margin-top:0.35rem;color:var(--sapi-dmc-top-notice);border-left:2px solid #ef4444;padding-left:0.40rem;font-style:normal;">'
-            f'<b>Aviso:</b> Ranking histórico: 01-09-2026.<br>'
-            f'La meteorología DMC reciente no se utilizó para calcular el ranking histórico.'
-            f'</div>'
-            f'</div>',
+            f"<li><span>Temperatura</span><b>{temp_str}</b></li>"
+            f"<li><span>Humedad relativa</span><b>{hum_str}</b></li>"
+            f"<li><span>Viento</span><b>{viento_str}</b></li>"
+            f"<li><span>Lectura (Chile)</span><b>{_esc(momento_cl)}</b></li>"
+            f"<li><span>Lectura (UTC)</span><b>{_esc(momento_utc)}</b></li>"
+            f"<li><span>Consulta efectuada</span><b>{_esc(checked_str)}</b></li>"
+            f"</ul>"
+            f"{error_html}"
+            f'<div class="sapi-v2-note" style="margin-top:0.35rem;'
+            f"color:var(--sapi-dmc-top-notice);border-left:2px solid #ef4444;"
+            f'padding-left:0.40rem;font-style:normal;">'
+            f"<b>Aviso:</b> Ranking histórico: 01-09-2026.<br>"
+            f"La meteorología DMC reciente no se utilizó para calcular el ranking histórico."
+            f"</div>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
@@ -1928,22 +1980,30 @@ def _render_ranking_expander(view: RankingView) -> None:
         date_line = _human_date(view.forecast_time)
         time_line = f"{_human_hm(view.forecast_time)} UTC"
         horizon_line = f"+{view.horizon_hours} h" if view.horizon_hours else "+6 h"
-        window_end_line = f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+        window_end_line = (
+            f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+        )
 
         st.markdown(
             f'<div class="sapi-table-date-banner">'
-            f'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.4rem;">'
+            f'<div style="display:flex;align-items:center;justify-content:space-between;'
+            f'flex-wrap:wrap;gap:0.4rem;">'
             f'<div style="display:flex;align-items:center;gap:0.45rem;">'
-            f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CALENDAR}</span>'
-            f'<span style="font-weight:700;font-size:0.75rem;color:var(--sapi-text-body);letter-spacing:0.02em;">CORTE TEMPORAL DE LA MATRIZ:</span>'
-            f'<span style="font-weight:850;font-size:0.78rem;color:var(--sapi-text-title);letter-spacing:0.02em;">{date_line} · {time_line}</span>'
-            f'</div>'
+            f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">'
+            f"{_SVG_CALENDAR}</span>"
+            f'<span style="font-weight:700;font-size:0.75rem;color:var(--sapi-text-body);'
+            f'letter-spacing:0.02em;">CORTE TEMPORAL DE LA MATRIZ:</span>'
+            f'<span style="font-weight:850;font-size:0.78rem;color:var(--sapi-text-title);'
+            f'letter-spacing:0.02em;">{date_line} · {time_line}</span>'
+            f"</div>"
             f'<div style="display:flex;align-items:center;gap:0.4rem;">'
             f'<span class="sapi-table-date-badge">VENTANA: T{horizon_line}{window_end_line}</span>'
-            f'<span class="sapi-table-date-badge" style="color:#10b981;border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);">50 CELDAS EVALUADAS</span>'
-            f'</div>'
-            f'</div>'
-            f'</div>',
+            f'<span class="sapi-table-date-badge" style="color:#10b981;'
+            f'border-color:rgba(16,185,129,0.3);background:rgba(16,185,129,0.1);">'
+            f"50 CELDAS EVALUADAS</span>"
+            f"</div>"
+            f"</div>"
+            f"</div>",
             unsafe_allow_html=True,
         )
 
@@ -2105,7 +2165,10 @@ def _render_bottom_modules(view: RankingView) -> None:
                         <div>
                             <div class="sapi-info-item__title">Fuente de datos</div>
                             <div class="sapi-info-item__val">NASA FIRMS</div>
-                            <div class="sapi-info-item__sub">Cobertura hasta 2026-08-30 (evaluado respecto al instante histórico T)</div>
+                            <div class="sapi-info-item__sub">
+                                Cobertura hasta 2026-08-30
+                                (evaluado respecto al instante histórico T)
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -2233,12 +2296,15 @@ def render_ranking_backend_dashboard() -> None:
                 set_appearance(APPEARANCE_CLARO)
                 st.rerun()
         else:
-            if st.button("◑", key="sapi_theme_toggle_btn", help="Cambiar a modo oscuro"):
+            if st.button(
+                "◑", key="sapi_theme_toggle_btn", help="Cambiar a modo oscuro"
+            ):
                 set_appearance(APPEARANCE_OSCURO)
                 st.rerun()
 
     with st.sidebar:
         from app.components.controls import render_appearance_toggle
+
         render_appearance_toggle(location="sidebar")
 
     # 2. Alerta histórica obligatoria
@@ -2255,31 +2321,41 @@ def render_ranking_backend_dashboard() -> None:
         m_head_left, m_head_right = st.columns([7.5, 2.5])
         with m_head_left:
             horizon_str = f"T+{view.horizon_hours}h" if view.horizon_hours else "T+6h"
-            window_end_str = f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+            window_end_str = (
+                f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+            )
             st.markdown(
                 f'<div class="sapi-map-title-row">'
                 f'<span class="sapi-map-icon">{_SVG_MAP}</span>'
                 f'<div style="flex-grow:1;">'
                 f'<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">'
-                f'<div class="sapi-map-title">Mapa de riesgo relativo de incendio (Vista ampliada)</div>'
+                f'<div class="sapi-map-title">Mapa de riesgo relativo de incendio '
+                f"(Vista ampliada)</div>"
                 f'<span class="sapi-map-historical-tag">'
-                f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CALENDAR}</span>'
-                f'<span>CORTE DE MATRIZ:</span>'
-                f'<span class="sapi-map-tag-date">{_human_date(view.forecast_time)} · {_human_hm(view.forecast_time)} UTC</span>'
+                f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">'
+                f"{_SVG_CALENDAR}</span>"
+                f"<span>CORTE DE MATRIZ:</span>"
+                f'<span class="sapi-map-tag-date">{_human_date(view.forecast_time)} · '
+                f"{_human_hm(view.forecast_time)} UTC</span>"
                 f'<span class="sapi-map-tag-badge">VENTANA: {horizon_str}{window_end_str}</span>'
-                f'</span>'
-                f'</div>'
-                f'<div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>'
-                f'</div>'
-                f'</div>',
+                f"</span>"
+                f"</div>"
+                f'<div class="sapi-map-sub">Cada celda muestra el score relativo '
+                f"(no es una probabilidad calibrada).</div>"
+                f"</div>"
+                f"</div>",
                 unsafe_allow_html=True,
             )
         with m_head_right:
-            if st.button("↙ Restaurar vista", key="btn_restore_map", use_container_width=True):
+            if st.button(
+                "↙ Restaurar vista", key="btn_restore_map", use_container_width=True
+            ):
                 st.session_state[_SESSION_EXPANDED] = False
                 st.rerun()
 
-        fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
+        fmap = build_map(
+            view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED]
+        )
         event = st_folium(
             fmap,
             height=700,
@@ -2300,8 +2376,12 @@ def render_ranking_backend_dashboard() -> None:
         with map_col:
             m_head_left, m_head_right = st.columns([6.8, 3.2])
             with m_head_left:
-                horizon_str = f"T+{view.horizon_hours}h" if view.horizon_hours else "T+6h"
-                window_end_str = f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+                horizon_str = (
+                    f"T+{view.horizon_hours}h" if view.horizon_hours else "T+6h"
+                )
+                window_end_str = (
+                    f" → {_human_hm(view.window_end)} UTC" if view.window_end else ""
+                )
                 st.markdown(
                     f'<div class="sapi-map-title-row">'
                     f'<span class="sapi-map-icon">{_SVG_MAP}</span>'
@@ -2309,15 +2389,19 @@ def render_ranking_backend_dashboard() -> None:
                     f'<div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">'
                     f'<div class="sapi-map-title">Mapa de riesgo relativo de incendio</div>'
                     f'<span class="sapi-map-historical-tag">'
-                    f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">{_SVG_CALENDAR}</span>'
-                    f'<span>CORTE DE MATRIZ:</span>'
-                    f'<span class="sapi-map-tag-date">{_human_date(view.forecast_time)} · {_human_hm(view.forecast_time)} UTC</span>'
-                    f'<span class="sapi-map-tag-badge">VENTANA: {horizon_str}{window_end_str}</span>'
-                    f'</span>'
-                    f'</div>'
-                    f'<div class="sapi-map-sub">Cada celda muestra el score relativo (no es una probabilidad calibrada).</div>'
-                    f'</div>'
-                    f'</div>',
+                    f'<span style="display:inline-flex;align-items:center;color:#38bdf8;">'
+                    f"{_SVG_CALENDAR}</span>"
+                    f"<span>CORTE DE MATRIZ:</span>"
+                    f'<span class="sapi-map-tag-date">{_human_date(view.forecast_time)} · '
+                    f"{_human_hm(view.forecast_time)} UTC</span>"
+                    f'<span class="sapi-map-tag-badge">VENTANA: {horizon_str}{window_end_str}'
+                    f"</span>"
+                    f"</span>"
+                    f"</div>"
+                    f'<div class="sapi-map-sub">Cada celda muestra el score relativo '
+                    f"(no es una probabilidad calibrada).</div>"
+                    f"</div>"
+                    f"</div>",
                     unsafe_allow_html=True,
                 )
             with m_head_right:
@@ -2328,17 +2412,25 @@ def render_ranking_backend_dashboard() -> None:
                         <div class="sapi-map-risk-widget">
                             <span class="sapi-map-risk-label">Riesgo (score)</span>
                             <div class="sapi-map-risk-bar"></div>
-                            <div class="sapi-map-risk-scale"><span>Bajo</span><span>Alto</span></div>
+                            <div class="sapi-map-risk-scale">
+                                <span>Bajo</span><span>Alto</span>
+                            </div>
                         </div>
                         """,
                         unsafe_allow_html=True,
                     )
                 with r_col2:
-                    if st.button("⤢ Expandir", key="btn_expand_map", help="Amplía el mapa a pantalla completa"):
+                    if st.button(
+                        "⤢ Expandir",
+                        key="btn_expand_map",
+                        help="Amplía el mapa a pantalla completa",
+                    ):
                         st.session_state[_SESSION_EXPANDED] = True
                         st.rerun()
 
-            fmap = build_map(view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED])
+            fmap = build_map(
+                view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED]
+            )
             event = st_folium(
                 fmap,
                 height=450,
@@ -2375,7 +2467,10 @@ def render_ranking_backend_dashboard() -> None:
                 options=cell_ids,
                 index=selected_idx,
                 key="sapi_cell_selector",
-                help="Selecciona una celda para inspeccionar sus variables territoriales y meteorológicas.",
+                help=(
+                    "Selecciona una celda para inspeccionar sus variables "
+                    "territoriales y meteorológicas."
+                ),
             )
             if new_selection != st.session_state[_SESSION_SELECTED]:
                 st.session_state[_SESSION_SELECTED] = new_selection
