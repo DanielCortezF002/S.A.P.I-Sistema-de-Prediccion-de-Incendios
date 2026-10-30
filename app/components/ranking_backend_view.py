@@ -1580,7 +1580,11 @@ def _render_dmc_top_strip() -> None:
             st.rerun()
 
 
-def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> None:
+def _render_kpi_strip(
+    view: RankingView,
+    selected_id: Optional[str] = None,
+    topography: Optional[Mapping[str, CellTopography]] = None,
+) -> None:
     """Fila de 5 tarjetas horizontales de indicadores superiores (TAREA B)."""
     top = _priority_group(view.cells)
     top_score = top[0].score if top else 0.0
@@ -1589,13 +1593,9 @@ def _render_kpi_strip(view: RankingView, selected_id: Optional[str] = None) -> N
     top_rank_num = top[0].display_rank if top else 1
 
     target_id = selected_id or top_id
-    topo = reference_topography()
-    row_topo = topo.get(target_id)
-    elev_str = (
-        f"{int(round(row_topo.elevation))} m"
-        if row_topo and row_topo.elevation is not None
-        else "317 m"
-    )
+    topo = reference_topography() if topography is None else topography
+    # Sin cobertura DEM la tarjeta muestra N/D, igual que el panel de detalle (QA-04).
+    elev_str, _, _ = _topo_for(topo, target_id)
 
     date_str = _human_date(view.forecast_time)
     horizon_str = f"h+{view.horizon_hours}" if view.horizon_hours else "h+6"

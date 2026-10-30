@@ -302,6 +302,54 @@ def test_kpi_strip_extended_shows_backend_meteo_verbatim(mock_st: MagicMock) -> 
     assert "Score relativo (top)" in text
 
 
+# F3B-DEF-01: la tarjeta "Territorio" mostraba un "317 m" fijo para celdas sin DEM.
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_kpi_strip_selected_cell_without_dem_shows_nd(mock_st: MagicMock) -> None:
+    assert not reference_topography()["VP-038"].dem_available
+    view_mod._render_kpi_strip(v0_view(), "VP-038")
+    text = _markdown_blob(mock_st)
+    assert 'sapi-card-kpi__val">N/D</div>' in text
+    assert "Elevación (VP-038)" in text
+    assert "317 m" not in text and "0 m" not in text
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_kpi_strip_selected_covered_cell_shows_its_own_elevation(
+    mock_st: MagicMock,
+) -> None:
+    table = reference_topography()
+    cell_id, topo = next(
+        (cid, t)
+        for cid, t in sorted(table.items())
+        if t.dem_available and round(t.elevation) != 317
+    )
+    view_mod._render_kpi_strip(v0_view(), cell_id)
+    text = _markdown_blob(mock_st)
+    assert f'sapi-card-kpi__val">{topo.elevation:.0f} m</div>' in text
+    assert f"Elevación ({cell_id})" in text
+
+
+@pytest.mark.parametrize(
+    "topography",
+    [
+        {"VP-001": CellTopography("VP-001", None, None, False)},
+        {},
+    ],
+    ids=["sin-cobertura", "ausente-de-la-tabla"],
+)
+@patch("app.components.ranking_backend_view.st")
+def test_kpi_strip_top_cell_without_topography_never_falls_back_to_a_fixed_value(
+    mock_st: MagicMock, topography: dict[str, CellTopography]
+) -> None:
+    view_mod._render_kpi_strip(v0_view(), topography=topography)
+    text = _markdown_blob(mock_st)
+    assert 'sapi-card-kpi__val">N/D</div>' in text
+    assert "Elevación (VP-001)" in text
+    assert "317 m" not in text
+
+
 @patch("app.components.ranking_backend_view.st")
 def test_disclaimer_from_backend_is_escaped_and_rn01_text_kept(
     mock_st: MagicMock,
