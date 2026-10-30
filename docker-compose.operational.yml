@@ -22,9 +22,11 @@ services:
       - ./data:/app/data:ro
   db-v2:
     # Reemplaza el volumen reproducible. Sin !override, Compose concatenaría
-    # los dos montajes sobre el mismo directorio de datos.
+    # los dos montajes sobre el mismo directorio de datos. !override reemplaza
+    # la lista entera: hay que repetir el volumen de la contraseña (SAPI-66.CA5).
     volumes: !override
       - sapi_v2_operational_pgdata:/var/lib/postgresql/data
+      - sapi_v2_secrets:/run/sapi-secrets
 
 volumes:
   sapi_v2_operational_pgdata:

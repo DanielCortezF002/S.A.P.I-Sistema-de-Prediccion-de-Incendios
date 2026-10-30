@@ -17,10 +17,14 @@ from __future__ import annotations
 
 import time
 import unittest
+from pathlib import Path
 
 from scripts.measure_browser_e2e_d21 import (
+    get_browser_navigation_type,
     is_confirmed_update,
     parse_backend_timestamp,
+    sha256_file,
+    verify_expanded_grid,
     wait_for_ranking_update_cycle,
 )
 
@@ -154,6 +158,63 @@ class TestWaitForRankingUpdateCycleCA4Directiva28(unittest.TestCase):
         t_start = time.perf_counter()
         latency_ms, post_raw, _ = wait_for_ranking_update_cycle(driver, pre, t_start, timeout=5.0)
         self.assertIn("15:53:47", post_raw)
+
+
+class TestEvidenceInstrumentationCA4(unittest.TestCase):
+    """Endurecimiento de la evidencia: hash de captura, navegación y grilla real."""
+
+    def test_sha256_file_is_uppercase_and_matches_known_digest(self):
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "sample.bin"
+            path.write_bytes(b"abc")
+            self.assertEqual(
+                sha256_file(path),
+                "BA7816BF8F01CFEA414140DE5DAE2223B00361A396177A9CB410FF61F20015AD",
+            )
+
+    def test_navigation_type_reads_performance_api(self):
+        class _Driver:
+            def execute_script(self, script):
+                self.script = script
+                return "reload"
+
+        self.assertEqual(get_browser_navigation_type(_Driver()), "reload")
+
+    def test_navigation_type_falls_back_to_unknown_on_error(self):
+        class _Driver:
+            def execute_script(self, script):
+                raise RuntimeError("sin performance API")
+
+        self.assertEqual(get_browser_navigation_type(_Driver()), "unknown")
+
+    def test_expanded_grid_requires_a_visible_grid(self):
+        class _Hidden:
+            def is_displayed(self):
+                return False
+
+        class _Driver:
+            def find_elements(self, by, selector):
+                self.selector = selector
+                return [_Hidden()]
+
+        ok, detail = verify_expanded_grid(_Driver())
+        self.assertFalse(ok)
+        self.assertIn("visibles=0", detail)
+
+    def test_expanded_grid_passes_with_a_visible_grid(self):
+        class _Visible:
+            def is_displayed(self):
+                return True
+
+        class _Driver:
+            def find_elements(self, by, selector):
+                return [_Visible()]
+
+        ok, detail = verify_expanded_grid(_Driver())
+        self.assertTrue(ok)
+        self.assertIn("visibles=1", detail)
 
 
 if __name__ == "__main__":

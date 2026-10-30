@@ -16,7 +16,7 @@ from app.theme.tokens import (
 from src.config import SAPI_DATA_MODE
 
 def render_appearance_toggle(*, location: str = "main") -> str:
-    """Interruptor ☀️ / 🌙 claro-oscuro. Devuelve el modo activo.
+    """Interruptor claro-oscuro. Devuelve el modo activo.
 
     Antes era un `st.radio` con las etiquetas "Claro"/"Oscuro" montado en el
     sidebar colapsado por defecto: invisible hasta que alguien lo abriera a
@@ -34,7 +34,7 @@ def render_appearance_toggle(*, location: str = "main") -> str:
     col_sol, col_luna = host.columns(2, gap="small")
     with col_sol:
         clicked_claro = st.button(
-            "☀️",
+            "Claro",
             key="sapi_theme_claro",
             use_container_width=True,
             type="primary" if current == APPEARANCE_CLARO else "secondary",
@@ -42,7 +42,7 @@ def render_appearance_toggle(*, location: str = "main") -> str:
         )
     with col_luna:
         clicked_oscuro = st.button(
-            "🌙",
+            "Oscuro",
             key="sapi_theme_oscuro",
             use_container_width=True,
             type="primary" if current == APPEARANCE_OSCURO else "secondary",
@@ -59,19 +59,19 @@ def render_appearance_toggle(*, location: str = "main") -> str:
 def render_data_mode_badge() -> None:
     """Badge visible en sidebar: fuente de datos del dashboard (SAPI-44)."""
     if SAPI_DATA_MODE == "prototype":
-        st.sidebar.markdown("### 🟣 Prototipo (datos reales)")
+        st.sidebar.markdown("### Prototipo (datos reales)")
         st.sidebar.caption(
             "`SAPI_DATA_MODE=prototype` — ranking real vía el pipeline temporal nuevo "
             "(Modelo D), NO probabilidad calibrada de incendio."
         )
     elif SAPI_DATA_MODE == "demo_seed":
-        st.sidebar.markdown("### 🟡 Modo Demo")
+        st.sidebar.markdown("### Modo Demo")
         st.sidebar.caption(
             "`SAPI_DATA_MODE=demo_seed` — probabilidades y niveles de riesgo provienen "
             "del escenario sembrado (`demo_seed`), no de inferencia XGBoost en runtime."
         )
     elif SAPI_DATA_MODE == "postgis_inference":
-        st.sidebar.markdown("### 🟢 Inferencia PostGIS")
+        st.sidebar.markdown("### Inferencia PostGIS")
         st.sidebar.caption(
             "`SAPI_DATA_MODE=postgis_inference` — predicciones desde `predicciones_riesgo`."
         )

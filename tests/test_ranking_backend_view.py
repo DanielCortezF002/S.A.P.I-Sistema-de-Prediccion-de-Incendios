@@ -125,6 +125,17 @@ def test_map_priority_mode_highlights_only_the_top_tie_group() -> None:
     assert len(strong) == 7  # empate real de 7 celdas con display_rank 1
 
 
+def test_map_all_cells_mode_colors_every_cell_by_its_group() -> None:
+    """SAPI-61.CA3 (D15): «Todas las celdas» colorea las 50 celdas por su grupo;
+    «Prioridades» atenúa en gris las 43 que no están en el grupo prioritario."""
+    muted = "#64748b"
+    prio = _rectangles(build_map(v0_view(), "Prioridades", selected_id=None))
+    todas = _rectangles(build_map(v0_view(), "Todas las celdas", selected_id=None))
+    assert sum(r.options["fillColor"] == muted for r in prio) == 43
+    assert not any(r.options["fillColor"] == muted for r in todas)
+    assert all(r.options["fillOpacity"] > 0.08 for r in todas)
+
+
 def test_map_without_topography_shows_nd_never_zero() -> None:
     fmap = build_map(v0_view(), "Todas las celdas", None, topography={})
     tips = [next(iter(r._children.values())).text for r in _rectangles(fmap)]
@@ -275,22 +286,68 @@ def test_kpi_strip_v0_declares_meteo_unavailable_and_counts_cells(
 ) -> None:
     view_mod._render_kpi_strip(v0_view())
     text = _markdown_blob(mock_st)
-    assert text.count(NOT_PROVIDED) == 4
-    assert ">50<" in text and "Celdas evaluadas" in text
-    assert "°C" not in text and "km/h" not in text
+    assert "50" in text and "Celdas evaluadas" in text
+    assert "Grupo prioritario" in text and "#1" in text
+    assert "Score relativo (top)" in text and "0.1313" in text
+    assert "Territorio" in text and "317 m" in text
+    assert "Ventana de análisis" in text and "01 sep 2026" in text
 
 
 @patch("app.components.ranking_backend_view.st")
 def test_kpi_strip_extended_shows_backend_meteo_verbatim(mock_st: MagicMock) -> None:
     view_mod._render_kpi_strip(extended_view())
     text = _markdown_blob(mock_st)
-    assert (
-        "18.8 °C" in text
-        and "72 %" in text
-        and "15.7 km/h" in text
-        and "Inactiva" in text
+    assert "50" in text and "Celdas evaluadas" in text
+    assert "#1" in text
+    assert "Score relativo (top)" in text
+
+
+# F3B-DEF-01: la tarjeta "Territorio" mostraba un "317 m" fijo para celdas sin DEM.
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_kpi_strip_selected_cell_without_dem_shows_nd(mock_st: MagicMock) -> None:
+    assert not reference_topography()["VP-038"].dem_available
+    view_mod._render_kpi_strip(v0_view(), "VP-038")
+    text = _markdown_blob(mock_st)
+    assert 'sapi-card-kpi__val">N/D</div>' in text
+    assert "Elevación (VP-038)" in text
+    assert "317 m" not in text and "0 m" not in text
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_kpi_strip_selected_covered_cell_shows_its_own_elevation(
+    mock_st: MagicMock,
+) -> None:
+    table = reference_topography()
+    cell_id, topo = next(
+        (cid, t)
+        for cid, t in sorted(table.items())
+        if t.dem_available and round(t.elevation) != 317
     )
-    assert NOT_PROVIDED not in text
+    view_mod._render_kpi_strip(v0_view(), cell_id)
+    text = _markdown_blob(mock_st)
+    assert f'sapi-card-kpi__val">{topo.elevation:.0f} m</div>' in text
+    assert f"Elevación ({cell_id})" in text
+
+
+@pytest.mark.parametrize(
+    "topography",
+    [
+        {"VP-001": CellTopography("VP-001", None, None, False)},
+        {},
+    ],
+    ids=["sin-cobertura", "ausente-de-la-tabla"],
+)
+@patch("app.components.ranking_backend_view.st")
+def test_kpi_strip_top_cell_without_topography_never_falls_back_to_a_fixed_value(
+    mock_st: MagicMock, topography: dict[str, CellTopography]
+) -> None:
+    view_mod._render_kpi_strip(v0_view(), topography=topography)
+    text = _markdown_blob(mock_st)
+    assert 'sapi-card-kpi__val">N/D</div>' in text
+    assert "Elevación (VP-001)" in text
+    assert "317 m" not in text
 
 
 @patch("app.components.ranking_backend_view.st")
@@ -429,7 +486,15 @@ def test_prepare_ranking_display_ties_ordered_by_cell_id() -> None:
     assert len(df) == 50
     # Los primeros 7 empatados con display_rank 1 deben quedar ordenados por ID
     top7_ids = list(df["Celda"][:7])
-    assert top7_ids == ["VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"]
+    assert top7_ids == [
+        "VP-001",
+        "VP-002",
+        "VP-011",
+        "VP-012",
+        "VP-013",
+        "VP-016",
+        "VP-033",
+    ]
     assert list(df["Prioridad"][:7]) == [1] * 7
     # Los 2 últimos empatados con display_rank 49 (VP-028 y VP-038)
     bottom2_ids = list(df["Celda"][-2:])
@@ -470,7 +535,13 @@ def test_ranking_expander_with_cell_id_order_and_filter(mock_st: MagicMock) -> N
     df = mock_st.dataframe.call_args[0][0]
     assert len(df) == 7
     assert list(df["Celda"]) == [
-        "VP-001", "VP-002", "VP-011", "VP-012", "VP-013", "VP-016", "VP-033"
+        "VP-001",
+        "VP-002",
+        "VP-011",
+        "VP-012",
+        "VP-013",
+        "VP-016",
+        "VP-033",
     ]
     assert all(df["Grupo"] == "Grupo 1")
     assert all(df["Prioridad"] == 1)

@@ -1,6 +1,6 @@
 # Matriz de Riesgos — Sprint 2 / Hito 2 (S.A.P.I.)
 
-Candidato: `f9654834cec0e026cd8fc84d5af7d81f75da25e2`. Escala: Probabilidad y
+Candidato Consolidado: `8010e4421cf91b80e6dc66d732ef6e98dfd1e4d8` (Base F7: `51ec3c06b67959d3daad6349c962a1be643906b4`). Escala: Probabilidad y
 Riesgo en {Baja, Media, Alta}; Impacto en {Bajo, Medio, Alto, Crítico}.
 Cada fila cita evidencia real, no una mitigación supuesta.
 

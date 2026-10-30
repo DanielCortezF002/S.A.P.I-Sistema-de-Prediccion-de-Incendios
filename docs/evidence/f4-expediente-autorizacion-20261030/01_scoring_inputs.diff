@@ -1,0 +1,18 @@
+diff --git a/src/inference/scoring_inputs.py b/src/inference/scoring_inputs.py
+index f3fb477..2dcb470 100644
+--- a/src/inference/scoring_inputs.py
++++ b/src/inference/scoring_inputs.py
+@@ -151,7 +151,12 @@ def _read_versioned_months(
+             expected_sha256=str(entry["sha256"]),
+         )
+         files.append(pinned)
+-        frames.append(parse_dmc_bytes(data, name))
++        try:
++            frames.append(parse_dmc_bytes(data, name))
++        except (UnicodeDecodeError, json.JSONDecodeError) as exc:
++            raise PinnedInputError(
++                f"Lectura DMC ilegible en {name} ({type(exc).__name__}): {exc}."
++            ) from exc
+     return files, frames, str(pointer["manifest_sha256"])
+ 
+ 

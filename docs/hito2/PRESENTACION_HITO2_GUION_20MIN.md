@@ -1,9 +1,22 @@
-# Guion de presentación Hito 2 — S.A.P.I. (20 minutos)
+# Guion de presentaci?n Hito 2 ? S.A.P.I. (20 minutos)
 
-Candidato: `d11428a6165dd0dd26f3440cb850ab08ab09f06a`. Estructura exigida por
-la Directiva 33: 5 + 5 + 7 + 3 minutos. Reemplaza el borrador previo
-(placeholders `[ATTEMPT2_RESULT]` etc., ya resueltos en
-`docs/evidence/actualizacion-informe-y-guion-20261015/`).
+**Candidato Consolidado:** Commit `8010e4421cf91b80e6dc66d732ef6e98dfd1e4d8` (Base F7: `51ec3c06b67959d3daad6349c962a1be643906b4`).  
+**Fecha de Consolidaci?n:** 24 de octubre de 2026.  
+**Evaluaci?n Normativa:** Mat?as Vargas ? Proyecto de T?tulo Hito 2 (Cobertura integral de criterios M1 a M8).  
+**Estructura Cronometrada:** 5 + 5 + 7 + 3 = 20 minutos estrictos.  
+
+### Matriz de Mapeo Normativo a la R?brica de Mat?as Vargas (M1?M8)
+
+| Criterio Evaluado | Ponderaci?n | Bloque del Guion | Minutos | Evidencia T?cnica Verificable |
+| :--- | :---: | :--- | :---: | :--- |
+| **M1. Incremento Funcional del Sprint 2** | 20% | Bloque 3: Demostraci?n en vivo | 10?17 | 4 microservicios en Docker, flujo completo Streamlit -> Spring Boot -> FastAPI -> PostGIS. |
+| **M2. An?lisis y Especificaci?n de Requerimientos** | 15% | Bloque 1: Contexto y requerimientos | 00?05 | Backlog 14 HU / 58 SP, conciliaci?n con Jira (12 finalizadas, 1 por hacer, 1 pendiente). |
+| **M3. Arquitectura de Software** | 15% | Bloque 2: Arquitectura y datos | 05?07 | Topolog?a desacoplada en Docker, 11 ADRs versionados, contratos OpenAPI fijados por SHA-256. |
+| **M4. Dise?o de Datos, Procesos y Plataformas** | 15% | Bloque 2 y Bloque 3 | 07?10, 15?17 | DER PostGIS, Flyway V001-V004, clave natural idempotente y `scientific_model_validation=false`. |
+| **M5. Implementaci?n y Calidad T?cnica** | 15% | Bloque 2 y Bloque 3 | 05?17 | Spring Boot 3 con fail-closed, FastAPI async, `HistGradientBoostingClassifier` desacoplado. |
+| **M6. Validaci?n y Pruebas del Incremento** | 10% | Bloque 4: Evidencias y cierre | 17?18 | 102 tests Python PASS, 137 tests Java Surefire PASS, 91 evidencias R2 con SHA-256 verificado. |
+| **M7. Integraci?n T?cnica y Atributos de Calidad** | 5% | Bloque 3: Demostraci?n en vivo | 13?15 | Latencias CA4 R2 (cold 6.867 ms, update 3.723 ms, cached 424 ms), red privada `sapi-v2-net`. |
+| **M8. Evidencia T?cnica, Trazabilidad y Evoluci?n** | 5% | Bloque 1 y Bloque 4 | 01?02, 18?20 | Superaci?n del monolito Hito 1, matriz de 19 riesgos y Gate B en NO GO como ?tica de software. |
 
 ---
 
@@ -66,12 +79,12 @@ requiere este paso).
 *Mostrar:* 4 contenedores `Up (healthy)`.
 
 **Minuto 11-13 — Navegación y ranking.**
-Abrir `http://localhost:8501`. Mostrar las 50 celdas H3, badge "Semántica:
+Abrir `http://localhost:8501`. Mostrar las 50 celdas rectangulares VP-001 a VP-050, badge "Semántica:
 relative_rank (no calibrado)", KPI "50 celdas evaluadas".
 
 **Minuto 13-15 — Actualización interactiva.**
 Clic en "Actualizar ranking". Mostrar el cambio de timestamp y la latencia
-medida (~1.7 s, dato real, no estimado).
+medida (tiempos R2 certificados: cold 6.867 ms, update interactivo 3.723 ms, cached 424 ms).
 
 **Minuto 15-17 — Persistencia e idempotencia en PostGIS.**
 *Comando:* `docker exec -it <db> psql -U sapi -d sapi_v2 -c "SELECT id, forecast_time, model_version, firms_origin FROM ejecuciones;"`
@@ -90,7 +103,7 @@ muestro sin filtrar." (señalar la tabla de `INFORME_HITO2_FINAL.md` §9).
 "Reproduje este experimento yo mismo hoy, contra el dato real: 107 positivos
 en 362 883 filas, 26 de 49 folds de prueba sin ningún positivo. Una LSTM no
 es viable con este volumen — y la literatura revisada confirma el mismo
-patrón en dominios comparables. Mantenemos XGBoost."
+patrón en dominios comparables. Mantenemos el baseline tabular con HistGradientBoostingClassifier."
 
 **Minuto 19-20 — Cierre honesto.**
 "Lo que falta no es ingeniería oculta: es autorización humana para el primer

@@ -1,0 +1,47 @@
+{
+  "captured_at": "2026-10-24T23:42:01.275844+00:00",
+  "run_label": "R2-evidence-remediation",
+  "project": "sapi-oc-e2e-20261024",
+  "health": {
+    "ml": {
+      "url": "http://127.0.0.1:58000/health",
+      "status": 200
+    },
+    "backend": {
+      "url": "http://127.0.0.1:58080/health",
+      "status": 200
+    },
+    "web": {
+      "url": "http://127.0.0.1:58501/_stcore/health",
+      "status": 200
+    }
+  },
+  "ranking": {
+    "schema_version": "sapi-ranking-v0",
+    "model_version": "prototype_model_d_v1",
+    "score_semantics": "relative_rank",
+    "scientific_model_validation": false,
+    "firms_origin": "reproducibility",
+    "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+    "cells": 50
+  },
+  "database": {
+    "ejecuciones": "1",
+    "predicciones_celda": "50",
+    "celdas_geom": "50",
+    "geometrias_validas": "50",
+    "flyway_ultima": "004",
+    "ejecucion_created_at": "2026-10-24 21:30:04.003667+00"
+  },
+  "containers": [
+    "sapi-oc-e2e-20261024-web-v2-1|Up 2 minutes|127.0.0.1:58501->8501/tcp",
+    "sapi-oc-e2e-20261024-backend-1|Up 6 minutes (healthy)|127.0.0.1:58080->8080/tcp",
+    "sapi-oc-e2e-20261024-db-v2-1|Up 6 minutes (healthy)|127.0.0.1:55432->5432/tcp",
+    "sapi-oc-e2e-20261024-ml-api-1|Up 6 minutes (healthy)|127.0.0.1:58000->8000/tcp"
+  ],
+  "volumes": [
+    "sapi-oc-e2e-20261024_sapi_v2_pgdata",
+    "sapi-oc-e2e-20261024_sapi_v2_secrets"
+  ],
+  "note": "CA4 no escribe ranking: las cuentas de base deben seguir en 1 ejecucion / 50 predicciones tras cold, update y cached."
+}

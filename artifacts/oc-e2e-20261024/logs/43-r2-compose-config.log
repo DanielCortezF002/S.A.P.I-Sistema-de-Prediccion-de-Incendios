@@ -1,0 +1,201 @@
+﻿name: sapi-oc-e2e-20261024
+services:
+  backend:
+    build:
+      context: C:\SAPI-OC-E2E-R2-20261024\services\backend
+      dockerfile: Dockerfile
+    depends_on:
+      db-v2:
+        condition: service_healthy
+        required: true
+      ml-api:
+        condition: service_started
+        required: true
+    environment:
+      SAPI_FLYWAY_LOCATIONS: filesystem:/app/db/migration
+      SAPI_ML_BASE_URL: http://ml-api:8000
+      SAPI_ML_CONNECT_TIMEOUT: 2s
+      SAPI_ML_READ_TIMEOUT: 60s
+      SAPI_PERSISTENCE_ALLOWED_FIRMS_ORIGINS: current,reproducibility
+      SAPI_PERSISTENCE_ENABLED: "true"
+      SPRING_CONFIG_IMPORT: configtree:/run/sapi-secrets/
+      SPRING_DATASOURCE_PASSWORD: $${db_password}
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db-v2:5432/sapi_v2
+      SPRING_DATASOURCE_USERNAME: sapi
+      SPRING_FLYWAY_FAILONMISSINGLOCATIONS: "true"
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - -fsS
+        - --noproxy
+        - '*'
+        - -o
+        - /dev/null
+        - http://127.0.0.1:8080/health
+      timeout: 5s
+      interval: 10s
+      retries: 6
+      start_period: 1m0s
+    networks:
+      sapi-v2-net: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8080
+        published: "58080"
+        protocol: tcp
+    volumes:
+      - type: bind
+        source: C:\SAPI-OC-E2E-R2-20261024\db\migration
+        target: /app/db/migration
+        read_only: true
+        bind: {}
+      - type: volume
+        source: sapi_v2_secrets
+        target: /run/sapi-secrets
+        read_only: true
+        volume: {}
+  db-v2:
+    command:
+      - postgres
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        secret=/run/sapi-secrets/db_password
+        if [ ! -s "$$secret" ]; then
+          if [ -s "$$PGDATA/PG_VERSION" ] && [ -z "$$SAPI_DB_PASSWORD_SEED" ]; then
+            echo "sapi-db-secret: la base persistente ya existe y el volumen sapi_v2_secrets no tiene su contrase├▒a; no se genera otra. Restaurar el volumen o definir SAPI_DB_PASSWORD con la contrase├▒a original." >&2
+            exit 1
+          fi
+          umask 077
+          tmp=$$(mktemp /run/sapi-secrets/.db_password.XXXXXX)
+          if [ -n "$$SAPI_DB_PASSWORD_SEED" ]; then
+            printf '%s' "$$SAPI_DB_PASSWORD_SEED" > "$$tmp"
+            origin="SAPI_DB_PASSWORD"
+          else
+            head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40 > "$$tmp"
+            origin="generada al azar"
+          fi
+          if [ ! -s "$$tmp" ]; then
+            echo "sapi-db-secret: no se pudo escribir la contrase├▒a." >&2
+            exit 1
+          fi
+          chown 999:999 "$$tmp"
+          chmod 0440 "$$tmp"
+          mv "$$tmp" "$$secret"
+          echo "sapi-db-secret: contrase├▒a de la base inicializada ($$origin)."
+        elif [ -n "$$SAPI_DB_PASSWORD_SEED" ] && [ "$$(cat "$$secret")" != "$$SAPI_DB_PASSWORD_SEED" ]; then
+          echo "sapi-db-secret: SAPI_DB_PASSWORD no coincide con la contrase├▒a guardada en sapi_v2_secrets; no se reemplaza." >&2
+          exit 1
+        else
+          echo "sapi-db-secret: se reutiliza la contrase├▒a guardada."
+        fi
+        chown 999:999 /run/sapi-secrets
+        chmod 0750 /run/sapi-secrets
+        unset SAPI_DB_PASSWORD_SEED
+        exec docker-entrypoint.sh "$$@"
+      - sapi-db-secret
+    environment:
+      POSTGRES_DB: sapi_v2
+      POSTGRES_PASSWORD_FILE: /run/sapi-secrets/db_password
+      POSTGRES_USER: sapi
+      SAPI_DB_PASSWORD_SEED: ""
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -h 127.0.0.1 -p 5432 -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"
+      timeout: 5s
+      interval: 5s
+      retries: 12
+      start_period: 20s
+    image: postgis/postgis:15-3.4
+    networks:
+      sapi-v2-net: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 5432
+        published: "55432"
+        protocol: tcp
+    volumes:
+      - type: volume
+        source: sapi_v2_pgdata
+        target: /var/lib/postgresql/data
+        volume: {}
+      - type: volume
+        source: sapi_v2_secrets
+        target: /run/sapi-secrets
+        volume: {}
+  ml-api:
+    build:
+      context: C:\SAPI-OC-E2E-R2-20261024
+      dockerfile: Dockerfile.ml-api
+    environment:
+      SAPI_REPRODUCIBILITY_MODE: "1"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - import sys, urllib.request as u; r = u.build_opener(u.ProxyHandler({})).open('http://127.0.0.1:8000/health',
+          timeout=4); sys.exit(0 if r.status == 200 else 1)
+      timeout: 5s
+      interval: 10s
+      retries: 6
+      start_period: 30s
+    networks:
+      sapi-v2-net: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8000
+        published: "58000"
+        protocol: tcp
+  web-v2:
+    profiles:
+      - presentation
+    build:
+      context: C:\SAPI-OC-E2E-R2-20261024
+      dockerfile: Dockerfile.web
+    command:
+      - python
+      - -m
+      - streamlit
+      - run
+      - app/app.py
+      - --server.port=8501
+      - --server.address=0.0.0.0
+      - --theme.base=dark
+      - --theme.primaryColor=#6b9fd4
+      - --theme.backgroundColor=#14171b
+      - --theme.secondaryBackgroundColor=#1c2128
+      - --theme.textColor=#e8eaed
+    depends_on:
+      backend:
+        condition: service_started
+        required: true
+    environment:
+      SAPI_BACKEND_BASE_URL: http://backend:8080
+      SAPI_UI_LEGACY_MODES: "0"
+    networks:
+      sapi-v2-net: null
+    ports:
+      - mode: ingress
+        host_ip: 127.0.0.1
+        target: 8501
+        published: "58501"
+        protocol: tcp
+networks:
+  sapi-v2-net:
+    name: sapi-oc-e2e-20261024_sapi-v2-net
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.99.99.0/24
+volumes:
+  sapi_v2_pgdata:
+    name: sapi-oc-e2e-20261024_sapi_v2_pgdata
+  sapi_v2_secrets:
+    name: sapi-oc-e2e-20261024_sapi_v2_secrets

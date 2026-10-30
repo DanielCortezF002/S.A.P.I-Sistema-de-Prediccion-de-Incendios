@@ -108,19 +108,198 @@ def test_freeze_command_is_strict():
     assert command[command.index("--allow-tag") + 1] == "t-rc1"
 
 
+def _valid_full_freeze_checks() -> list[dict]:
+    """Genera una lista completa con todos los controles obligatorios en PASS."""
+    return [{"check": c, "status": "PASS"} for c in mg.MANDATORY_FREEZE_CHECKS]
+
+
+def test_freeze_gate_status_full_pass():
+    """Reporte completo con todos los controles aprobados -> PASS."""
+    rows = _valid_full_freeze_checks()
+    status, problems = mg.freeze_gate_status({"checks": rows})
+    assert status == "PASS"
+    assert problems == []
+
+
+def test_freeze_gate_status_f7_info_is_rejected_even_with_f4b_pass():
+    """GOV-F4F7-R1: F7 estricto. F7=INFO (contrato distinto de CONTRACT_PINS) -> FAIL,
+    aunque F4b confirme que el cambio es solo aditivo."""
+    rows = [
+        {"check": c, "status": "INFO" if c == "F7 contratos v0" else "PASS"}
+        for c in mg.MANDATORY_FREEZE_CHECKS
+    ]
+    status, problems = mg.freeze_gate_status({"checks": rows})
+    assert status == "FAIL"
+    assert problems == ["F7 contratos v0=INFO no autorizado"]
+
+
 @pytest.mark.parametrize(
-    "rows,expected",
+    "mutator,expected_problem_substring",
     [
-        ([{"check": "F1 HEAD", "status": "PASS"}], "PASS"),
-        ([{"check": "F2 fingerprint Modelo D", "status": "SKIP"}], "FAIL"),
-        ([{"check": "F1 refs remotos", "status": "SKIP"}], "FAIL"),
-        ([{"check": "F8 worktree limpio", "status": "WARN"}], "FAIL"),
-        ([{"check": "F6 db/migration", "status": "FAIL"}], "FAIL"),
-        ([], "FAIL"),
+        # F7=INFO y F4b=FAIL -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "INFO"
+                        if row["check"] == "F7 contratos v0"
+                        else (
+                            "FAIL"
+                            if row["check"] == "F4b contratos aditivos"
+                            else row["status"]
+                        )
+                    ),
+                )
+                for row in rows
+            ],
+            "F4b contratos aditivos",
+        ),
+        # F7=INFO sin F4b -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "INFO" if row["check"] == "F7 contratos v0" else row["status"]
+                    ),
+                )
+                for row in rows
+                if row["check"] != "F4b contratos aditivos"
+            ],
+            "controles obligatorios ausentes",
+        ),
+        # F7=INFO y F4b=PASS, pero faltan controles obligatorios -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "INFO" if row["check"] == "F7 contratos v0" else row["status"]
+                    ),
+                )
+                for row in rows
+                if row["check"] != "F2 fingerprint Modelo D"
+            ],
+            "controles obligatorios ausentes: F2 fingerprint Modelo D",
+        ),
+        # INFO en F4 congelados (commits) -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "INFO"
+                        if row["check"] == "F4 congelados (commits)"
+                        else row["status"]
+                    ),
+                )
+                for row in rows
+            ],
+            "F4 congelados (commits)=INFO no autorizado",
+        ),
+        # INFO en F2 fingerprint Modelo D -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "INFO"
+                        if row["check"] == "F2 fingerprint Modelo D"
+                        else row["status"]
+                    ),
+                )
+                for row in rows
+            ],
+            "F2 fingerprint Modelo D=INFO no autorizado",
+        ),
+        # FAIL en un control estricto -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "FAIL" if row["check"] == "F6 db/migration" else row["status"]
+                    ),
+                )
+                for row in rows
+            ],
+            "F6 db/migration=FAIL",
+        ),
+        # SKIP en un control -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "SKIP"
+                        if row["check"] == "F2 fingerprint Modelo D"
+                        else row["status"]
+                    ),
+                )
+                for row in rows
+            ],
+            "F2 fingerprint Modelo D=SKIP",
+        ),
+        # WARN en worktree -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=(
+                        "WARN"
+                        if row["check"] == "F8 worktree limpio"
+                        else row["status"]
+                    ),
+                )
+                for row in rows
+            ],
+            "F8 worktree limpio=WARN",
+        ),
+        # Estado desconocido -> FAIL
+        (
+            lambda rows: [
+                dict(
+                    row,
+                    status=("CORRUPT" if row["check"] == "F1 HEAD" else row["status"]),
+                )
+                for row in rows
+            ],
+            "F1 HEAD=CORRUPT",
+        ),
+        # Controles duplicados o contradictorios -> FAIL
+        (
+            lambda rows: rows + [{"check": "F1 HEAD", "status": "PASS"}],
+            "control duplicado o contradictorio: F1 HEAD",
+        ),
+        (
+            lambda rows: rows
+            + [{"check": "F4 congelados (commits)", "status": "FAIL"}],
+            "control duplicado o contradictorio: F4 congelados (commits)",
+        ),
     ],
 )
-def test_freeze_gate_treats_any_non_pass_row_as_fail(rows, expected):
-    assert mg.freeze_gate_status({"checks": rows})[0] == expected
+def test_freeze_gate_status_negative_cases(mutator, expected_problem_substring):
+    rows = mutator(_valid_full_freeze_checks())
+    status, problems = mg.freeze_gate_status({"checks": rows})
+    assert status == "FAIL"
+    assert any(expected_problem_substring in p for p in problems)
+
+
+@pytest.mark.parametrize(
+    "malformed_report",
+    [
+        {},
+        {"checks": []},
+        None,
+        {"checks": [{}]},
+        {"checks": "invalid_type"},
+    ],
+)
+def test_freeze_gate_status_empty_or_malformed(malformed_report):
+    status, problems = mg.freeze_gate_status(malformed_report)
+    assert status == "FAIL"
+    assert len(problems) > 0
 
 
 def test_allowed_tags_are_a_finite_list():

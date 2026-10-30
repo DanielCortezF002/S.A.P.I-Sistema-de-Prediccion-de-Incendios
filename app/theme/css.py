@@ -196,7 +196,7 @@ def build_stylesheet(mode: str = t.APPEARANCE_CLARO) -> str:
         section[data-testid="stMain"] div[data-testid="stDownloadButton"] button:hover span {{
             color: var(--sapi-accent) !important;
         }}
-        /* Botón "primary" (el modo ☀️/🌙 activo del interruptor de apariencia):
+        /* Botón "primary" (el modo claro/oscuro activo del interruptor de apariencia):
            fondo de acento sólido, texto blanco — Streamlit ya hace exactamente
            esto nativamente, pero el bloque de arriba lo pisaba con el fondo
            de tarjeta. Se reafirma acá, después, para que gane. */

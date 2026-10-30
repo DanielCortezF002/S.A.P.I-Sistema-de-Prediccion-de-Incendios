@@ -1,0 +1,11 @@
+{
+  "captured_at": "2026-10-24T22:18:11.970914+00:00",
+  "http": 422,
+  "body": {
+    "status": "error",
+    "error_type": "invalid_request",
+    "message": "La petición no cumple el contrato: forecast_time debe ser una fecha-hora RFC 3339 con zona horaria."
+  },
+  "counts_before": "1/50",
+  "counts_after": "1/50"
+}

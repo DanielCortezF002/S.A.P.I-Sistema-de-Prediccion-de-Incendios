@@ -1,0 +1,17 @@
+﻿captured_at=2026-10-24T23:41:23.6299820Z
+run_label=R2-evidence-remediation
+worktree=C:\SAPI-OC-E2E-R2-20261024
+branch=test/oc-fullstack-e2e-r2-20261024
+head=eb1b37030d206462878a785a8f4a67edba7b2c98
+tree=404518eb9c5982452ec74c93efffd17b52e4c462
+app_tree_services=9cd77f12a2f9b9353923ed8567b7b7f7a539ca08
+app_tree_app=82e9d30a23cda053c44599f6e579e4b1eaa67f93
+app_tree_contracts=e4c6874cf86939384ad3cd76ce09d4aadd2c4abb
+windows=Microsoft Windows NT 10.0.26200.0
+python=3.14.7
+pytest=9.1.1
+playwright=1.64.1
+docker_client=29.8.1
+docker_server=29.8.1
+compose=5.5.1
+edge=156.0.4314.42

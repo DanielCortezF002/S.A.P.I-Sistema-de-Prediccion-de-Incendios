@@ -4,21 +4,73 @@
 # `presentation`: no entra en esa ruta por defecto y no activa el profile
 # `legacy`. Los servicios de Hito 1 quedan fuera con profiles `legacy`
 # (db-postgis, analytics-backend, web-presentation) y `ops` (n8n-bridge).
-# Configuración en .env (ver .env.example y README). La ruta v2 usa su propia
-# red (sapi-v2-net): los servicios legacy no llegan a db-v2.
+# La ruta v2 arranca sin .env (SAPI-66.CA5): la contraseña de la base se genera
+# en el volumen sapi_v2_secrets. .env es opcional (ver .env.example y README).
+# La ruta v2 usa su propia red (sapi-v2-net): los servicios legacy no llegan a db-v2.
 services:
   db-v2:
     # Base v2 aislada del legacy (H4, ADR-008): volumen propio, sin
     # docker/initdb. El esquema lo crea Flyway desde el backend (V001-V003).
     image: postgis/postgis:15-3.4
+    # SAPI-66.CA5: arranque sin .env. Antes del entrypoint de la imagen, este
+    # paso deja la contraseña de la base en el volumen sapi_v2_secrets
+    # (archivo db_password, 0440, uid/gid 999: postgres y el usuario del
+    # backend). Si no existe la genera al azar, o la toma de SAPI_DB_PASSWORD
+    # si el operador la definió; si existe la reutiliza. Nunca la imprime.
+    # Falla (exit 1, sin arrancar la base) si la base persistente ya está
+    # inicializada y el secreto no se puede recuperar, o si SAPI_DB_PASSWORD
+    # no coincide con el secreto guardado: nunca cae a una credencial por defecto.
+    entrypoint:
+      - sh
+      - -ec
+      - |
+        secret=/run/sapi-secrets/db_password
+        if [ ! -s "$$secret" ]; then
+          if [ -s "$$PGDATA/PG_VERSION" ] && [ -z "$$SAPI_DB_PASSWORD_SEED" ]; then
+            echo "sapi-db-secret: la base persistente ya existe y el volumen sapi_v2_secrets no tiene su contraseña; no se genera otra. Restaurar el volumen o definir SAPI_DB_PASSWORD con la contraseña original." >&2
+            exit 1
+          fi
+          umask 077
+          tmp=$$(mktemp /run/sapi-secrets/.db_password.XXXXXX)
+          if [ -n "$$SAPI_DB_PASSWORD_SEED" ]; then
+            printf '%s' "$$SAPI_DB_PASSWORD_SEED" > "$$tmp"
+            origin="SAPI_DB_PASSWORD"
+          else
+            head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40 > "$$tmp"
+            origin="generada al azar"
+          fi
+          if [ ! -s "$$tmp" ]; then
+            echo "sapi-db-secret: no se pudo escribir la contraseña." >&2
+            exit 1
+          fi
+          chown 999:999 "$$tmp"
+          chmod 0440 "$$tmp"
+          mv "$$tmp" "$$secret"
+          echo "sapi-db-secret: contraseña de la base inicializada ($$origin)."
+        elif [ -n "$$SAPI_DB_PASSWORD_SEED" ] && [ "$$(cat "$$secret")" != "$$SAPI_DB_PASSWORD_SEED" ]; then
+          echo "sapi-db-secret: SAPI_DB_PASSWORD no coincide con la contraseña guardada en sapi_v2_secrets; no se reemplaza." >&2
+          exit 1
+        else
+          echo "sapi-db-secret: se reutiliza la contraseña guardada."
+        fi
+        chown 999:999 /run/sapi-secrets
+        chmod 0750 /run/sapi-secrets
+        unset SAPI_DB_PASSWORD_SEED
+        exec docker-entrypoint.sh "$$@"
+      - sapi-db-secret
+    command: ["postgres"]
     environment:
       POSTGRES_USER: ${SAPI_DB_USER:-sapi}
-      POSTGRES_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
+      POSTGRES_PASSWORD_FILE: /run/sapi-secrets/db_password
       POSTGRES_DB: ${SAPI_DB_NAME:-sapi_v2}
+      # Opcional: solo para fijar la contraseña en el primer arranque o para
+      # seguir usando un volumen creado con la de .env. Vacío = generada.
+      SAPI_DB_PASSWORD_SEED: ${SAPI_DB_PASSWORD:-}
     ports:
       - "127.0.0.1:${SAPI_DB_PORT:-5432}:5432"
     volumes:
       - sapi_v2_pgdata:/var/lib/postgresql/data
+      - sapi_v2_secrets:/run/sapi-secrets
     healthcheck:
       # Por TCP: el servidor temporal que usa la imagen durante la
       # inicialización solo escucha en el socket Unix, así que este check no
@@ -68,7 +120,11 @@ services:
       SAPI_ML_READ_TIMEOUT: ${SAPI_ML_READ_TIMEOUT:-60s}
       SPRING_DATASOURCE_URL: jdbc:postgresql://db-v2:5432/${SAPI_DB_NAME:-sapi_v2}
       SPRING_DATASOURCE_USERNAME: ${SAPI_DB_USER:-sapi}
-      SPRING_DATASOURCE_PASSWORD: ${SAPI_DB_PASSWORD:?Agregar SAPI_DB_PASSWORD a .env (bloque SAPI-60 de .env.example; no reemplazar un .env existente)}
+      # La contraseña llega como archivo (configtree, la misma que usa db-v2),
+      # no como variable de Compose. Sin el archivo el placeholder no se
+      # resuelve y el backend no arranca: no hay contraseña vacía de reserva.
+      SPRING_CONFIG_IMPORT: configtree:/run/sapi-secrets/
+      SPRING_DATASOURCE_PASSWORD: $${db_password}
       SAPI_PERSISTENCE_ENABLED: "true"
       # F1 (D1/D2/D10, Jira #10134): base/E2E acepta current y reproducibility (coherente con
       # SAPI_REPRODUCIBILITY_MODE de ml-api). El overlay operacional (SAPI-43) debe fijar esto
@@ -78,6 +134,7 @@ services:
       SPRING_FLYWAY_FAILONMISSINGLOCATIONS: "true"
     volumes:
       - ./db/migration:/app/db/migration:ro
+      - sapi_v2_secrets:/run/sapi-secrets:ro
     ports:
       - "127.0.0.1:${SAPI_BACKEND_PORT:-8080}:8080"
     depends_on:
@@ -135,10 +192,15 @@ services:
     container_name: sapi-db-postgis
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-sapi}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sapi_secret}
+      # Sin contraseña por defecto (G0/SAPI-60.CA3): si POSTGRES_PASSWORD no
+      # está en .env, la imagen se niega a inicializar la base en vez de usar
+      # una credencial pública. Vacío explícito (no `:?`) porque Compose
+      # interpola todo el archivo y la ruta v2 debe arrancar sin .env.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-}
       POSTGRES_DB: ${POSTGRES_DB:-sapi_db}
     ports:
-      - "5432:5432"
+      # Solo loopback, como la ruta v2.
+      - "127.0.0.1:5432:5432"
     volumes:
       - sapi_pgdata:/var/lib/postgresql/data
       - ./docker/initdb:/docker-entrypoint-initdb.d:ro
@@ -160,8 +222,8 @@ services:
     env_file:
       - .env
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
-      DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+      DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
     volumes:
       - ./data:/app/data
       - ./models:/app/models
@@ -183,8 +245,8 @@ services:
     # externas (NASA FIRMS, DMC, OpenTopography) -- Model D solo lee
     # archivos locales. Solo recibe la URL de la base de datos.
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
-      DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-sapi_secret}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
+      DATABASE_URL_DIRECT: postgresql://${POSTGRES_USER:-sapi}:${POSTGRES_PASSWORD:-}@db-postgis:5432/${POSTGRES_DB:-sapi_db}
     ports:
       - "8501:8501"
     volumes:
@@ -238,6 +300,10 @@ volumes:
   # Para reiniciar solo la base v2: `docker compose down` y luego
   # `docker volume rm <proyecto>_sapi_v2_pgdata` (ver README).
   sapi_v2_pgdata:
+  # Contraseña de la base v2 (SAPI-66.CA5), generada en el primer arranque.
+  # Va con sapi_v2_pgdata: borrar uno sin el otro deja la base inaccesible
+  # (db-v2 se niega a arrancar en vez de inventar otra contraseña).
+  sapi_v2_secrets:
 
 networks:
   sapi-net:
