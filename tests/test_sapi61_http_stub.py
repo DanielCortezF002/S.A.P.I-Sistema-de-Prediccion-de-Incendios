@@ -581,23 +581,52 @@ def test_apptest_selecting_a_cell_updates_the_detail_panel(
 def test_apptest_map_mode_toggle_does_not_refetch_or_break(
     stub: StubBackend, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """SAPI-61.CA3/CA5: prueba original de main (2ba8ceb), restaurada en F2 (D15)."""
     at = run_app(monkeypatch, stub.base_url)
-    toggle = next(
-        (
-            r
-            for r in at.radio
-            if r.label in ("Vista del mapa", "Criterio de ordenación")
-        ),
-        None,
-    )
-    assert (
-        toggle is not None
-    ), "debe existir un control radio interactivo de presentación"
+    toggle = next(r for r in at.radio if r.label == "Vista del mapa")
+    assert list(toggle.options) == ["Prioridades", "Todas las celdas"]
+    assert toggle.value == "Prioridades"
     calls_before = len(stub.requests)
-    new_val = toggle.options[1] if len(toggle.options) > 1 else toggle.options[0]
-    at = toggle.set_value(new_val).run()
+    at = toggle.set_value("Todas las celdas").run()
     assert not at.exception
     assert len(stub.requests) == calls_before  # cache: la UI no vuelve a consultar
+    toggle = next(r for r in at.radio if r.label == "Vista del mapa")
+    assert toggle.value == "Todas las celdas"
+
+
+def test_apptest_map_mode_survives_expanding_the_map(
+    stub: StubBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """D15: el mapa ampliado conserva el modo elegido y tampoco vuelve a consultar."""
+    at = run_app(monkeypatch, stub.base_url)
+    at = (
+        next(r for r in at.radio if r.label == "Vista del mapa")
+        .set_value("Todas las celdas")
+        .run()
+    )
+    calls_before = len(stub.requests)
+    at = at.button(key="btn_expand_map").click().run()
+    assert not at.exception
+    toggle = next(r for r in at.radio if r.label == "Vista del mapa")
+    assert toggle.value == "Todas las celdas"
+    assert len(stub.requests) == calls_before
+
+
+def test_apptest_order_criterion_change_does_not_refetch_or_break(
+    stub: StubBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cambiar el criterio de ordenación de la tabla no vuelve a consultar al backend.
+
+    Esta prueba existía en 70c29f9 con el nombre de la prueba del mapa; en F2 (D15)
+    recibe su propio nombre y deja de aceptar un control con una sola opción.
+    """
+    at = run_app(monkeypatch, stub.base_url)
+    order = next(r for r in at.radio if r.label == "Criterio de ordenación")
+    assert len(order.options) >= 2
+    calls_before = len(stub.requests)
+    at = order.set_value(order.options[1]).run()
+    assert not at.exception
+    assert len(stub.requests) == calls_before
 
 
 def test_apptest_backend_down_shows_controlled_message(

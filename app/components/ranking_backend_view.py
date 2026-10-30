@@ -55,6 +55,7 @@ from src.geo.grid import all_cells, assign_cell
 _MAP_MODE_PRIORIDADES = "Prioridades"
 _MAP_MODE_TODAS = "Todas las celdas"
 _SESSION_MAP_MODE = "ranking_v2_map_mode"
+_SESSION_MAP_MODE_PERSISTED = "ranking_v2_map_mode_persisted"
 _SESSION_SELECTED = "ranking_v2_selected_cell"
 _SESSION_EXPANDED = "ranking_v2_map_expanded"
 _ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
@@ -293,6 +294,28 @@ def cell_from_click(event: Any) -> Optional[str]:
         return assign_cell(float(last["lat"]), float(last["lng"]))
     except (TypeError, ValueError):
         return None
+
+
+def _render_map_mode_selector() -> str:
+    """Selector «Vista del mapa» (SAPI-61.CA3/CA5; restaurado en F2, resolución D15).
+
+    El modo se copia en una clave de sesión que no pertenece a ningún widget: los
+    botones Expandir/Restaurar llaman a `st.rerun()` antes de que el selector se dibuje,
+    y Streamlit descarta el estado de los widgets que no se dibujaron en esa pasada.
+    Solo cambia la representación; no consulta al backend ni recalcula scores.
+    """
+    options = [_MAP_MODE_PRIORIDADES, _MAP_MODE_TODAS]
+    persisted = st.session_state.get(_SESSION_MAP_MODE_PERSISTED, _MAP_MODE_PRIORIDADES)
+    mode = st.radio(
+        "Vista del mapa",
+        options=options,
+        index=options.index(persisted) if persisted in options else 0,
+        horizontal=True,
+        key=_SESSION_MAP_MODE,
+        help="Solo cambia la representación visual. No consulta ni recalcula nada.",
+    )
+    st.session_state[_SESSION_MAP_MODE_PERSISTED] = mode
+    return str(mode)
 
 
 def build_map(
@@ -2356,9 +2379,8 @@ def render_ranking_backend_dashboard() -> None:
                 st.session_state[_SESSION_EXPANDED] = False
                 st.rerun()
 
-        fmap = build_map(
-            view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED]
-        )
+        map_mode = _render_map_mode_selector()
+        fmap = build_map(view, map_mode, st.session_state[_SESSION_SELECTED])
         event = st_folium(
             fmap,
             height=700,
@@ -2431,9 +2453,8 @@ def render_ranking_backend_dashboard() -> None:
                         st.session_state[_SESSION_EXPANDED] = True
                         st.rerun()
 
-            fmap = build_map(
-                view, _MAP_MODE_PRIORIDADES, st.session_state[_SESSION_SELECTED]
-            )
+            map_mode = _render_map_mode_selector()
+            fmap = build_map(view, map_mode, st.session_state[_SESSION_SELECTED])
             event = st_folium(
                 fmap,
                 height=450,

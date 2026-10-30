@@ -125,6 +125,17 @@ def test_map_priority_mode_highlights_only_the_top_tie_group() -> None:
     assert len(strong) == 7  # empate real de 7 celdas con display_rank 1
 
 
+def test_map_all_cells_mode_colors_every_cell_by_its_group() -> None:
+    """SAPI-61.CA3 (D15): «Todas las celdas» colorea las 50 celdas por su grupo;
+    «Prioridades» atenúa en gris las 43 que no están en el grupo prioritario."""
+    muted = "#64748b"
+    prio = _rectangles(build_map(v0_view(), "Prioridades", selected_id=None))
+    todas = _rectangles(build_map(v0_view(), "Todas las celdas", selected_id=None))
+    assert sum(r.options["fillColor"] == muted for r in prio) == 43
+    assert not any(r.options["fillColor"] == muted for r in todas)
+    assert all(r.options["fillOpacity"] > 0.08 for r in todas)
+
+
 def test_map_without_topography_shows_nd_never_zero() -> None:
     fmap = build_map(v0_view(), "Todas las celdas", None, topography={})
     tips = [next(iter(r._children.values())).text for r in _rectangles(fmap)]
