@@ -243,3 +243,57 @@ def test_sapi61_flow_has_no_transitive_local_scoring(entrypoint: str) -> None:
     assert (
         not violations
     ), f"'{entrypoint}' arrastra scoring local al flujo SAPI-61: {sorted(violations)}"
+
+
+# D2 (F2, 30-10-2026): la interfaz no consulta servicios externos por su cuenta.
+# Los datos remotos llegan solo por servicios propios del sistema: el backend
+# (`backend_client`) y, en el modo operación, el bridge propio `tools/n8n_bridge`
+# (`score_contract`, GET /score). El lanzador local (`control_center`) hace un GET de
+# salud a 127.0.0.1. Cierra el hueco que permitió a la vista consultar la API de DMC
+# directamente desde Streamlit.
+_HTTP_CLIENT_MODULES = ("requests", "httpx", "aiohttp", "urllib.request", "http.client")
+_HTTP_CLIENT_ALLOWLIST = frozenset(
+    {
+        Path("app/utils/backend_client.py"),
+        Path("app/utils/score_contract.py"),
+        Path("app/control_center.py"),
+    }
+)
+_EXTERNAL_DATA_MARKERS = ("meteochile", "DMC_USUARIO", "DMC_TOKEN")
+
+
+def test_app_reaches_remote_data_only_through_backend_client() -> None:
+    """D2 / SAPI-61.CA2: ningún módulo de app/ fuera de la lista permitida importa un
+    cliente HTTP ni contiene la URL o las credenciales de la API de DMC.
+
+    Raises:
+        AssertionError: Si un módulo de app/ puede consultar servicios externos sin
+            pasar por el backend.
+    """
+    project_root = Path(__file__).parent.parent
+    violations: list[str] = []
+    for file_path in sorted((project_root / "app").glob("**/*.py")):
+        rel = file_path.relative_to(project_root)
+        source = file_path.read_text(encoding="utf-8")
+        for marker in _EXTERNAL_DATA_MARKERS:
+            if marker in source:
+                violations.append(f"{rel}: contiene '{marker}'")
+        if rel in _HTTP_CLIENT_ALLOWLIST:
+            continue
+        for node in ast.walk(ast.parse(source, filename=str(file_path))):
+            modules: list[str] = []
+            if isinstance(node, ast.Import):
+                modules = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom) and node.module:
+                modules = [node.module]
+            for module in modules:
+                if any(
+                    module == m or module.startswith(m + ".")
+                    for m in _HTTP_CLIENT_MODULES
+                ):
+                    violations.append(f"{rel}: importa '{module}'")
+    assert (
+        not violations
+    ), "La UI puede consultar servicios externos sin el backend: " + "; ".join(
+        violations
+    )

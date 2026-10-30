@@ -64,6 +64,8 @@ def test_presentation_profile_reaches_backend_without_joining_the_default_route(
     assert web["depends_on"]["backend"]["condition"] == "service_started"
     assert "env_file" not in web
     assert "volumes" not in web
+    # D2: la interfaz no recibe credenciales de servicios externos (antes DMC).
+    assert not {"DMC_USUARIO", "DMC_TOKEN"} & set(web["environment"])
     assert "sapi-v2-net" not in SERVICES["web-presentation"].get("networks", [])
 
 

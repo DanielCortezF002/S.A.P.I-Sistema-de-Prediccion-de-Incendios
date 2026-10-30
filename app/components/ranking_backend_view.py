@@ -1485,12 +1485,12 @@ def _render_dmc_top_strip() -> None:
         STATUS_DESACTUALIZADO,
         STATUS_NO_DISPONIBLE,
         STATUS_RECIENTE,
-        fetch_rodelillo_live,
-        refresh_rodelillo_live,
+        load_rodelillo_observation,
+        reload_rodelillo_observation,
     )
 
     if "sapi_dmc_data" not in st.session_state:
-        st.session_state["sapi_dmc_data"] = fetch_rodelillo_live()
+        st.session_state["sapi_dmc_data"] = load_rodelillo_observation()
 
     data = st.session_state.get("sapi_dmc_data", {})
     status = data.get("status", STATUS_NO_DISPONIBLE)
@@ -1545,12 +1545,15 @@ def _render_dmc_top_strip() -> None:
         )
     with c_btn:
         if st.button(
-            "Consultar última lectura",
+            "Releer última ingesta",
             key="sapi_btn_dmc_strip_refresh",
             use_container_width=True,
-            help="Consulta la última observación meteorológica de DMC Rodelillo (330007)",
+            help=(
+                "Relee la última observación de DMC Rodelillo (330007) ingerida por el "
+                "pipeline. La interfaz no consulta la API de DMC."
+            ),
         ):
-            st.session_state["sapi_dmc_data"] = refresh_rodelillo_live()
+            st.session_state["sapi_dmc_data"] = reload_rodelillo_observation()
             st.rerun()
 
 
@@ -1827,11 +1830,11 @@ def _render_dmc_observation_panel() -> None:
         STATUS_DESACTUALIZADO,
         STATUS_NO_DISPONIBLE,
         STATUS_RECIENTE,
-        fetch_rodelillo_live,
+        load_rodelillo_observation,
     )
 
     if "sapi_dmc_data" not in st.session_state:
-        st.session_state["sapi_dmc_data"] = fetch_rodelillo_live()
+        st.session_state["sapi_dmc_data"] = load_rodelillo_observation()
 
     data = st.session_state.get("sapi_dmc_data", {})
 
@@ -1839,8 +1842,8 @@ def _render_dmc_observation_panel() -> None:
         if not data:
             st.markdown(
                 '<div style="font-size:0.78rem;color:var(--sapi-text-muted);padding:0.3rem 0;">'
-                "Haga clic en <b>«Consultar última lectura»</b> en la barra superior para "
-                "actualizar la medición de la estación Rodelillo (330007)."
+                "Haga clic en <b>«Releer última ingesta»</b> en la barra superior para "
+                "releer la última observación ingerida de la estación Rodelillo (330007)."
                 "</div>",
                 unsafe_allow_html=True,
             )
@@ -1899,7 +1902,7 @@ def _render_dmc_observation_panel() -> None:
             f"<li><span>Viento</span><b>{viento_str}</b></li>"
             f"<li><span>Lectura (Chile)</span><b>{_esc(momento_cl)}</b></li>"
             f"<li><span>Lectura (UTC)</span><b>{_esc(momento_utc)}</b></li>"
-            f"<li><span>Consulta efectuada</span><b>{_esc(checked_str)}</b></li>"
+            f"<li><span>Lectura del archivo</span><b>{_esc(checked_str)}</b></li>"
             f"</ul>"
             f"{error_html}"
             f'<div class="sapi-v2-note" style="margin-top:0.35rem;'
