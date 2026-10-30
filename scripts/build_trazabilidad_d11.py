@@ -88,15 +88,30 @@ for line in req.splitlines():
         (f"{m.group(1)}.{m.group(2)}", crit, rn, verif, evid, estado, verify(verif + " " + evid))
     )
 
+# Backlog comprometido y congelado (requerimientos §2): una fila por HU con SP numérico.
+# La fila «SAPI-64, 65, 68 … Won't» no tiene SP y queda fuera por construcción.
+backlog = {}
+in_s2_table = False
+for line in req.splitlines():
+    if line.startswith("## 2."):
+        in_s2_table = True
+    elif line.startswith("## 3."):
+        break
+    m = re.match(r"^\| (SAPI-\d+) \|(?:[^|]*\|){3} (\d+) \|", line)
+    if in_s2_table and m:
+        backlog[m.group(1)] = int(m.group(2))
+
 # Ajustes conocidos en F2 (verificados en este candidato); no reemplazan el estado de 08-10.
 F2_NOTES = {
-    "SAPI-61.CA2": "F2/D2: la UI ya no consulta DMC por su cuenta; nueva regla en "
-    "`tests/test_architecture.py`.",
+    "SAPI-61.CA2": "F2/D2: la UI ya no consulta la API de DMC; nueva regla en "
+    "`tests/test_architecture.py`. PENDIENTE: la franja meteorológica aún lee la última "
+    "ingesta en `data/raw` sin pasar por el backend (deuda S3).",
     "SAPI-61.CA3": "F2/D15: selector «Vista del mapa» restaurado; prueba original de main "
     "repuesta en `tests/test_sapi61_http_stub.py`.",
     "SAPI-61.CA5": "F2/D15: modos Prioridades y Todas las celdas cubiertos en "
     "`tests/test_ranking_backend_view.py`.",
-    "SAPI-66.CA5": "Pendiente D4: IT-13 se evalúa en entorno limpio en F2 (ver informe F2).",
+    "SAPI-66.CA5": "F2/D4: IT-13 PASS en entorno limpio sin `.env` sobre el candidato "
+    "(Windows local; falta CI Linux). Ver acta F2.",
 }
 
 s2 = [k for k, v in jira.items() if v["sprint2"]]
@@ -123,8 +138,21 @@ w("- La versión anterior de este archivo (commit `8c0f4a2`) se retiró por tít
 w("")
 w("## 1. Conciliación con Jira")
 w("")
-w(f"Sprint 2 (id 36, cerrado el 16-10-2026) contiene **{len(s2)} historias y {s2_sp} SP**, todas "
-  "en estado *Finalizado*.")
+only_backlog = sorted(set(backlog) - set(s2), key=lambda k: int(k.split("-")[1]))
+only_sprint = sorted(set(s2) - set(backlog), key=lambda k: int(k.split("-")[1]))
+w("Se conservan dos cifras distintas, ambas válidas para lo que miden:")
+w("")
+w("| Cifra | Historias | SP | Fuente |")
+w("|---|---:|---:|---|")
+w(f"| Backlog comprometido y congelado | {len(backlog)} | {sum(backlog.values())} | "
+  "`requerimientos-sprint2.md` §2 (08-10-2026); base de las cifras del Informe Hito 2 |")
+w(f"| Contenido efectivo del Sprint 2 cerrado | {len(s2)} | {s2_sp} | Jira, Sprint 2 (id 36), "
+  "cerrado el 16-10-2026, todas en *Finalizado* |")
+w("")
+diff_txt = ", ".join(f"{k} ({backlog[k]} SP, {jira[k]['status']})" for k in only_backlog)
+w(f"Diferencia: en el backlog congelado pero no en el sprint cerrado: {diff_txt or 'ninguna'}. "
+  f"En el sprint cerrado pero no en el backlog: {', '.join(only_sprint) or 'ninguna'}. "
+  "Ninguna de las dos cifras reemplaza a la otra.")
 w("")
 w("| HU | Título (Jira) | SP | Estado Jira | En Sprint 2 | CA en requerimientos §3 |")
 w("|---|---|---:|---|---|---:|")
@@ -134,7 +162,8 @@ for key in sorted(jira, key=lambda k: int(k.split("-")[1])):
       f"{'sí' if v['sprint2'] else 'no'} | {len(ca_rows.get(key, []))} |")
 w("")
 w("**Discrepancias detectadas:**")
-w("- La versión retirada declaraba 14 historias y 58 SP, incluía SAPI-64 como «Marco de testing "
+w("- La versión retirada coincidía en el total del backlog congelado (14 historias, 58 SP), pero "
+  "no en su composición: incluía SAPI-64 como «Marco de testing "
   "E2E» (3 SP) y SAPI-55 como «Freeze científico». En Jira, SAPI-64 es «Ejecutar experimento "
   "RNN/LSTM» (8 SP, Por hacer, fuera del sprint) y SAPI-55 es «Exponer Modelo D mediante "
   "microservicio FastAPI»; SAPI-56 tiene 3 SP, no 5.")

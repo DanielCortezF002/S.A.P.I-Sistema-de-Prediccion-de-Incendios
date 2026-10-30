@@ -11,7 +11,14 @@
 
 ## 1. Conciliación con Jira
 
-Sprint 2 (id 36, cerrado el 16-10-2026) contiene **13 historias y 55 SP**, todas en estado *Finalizado*.
+Se conservan dos cifras distintas, ambas válidas para lo que miden:
+
+| Cifra | Historias | SP | Fuente |
+|---|---:|---:|---|
+| Backlog comprometido y congelado | 14 | 58 | `requerimientos-sprint2.md` §2 (08-10-2026); base de las cifras del Informe Hito 2 |
+| Contenido efectivo del Sprint 2 cerrado | 13 | 55 | Jira, Sprint 2 (id 36), cerrado el 16-10-2026, todas en *Finalizado* |
+
+Diferencia: en el backlog congelado pero no en el sprint cerrado: SAPI-67 (3 SP, PENDIENTE A VALIDACION). En el sprint cerrado pero no en el backlog: ninguna. Ninguna de las dos cifras reemplaza a la otra.
 
 | HU | Título (Jira) | SP | Estado Jira | En Sprint 2 | CA en requerimientos §3 |
 |---|---|---:|---|---|---:|
@@ -34,7 +41,7 @@ Sprint 2 (id 36, cerrado el 16-10-2026) contiene **13 historias y 55 SP**, todas
 | SAPI-68 | S2-15 — Desplegar vertical slice S.A.P.I. v2 en cloud | 8 | Por hacer | no | 0 |
 
 **Discrepancias detectadas:**
-- La versión retirada declaraba 14 historias y 58 SP, incluía SAPI-64 como «Marco de testing E2E» (3 SP) y SAPI-55 como «Freeze científico». En Jira, SAPI-64 es «Ejecutar experimento RNN/LSTM» (8 SP, Por hacer, fuera del sprint) y SAPI-55 es «Exponer Modelo D mediante microservicio FastAPI»; SAPI-56 tiene 3 SP, no 5.
+- La versión retirada coincidía en el total del backlog congelado (14 historias, 58 SP), pero no en su composición: incluía SAPI-64 como «Marco de testing E2E» (3 SP) y SAPI-55 como «Freeze científico». En Jira, SAPI-64 es «Ejecutar experimento RNN/LSTM» (8 SP, Por hacer, fuera del sprint) y SAPI-55 es «Exponer Modelo D mediante microservicio FastAPI»; SAPI-56 tiene 3 SP, no 5.
 - SAPI-49 y SAPI-63 figuran en `requerimientos-sprint2.md` §2 como «Could — congelado, Por hacer», pero Jira las registra en Sprint 2 como Finalizado (resueltas el 16-10-2026). SAPI-49 no tiene criterios de aceptación en Jira ni en §3. Esta diferencia debe resolverla el responsable del proyecto; este documento no la corrige.
 - SAPI-67 (3 SP) está en PENDIENTE A VALIDACION y fuera de Sprint 2 (decisión D8 pendiente).
 
@@ -132,7 +139,7 @@ Sprint 2 (id 36, cerrado el 16-10-2026) contiene **13 historias y 55 SP**, todas
 | CA | Criterio | RN | Verificación prevista | Evidencia | Estado registrado (08-10) | Verificación en el candidato |
 |---|---|---|---|---|---|---|
 | SAPI-61.CA1 | Streamlit deja de llamar score_current_grid() en el flujo principal | — | Regla nueva en `tests/test_architecture.py` | PR-5 |  | presente |
-| SAPI-61.CA2 | Consume `GET /api/v1/ranking` de Spring Boot | — | `tests/test_backend_client.py` | PR-5 | <br>**F2/D2: la UI ya no consulta DMC por su cuenta; nueva regla en `tests/test_architecture.py`.** | presente |
+| SAPI-61.CA2 | Consume `GET /api/v1/ranking` de Spring Boot | — | `tests/test_backend_client.py` | PR-5 | <br>**F2/D2: la UI ya no consulta la API de DMC; nueva regla en `tests/test_architecture.py`. PENDIENTE: la franja meteorológica aún lee la última ingesta en `data/raw` sin pasar por el backend (deuda S3).** | presente |
 | SAPI-61.CA3 | Mapa, ranking, empates, frescura y trazabilidad se mantienen | RN-03 | AppTest (`tests/test_ranking_view.py`) y navegador | capturas de PR-5 | <br>**F2/D15: selector «Vista del mapa» restaurado; prueba original de main repuesta en `tests/test_sapi61_http_stub.py`.** | ausente |
 | SAPI-61.CA4 | Maneja error de backend caído con mensaje visible al usuario | RN-09 | AppTest por estado de error | PR-5 |  | manual |
 | SAPI-61.CA5 | No se rompe la funcionalidad existente del mapa | — | Suite completa con gate del 80 % | PR-5 | <br>**F2/D15: modos Prioridades y Todas las celdas cubiertos en `tests/test_ranking_backend_view.py`.** | manual |
@@ -155,7 +162,7 @@ Sprint 2 (id 36, cerrado el 16-10-2026) contiene **13 historias y 55 SP**, todas
 | SAPI-66.CA2 | Errores y contratos verificados en cada salto | RN-02, RN-03, RN-09 | Validación contra los YAML en cada salto | reporte E2E |  | manual |
 | SAPI-66.CA3 | Resultado persiste en PostgreSQL y es consultable | RN-07 | Filas en la base == respuesta | reporte E2E |  | manual |
 | SAPI-66.CA4 | Tiempo total de respuesta documentado | — | Tiempos por salto (frío y caliente) | `timings.csv` |  | manual |
-| SAPI-66.CA5 | Prueba ejecutable con `docker-compose up` sin configuración adicional | — | `scripts/e2e_slice.py` sobre el compose por defecto | reporte E2E | <br>**Pendiente D4: IT-13 se evalúa en entorno limpio en F2 (ver informe F2).** | ausente |
+| SAPI-66.CA5 | Prueba ejecutable con `docker-compose up` sin configuración adicional | — | `scripts/e2e_slice.py` sobre el compose por defecto | reporte E2E | <br>**F2/D4: IT-13 PASS en entorno limpio sin `.env` sobre el candidato (Windows local; falta CI Linux). Ver acta F2.** | ausente |
 
 ## 3. Historias de Sprint 2 sin criterios en §3
 
