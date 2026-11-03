@@ -91,6 +91,10 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.ml-api
+    # El CMD de Dockerfile.ml-api con dos procesos (A4, IL 3.2 e): con uno
+    # solo, /predict hace cola y L1/L2 superan el p95 (FAIL); con dos pasan.
+    # Ver ACTA_OCC_S3_A4_CLEAN_REPRODUCIBILITY_R1.md. Requiere >= 2 vCPU.
+    command: ["uvicorn", "services.ml_api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
     environment:
       SAPI_REPRODUCIBILITY_MODE: "1"
     ports:

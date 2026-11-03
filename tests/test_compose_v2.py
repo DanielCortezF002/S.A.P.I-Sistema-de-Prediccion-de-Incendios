@@ -9,6 +9,7 @@ health, Flyway, ranking, persistencia y la consulta psql) la hace
 
 from __future__ import annotations
 
+import json
 import re
 from pathlib import Path
 
@@ -298,6 +299,15 @@ def test_ml_service_runs_in_reproducible_mode_from_the_image() -> None:
     assert ml["build"] == {"context": ".", "dockerfile": "Dockerfile.ml-api"}
     # El snapshot de Hito 1 va dentro de la imagen: sin montajes del host.
     assert "volumes" not in ml
+
+
+def test_ml_service_runs_the_image_cmd_with_two_workers() -> None:
+    """A4 (IL 3.2 e): el command repite el CMD de Dockerfile.ml-api y solo agrega
+    `--workers 2`; si el CMD cambia (puerto, módulo), el command no queda atrás."""
+    dockerfile = (REPO_ROOT / "Dockerfile.ml-api").read_text(encoding="utf-8")
+    cmd_line = next(line for line in dockerfile.splitlines() if line.startswith("CMD "))
+    image_cmd = json.loads(cmd_line[len("CMD ") :])
+    assert SERVICES["ml-api"]["command"] == image_cmd + ["--workers", "2"]
 
 
 class _ComposeOverrideTolerantLoader(yaml.SafeLoader):

@@ -79,3 +79,8 @@ inspect_nasa_error.py
 run_ingest_real.py
 test_*.py
 coverage_run.txt
+# Salida de compilacion Maven (mvnw verify en el host). El backend tiene su
+# propio .dockerignore, pero el contexto raiz (ml-api, web) la copiaba con
+# `COPY . .`: OCC-S3-PERFORMANCE-A4-R1 encontro 95 archivos (24 MB) de
+# services/backend/target/ dentro de la imagen ML.
+**/target/

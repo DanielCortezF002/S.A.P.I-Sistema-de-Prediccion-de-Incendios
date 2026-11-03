@@ -3,7 +3,8 @@
 Dos niveles:
 
 - Estático (siempre): `.dockerignore` excluye `.env`, `.env.*`, `.mcp.json`,
-  `.venv*` y caches de Python, con esas reglas DESPUÉS de cualquier excepción
+  `.venv*`, caches de Python y la salida de Maven (`**/target/`), con esas
+  reglas DESPUÉS de cualquier excepción
   `!` (en .dockerignore gana la última regla que coincide). Y
   `web-presentation` no recibe `env_file` en docker-compose.yml.
 - Dentro de la imagen (solo si corre en Docker con el repo en /app, sin
@@ -35,6 +36,7 @@ REQUIRED_EXCLUSIONS = (
     "**/*.py[cod]",
     "**/.pytest_cache/",
     ".coverage*",
+    "**/target/",
 )
 
 
