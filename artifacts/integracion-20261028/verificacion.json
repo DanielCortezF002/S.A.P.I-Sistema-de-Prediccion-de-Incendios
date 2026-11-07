@@ -1,0 +1,11 @@
+﻿{
+    "timestamp_utc":  "2026-10-28T23:58:09.5167465Z",
+    "git_sha":  "674f1676f2f6b392855512fdcb4eac4e2209d458",
+    "schema_version":  "sapi-ranking-v0",
+    "model_version":  "prototype_model_d_v1",
+    "cell_count":  50,
+    "unique_cell_ids":  50,
+    "unique_scores":  3,
+    "scientific_validation":  false,
+    "test_pass":  true
+}
