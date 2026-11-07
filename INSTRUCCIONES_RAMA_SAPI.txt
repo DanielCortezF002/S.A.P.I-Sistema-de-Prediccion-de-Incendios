@@ -1,0 +1,12 @@
+S.A.P.I. - Nomenclatura de ramas en español
+
+1. Extrae sapi_renombrar_ramas_espanol.ps1 a C:\SAPI.
+2. En PowerShell, ejecuta:
+   cd C:\SAPI
+   Test-Path .\sapi_renombrar_ramas_espanol.ps1
+   gh --version
+   Set-ExecutionPolicy -Scope Process Bypass -Force
+   .\sapi_renombrar_ramas_espanol.ps1
+
+El comando sin -Apply SOLO muestra una vista previa.
+No ejecutes -Apply hasta revisar sus resultados.
