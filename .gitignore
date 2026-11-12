@@ -35,3 +35,15 @@ reports/*.html
 /test_raw_parser.py
 /test_spatial_join.py
 /coverage_run.txt
+
+# Compilación y artefactos de build Maven (Spring Boot)
+target/
+
+# Entornos de desarrollo y configuración local de IDEs
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Tipado y herramientas de análisis estático
+.mypy_cache/
