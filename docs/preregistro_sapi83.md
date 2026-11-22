@@ -147,3 +147,16 @@ Salidas previstas (al ejecutar, no ahora): `reports/evaluacion_modelo_d_<fecha>.
 | D3 | 22-11-2026 | El hash de `reports/experiment_abcd_h6_results.json` se fija sobre el blob de git (LF), no sobre el archivo en disco (CRLF por `core.autocrlf`). | Ninguno: el script normaliza fin de línea antes de comparar. |
 | D4 | 22-11-2026 | El fold 2022 queda fuera del alcance de las matrices (no tiene D entrenado en la referencia). | Ninguno; ya era así en la referencia. |
 | D5 | 22-11-2026 | Las pruebas de HU-83 se corren con `-o addopts=""` (sin el umbral global de cobertura 80 % de `pytest.ini`, que aplica a la suite completa). | Ninguno sobre la evaluación. |
+| D6 | 22-11-2026 | Paquetes agregados después del commit del criterio (`c15993c`), solo para que corran las pruebas y las figuras: imbalanced-learn 0.14.2 y SQLAlchemy 2.0.52 (los importa `tests/conftest.py` vía `src.procesamiento.features` → `src.db`), matplotlib 3.11.2 (figuras de CA1; no está fijado en `requirements*.txt`, se usó la versión que resolvió pip). | Ninguno sobre el protocolo ni sobre la selección de días. |
+| D7 | 22-11-2026 | Para generar el CSV se importó y llamó `seleccionar_dias()` de `scripts/evaluacion_modelo_d.py` sobre el FIRMS congelado (columnas `latitude`, `longitude`, `acq_date`). **No** se ejecutó `main()`, no se leyó el dataset ni el modelo, no hubo evaluación. | Ninguno; deja la selección reproducible con el mismo código que la verifica. |
+| D8 | 22-11-2026 | El desempate del ranking replica `sort_values(ascending=False)` de pandas (quicksort, no estable), igual que producción; entre celdas con score idéntico el orden lo fija ese algoritmo, no el `cell_id`. Por eso se reportan los empates en el corte (sección 5). | Declarado; no se cambia la regla de la pantalla. |
+
+## 11. Registro de preparación (22-11-2026)
+
+- Commit del criterio (antes del CSV): `c15993c`.
+- Script y pruebas: `9f7b023`. CSV de días: `3a8f45c`.
+- Resultado de la selección (solo FIRMS): días con incendio 2023-12-09, 2023-12-10, 2024-02-02, 2024-02-03, 2024-02-04 (cupo global), 2025-01-15, 2025-11-02, 2026-02-01, 2026-02-14; cada uno con su control emparejado sin detección en ±3 días en `docs/dias_prueba_seleccionados.csv`.
+- Entorno: `.venv` local (ignorado por `.gitignore`, patrón `.venv*/`), Python 3.14.10; `pip freeze` en `docs/pip_freeze_sapi83.txt`.
+- Pruebas: `tests/test_sapi83_evaluacion_modelo_d.py`, solo fixtures sintéticos, ejecutadas con `pytest -o addopts=""`.
+- **No ejecutado:** `scripts/experiment_abcd.py`, `main()` de `scripts/evaluacion_modelo_d.py`, ningún entrenamiento, ninguna lectura del dataset `14b36ad8…`.
+- Pendiente para la fase de ejecución (requiere autorización nueva): correr `python scripts/evaluacion_modelo_d.py --dataset C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet --confirmo-autorizacion-ejecucion`; si CA4 = NO, se detiene y se reporta.
