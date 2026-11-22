@@ -209,6 +209,7 @@ def test_parada_temprana_desactivada_sintetico(
     assert pt["early_stopping"] is False
     assert pt["detenido_por_parada_temprana"] is False
     assert pt["n_iter_"] == SYNTH_TREES == pt["max_iter"]
+    assert pt["origen_n_arboles"] == "tope de iteraciones"
     md = (tmp_path / "out" / emd.MD_NAME).read_text(encoding="utf-8")
     assert "no se detuvo por parada temprana" in md
 
@@ -236,6 +237,7 @@ def test_parada_temprana_activada_sintetico(tmp_path: Path) -> None:
     assert pt["iteraciones_sin_mejora_al_final"] == 3
     assert pt["n_validation_score_"] == pt["n_iter_"] + 1
     assert exp["n_arboles"] == pt["n_iter_"]  # sklearn conserva todos los arboles
+    assert pt["origen_n_arboles"] == "detención temprana"
 
 
 def test_fuente_importancia_declara_atributos_privados(
@@ -252,6 +254,7 @@ def test_artefacto_real_parada_temprana(tmp_path: Path) -> None:
     """Modelo D real, solo lectura: 22 arboles por parada temprana (sin datos)."""
     if not emd.DEFAULT_MODEL.exists():
         pytest.skip("models/prototype_model_d.pkl no presente")
+    assert _sha(emd.DEFAULT_MODEL) == emd.EXPECTED_SHA256
     payload = emd.run(
         emd.DEFAULT_MODEL, tmp_path / "out", generated_at="2026-11-22T00:00:00+00:00"
     )
@@ -262,7 +265,49 @@ def test_artefacto_real_parada_temprana(tmp_path: Path) -> None:
     assert pt["n_iter_"] == 22
     assert pt["do_early_stopping_"] is True
     assert pt["detenido_por_parada_temprana"] is True
+    assert pt["origen_n_arboles"] == "detención temprana"
+    md = (tmp_path / "out" / emd.MD_NAME).read_text(encoding="utf-8")
+    assert "Origen del numero de arboles: detención temprana." in md
     assert (
         pt["mejor_iteracion_validacion"] + pt["iteraciones_sin_mejora_al_final"] == 22
     )
     assert _sha(emd.DEFAULT_MODEL) == emd.EXPECTED_SHA256
+
+
+def test_frontera_parada_temprana_activa_llega_al_tope(tmp_path: Path) -> None:
+    """SINTETICO (caso B-4): parada temprana ACTIVA pero n_iter_ == max_iter.
+
+    Con max_iter=3 y n_iter_no_change=10 es imposible acumular 10 iteraciones sin
+    mejora antes del tope, asi que el entrenamiento termina por el tope.
+    Con '<=' en lugar de '<' en la regla, esta prueba falla.
+    """
+    rng = np.random.default_rng(2)
+    n = 600
+    x = pd.DataFrame({name: rng.normal(size=n) for name in SYNTH_FEATURES})
+    y = (x["sint_a"] > 0).astype(int)
+    model = HistGradientBoostingClassifier(
+        max_iter=3,
+        max_depth=2,
+        early_stopping=True,
+        n_iter_no_change=10,
+        random_state=0,
+    ).fit(x, y)
+    assert model.do_early_stopping_ is True and model.n_iter_ == model.max_iter == 3
+    path = tmp_path / "modelo_sintetico_tope.pkl"
+    joblib.dump({"model": model, "metadata": {"model_version": "SINTETICO_TEST"}}, path)
+
+    out = tmp_path / "out"
+    exp = _run(path, out, expected_trees=3)["explicacion"]
+    pt = exp["parada_temprana"]
+    assert pt["do_early_stopping_"] is True
+    assert pt["n_iter_"] == pt["max_iter"] == 3
+    assert pt["detenido_por_parada_temprana"] is False
+    assert pt["origen_n_arboles"] == "tope de iteraciones"
+    md = (out / emd.MD_NAME).read_text(encoding="utf-8")
+    assert "Origen del numero de arboles: tope de iteraciones." in md
+    assert "parada temprana activa" in md
+    saved = json.loads((out / emd.JSON_NAME).read_text(encoding="utf-8"))
+    assert (
+        saved["explicacion"]["parada_temprana"]["origen_n_arboles"]
+        == "tope de iteraciones"
+    )

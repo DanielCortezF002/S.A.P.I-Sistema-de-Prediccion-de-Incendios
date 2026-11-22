@@ -1,6 +1,6 @@
 # HU-88 -- Explicacion estructural del Modelo D
 
-- Generado: 2026-11-22T06:11:17+00:00
+- Generado: 2026-11-22T19:32:30+00:00
 - Artefacto: `models/prototype_model_d.pkl`
 - SHA-256 verificado (antes de cargar y despues): `ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f`
 - Tipo: HistGradientBoostingClassifier -- 22 arboles, 25 variables (verificado contra lo esperado: 22 / 25)
@@ -8,7 +8,7 @@
 
 ## Por que hay este numero de arboles
 
-Parametros leidos del artefacto: early_stopping='auto', n_iter_no_change=10, max_iter=100, tol=1e-07, validation_fraction=0.1, scoring='loss'; atributos: n_iter_=22, do_early_stopping_=True, validation_score_ con 23 valores. El entrenamiento se detuvo por parada temprana en la iteracion 22 de 100 posibles: la mejor puntuacion de validacion interna se alcanzo tras 12 arboles y las 10 iteraciones siguientes no la mejoraron. scikit-learn conserva todos los arboles construidos hasta detenerse; no descarta los posteriores a la mejor iteracion de validacion.
+Parametros leidos del artefacto: early_stopping='auto', n_iter_no_change=10, max_iter=100, tol=1e-07, validation_fraction=0.1, scoring='loss'; atributos: n_iter_=22, do_early_stopping_=True, validation_score_ con 23 valores. Origen del numero de arboles: detención temprana. El entrenamiento se detuvo por parada temprana en la iteracion 22 de 100 posibles: la mejor puntuacion de validacion interna se alcanzo tras 12 arboles y las 10 iteraciones siguientes no la mejoraron. scikit-learn conserva todos los arboles construidos hasta detenerse; no descarta los posteriores a la mejor iteracion de validacion.
 
 ## Forma de los arboles
 

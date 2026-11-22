@@ -18,7 +18,7 @@ python scripts/explicar_modelo_d.py --expected-sha256 0000...0000 --out-dir <tmp
 # ERROR: SHA-256 no coincide ... El artefacto NO se deserializo.  (exit 2)
 
 python -m pytest tests/test_hu88_explicar_modelo_d.py -o addopts="" --noconftest -q
-# 12 passed (8 originales + 4 de las observaciones B-1 y B-3 del Auditor)
+# 13 passed (8 originales + 4 de B-1/B-3 + 1 de frontera B-4)
 ```
 
 `--noconftest` y `-o addopts=""`: el `tests/conftest.py` compartido importa `src.procesamiento.features`
@@ -43,3 +43,15 @@ no usan esos fixtures ni cubren esos paquetes.
   y el rango corregido 74,5-89,0 % (seccion 12 del preregistro, commit afb8725).
 - B-3: `fuente_importancia` (JSON), el MD y el documento declaran que la importancia usa atributos privados
   de scikit-learn 1.9.0 (`_predictors`).
+
+## Orden 05 (2026-11-22): frontera de parada temprana y control de hash
+
+- B-4 (delta ca5221a): el campo `parada_temprana.origen_n_arboles` del JSON, el MD y la salida del script
+  dicen «detención temprana» o «tope de iteraciones». El Modelo D da «detención temprana» (n_iter_=22 < max_iter=100).
+  La prueba sintetica `test_frontera_parada_temprana_activa_llega_al_tope` (parada temprana activa, max_iter=3,
+  n_iter_=3) da «tope de iteraciones». Con la mutacion `<` -> `<=` en la regla, esa prueba falla
+  (1 failed, 12 passed); despues se restauro el codigo.
+- Las 2 pruebas que leen el pkl real comprueban SHA-256 == ac017bef...2173f antes y despues de ejecutar.
+- `auditoria/`: copias byte a byte (CRLF original, con rutas locales sin editar) de los dos informes del Auditor,
+  y su `SHA256SUMS`. `auditoria/.gitattributes` (`* -text`) se anadio porque core.autocrlf=true convertiria
+  CRLF a LF en el blob, y la copia versionada ya no seria identica al original.

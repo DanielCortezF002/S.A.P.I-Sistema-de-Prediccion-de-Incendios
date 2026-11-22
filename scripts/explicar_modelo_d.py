@@ -258,6 +258,11 @@ def explain(estimator: Any) -> dict[str, Any]:
     }
 
 
+ORIGEN_DETENCION = "detención temprana"
+ORIGEN_TOPE = "tope de iteraciones"
+ORIGEN_INDETERMINADO = "indeterminado"
+
+
 def early_stopping_info(estimator: Any) -> dict[str, Any]:
     """Por que el ensamble tiene N arboles: parametros y atributos del artefacto.
 
@@ -290,6 +295,19 @@ def early_stopping_info(estimator: Any) -> dict[str, Any]:
         and info["max_iter"] is not None
         and info["n_iter_"] < info["max_iter"]
     )
+    # Origen explicito del numero de arboles. Regla: si el entrenamiento termino
+    # antes de max_iter con parada temprana activa, fue la detencion temprana;
+    # si llego a max_iter (este o no activa la parada temprana), fue el tope.
+    if info["detenido_por_parada_temprana"]:
+        info["origen_n_arboles"] = ORIGEN_DETENCION
+    elif (
+        info["n_iter_"] is not None
+        and info["max_iter"] is not None
+        and info["n_iter_"] >= info["max_iter"]
+    ):
+        info["origen_n_arboles"] = ORIGEN_TOPE
+    else:
+        info["origen_n_arboles"] = ORIGEN_INDETERMINADO
     info["nota"] = (
         "scikit-learn conserva todos los arboles construidos hasta detenerse; "
         "no descarta los posteriores a la mejor iteracion de validacion."
@@ -347,14 +365,29 @@ def _texto_parada(pt: dict[str, Any]) -> str:
         f"do_early_stopping_={pt['do_early_stopping_']}, "
         f"validation_score_ con {pt['n_validation_score_']} valores."
     )
+    origen = f" Origen del numero de arboles: {pt['origen_n_arboles']}."
+    if pt["origen_n_arboles"] == ORIGEN_TOPE:
+        activa = "activa" if pt["do_early_stopping_"] else "inactiva"
+        return (
+            base
+            + origen
+            + (
+                f" El entrenamiento llego al tope max_iter={pt['max_iter']} "
+                f"(parada temprana {activa}); no se detuvo por parada temprana."
+            )
+        )
     if not pt["detenido_por_parada_temprana"]:
-        return base + " El entrenamiento no se detuvo por parada temprana."
-    return base + (
-        f" El entrenamiento se detuvo por parada temprana en la iteracion "
-        f"{pt['n_iter_']} de {pt['max_iter']} posibles: la mejor puntuacion de "
-        f"validacion interna se alcanzo tras {pt['mejor_iteracion_validacion']} "
-        f"arboles y las {pt['iteraciones_sin_mejora_al_final']} iteraciones "
-        f"siguientes no la mejoraron. {pt['nota']}"
+        return base + origen + " El entrenamiento no se detuvo por parada temprana."
+    return (
+        base
+        + origen
+        + (
+            f" El entrenamiento se detuvo por parada temprana en la iteracion "
+            f"{pt['n_iter_']} de {pt['max_iter']} posibles: la mejor puntuacion de "
+            f"validacion interna se alcanzo tras {pt['mejor_iteracion_validacion']} "
+            f"arboles y las {pt['iteraciones_sin_mejora_al_final']} iteraciones "
+            f"siguientes no la mejoraron. {pt['nota']}"
+        )
     )
 
 
@@ -599,6 +632,7 @@ def main(argv: list[str] | None = None) -> int:
     exp = payload["explicacion"]
     print(f"SHA-256 OK: {payload['artefacto']['sha256']}")
     print(f"Estructura OK: {exp['n_arboles']} arboles, {exp['n_variables']} variables")
+    print(f"Origen del numero de arboles: {exp['parada_temprana']['origen_n_arboles']}")
     for r in exp["importancias"][:5]:
         print(
             f"  {r['rank']}. {r['variable']}: {r['importancia_ganancia'] * 100:.1f} %"

@@ -1,6 +1,6 @@
 {
   "hu": "HU-88",
-  "generado_en": "2026-11-22T06:11:17+00:00",
+  "generado_en": "2026-11-22T19:32:30+00:00",
   "artefacto": {
     "ruta": "models/prototype_model_d.pkl",
     "sha256": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f",
@@ -84,6 +84,7 @@
       "mejor_iteracion_validacion": 12,
       "iteraciones_sin_mejora_al_final": 10,
       "detenido_por_parada_temprana": true,
+      "origen_n_arboles": "detención temprana",
       "nota": "scikit-learn conserva todos los arboles construidos hasta detenerse; no descarta los posteriores a la mejor iteracion de validacion."
     },
     "resumen_arboles": {
