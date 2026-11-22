@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="680" height="786" viewBox="0 0 680 786" role="img" aria-labelledby="t d">
+<title id="t">Modelo D: importancia de variables por ganancia de particion</title>
+<desc id="d">Barras horizontales ordenadas de mayor a menor. Calculado solo con la estructura del artefacto, sin datos. No es causal.</desc>
+<style>
+:root{--surface:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--grid:#e4e3df;--bar:#2a78d6}
+@media (prefers-color-scheme: dark){:root{--surface:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--grid:#383835;--bar:#3987e5}}
+text{font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-size:12px;fill:var(--ink)}
+.muted{fill:var(--ink2)} .bar{fill:var(--bar)} .bar:hover{opacity:.8}
+</style>
+<rect width="680" height="786" fill="var(--surface)"/>
+<text x="16" y="24" style="font-size:15px;font-weight:600">Modelo D -- importancia por ganancia</text>
+<text x="16" y="42" class="muted">Proporcion de la ganancia total de particiones (22 arboles). Estructural, no causal.</text>
+<line x1="250" y1="52" x2="250" y2="760" stroke="var(--grid)" stroke-width="1"/>
+<text x="242" y="71.0" text-anchor="end">meteo_actual_temp</text>
+<rect class="bar" x="250" y="56" width="360.00" height="22" rx="4.00"><title>meteo_actual_temp: 42.1 % de la ganancia; 47 particiones; 22 arboles; raiz 19 veces</title></rect>
+<text x="616.00" y="71.0" class="muted">42.1 %</text>
+<text x="242" y="99.0" text-anchor="end">dias_desde_ultimo_evento</text>
+<rect class="bar" x="250" y="84" width="97.00" height="22" rx="4.00"><title>dias_desde_ultimo_evento: 11.4 % de la ganancia; 35 particiones; 22 arboles; raiz 0 veces</title></rect>
+<text x="353.00" y="99.0" class="muted">11.4 %</text>
+<text x="242" y="127.0" text-anchor="end">meteo_lag_6h_temp</text>
+<rect class="bar" x="250" y="112" width="94.17" height="22" rx="4.00"><title>meteo_lag_6h_temp: 11.0 % de la ganancia; 53 particiones; 22 arboles; raiz 2 veces</title></rect>
+<text x="350.17" y="127.0" class="muted">11.0 %</text>
+<text x="242" y="155.0" text-anchor="end">meteo_lag_24h_hr</text>
+<rect class="bar" x="250" y="140" width="46.77" height="22" rx="4.00"><title>meteo_lag_24h_hr: 5.5 % de la ganancia; 19 particiones; 10 arboles; raiz 0 veces</title></rect>
+<text x="302.77" y="155.0" class="muted">5.5 %</text>
+<text x="242" y="183.0" text-anchor="end">meteo_lag_6h_hr</text>
+<rect class="bar" x="250" y="168" width="38.31" height="22" rx="4.00"><title>meteo_lag_6h_hr: 4.5 % de la ganancia; 39 particiones; 22 arboles; raiz 0 veces</title></rect>
+<text x="294.31" y="183.0" class="muted">4.5 %</text>
+<text x="242" y="211.0" text-anchor="end">meteo_lag_24h_temp</text>
+<rect class="bar" x="250" y="196" width="30.25" height="22" rx="4.00"><title>meteo_lag_24h_temp: 3.5 % de la ganancia; 14 particiones; 11 arboles; raiz 1 veces</title></rect>
+<text x="286.25" y="211.0" class="muted">3.5 %</text>
+<text x="242" y="239.0" text-anchor="end">meteo_actual_hr</text>
+<rect class="bar" x="250" y="224" width="28.23" height="22" rx="4.00"><title>meteo_actual_hr: 3.3 % de la ganancia; 12 particiones; 8 arboles; raiz 0 veces</title></rect>
+<text x="284.23" y="239.0" class="muted">3.3 %</text>
+<text x="242" y="267.0" text-anchor="end">meteo_lag_48h_viento</text>
+<rect class="bar" x="250" y="252" width="22.32" height="22" rx="4.00"><title>meteo_lag_48h_viento: 2.6 % de la ganancia; 17 particiones; 13 arboles; raiz 0 veces</title></rect>
+<text x="278.32" y="267.0" class="muted">2.6 %</text>
+<text x="242" y="295.0" text-anchor="end">meteo_lag_12h_temp</text>
+<rect class="bar" x="250" y="280" width="22.11" height="22" rx="4.00"><title>meteo_lag_12h_temp: 2.6 % de la ganancia; 10 particiones; 10 arboles; raiz 0 veces</title></rect>
+<text x="278.11" y="295.0" class="muted">2.6 %</text>
+<text x="242" y="323.0" text-anchor="end">meteo_lag_48h_hr</text>
+<rect class="bar" x="250" y="308" width="18.84" height="22" rx="4.00"><title>meteo_lag_48h_hr: 2.2 % de la ganancia; 11 particiones; 10 arboles; raiz 0 veces</title></rect>
+<text x="274.84" y="323.0" class="muted">2.2 %</text>
+<text x="242" y="351.0" text-anchor="end">meteo_actual_viento</text>
+<rect class="bar" x="250" y="336" width="17.13" height="22" rx="4.00"><title>meteo_actual_viento: 2.0 % de la ganancia; 12 particiones; 9 arboles; raiz 0 veces</title></rect>
+<text x="273.13" y="351.0" class="muted">2.0 %</text>
+<text x="242" y="379.0" text-anchor="end">meteo_lag_12h_viento</text>
+<rect class="bar" x="250" y="364" width="14.01" height="22" rx="4.00"><title>meteo_lag_12h_viento: 1.6 % de la ganancia; 11 particiones; 9 arboles; raiz 0 veces</title></rect>
+<text x="270.01" y="379.0" class="muted">1.6 %</text>
+<text x="242" y="407.0" text-anchor="end">meteo_lag_24h_viento</text>
+<rect class="bar" x="250" y="392" width="12.28" height="22" rx="4.00"><title>meteo_lag_24h_viento: 1.4 % de la ganancia; 7 particiones; 6 arboles; raiz 0 veces</title></rect>
+<text x="268.28" y="407.0" class="muted">1.4 %</text>
+<text x="242" y="435.0" text-anchor="end">elevacion</text>
+<rect class="bar" x="250" y="420" width="11.13" height="22" rx="4.00"><title>elevacion: 1.3 % de la ganancia; 6 particiones; 6 arboles; raiz 0 veces</title></rect>
+<text x="267.13" y="435.0" class="muted">1.3 %</text>
+<text x="242" y="463.0" text-anchor="end">historial_firms_count</text>
+<rect class="bar" x="250" y="448" width="10.07" height="22" rx="4.00"><title>historial_firms_count: 1.2 % de la ganancia; 7 particiones; 7 arboles; raiz 0 veces</title></rect>
+<text x="266.07" y="463.0" class="muted">1.2 %</text>
+<text x="242" y="491.0" text-anchor="end">meteo_lag_48h_temp</text>
+<rect class="bar" x="250" y="476" width="8.53" height="22" rx="4.00"><title>meteo_lag_48h_temp: 1.0 % de la ganancia; 7 particiones; 5 arboles; raiz 0 veces</title></rect>
+<text x="264.53" y="491.0" class="muted">1.0 %</text>
+<text x="242" y="519.0" text-anchor="end">meteo_lag_6h_viento</text>
+<rect class="bar" x="250" y="504" width="7.72" height="22" rx="3.86"><title>meteo_lag_6h_viento: 0.9 % de la ganancia; 6 particiones; 5 arboles; raiz 0 veces</title></rect>
+<text x="263.72" y="519.0" class="muted">0.9 %</text>
+<text x="242" y="547.0" text-anchor="end">orientacion</text>
+<rect class="bar" x="250" y="532" width="6.55" height="22" rx="3.27"><title>orientacion: 0.8 % de la ganancia; 8 particiones; 8 arboles; raiz 0 veces</title></rect>
+<text x="262.55" y="547.0" class="muted">0.8 %</text>
+<text x="242" y="575.0" text-anchor="end">meteo_lag_12h_hr</text>
+<rect class="bar" x="250" y="560" width="5.85" height="22" rx="2.92"><title>meteo_lag_12h_hr: 0.7 % de la ganancia; 6 particiones; 6 arboles; raiz 0 veces</title></rect>
+<text x="261.85" y="575.0" class="muted">0.7 %</text>
+<text x="242" y="603.0" text-anchor="end">pendiente</text>
+<rect class="bar" x="250" y="588" width="3.15" height="22" rx="1.58"><title>pendiente: 0.4 % de la ganancia; 3 particiones; 3 arboles; raiz 0 veces</title></rect>
+<text x="259.15" y="603.0" class="muted">0.4 %</text>
+<text x="242" y="631.0" text-anchor="end">meteo_actual_regla_30_30_30</text>
+<text x="256.00" y="631.0" class="muted">0.0 %</text>
+<text x="242" y="659.0" text-anchor="end">meteo_lag_6h_regla_30_30_30</text>
+<text x="256.00" y="659.0" class="muted">0.0 %</text>
+<text x="242" y="687.0" text-anchor="end">meteo_lag_12h_regla_30_30_30</text>
+<text x="256.00" y="687.0" class="muted">0.0 %</text>
+<text x="242" y="715.0" text-anchor="end">meteo_lag_24h_regla_30_30_30</text>
+<text x="256.00" y="715.0" class="muted">0.0 %</text>
+<text x="242" y="743.0" text-anchor="end">meteo_lag_48h_regla_30_30_30</text>
+<text x="256.00" y="743.0" class="muted">0.0 %</text>
+<text x="16" y="778" class="muted">Fuente: SHA-256 ac017bef1f42... artefacto -- scripts/explicar_modelo_d.py (HU-88)</text>
+</svg>
