@@ -12,6 +12,7 @@ Casos negativos CA5 (deben levantar error y detener la evaluación):
 from __future__ import annotations
 
 import copy
+import json
 import hashlib
 from datetime import date
 
@@ -368,3 +369,84 @@ def test_curva_no_disponible_no_se_inventa():
         pass
 
     assert ev.curva_entrenamiento(SinteticoModeloSinCurva())["disponible"] is False
+
+
+# ── Integración: main() con CA4 = NO se detiene antes de las matrices ──────────
+# Condición 1 del Auditor (ola1-parte5, 22-11-2026). TODO es SINTÉTICO: FIRMS,
+# dataset, "modelo" y referencia se fabrican en tmp_path solo para esta prueba.
+# No se entrena ningún modelo: `entrenar_fold_d` se sustituye por un
+# clasificador sintético de score fijo.
+
+_SINTETICO_FECHAS_FIRMS = [
+    "2023-01-20", "2023-02-10", "2024-02-02", "2024-02-03", "2024-03-01",
+    "2025-01-15", "2025-01-16", "2026-02-01", "2026-02-20",
+]
+
+
+class _SinteticoClasificador:
+    """Clasificador SINTÉTICO: score determinista, sin entrenamiento."""
+
+    def predict_proba(self, x):
+        p = np.linspace(0.1, 0.9, len(x))
+        return np.column_stack([1 - p, p])
+
+
+def _sintetico_artefactos_main(tmp_path):
+    from scripts.experiment_abcd import FEATURES_D
+
+    lat, lon = _sintetico_punto_en_celda(0)
+    firms = tmp_path / "sintetico_firms.csv"
+    pd.DataFrame({"latitude": lat, "longitude": lon, "acq_date": _SINTETICO_FECHAS_FIRMS}).to_csv(firms, index=False)
+    dias = tmp_path / "sintetico_dias.csv"
+    ev.seleccionar_dias(ev.estadisticas_diarias_firms(ev.cargar_firms_fechas(firms))).to_csv(dias, index=False)
+
+    filas = []
+    for anio in range(2021, 2027):
+        for k, ts in enumerate(pd.to_datetime([f"{anio}-02-02T00:00Z", f"{anio}-02-02T06:00Z"])):
+            for j, cell in enumerate(("VP-001", "VP-002", "VP-003")):
+                filas.append({"forecast_time": ts, "cell_id": cell, "eligible_for_training": True,
+                              "target": int(k == 0 and j == 0), **{f: 0.0 for f in FEATURES_D}})
+    dataset = tmp_path / "sintetico_dataset.parquet"
+    pd.DataFrame(filas).to_parquet(dataset)
+
+    modelo = tmp_path / "sintetico_modelo.pkl"
+    modelo.write_bytes(b"modelo sintetico: no se carga si CA4 = NO")
+
+    # Referencia SINTÉTICA con conteos correctos pero PR-AUC alterada -> CA4 = NO.
+    referencia = tmp_path / "sintetico_referencia.json"
+    referencia.write_text(json.dumps({"folds": [
+        {"test_bloque": str(a), "n_test": 6, "n_positivos_test_filas": 1,
+         "resultados": {"fila": {"modelo_D": {"pr_auc": 0.123456}}}}
+        for a in range(2022, 2027)
+    ]}), encoding="utf-8")
+    return {"dataset": dataset, "firms": firms, "modelo": modelo, "referencia": referencia, "dias": dias}
+
+
+def test_main_con_ca4_no_se_detiene_antes_de_matrices_y_figuras(tmp_path, monkeypatch):
+    a = _sintetico_artefactos_main(tmp_path)
+    for const, clave in (("SHA256_DATASET", "dataset"), ("SHA256_FIRMS", "firms"),
+                         ("SHA256_MODELO_D", "modelo"), ("SHA256_REFERENCIA", "referencia")):
+        monkeypatch.setattr(ev, const, ev.sha256_archivo(a[clave], normalizar_fin_de_linea=clave == "referencia"))
+    monkeypatch.setattr(ev, "entrenar_fold_d", lambda train: _SinteticoClasificador())
+
+    llamadas = []
+    for nombre in ("matriz_zona", "matriz_dia", "umbral_p90", "score_por_dia", "curva_entrenamiento", "_figuras"):
+        monkeypatch.setattr(ev, nombre, lambda *args, _n=nombre, **kw: llamadas.append(_n))
+
+    salida = tmp_path / "sintetico_salida"
+    with pytest.raises(ev.EvaluacionDetenida, match="CA4 = NO"):
+        ev.main([
+            "--dataset", str(a["dataset"]), "--firms", str(a["firms"]), "--modelo", str(a["modelo"]),
+            "--referencia", str(a["referencia"]), "--dias", str(a["dias"]), "--salida", str(salida),
+            "--confirmo-autorizacion-ejecucion",
+        ])
+
+    assert llamadas == [], f"main() siguió después de CA4 = NO: {llamadas}"
+    controles = list(salida.glob("evaluacion_modelo_d_control_ca4_*.json"))
+    assert len(controles) == 1
+    control = json.loads(controles[0].read_text(encoding="utf-8"))["control"]
+    assert control["resultado"] == "NO" and control["motivos"]
+    assert all("PR-AUC" in m for m in control["motivos"])
+    escritos = {p.name for p in salida.iterdir()}
+    assert escritos == {controles[0].name}, f"se escribieron salidas además del control: {escritos}"
+    assert not (salida / "figuras_sapi83").exists()
