@@ -163,3 +163,31 @@ Salidas previstas (al ejecutar, no ahora): `reports/evaluacion_modelo_d_<fecha>.
 - Pruebas: `tests/test_sapi83_evaluacion_modelo_d.py`, solo fixtures sintéticos, ejecutadas con `pytest -o addopts=""`.
 - **No ejecutado:** `scripts/experiment_abcd.py`, `main()` de `scripts/evaluacion_modelo_d.py`, ningún entrenamiento, ninguna lectura del dataset `14b36ad8…`.
 - Pendiente para la fase de ejecución (requiere autorización nueva): correr `python scripts/evaluacion_modelo_d.py --dataset C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet --confirmo-autorizacion-ejecucion`; si CA4 = NO, se detiene y se reporta.
+
+## 12. Registro de ejecución R2–R6 (22-11-2026)
+
+Autorización: Orden 01 del 22-11-2026 (Daniel Cortez). GO final del Auditor: `ola1-parte5b-resello-hu83-20261122.md` (SHA-256 `55239c673b0896b53335ae90c055ac20d6aeccfe1cc0fa5a3eb9b72c831e22f6`). Esta sección solo registra; las secciones 1–10 no cambian.
+
+**Precondiciones verificadas antes de ejecutar:** HEAD = `71722ef4b16bc6b4ae6a372d8588fe8b79c94f4d` con árbol limpio; dataset `C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet` (solo lectura, no copiado) con SHA-256 `14b36ad8…530fe`; `docs/dias_prueba_seleccionados.csv` sin cambios desde `3a8f45c`.
+
+**Comando** (2026-11-22T06:00:54Z → 06:01:28Z, exit 0):
+`.venv/Scripts/python -I scripts/evaluacion_modelo_d.py --dataset C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet --confirmo-autorizacion-ejecucion`
+Log: `reports/sapi83/ejecucion_r2_r6_20261122T060054Z.log`.
+
+**Hashes verificados por el script:** dataset `14b36ad8…`, FIRMS `a9a85db4…`, modelo D `ac017bef…`, referencia `4bbe4db0…` (todos coinciden).
+
+**CA4 (reproducción): SÍ.** PR-AUC del D re-entrenado = referencia, diferencia 0 en los 4 folds: 2023 `0.0008561319756338858`, 2024 `0.010692228032479597`, 2025 `0.0009183479102241013`, 2026 `0.0010260189942317172`; fold 2022 sin entrenar en ambos. Archivo: `reports/evaluacion_modelo_d_control_ca4_20261122.json`.
+
+**Matriz por zona, Top 5 (2023–2026 agregado):** VP 12, FP 26 643, FN 70, VN 239 738; sensibilidad 0,146 (12/82); precisión 0,00045. Por año (VP/FN): 2023 1/18, 2024 5/41, 2025 4/3, 2026 2/8. Empate en el corte en 1265/1460, 1303/1464, 1075/1443 y 747/964 forecast_times (2023…2026); positivos dentro del grupo empatado del corte: 8, 6, 1, 2. Referencia descriptiva, no prueba: un Top 5 al azar de 50 celdas acierta en promedio el 10 % de los positivos.
+
+**Matriz por día, 18 días del CSV (primaria):** VP 6, FN 3, FP 3, VN 6 (sensibilidad 6/9, especificidad 6/9). Umbrales p90 (solo años de entrenamiento): 2023 0,3906; 2024 0,6410; 2025 0,7507; 2026 0,7683. Ningún día NO_EVALUABLE. Secundaria (todos los días con filas elegibles): 2023 VP4 FP50 FN7 VN304; 2024 VP7 FP40 FN13 VN306; 2025 VP2 FP23 FN4 VN332; 2026 VP3 FP30 FN5 VN203. Con 9 + 9 días no hay inferencia (sección 9).
+
+**Resultados completos:** `reports/evaluacion_modelo_d_20261122.json`. Figuras: `reports/figuras_sapi83/matriz_zona_top5_2023_2026.png`, `reports/figuras_sapi83/matriz_dia_con_sin_incendio.png`.
+
+**Casos negativos CA5 (HU-83.T4):** `reports/sapi83/pytest_casos_negativos_ca5_20261122T060209Z.txt`: 37 passed, solo fixtures sintéticos. Incluye CA5-a (umbral con año de prueba y con año posterior → `FugaDeUmbral`), CA5-b (PR-AUC o referencia alterada y 7 mutaciones → `EvaluacionDetenida`) y la integración de `main()` con CA4 = NO. El script no tiene un modo de verificación negativa con datos reales.
+
+**Defectos encontrados en la ejecución:**
+- **E1 (CA1 incumplido, bloquea la curva).** `models/prototype_model_d.pkl` es un dict `{"model", "metadata"}`; producción lo desenvuelve (`payload["model"]`, `prototype_service.py:219`), pero `main()` pasa el dict entero a `curva_entrenamiento()`, que por eso respondió «curva no disponible en el artefacto». La curva **sí existe**: lectura de solo lectura posterior, sin re-entrenar, muestra `HistGradientBoostingClassifier` con `early_stopping="auto"` activo, `n_iter_ = 22`, y 23 valores en `train_score_` y en `validation_score_`. No se corrigió ni se generó la figura fuera del código sellado: la corrección (`payload["model"]`) es un commit posterior al sello y requiere nueva revisión antes de re-ejecutar solo la parte de la curva.
+- **E2 (cosmético).** En las matrices, la cifra de la celda oscura (VN) se dibuja en negro sobre azul oscuro y se lee mal.
+- **E3 (menor).** `figuras` en el JSON guarda rutas absolutas locales de Windows.
+- **Observación.** Los empates en el corte Top 5 ocurren en el 77–89 % de los forecast_times, así que la matriz por zona depende mucho del orden de desempate (D8). Hay que decirlo junto a la cifra.
