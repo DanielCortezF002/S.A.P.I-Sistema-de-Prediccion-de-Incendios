@@ -49,3 +49,13 @@ Las definiciones y las mediciones anteriores vienen del Informe del Hito 2 (Tabl
 **Validación por un stakeholder:** cada resultado medido se presentará en la sesión de HU-79. Su aprobación queda con nombre, rol y fecha en el ticket. **Al 22-11-2026 no hay ninguna aprobación registrada.**
 
 **Otra medición anterior, no usada como línea base:** un borrador del 15-11-2026, fuera del repositorio, cita 6,9 s en frío y 3,7 s al actualizar (24-10-2026, commit `2a71c7e`). No se re-verificó. Como línea base se usa la del Informe del Hito 2 (28-10-2026, n = 30).
+
+## 6. Mediciones previas al sellado
+
+| Medición | Commit | Fecha UTC | Preregistro propio | ¿Tiene meta asociada? |
+|---|---|---|---|---|
+| HU-83 R2–R6 (evaluación del Modelo D con datos reales) | `2175742` (rama `ml/sapi-83-preregistro`) | 2026-11-22T06:02:42Z | Criterio `c15993c` (2026-11-22 01:16 -0300) y sello `71722ef` (2026-11-22T04:27:43Z) | No: «meta pendiente de Daniel». Ningún valor se fijó después de medir |
+
+**El plan general se escribió 5 minutos después de esta ejecución; se declara como brecha, no se modifica ninguna fecha.** Fechas de commit verificadas con `git log` el 22-11-2026: la medición es `2175742` (2026-11-22T06:02:42Z) y el plan general es `f7c340d` (2026-11-22T06:08:00Z).
+
+Esta brecha no cambia ninguna meta de la sección 5: todas siguen como «meta pendiente de Daniel».

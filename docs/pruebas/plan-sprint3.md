@@ -68,3 +68,13 @@ La severidad queda **por asignar**, porque no figura en los tickets.
 ## 6. Informe de resultados
 
 Al cierre se redacta `docs/pruebas/informe-resultados.md`. Por tipo de prueba explica qué se probó, qué resultó, qué significa, qué falló y qué se decidió.
+
+## 7. Mediciones previas al sellado
+
+| Medición | Commit | Fecha UTC | Preregistro propio | ¿Tiene meta asociada? |
+|---|---|---|---|---|
+| HU-83 R2–R6 (evaluación del Modelo D con datos reales) | `2175742` (rama `ml/sapi-83-preregistro`) | 2026-11-22T06:02:42Z | Criterio `c15993c` (2026-11-22 01:16 -0300) y sello `71722ef` (2026-11-22T04:27:43Z) | No: «meta pendiente de Daniel». Ningún valor se fijó después de medir |
+
+**El plan general se escribió 5 minutos después de esta ejecución; se declara como brecha, no se modifica ninguna fecha.** Fechas de commit verificadas con `git log` el 22-11-2026: la medición es `2175742` (2026-11-22T06:02:42Z) y el plan general es `f7c340d` (2026-11-22T06:08:00Z).
+
+**Pendiente para HU-92.T7 (SAPI-174):** registrar esta brecha en `docs/riesgos.md` cuando ese archivo exista. Hoy no existe en esta rama y no se crea en este commit.
