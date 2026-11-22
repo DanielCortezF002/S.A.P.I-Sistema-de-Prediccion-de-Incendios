@@ -18,7 +18,7 @@ python scripts/explicar_modelo_d.py --expected-sha256 0000...0000 --out-dir <tmp
 # ERROR: SHA-256 no coincide ... El artefacto NO se deserializo.  (exit 2)
 
 python -m pytest tests/test_hu88_explicar_modelo_d.py -o addopts="" --noconftest -q
-# 8 passed
+# 12 passed (8 originales + 4 de las observaciones B-1 y B-3 del Auditor)
 ```
 
 `--noconftest` y `-o addopts=""`: el `tests/conftest.py` compartido importa `src.procesamiento.features`
@@ -32,3 +32,14 @@ no usan esos fixtures ni cubren esos paquetes.
 - `modelo_d_importancias.svg` -- figura de importancias (revisada visualmente en Edge headless).
 
 `sha256sum models/prototype_model_d.pkl` antes y despues: `ac017bef...2173f` (sin cambios).
+
+## Observaciones del Auditor (orden01-hu88-t1t2-20261122.md, SHA-256 50370c35...)
+
+- B-1: el JSON (`explicacion.parada_temprana`) y el MD ("Por que hay este numero de arboles") registran los
+  parametros leidos del pkl tras verificar su hash: early_stopping='auto', do_early_stopping_=True,
+  n_iter_no_change=10, max_iter=100, validation_fraction=0.1, scoring='loss', n_iter_=22,
+  validation_score_ con 23 valores, mejor iteracion de validacion 12 y 10 iteraciones sin mejora.
+- B-2: `docs/modelo_d_una_pagina.md` cita para los empates HU-83 commit 2175742 (rama ml/sapi-83-preregistro)
+  y el rango corregido 74,5-89,0 % (seccion 12 del preregistro, commit afb8725).
+- B-3: `fuente_importancia` (JSON), el MD y el documento declaran que la importancia usa atributos privados
+  de scikit-learn 1.9.0 (`_predictors`).

@@ -241,6 +241,7 @@ def explain(estimator: Any) -> dict[str, Any]:
         "hiperparametros": {
             k: params[k] for k in sorted(params) if _jsonable(params[k])
         },
+        "parada_temprana": early_stopping_info(estimator),
         "resumen_arboles": {
             "profundidad_min": min(depths) if depths else None,
             "profundidad_max": max(depths) if depths else None,
@@ -255,6 +256,45 @@ def explain(estimator: Any) -> dict[str, Any]:
         "importancias": ranking,
         "arboles": per_tree,
     }
+
+
+def early_stopping_info(estimator: Any) -> dict[str, Any]:
+    """Por que el ensamble tiene N arboles: parametros y atributos del artefacto.
+
+    Todo se lee del objeto ya cargado (sin datos). ``validation_score_`` es la
+    puntuacion (``scoring``; con 'loss' es la log-loss negativa) sobre la
+    particion de validacion interna que scikit-learn separo al entrenar; su
+    indice 0 es el modelo sin arboles.
+    """
+    params = estimator.get_params() if hasattr(estimator, "get_params") else {}
+    keys = ("early_stopping", "n_iter_no_change", "max_iter", "tol")
+    keys += ("validation_fraction", "scoring")
+    info: dict[str, Any] = {k: params.get(k) for k in keys}
+    n_iter = getattr(estimator, "n_iter_", None)
+    info["n_iter_"] = int(n_iter) if n_iter is not None else None
+    do_es = getattr(estimator, "do_early_stopping_", None)
+    info["do_early_stopping_"] = bool(do_es) if do_es is not None else None
+    scores = getattr(estimator, "validation_score_", None)
+    if scores is not None and len(scores):
+        info["n_validation_score_"] = int(len(scores))
+        best = max(range(len(scores)), key=lambda i: scores[i])
+        info["mejor_iteracion_validacion"] = best
+        info["iteraciones_sin_mejora_al_final"] = int(len(scores) - 1 - best)
+    else:
+        info["n_validation_score_"] = 0
+        info["mejor_iteracion_validacion"] = None
+        info["iteraciones_sin_mejora_al_final"] = None
+    info["detenido_por_parada_temprana"] = bool(
+        info["do_early_stopping_"]
+        and info["n_iter_"] is not None
+        and info["max_iter"] is not None
+        and info["n_iter_"] < info["max_iter"]
+    )
+    info["nota"] = (
+        "scikit-learn conserva todos los arboles construidos hasta detenerse; "
+        "no descarta los posteriores a la mejor iteracion de validacion."
+    )
+    return info
 
 
 def _jsonable(value: Any) -> bool:
@@ -284,10 +324,37 @@ METODO = (
     "muchos umbrales posibles."
 )
 
+FUENTE_IMPORTANCIA = (
+    "Calculada por este script recorriendo atributos PRIVADOS de scikit-learn 1.9.0 "
+    "(HistGradientBoostingClassifier._predictors y TreePredictor.nodes). No es un "
+    "atributo oficial del modelo (HistGradientBoostingClassifier no expone "
+    "feature_importances_) y puede romperse o cambiar con otra version de scikit-learn."
+)
+
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+
+def _texto_parada(pt: dict[str, Any]) -> str:
+    base = (
+        f"Parametros leidos del artefacto: early_stopping={pt['early_stopping']!r}, "
+        f"n_iter_no_change={pt['n_iter_no_change']}, max_iter={pt['max_iter']}, "
+        f"tol={pt['tol']}, validation_fraction={pt['validation_fraction']}, "
+        f"scoring={pt['scoring']!r}; atributos: n_iter_={pt['n_iter_']}, "
+        f"do_early_stopping_={pt['do_early_stopping_']}, "
+        f"validation_score_ con {pt['n_validation_score_']} valores."
+    )
+    if not pt["detenido_por_parada_temprana"]:
+        return base + " El entrenamiento no se detuvo por parada temprana."
+    return base + (
+        f" El entrenamiento se detuvo por parada temprana en la iteracion "
+        f"{pt['n_iter_']} de {pt['max_iter']} posibles: la mejor puntuacion de "
+        f"validacion interna se alcanzo tras {pt['mejor_iteracion_validacion']} "
+        f"arboles y las {pt['iteraciones_sin_mejora_al_final']} iteraciones "
+        f"siguientes no la mejoraron. {pt['nota']}"
     )
 
 
@@ -306,6 +373,10 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         f"{payload['verificacion']['variables_esperadas']})",
         f"- Datos usados: {payload['datos_usados']}",
         "",
+        "## Por que hay este numero de arboles",
+        "",
+        _texto_parada(exp["parada_temprana"]),
+        "",
         "## Forma de los arboles",
         "",
         f"- Profundidad maxima por arbol: {res['profundidad_min']}--{res['profundidad_max']} "
@@ -317,6 +388,8 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "## Importancia de variables (ganancia de particion)",
         "",
         METODO,
+        "",
+        f"Fuente del calculo: {FUENTE_IMPORTANCIA}",
         "",
         "| # | Variable | Importancia (ganancia) | Particiones | Arboles que la usan | Veces en raiz |",
         "|---|---|---:|---:|---:|---:|",
@@ -348,7 +421,8 @@ def write_markdown(path: Path, payload: dict[str, Any]) -> None:
         "- `scientific_model_validation=false`: este reporte no valida el modelo.",
         "- La importancia por ganancia describe como el modelo se ajusto a sus datos de "
         "entrenamiento; no mide causalidad ni desempeno fuera de muestra.",
-        "- Usa atributos privados de scikit-learn 1.9.0; otra version puede no ser compatible.",
+        "- La importancia por ganancia y el detalle por arbol se calculan con atributos "
+        "privados de scikit-learn 1.9.0 (`_predictors`); otra version puede no ser compatible.",
         "",
         f"Entorno: {', '.join(f'{k} {v}' for k, v in payload['entorno'].items())}",
         "",
@@ -482,6 +556,7 @@ def run(
         "scientific_model_validation": False,
         "score_semantics": "relative_rank",
         "metodo_importancia": METODO,
+        "fuente_importancia": FUENTE_IMPORTANCIA,
         "entorno": _versions(),
         "explicacion": explicacion,
     }

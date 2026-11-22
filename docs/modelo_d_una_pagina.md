@@ -8,6 +8,8 @@ El Modelo D es el programa que S.A.P.I. usa para **ordenar las 50 celdas de la z
 
 Por dentro es un conjunto de **22 árboles de decisión** pequeños (técnicamente, un `HistGradientBoostingClassifier`). Cada árbol hace hasta 4 preguntas seguidas del tipo "¿la temperatura supera tal valor?" y termina en una de sus 16 respuestas posibles. El puntaje final suma lo que aportan los 22 árboles.
 
+**¿Por qué 22 árboles y no 100?** Por la **parada temprana**. Al entrenar se permitían hasta 100 árboles (`max_iter=100`), pero el modelo tenía activada la parada temprana (`early_stopping='auto'`, que se activó: `do_early_stopping_=True`). Con esa opción, scikit-learn aparta una parte de los datos para comprobar el aprendizaje (`validation_fraction=0.1`) y se detiene cuando pasan 10 árboles seguidos sin mejorar (`n_iter_no_change=10`). El mejor resultado se alcanzó con 12 árboles. Los 10 siguientes no lo mejoraron, así que el entrenamiento se detuvo en 22 (`n_iter_=22`). El modelo guarda los 22, no solo los 12 primeros. Todos estos valores se leyeron del propio archivo del modelo, después de comprobar su huella digital (sección "Por que hay este numero de arboles" de `reports/hu88_explicacion_modelo_d/modelo_d_explicacion.md`).
+
 El archivo desplegado es `models/prototype_model_d.pkl`. Su huella digital (SHA-256) es `ac017bef…2173f`. El script de HU-88 la comprueba antes de abrir el archivo y no lo modifica.
 
 ## Qué información usa (25 variables)
@@ -39,6 +41,7 @@ Al leer estas cifras:
 - **No dice en qué dirección.** No indica si más temperatura sube o baja el puntaje en cada celda.
 - **Viene del entrenamiento.** No mide si el modelo acierta con datos nuevos.
 - **Favorece variables con muchos valores distintos.** Las mediciones continuas, como la temperatura, ofrecen más cortes posibles que una variable de sí o no.
+- **No es una cifra oficial de la librería.** El modelo no trae una "importancia" incorporada (`HistGradientBoostingClassifier` no tiene `feature_importances_`). El script de HU-88 la calcula recorriendo partes internas y privadas de scikit-learn 1.9.0 (`_predictors`). Con otra versión de scikit-learn, el cálculo puede dejar de funcionar o cambiar.
 
 ## Limitaciones
 
@@ -46,5 +49,5 @@ Al leer estas cifras:
 - **No está validado científicamente.** El sistema declara `scientific_model_validation = false`, y este documento no cambia esa condición.
 - **El modelo desplegado se entrenó con todo el periodo 2021–2026** (30-08-2021 a 29-08-2026). No se reservó un periodo de prueba. Las métricas publicadas vienen de reentrenamientos por año (`docs/model_card_baseline.md`), no de este archivo.
 - **Aprendió de muy pocos casos:** 107 situaciones positivas entre 362.883 filas.
-- **Usa una sola estación meteorológica** (Rodelillo, 330007) para toda la zona, así que todas las celdas comparten el mismo clima en un mismo momento. Las diferencias entre celdas vienen del historial de focos y del terreno. En la práctica, muchas celdas quedan con el mismo puntaje (empates).
+- **Usa una sola estación meteorológica** (Rodelillo, 330007) para toda la zona, así que todas las celdas comparten el mismo clima en un mismo momento. Las diferencias entre celdas vienen del historial de focos y del terreno. En la práctica, muchas celdas quedan con el mismo puntaje (empates). En la evaluación de HU-83 (años 2023 a 2026), entre el 74,5 % y el 89,0 % de los momentos de pronóstico tenían celdas empatadas justo en el corte del Top 5. Cuando eso ocurre, el orden entre las celdas empatadas es arbitrario. Fuente: resultados de HU-83, commit `2175742` de la rama `ml/sapi-83-preregistro` (`reports/evaluacion_modelo_d_20261122.json`). El rango corregido está en la sección 12 de `docs/preregistro_sapi83.md`, commit `afb8725`.
 - **No sirve para decisiones operacionales.** Es un prototipo exploratorio.

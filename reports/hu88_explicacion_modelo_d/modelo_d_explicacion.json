@@ -1,6 +1,6 @@
 {
   "hu": "HU-88",
-  "generado_en": "2026-11-22T06:06:41+00:00",
+  "generado_en": "2026-11-22T06:11:17+00:00",
   "artefacto": {
     "ruta": "models/prototype_model_d.pkl",
     "sha256": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f",
@@ -31,6 +31,7 @@
   "scientific_model_validation": false,
   "score_semantics": "relative_rank",
   "metodo_importancia": "Importancia por ganancia: suma del campo 'gain' (reduccion de la perdida log-loss lograda por la particion, segun scikit-learn) de todos los nodos internos que usan cada variable, normalizada para sumar 1. Se calcula solo con la estructura del artefacto (sin datos). Es una medida interna del entrenamiento: no es causal, no es importancia por permutacion, y puede sobrevalorar variables continuas con muchos umbrales posibles.",
+  "fuente_importancia": "Calculada por este script recorriendo atributos PRIVADOS de scikit-learn 1.9.0 (HistGradientBoostingClassifier._predictors y TreePredictor.nodes). No es un atributo oficial del modelo (HistGradientBoostingClassifier no expone feature_importances_) y puede romperse o cambiar con otra version de scikit-learn.",
   "entorno": {
     "python": "3.14.10",
     "numpy": "2.5.2",
@@ -69,6 +70,21 @@
       "validation_fraction": 0.1,
       "verbose": 0,
       "warm_start": false
+    },
+    "parada_temprana": {
+      "early_stopping": "auto",
+      "n_iter_no_change": 10,
+      "max_iter": 100,
+      "tol": 1e-07,
+      "validation_fraction": 0.1,
+      "scoring": "loss",
+      "n_iter_": 22,
+      "do_early_stopping_": true,
+      "n_validation_score_": 23,
+      "mejor_iteracion_validacion": 12,
+      "iteraciones_sin_mejora_al_final": 10,
+      "detenido_por_parada_temprana": true,
+      "nota": "scikit-learn conserva todos los arboles construidos hasta detenerse; no descarta los posteriores a la mejor iteracion de validacion."
     },
     "resumen_arboles": {
       "profundidad_min": 4,

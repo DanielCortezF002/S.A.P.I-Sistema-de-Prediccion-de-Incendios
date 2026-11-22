@@ -199,3 +199,70 @@ def test_artefacto_real_22_arboles_25_variables(tmp_path: Path) -> None:
     assert payload["artefacto"]["feature_columns_coinciden_con_modelo"] is True
     assert payload["artefacto"]["sha256_despues_de_ejecutar"] == emd.EXPECTED_SHA256
     assert _sha(emd.DEFAULT_MODEL) == before
+
+
+def test_parada_temprana_desactivada_sintetico(
+    synthetic_artifact: Path, tmp_path: Path
+) -> None:
+    exp = _run(synthetic_artifact, tmp_path / "out")["explicacion"]
+    pt = exp["parada_temprana"]
+    assert pt["early_stopping"] is False
+    assert pt["detenido_por_parada_temprana"] is False
+    assert pt["n_iter_"] == SYNTH_TREES == pt["max_iter"]
+    md = (tmp_path / "out" / emd.MD_NAME).read_text(encoding="utf-8")
+    assert "no se detuvo por parada temprana" in md
+
+
+def test_parada_temprana_activada_sintetico(tmp_path: Path) -> None:
+    """SINTETICO: etiqueta aleatoria (ruido puro) para forzar la parada temprana."""
+    rng = np.random.default_rng(1)
+    n = 2000
+    x = pd.DataFrame({name: rng.normal(size=n) for name in SYNTH_FEATURES})
+    y = rng.integers(0, 2, size=n)
+    model = HistGradientBoostingClassifier(
+        max_iter=200,
+        max_depth=2,
+        early_stopping=True,
+        n_iter_no_change=3,
+        random_state=0,
+    ).fit(x, y)
+    path = tmp_path / "modelo_sintetico_es.pkl"
+    joblib.dump({"model": model, "metadata": {"model_version": "SINTETICO_TEST"}}, path)
+
+    exp = _run(path, tmp_path / "out", expected_trees=int(model.n_iter_))["explicacion"]
+    pt = exp["parada_temprana"]
+    assert pt["detenido_por_parada_temprana"] is True
+    assert pt["n_iter_"] < 200
+    assert pt["iteraciones_sin_mejora_al_final"] == 3
+    assert pt["n_validation_score_"] == pt["n_iter_"] + 1
+    assert exp["n_arboles"] == pt["n_iter_"]  # sklearn conserva todos los arboles
+
+
+def test_fuente_importancia_declara_atributos_privados(
+    synthetic_artifact: Path, tmp_path: Path
+) -> None:
+    payload = _run(synthetic_artifact, tmp_path / "out")
+    assert "_predictors" in payload["fuente_importancia"]
+    assert "1.9.0" in payload["fuente_importancia"]
+    md = (tmp_path / "out" / emd.MD_NAME).read_text(encoding="utf-8")
+    assert "_predictors" in md
+
+
+def test_artefacto_real_parada_temprana(tmp_path: Path) -> None:
+    """Modelo D real, solo lectura: 22 arboles por parada temprana (sin datos)."""
+    if not emd.DEFAULT_MODEL.exists():
+        pytest.skip("models/prototype_model_d.pkl no presente")
+    payload = emd.run(
+        emd.DEFAULT_MODEL, tmp_path / "out", generated_at="2026-11-22T00:00:00+00:00"
+    )
+    pt = payload["explicacion"]["parada_temprana"]
+    assert pt["early_stopping"] == "auto"
+    assert pt["n_iter_no_change"] == 10
+    assert pt["max_iter"] == 100
+    assert pt["n_iter_"] == 22
+    assert pt["do_early_stopping_"] is True
+    assert pt["detenido_por_parada_temprana"] is True
+    assert (
+        pt["mejor_iteracion_validacion"] + pt["iteraciones_sin_mejora_al_final"] == 22
+    )
+    assert _sha(emd.DEFAULT_MODEL) == emd.EXPECTED_SHA256

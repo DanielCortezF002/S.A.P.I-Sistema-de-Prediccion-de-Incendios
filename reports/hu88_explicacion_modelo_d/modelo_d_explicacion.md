@@ -1,10 +1,14 @@
 # HU-88 -- Explicacion estructural del Modelo D
 
-- Generado: 2026-11-22T06:06:41+00:00
+- Generado: 2026-11-22T06:11:17+00:00
 - Artefacto: `models/prototype_model_d.pkl`
 - SHA-256 verificado (antes de cargar y despues): `ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f`
 - Tipo: HistGradientBoostingClassifier -- 22 arboles, 25 variables (verificado contra lo esperado: 22 / 25)
 - Datos usados: ninguno (solo estructura del artefacto; el dataset no se lee)
+
+## Por que hay este numero de arboles
+
+Parametros leidos del artefacto: early_stopping='auto', n_iter_no_change=10, max_iter=100, tol=1e-07, validation_fraction=0.1, scoring='loss'; atributos: n_iter_=22, do_early_stopping_=True, validation_score_ con 23 valores. El entrenamiento se detuvo por parada temprana en la iteracion 22 de 100 posibles: la mejor puntuacion de validacion interna se alcanzo tras 12 arboles y las 10 iteraciones siguientes no la mejoraron. scikit-learn conserva todos los arboles construidos hasta detenerse; no descarta los posteriores a la mejor iteracion de validacion.
 
 ## Forma de los arboles
 
@@ -16,6 +20,8 @@
 ## Importancia de variables (ganancia de particion)
 
 Importancia por ganancia: suma del campo 'gain' (reduccion de la perdida log-loss lograda por la particion, segun scikit-learn) de todos los nodos internos que usan cada variable, normalizada para sumar 1. Se calcula solo con la estructura del artefacto (sin datos). Es una medida interna del entrenamiento: no es causal, no es importancia por permutacion, y puede sobrevalorar variables continuas con muchos umbrales posibles.
+
+Fuente del calculo: Calculada por este script recorriendo atributos PRIVADOS de scikit-learn 1.9.0 (HistGradientBoostingClassifier._predictors y TreePredictor.nodes). No es un atributo oficial del modelo (HistGradientBoostingClassifier no expone feature_importances_) y puede romperse o cambiar con otra version de scikit-learn.
 
 | # | Variable | Importancia (ganancia) | Particiones | Arboles que la usan | Veces en raiz |
 |---|---|---:|---:|---:|---:|
@@ -79,6 +85,6 @@ Figura: `modelo_d_importancias.svg` (misma informacion que la tabla).
 - El score del Modelo D es un ranking relativo, no una probabilidad calibrada.
 - `scientific_model_validation=false`: este reporte no valida el modelo.
 - La importancia por ganancia describe como el modelo se ajusto a sus datos de entrenamiento; no mide causalidad ni desempeno fuera de muestra.
-- Usa atributos privados de scikit-learn 1.9.0; otra version puede no ser compatible.
+- La importancia por ganancia y el detalle por arbol se calculan con atributos privados de scikit-learn 1.9.0 (`_predictors`); otra version puede no ser compatible.
 
 Entorno: python 3.14.10, numpy 2.5.2, scipy 1.18.1, sklearn 1.9.0, joblib 1.5.3
