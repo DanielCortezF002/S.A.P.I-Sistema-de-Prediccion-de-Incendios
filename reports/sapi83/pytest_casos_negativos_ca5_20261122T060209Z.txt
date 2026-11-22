@@ -1,0 +1,46 @@
+# 2026-11-22T06:02:09Z HEAD=71722ef4b16bc6b4ae6a372d8588fe8b79c94f4d — solo fixtures sinteticos
+============================= test session starts =============================
+platform win32 -- Python 3.14.10, pytest-9.1.1, pluggy-1.7.0 -- C:\Users\danie\orca\workspaces\SAPI\vaquita\.venv\Scripts\python.exe
+rootdir: C:\Users\danie\orca\workspaces\SAPI\vaquita
+configfile: pytest.ini
+collecting ... collected 37 items
+
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5a_umbral_con_dias_del_anio_de_prueba_levanta_error PASSED [  2%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5a_umbral_con_anio_posterior_tambien_levanta_error PASSED [  5%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_umbral_p90_solo_entrenamiento_es_percentil_lineal PASSED [  8%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca4_reproduccion_identica_da_si PASSED [ 10%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_pr_auc_alterada_detiene_la_evaluacion PASSED [ 13%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_referencia_alterada_detiene_la_evaluacion PASSED [ 16%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>0] PASSED [ 18%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>1] PASSED [ 21%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>2] PASSED [ 24%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>3] PASSED [ 27%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>4] PASSED [ 29%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>5] PASSED [ 32%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ca5b_cualquier_discrepancia_de_reproduccion_detiene[<lambda>6] PASSED [ 35%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_reproduccion_sin_folds_detiene PASSED [ 37%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_hash_distinto_detiene PASSED [ 40%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_artefacto_faltante_detiene PASSED [ 43%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_hash_con_normalizacion_de_fin_de_linea PASSED [ 45%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_main_sin_autorizacion_no_ejecuta_nada PASSED [ 48%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_main_verifica_hashes_antes_de_leer PASSED [ 51%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_top_n_coincide_con_score_contract PASSED [ 54%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ranking_pantalla_igual_a_prototype_service_y_metadatos_de_empate PASSED [ 56%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_ranking_sin_empate_en_corte PASSED [ 59%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_matriz_zona_cuenta_vp_fp_fn_vn_y_empates PASSED [ 62%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_matriz_zona_registra_T_con_celdas_en_cooldown PASSED [ 64%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_score_por_dia_es_maximo_por_fecha_utc PASSED [ 67%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_matriz_dia_y_no_evaluables PASSED [ 70%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_cocientes_con_denominador_cero_son_none PASSED [ 72%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_estadisticas_diarias_solo_cuentan_detecciones_en_la_grilla PASSED [ 75%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_seleccion_forzados_cuotas_y_controles PASSED [ 78%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_seleccion_control_mas_cercano_y_empate_al_mas_temprano PASSED [ 81%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_seleccion_sin_dia_forzado_detiene PASSED [ 83%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_seleccion_sin_control_posible_detiene PASSED [ 86%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_seleccion_con_menos_de_9_candidatos_detiene PASSED [ 89%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_csv_de_dias_alterado_detiene PASSED [ 91%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_fold_con_un_positivo_no_se_entrena_como_en_experiment_abcd PASSED [ 94%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_curva_no_disponible_no_se_inventa PASSED [ 97%]
+tests/test_sapi83_evaluacion_modelo_d.py::test_main_con_ca4_no_se_detiene_antes_de_matrices_y_figuras PASSED [100%]
+
+============================= 37 passed in 0.71s ==============================

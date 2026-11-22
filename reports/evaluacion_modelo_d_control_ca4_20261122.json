@@ -1,0 +1,46 @@
+{
+  "sello": "commit 71722ef4b16b · 2026-11-22T06:01:11+00:00",
+  "hashes": {
+    "dataset": "14b36ad8db680cf57f6e0c655cb0a1940ed4b4c63e810d59e470055babc530fe",
+    "firms": "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271",
+    "modelo_d": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f",
+    "referencia": "4bbe4db0054c4c08c08c93cfc0253201475b2fab9562ec61ccd0acc8ae04f8cd"
+  },
+  "control": {
+    "resultado": "SÍ",
+    "tolerancia": 1e-09,
+    "folds": [
+      {
+        "test_bloque": "2022",
+        "pr_auc_referencia": null,
+        "pr_auc_recalculada": null,
+        "ok": true
+      },
+      {
+        "test_bloque": "2023",
+        "pr_auc_referencia": 0.0008561319756338858,
+        "pr_auc_recalculada": 0.0008561319756338858,
+        "ok": true
+      },
+      {
+        "test_bloque": "2024",
+        "pr_auc_referencia": 0.010692228032479597,
+        "pr_auc_recalculada": 0.010692228032479597,
+        "ok": true
+      },
+      {
+        "test_bloque": "2025",
+        "pr_auc_referencia": 0.0009183479102241013,
+        "pr_auc_recalculada": 0.0009183479102241013,
+        "ok": true
+      },
+      {
+        "test_bloque": "2026",
+        "pr_auc_referencia": 0.0010260189942317172,
+        "pr_auc_recalculada": 0.0010260189942317172,
+        "ok": true
+      }
+    ],
+    "motivos": []
+  }
+}
