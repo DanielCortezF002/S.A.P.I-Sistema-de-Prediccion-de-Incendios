@@ -197,3 +197,14 @@ Log: `reports/sapi83/ejecucion_r2_r6_20261122T060054Z.log`.
 - **E2 (implementación, cosmético).** Corrección: la cifra se dibuja en blanco sobre las celdas oscuras (`_color_texto`). Se agrega `regenerar_figuras_desde_json()` (CLI `--regenerar-figuras-desde-json <json> --confirmo-autorizacion-ejecucion`), que redibuja desde el JSON existente sin leer el dataset ni recalcular matrices y conserva el sello original anotando el commit de la regeneración.
 - **E3 (implementación, menor).** Corrección: las futuras salidas guardan en `figuras` rutas relativas al directorio del JSON (`--salida`), con `/`.
 - **Pendiente, requiere GO del Auditor:** re-ejecutar solo la curva CA1 con el código corregido y regenerar las figuras de matriz desde `reports/evaluacion_modelo_d_20261122.json`. Hasta entonces CA1 (curva) sigue incumplido.
+
+**Modo `--solo-curva-ca1` y condiciones del Auditor sobre R2–R6 (22-11-2026; flag aprobado por el Director; informe `orden01-hu83-ejecucion-r2r6-20261122.md`, SHA-256 `c722649ff6537d0f9ed83dbabb979248b234c33ff9e0e61116f5fb382c86a884`; dictamen GO CA2–CA5, NO GO CA1).**
+- **`--solo-curva-ca1`** (exige `--confirmo-autorizacion-ejecucion`). Funciona así:
+  - verifica el SHA-256 del pkl (`ac017bef…`) antes de cargarlo;
+  - no lee el dataset ni FIRMS, y no recalcula CA4 ni matrices;
+  - desenvuelve el estimador (E1) y escribe solo `curva_entrenamiento_modelo_d.png` y `curva_ca1.json`, con rutas relativas, en un `--salida` **nuevo**;
+  - falla si ese destino ya existe, y falla sin escribir nada si el artefacto no tiene curva.
+- **M-1.** Los tres modos (evaluación, `--solo-curva-ca1`, `--regenerar-figuras-desde-json`) registran en stdout (log) una línea `[estado_codigo]` con HEAD, `git status --porcelain` y el SHA-256 del script ejecutado, y la guardan en sus JSON. **Se detienen si el árbol git no está limpio.**
+- **A-1 (corrección de CA1).** La frase «curva no disponible en el artefacto» del JSON de `2175742` es errónea. No se reescribe: la corrige el anexo `reports/sapi83/anexo_correccion_ca1.md`, y la reemplazará el `curva_ca1.json` que genere `--solo-curva-ca1` tras el GO.
+- **M-2.** La matriz por zona se presenta siempre con el dato de empates en el corte. `nota_empates_zona()` se incluye en el JSON (`nota_empates_zona`) y se dibuja en la figura de zona, también al regenerarla desde JSON; sin datos de empates por fold, la figura no se genera.
+- **Corrección de una cifra de esta sección:** donde arriba dice «77–89 %» de forecast_times con empate en el corte, el valor correcto es **74.5–89.0 %** (2023 86.6 %, 2024 89.0 %, 2025 74.5 %, 2026 77.5 %; total 4390/5331 = 82.3 %), calculado desde `reports/evaluacion_modelo_d_20261122.json`.
