@@ -393,7 +393,19 @@ def matriz_dia(scores_dia: pd.Series, con_incendio: Mapping[date, bool], umbral:
 
 
 # ── 6. Curva de entrenamiento del desplegado ───────────────────────────────────
+def extraer_estimador(payload):
+    """E1: `models/prototype_model_d.pkl` es un dict {"model", "metadata"}
+    (igual que lo desenvuelve prototype_service._pin_model: payload["model"])."""
+    if isinstance(payload, Mapping):
+        if "model" not in payload:
+            raise EvaluacionDetenida("El artefacto del modelo no tiene la clave 'model'.")
+        return payload["model"]
+    return payload
+
+
 def curva_entrenamiento(modelo) -> dict:
+    if isinstance(modelo, Mapping):
+        raise TypeError("curva_entrenamiento recibió el dict del artefacto; usar extraer_estimador() antes (E1).")
     train = getattr(modelo, "train_score_", None)
     val = getattr(modelo, "validation_score_", None)
     if train is None or len(train) == 0:
@@ -415,12 +427,23 @@ def _commit_sha() -> str:
         return "desconocido"
 
 
-def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str) -> list[str]:
+def _color_texto(valor: float, maximo: float) -> str:
+    """E2: cifra blanca sobre celdas oscuras (más de la mitad del máximo en Blues)."""
+    return "white" if maximo > 0 and valor > maximo / 2 else "black"
+
+
+def _ruta_relativa(p: Path, base: Path) -> str:
+    """E3: ruta relativa al directorio del JSON de resultados (`--salida`)."""
+    return Path(p).resolve().relative_to(Path(base).resolve()).as_posix()
+
+
+def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str, base: Optional[Path] = None) -> list[str]:
     import matplotlib
 
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
+    base = salida.parent if base is None else base
     salida.mkdir(parents=True, exist_ok=True)
     rutas = []
     if curva.get("disponible"):
@@ -435,7 +458,7 @@ def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str) -> li
         p = salida / "curva_entrenamiento_modelo_d.png"
         fig.savefig(p, dpi=150, bbox_inches="tight")
         plt.close(fig)
-        rutas.append(str(p))
+        rutas.append(_ruta_relativa(p, base))
     for nombre, m, etiquetas in (
         ("matriz_zona_top5_2023_2026.png", zona, ("Top 5", "fuera del Top 5")),
         ("matriz_dia_con_sin_incendio.png", dia, ("día de alerta", "día sin alerta")),
@@ -444,27 +467,55 @@ def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str) -> li
         fig, ax = plt.subplots(figsize=(5, 4))
         ax.imshow(mat, cmap="Blues")
         for (i, j), v in np.ndenumerate(mat):
-            ax.text(j, i, str(v), ha="center", va="center")
+            ax.text(j, i, str(v), ha="center", va="center", color=_color_texto(v, mat.max()))
         ax.set_xticks([0, 1], etiquetas)
         ax.set_yticks([0, 1], ["hubo detección", "no hubo"])
         ax.set_title(f"{nombre[:-4]}\n{sello}", fontsize=9)
         p = salida / nombre
         fig.savefig(p, dpi=150, bbox_inches="tight")
         plt.close(fig)
-        rutas.append(str(p))
+        rutas.append(_ruta_relativa(p, base))
     return rutas
+
+
+def regenerar_figuras_desde_json(resultados_json: Path, salida: Path) -> list[str]:
+    """E2: redibuja las figuras SOLO desde un JSON de resultados ya generado.
+
+    No lee el dataset, no entrena ni recalcula matrices: usa los agregados y
+    la curva guardados en el JSON. El sello original se conserva y se anota
+    el commit y la hora de la regeneración.
+    """
+    r = json.loads(Path(resultados_json).read_text(encoding="utf-8"))
+    sello = (
+        f"{r['sello']}\nregenerada desde {Path(resultados_json).name} "
+        f"(sha256 {sha256_archivo(resultados_json, normalizar_fin_de_linea=True)[:12]}) · "
+        f"commit {_commit_sha()[:12]} · {datetime.now(timezone.utc).isoformat(timespec='seconds')}"
+    )
+    return _figuras(
+        Path(salida) / "figuras_sapi83", r.get("curva_entrenamiento_desplegado") or {},
+        r["zona_agregado_2023_2026"], r["dia_seleccionados_agregado_2023_2026"], sello, base=Path(salida),
+    )
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--dataset", required=True, type=Path, help="temporal_dataset_h6.parquet verificado (solo lectura)")
+    ap.add_argument("--dataset", type=Path, help="temporal_dataset_h6.parquet verificado (solo lectura)")
     ap.add_argument("--firms", type=Path, default=FIRMS_CSV)
     ap.add_argument("--modelo", type=Path, default=MODELO_D_PKL)
     ap.add_argument("--referencia", type=Path, default=REFERENCIA_JSON)
     ap.add_argument("--dias", type=Path, default=DIAS_CSV)
     ap.add_argument("--salida", type=Path, default=REPO_ROOT / "reports")
     ap.add_argument("--confirmo-autorizacion-ejecucion", action="store_true")
+    ap.add_argument("--regenerar-figuras-desde-json", type=Path, default=None,
+                    help="Solo redibuja figuras desde un JSON de resultados existente (no evalúa).")
     args = ap.parse_args(argv)
+    if args.regenerar_figuras_desde_json is not None:
+        if not args.confirmo_autorizacion_ejecucion:
+            raise EvaluacionDetenida("Regeneración no autorizada: falta --confirmo-autorizacion-ejecucion.")
+        regenerar_figuras_desde_json(args.regenerar_figuras_desde_json, args.salida)
+        return 0
+    if args.dataset is None:
+        ap.error("--dataset es obligatorio para evaluar")
     if not args.confirmo_autorizacion_ejecucion:
         raise EvaluacionDetenida("Ejecución no autorizada: falta --confirmo-autorizacion-ejecucion.")
 
@@ -545,10 +596,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     # 6. Curva del desplegado (solo lectura).
     import joblib
 
-    resultado["curva_entrenamiento_desplegado"] = curva_entrenamiento(joblib.load(args.modelo))
+    resultado["curva_entrenamiento_desplegado"] = curva_entrenamiento(extraer_estimador(joblib.load(args.modelo)))
     resultado["figuras"] = _figuras(
         args.salida / "figuras_sapi83", resultado["curva_entrenamiento_desplegado"],
         resultado["zona_agregado_2023_2026"], resultado["dia_seleccionados_agregado_2023_2026"], sello,
+        base=args.salida,
     )
     (args.salida / f"evaluacion_modelo_d_{fecha}.json").write_text(
         json.dumps(resultado, ensure_ascii=False, indent=2, default=str), encoding="utf-8"

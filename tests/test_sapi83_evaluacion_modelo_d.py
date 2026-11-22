@@ -14,6 +14,7 @@ from __future__ import annotations
 import copy
 import json
 import hashlib
+from pathlib import Path
 from datetime import date
 
 import numpy as np
@@ -450,3 +451,79 @@ def test_main_con_ca4_no_se_detiene_antes_de_matrices_y_figuras(tmp_path, monkey
     escritos = {p.name for p in salida.iterdir()}
     assert escritos == {controles[0].name}, f"se escribieron salidas además del control: {escritos}"
     assert not (salida / "figuras_sapi83").exists()
+
+
+# ── Defectos E1–E3 detectados en la ejecución R2–R6 (22-11-2026) ──────────────
+# Fixtures SINTÉTICAS: ni el pkl real ni el JSON real de resultados se leen.
+
+
+class _SinteticoEstimadorConCurva:
+    """Estimador SINTÉTICO con los atributos que deja HistGradientBoostingClassifier."""
+
+    train_score_ = np.array([-0.70, -0.40, -0.30])
+    validation_score_ = np.array([-0.71, -0.45, -0.38])
+    n_iter_ = 2
+
+
+def test_e1_curva_rechaza_el_dict_entero_del_artefacto():
+    sintetico_payload = {"model": _SinteticoEstimadorConCurva(), "metadata": {"sintetico": True}}
+    with pytest.raises(TypeError, match="extraer_estimador"):
+        ev.curva_entrenamiento(sintetico_payload)
+
+
+def test_e1_extraer_estimador_desenvuelve_el_dict_como_produccion():
+    sintetico_payload = {"model": _SinteticoEstimadorConCurva(), "metadata": {"sintetico": True}}
+    curva = ev.curva_entrenamiento(ev.extraer_estimador(sintetico_payload))
+    assert curva["disponible"] is True and curva["n_iter"] == 2
+    assert curva["train_score"] == [-0.70, -0.40, -0.30]
+    assert curva["validation_score"] == [-0.71, -0.45, -0.38]
+
+
+def test_e1_artefacto_sin_clave_model_detiene():
+    with pytest.raises(ev.EvaluacionDetenida):
+        ev.extraer_estimador({"metadata": {"sintetico": True}})
+
+
+def test_e2_cifra_de_celda_oscura_en_blanco():
+    sintetico_vn, sintetico_fp = 239738, 26643
+    assert ev._color_texto(sintetico_vn, sintetico_vn) == "white"
+    assert ev._color_texto(sintetico_fp, sintetico_vn) == "black"
+    assert ev._color_texto(0, 0) == "black"
+
+
+def _sintetico_json_resultados(tmp_path):
+    m = {"VP": 1, "FP": 2, "FN": 3, "VN": 400, "precision": None, "sensibilidad": None, "especificidad": None}
+    p = tmp_path / "sintetico_resultados.json"
+    p.write_text(json.dumps({
+        "sello": "SINTETICO commit 000000000000",
+        "zona_agregado_2023_2026": m,
+        "dia_seleccionados_agregado_2023_2026": m,
+        "curva_entrenamiento_desplegado": ev.curva_entrenamiento(_SinteticoEstimadorConCurva()),
+    }), encoding="utf-8")
+    return p
+
+
+def test_e2_regenerar_figuras_desde_json_no_recalcula(tmp_path, monkeypatch):
+    for nombre in ("matriz_zona", "matriz_dia", "umbral_p90", "score_por_dia", "entrenar_fold_d", "puntuar"):
+        monkeypatch.setattr(ev, nombre, lambda *a, _n=nombre, **k: pytest.fail(f"{_n} no debe llamarse"))
+    monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: pytest.fail("no debe leer dataset"))
+    salida = tmp_path / "sintetico_salida"
+    rutas = ev.regenerar_figuras_desde_json(_sintetico_json_resultados(tmp_path), salida)
+    assert rutas == [
+        "figuras_sapi83/curva_entrenamiento_modelo_d.png",
+        "figuras_sapi83/matriz_zona_top5_2023_2026.png",
+        "figuras_sapi83/matriz_dia_con_sin_incendio.png",
+    ]
+    assert all((salida / r).is_file() for r in rutas)
+
+
+def test_e2_modo_regenerar_por_cli_exige_autorizacion(tmp_path):
+    with pytest.raises(ev.EvaluacionDetenida, match="no autorizada"):
+        ev.main(["--regenerar-figuras-desde-json", str(_sintetico_json_resultados(tmp_path)), "--salida", str(tmp_path)])
+
+
+def test_e3_rutas_de_figuras_son_relativas_al_json(tmp_path):
+    m = {"VP": 0, "FP": 1, "FN": 0, "VN": 9}
+    rutas = ev._figuras(tmp_path / "figuras_sapi83", {"disponible": False}, m, m, "SINTETICO", base=tmp_path)
+    assert rutas == ["figuras_sapi83/matriz_zona_top5_2023_2026.png", "figuras_sapi83/matriz_dia_con_sin_incendio.png"]
+    assert not any(Path(r).is_absolute() or "\\" in r for r in rutas)
