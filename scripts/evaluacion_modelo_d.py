@@ -427,6 +427,51 @@ def _commit_sha() -> str:
         return "desconocido"
 
 
+def estado_codigo() -> dict:
+    """M-1: HEAD, `git status --porcelain` y SHA-256 del script que se ejecuta."""
+    try:
+        porcelain = subprocess.run(
+            ["git", "status", "--porcelain"], cwd=REPO_ROOT, capture_output=True, text=True, check=True
+        ).stdout
+    except Exception as exc:  # noqa: BLE001
+        raise EvaluacionDetenida(f"No se pudo leer el estado git del repositorio: {exc}") from exc
+    script = Path(__file__).resolve()
+    return {
+        "head": _commit_sha(),
+        "git_status_porcelain": porcelain,
+        "sha256_script": sha256_archivo(script),
+        "sha256_script_lf": sha256_archivo(script, normalizar_fin_de_linea=True),
+    }
+
+
+def exigir_arbol_limpio(estado: Mapping) -> None:
+    """M-1: registra el estado en stdout (log) y se detiene si el árbol no está limpio."""
+    print("[estado_codigo] " + json.dumps(dict(estado), ensure_ascii=False), flush=True)
+    if str(estado.get("git_status_porcelain", "")).strip():
+        raise EvaluacionDetenida(
+            "Árbol git no limpio: commitear antes de ejecutar. git status --porcelain:\n" + estado["git_status_porcelain"]
+        )
+
+
+def nota_empates_zona(folds: Mapping) -> str:
+    """M-2: dato de empates en el corte Top 5 que acompaña SIEMPRE a la matriz por zona."""
+    if not folds:
+        raise EvaluacionDetenida("Sin datos de empates por fold: la matriz por zona no se presenta sin ellos (M-2).")
+    partes, tot_emp, tot_t, tot_pos = [], 0, 0, 0
+    for anio in sorted(folds):
+        z = folds[anio]["zona"]
+        emp, n_t = int(z["n_T_empate_en_corte"]), int(z["n_T"])
+        tot_emp, tot_t = tot_emp + emp, tot_t + n_t
+        tot_pos += int(z["n_positivos_en_grupo_empatado_del_corte"])
+        partes.append(f"{anio} {emp}/{n_t} ({100 * emp / n_t:.1f} %)" if n_t else f"{anio} 0/0")
+    total = f"{tot_emp}/{tot_t} ({100 * tot_emp / tot_t:.1f} %)" if tot_t else "0/0"
+    return (
+        f"Empate en el corte Top 5 en {total} forecast_times: " + "; ".join(partes)
+        + f". Positivos dentro del grupo empatado del corte: {tot_pos}. "
+        "El orden entre celdas empatadas es arbitrario (D8)."
+    )
+
+
 def _color_texto(valor: float, maximo: float) -> str:
     """E2: cifra blanca sobre celdas oscuras (más de la mitad del máximo en Blues)."""
     return "white" if maximo > 0 and valor > maximo / 2 else "black"
@@ -437,7 +482,61 @@ def _ruta_relativa(p: Path, base: Path) -> str:
     return Path(p).resolve().relative_to(Path(base).resolve()).as_posix()
 
 
-def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str, base: Optional[Path] = None) -> list[str]:
+def _figura_curva(salida: Path, curva: dict, sello: str) -> Path:
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(7, 4))
+    ax.plot(curva["train_score"], label="entrenamiento")
+    if curva.get("validation_score"):
+        ax.plot(curva["validation_score"], label="validación interna")
+    ax.set_xlabel("iteración")
+    ax.set_ylabel("score interno (log-loss negativo)")
+    ax.set_title(f"Curva de entrenamiento — Modelo D desplegado\n{sello}", fontsize=9)
+    ax.legend()
+    p = Path(salida) / "curva_entrenamiento_modelo_d.png"
+    fig.savefig(p, dpi=150, bbox_inches="tight")
+    plt.close(fig)
+    return p
+
+
+def solo_curva_ca1(modelo: Path, salida: Path, estado: Optional[Mapping] = None) -> dict:
+    """Modo --solo-curva-ca1: SOLO la curva de entrenamiento del D desplegado.
+
+    No lee dataset ni FIRMS, no recalcula CA4 ni matrices. Verifica el hash
+    del pkl antes de cargarlo, desenvuelve el estimador (E1) y escribe la
+    figura y un JSON pequeño en un directorio NUEVO (falla si ya existe).
+    """
+    salida = Path(salida)
+    if salida.exists():
+        raise EvaluacionDetenida(f"El destino {salida} ya existe; --solo-curva-ca1 exige un directorio nuevo.")
+    hashes = verificar_hashes([ArtefactoEsperado("modelo_d", modelo, SHA256_MODELO_D)])
+    import joblib
+
+    curva = curva_entrenamiento(extraer_estimador(joblib.load(modelo)))
+    if not curva.get("disponible"):
+        raise EvaluacionDetenida("El estimador no tiene curva de entrenamiento; no se inventa.")
+    sello = f"commit {_commit_sha()[:12]} · {datetime.now(timezone.utc).isoformat(timespec='seconds')} · solo curva CA1"
+    salida.mkdir(parents=True)
+    figura = _figura_curva(salida, curva, sello)
+    resultado = {
+        "sello": sello,
+        "hashes": hashes,
+        "modo": "solo_curva_ca1",
+        "estado_codigo": dict(estado) if estado is not None else None,
+        "aviso": "Solo curva del artefacto desplegado; no se leyó el dataset ni se recalcularon CA4 ni matrices.",
+        "curva_entrenamiento_desplegado": curva,
+        "figuras": [_ruta_relativa(figura, salida)],
+    }
+    (salida / "curva_ca1.json").write_text(json.dumps(resultado, ensure_ascii=False, indent=2), encoding="utf-8")
+    return resultado
+
+
+def _figuras(
+    salida: Path, curva: dict, zona: dict, dia: dict, sello: str, base: Optional[Path] = None, *, nota_zona: str
+) -> list[str]:
     import matplotlib
 
     matplotlib.use("Agg")
@@ -447,18 +546,7 @@ def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str, base:
     salida.mkdir(parents=True, exist_ok=True)
     rutas = []
     if curva.get("disponible"):
-        fig, ax = plt.subplots(figsize=(7, 4))
-        ax.plot(curva["train_score"], label="entrenamiento")
-        if curva.get("validation_score"):
-            ax.plot(curva["validation_score"], label="validación interna")
-        ax.set_xlabel("iteración")
-        ax.set_ylabel("score interno (log-loss negativo)")
-        ax.set_title(f"Curva de entrenamiento — Modelo D desplegado\n{sello}", fontsize=9)
-        ax.legend()
-        p = salida / "curva_entrenamiento_modelo_d.png"
-        fig.savefig(p, dpi=150, bbox_inches="tight")
-        plt.close(fig)
-        rutas.append(_ruta_relativa(p, base))
+        rutas.append(_ruta_relativa(_figura_curva(salida, curva, sello), base))
     for nombre, m, etiquetas in (
         ("matriz_zona_top5_2023_2026.png", zona, ("Top 5", "fuera del Top 5")),
         ("matriz_dia_con_sin_incendio.png", dia, ("día de alerta", "día sin alerta")),
@@ -471,6 +559,8 @@ def _figuras(salida: Path, curva: dict, zona: dict, dia: dict, sello: str, base:
         ax.set_xticks([0, 1], etiquetas)
         ax.set_yticks([0, 1], ["hubo detección", "no hubo"])
         ax.set_title(f"{nombre[:-4]}\n{sello}", fontsize=9)
+        if m is zona:
+            fig.text(0.5, -0.02, nota_zona, ha="center", va="top", fontsize=7, wrap=True)
         p = salida / nombre
         fig.savefig(p, dpi=150, bbox_inches="tight")
         plt.close(fig)
@@ -494,6 +584,7 @@ def regenerar_figuras_desde_json(resultados_json: Path, salida: Path) -> list[st
     return _figuras(
         Path(salida) / "figuras_sapi83", r.get("curva_entrenamiento_desplegado") or {},
         r["zona_agregado_2023_2026"], r["dia_seleccionados_agregado_2023_2026"], sello, base=Path(salida),
+        nota_zona=nota_empates_zona(r.get("folds") or {}),
     )
 
 
@@ -508,16 +599,28 @@ def main(argv: Optional[list[str]] = None) -> int:
     ap.add_argument("--confirmo-autorizacion-ejecucion", action="store_true")
     ap.add_argument("--regenerar-figuras-desde-json", type=Path, default=None,
                     help="Solo redibuja figuras desde un JSON de resultados existente (no evalúa).")
+    ap.add_argument("--solo-curva-ca1", action="store_true",
+                    help="Solo la curva CA1 del pkl desplegado en un --salida NUEVO (no lee el dataset).")
     args = ap.parse_args(argv)
+    if args.solo_curva_ca1:
+        if not args.confirmo_autorizacion_ejecucion:
+            raise EvaluacionDetenida("Curva CA1 no autorizada: falta --confirmo-autorizacion-ejecucion.")
+        estado = estado_codigo()
+        exigir_arbol_limpio(estado)
+        solo_curva_ca1(args.modelo, args.salida, estado)
+        return 0
     if args.regenerar_figuras_desde_json is not None:
         if not args.confirmo_autorizacion_ejecucion:
             raise EvaluacionDetenida("Regeneración no autorizada: falta --confirmo-autorizacion-ejecucion.")
+        exigir_arbol_limpio(estado_codigo())
         regenerar_figuras_desde_json(args.regenerar_figuras_desde_json, args.salida)
         return 0
     if args.dataset is None:
         ap.error("--dataset es obligatorio para evaluar")
     if not args.confirmo_autorizacion_ejecucion:
         raise EvaluacionDetenida("Ejecución no autorizada: falta --confirmo-autorizacion-ejecucion.")
+    estado = estado_codigo()
+    exigir_arbol_limpio(estado)
 
     from app.utils.score_contract import TOP_N
 
@@ -564,12 +667,16 @@ def main(argv: Optional[list[str]] = None) -> int:
     fecha = datetime.now(timezone.utc).strftime("%Y%m%d")
     args.salida.mkdir(parents=True, exist_ok=True)
     (args.salida / f"evaluacion_modelo_d_control_ca4_{fecha}.json").write_text(
-        json.dumps({"sello": sello, "hashes": hashes, "control": control}, ensure_ascii=False, indent=2), encoding="utf-8"
+        json.dumps({"sello": sello, "hashes": hashes, "estado_codigo": estado, "control": control}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
     exigir_reproduccion(control)
 
     # 5. Matrices.
-    resultado = {"sello": sello, "hashes": hashes, "aviso": "Score = ranking relativo, no probabilidad calibrada.", "folds": {}}
+    resultado = {
+        "sello": sello, "hashes": hashes, "estado_codigo": estado,
+        "aviso": "Score = ranking relativo, no probabilidad calibrada.", "folds": {},
+    }
     tot_z = [0, 0, 0, 0]
     tot_d = [0, 0, 0, 0]
     for anio in ANIOS_PRUEBA:
@@ -592,6 +699,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             tot_d[k] += dia_sel[n]
     resultado["zona_agregado_2023_2026"] = _matriz(*tot_z)
     resultado["dia_seleccionados_agregado_2023_2026"] = _matriz(*tot_d)
+    resultado["nota_empates_zona"] = nota_empates_zona(resultado["folds"])
 
     # 6. Curva del desplegado (solo lectura).
     import joblib
@@ -600,7 +708,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     resultado["figuras"] = _figuras(
         args.salida / "figuras_sapi83", resultado["curva_entrenamiento_desplegado"],
         resultado["zona_agregado_2023_2026"], resultado["dia_seleccionados_agregado_2023_2026"], sello,
-        base=args.salida,
+        base=args.salida, nota_zona=resultado["nota_empates_zona"],
     )
     (args.salida / f"evaluacion_modelo_d_{fecha}.json").write_text(
         json.dumps(resultado, ensure_ascii=False, indent=2, default=str), encoding="utf-8"

@@ -26,6 +26,12 @@ from src.geo.grid import all_cells
 
 # ── Fixtures SINTÉTICAS ────────────────────────────────────────────────────────
 
+SINTETICO_ESTADO_LIMPIO = {
+    "head": "0" * 40, "git_status_porcelain": "", "sha256_script": "a" * 64, "sha256_script_lf": "a" * 64,
+}
+SINTETICO_ESTADO_SUCIO = {**SINTETICO_ESTADO_LIMPIO, "git_status_porcelain": " M scripts/evaluacion_modelo_d.py\n"}
+
+
 
 @pytest.fixture
 def sintetico_referencia() -> dict:
@@ -193,6 +199,7 @@ def test_main_sin_autorizacion_no_ejecuta_nada(tmp_path):
 def test_main_verifica_hashes_antes_de_leer(tmp_path, monkeypatch):
     sintetico = tmp_path / "sintetico_dataset.parquet"
     sintetico.write_bytes(b"no es un parquet: fixture sintetica")
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_LIMPIO))
     monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: pytest.fail("leyó el dataset antes de verificar hashes"))
     with pytest.raises(ev.EvaluacionDetenida, match="hashes"):
         ev.main(["--dataset", str(sintetico), "--salida", str(tmp_path), "--confirmo-autorizacion-ejecucion"])
@@ -429,6 +436,7 @@ def test_main_con_ca4_no_se_detiene_antes_de_matrices_y_figuras(tmp_path, monkey
                          ("SHA256_MODELO_D", "modelo"), ("SHA256_REFERENCIA", "referencia")):
         monkeypatch.setattr(ev, const, ev.sha256_archivo(a[clave], normalizar_fin_de_linea=clave == "referencia"))
     monkeypatch.setattr(ev, "entrenar_fold_d", lambda train: _SinteticoClasificador())
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_LIMPIO))
 
     llamadas = []
     for nombre in ("matriz_zona", "matriz_dia", "umbral_p90", "score_por_dia", "curva_entrenamiento", "_figuras"):
@@ -491,6 +499,14 @@ def test_e2_cifra_de_celda_oscura_en_blanco():
     assert ev._color_texto(0, 0) == "black"
 
 
+def _sintetico_folds_empates() -> dict:
+    """Conteos de empate SINTÉTICOS (no son los de la ejecución real)."""
+    return {
+        "2023": {"zona": {"n_T": 10, "n_T_empate_en_corte": 8, "n_positivos_en_grupo_empatado_del_corte": 1}},
+        "2024": {"zona": {"n_T": 20, "n_T_empate_en_corte": 5, "n_positivos_en_grupo_empatado_del_corte": 2}},
+    }
+
+
 def _sintetico_json_resultados(tmp_path):
     m = {"VP": 1, "FP": 2, "FN": 3, "VN": 400, "precision": None, "sensibilidad": None, "especificidad": None}
     p = tmp_path / "sintetico_resultados.json"
@@ -499,6 +515,7 @@ def _sintetico_json_resultados(tmp_path):
         "zona_agregado_2023_2026": m,
         "dia_seleccionados_agregado_2023_2026": m,
         "curva_entrenamiento_desplegado": ev.curva_entrenamiento(_SinteticoEstimadorConCurva()),
+        "folds": _sintetico_folds_empates(),
     }), encoding="utf-8")
     return p
 
@@ -524,6 +541,166 @@ def test_e2_modo_regenerar_por_cli_exige_autorizacion(tmp_path):
 
 def test_e3_rutas_de_figuras_son_relativas_al_json(tmp_path):
     m = {"VP": 0, "FP": 1, "FN": 0, "VN": 9}
-    rutas = ev._figuras(tmp_path / "figuras_sapi83", {"disponible": False}, m, m, "SINTETICO", base=tmp_path)
+    rutas = ev._figuras(tmp_path / "figuras_sapi83", {"disponible": False}, m, m, "SINTETICO", base=tmp_path,
+                        nota_zona="nota SINTETICA")
     assert rutas == ["figuras_sapi83/matriz_zona_top5_2023_2026.png", "figuras_sapi83/matriz_dia_con_sin_incendio.png"]
     assert not any(Path(r).is_absolute() or "\\" in r for r in rutas)
+
+
+# ── --solo-curva-ca1, M-1 (estado del código) y M-2 (empates) ──────────────────
+# Fixtures SINTÉTICAS: el pkl es un joblib de un estimador sintético en tmp_path.
+
+
+class SinteticoEstimadorSinCurva:
+    """Estimador SINTÉTICO sin train_score_ (picklable: nivel de módulo)."""
+
+
+def _sintetico_pkl(tmp_path, monkeypatch) -> Path:
+    import joblib
+
+    pkl = tmp_path / "sintetico_modelo.pkl"
+    joblib.dump({"model": _SinteticoEstimadorConCurva(), "metadata": {"sintetico": True}}, pkl)
+    monkeypatch.setattr(ev, "SHA256_MODELO_D", ev.sha256_archivo(pkl))
+    return pkl
+
+
+def _prohibir_datos_y_evaluacion(monkeypatch):
+    monkeypatch.setattr(pd, "read_parquet", lambda *a, **k: pytest.fail("abrió el dataset"))
+    for nombre in ("cargar_firms_fechas", "control_reproduccion", "entrenar_fold_d", "matriz_zona", "matriz_dia",
+                   "umbral_p90", "regenerar_figuras_desde_json"):
+        monkeypatch.setattr(ev, nombre, lambda *a, _n=nombre, **k: pytest.fail(f"{_n} no debe llamarse"))
+
+
+def _cli_solo_curva(pkl, salida):
+    return ["--solo-curva-ca1", "--modelo", str(pkl), "--salida", str(salida), "--confirmo-autorizacion-ejecucion"]
+
+
+def test_solo_curva_genera_curva_y_json_con_rutas_relativas_sin_abrir_dataset(tmp_path, monkeypatch):
+    pkl = _sintetico_pkl(tmp_path, monkeypatch)
+    _prohibir_datos_y_evaluacion(monkeypatch)
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_LIMPIO))
+    salida = tmp_path / "sintetico_curva_nueva"
+    assert ev.main(_cli_solo_curva(pkl, salida)) == 0
+    r = json.loads((salida / "curva_ca1.json").read_text(encoding="utf-8"))
+    assert r["modo"] == "solo_curva_ca1" and r["figuras"] == ["curva_entrenamiento_modelo_d.png"]
+    assert r["curva_entrenamiento_desplegado"]["n_iter"] == 2
+    assert r["estado_codigo"] == SINTETICO_ESTADO_LIMPIO
+    assert sorted(x.name for x in salida.iterdir()) == ["curva_ca1.json", "curva_entrenamiento_modelo_d.png"]
+
+
+def test_solo_curva_no_toca_los_json_existentes(tmp_path, monkeypatch):
+    pkl = _sintetico_pkl(tmp_path, monkeypatch)
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_LIMPIO))
+    reportes = tmp_path / "sintetico_reports"
+    reportes.mkdir()
+    existentes = {
+        reportes / "evaluacion_modelo_d_20261122.json": '{"sintetico": "resultados"}',
+        reportes / "evaluacion_modelo_d_control_ca4_20261122.json": '{"sintetico": "control"}',
+    }
+    for ruta, texto in existentes.items():
+        ruta.write_text(texto, encoding="utf-8")
+    antes = {r: ev.sha256_archivo(r) for r in existentes}
+    ev.main(_cli_solo_curva(pkl, reportes / "sapi83" / "curva_ca1_sintetica"))
+    assert {r: ev.sha256_archivo(r) for r in existentes} == antes
+
+
+def test_solo_curva_falla_si_el_destino_existe(tmp_path, monkeypatch):
+    pkl = _sintetico_pkl(tmp_path, monkeypatch)
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_LIMPIO))
+    salida = tmp_path / "sintetico_existente"
+    salida.mkdir()
+    (salida / "previo.txt").write_text("sintetico", encoding="utf-8")
+    with pytest.raises(ev.EvaluacionDetenida, match="ya existe"):
+        ev.main(_cli_solo_curva(pkl, salida))
+    assert [x.name for x in salida.iterdir()] == ["previo.txt"]
+
+
+def test_solo_curva_falla_con_hash_de_pkl_alterado_antes_de_cargarlo(tmp_path, monkeypatch):
+    import joblib
+
+    pkl = _sintetico_pkl(tmp_path, monkeypatch)
+    monkeypatch.setattr(ev, "SHA256_MODELO_D", "0" * 64)
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_LIMPIO))
+    monkeypatch.setattr(joblib, "load", lambda *a, **k: pytest.fail("cargó el pkl sin verificar el hash"))
+    salida = tmp_path / "sintetico_no_creado"
+    with pytest.raises(ev.EvaluacionDetenida, match="hashes"):
+        ev.main(_cli_solo_curva(pkl, salida))
+    assert not salida.exists()
+
+
+def test_solo_curva_exige_autorizacion(tmp_path, monkeypatch):
+    pkl = _sintetico_pkl(tmp_path, monkeypatch)
+    with pytest.raises(ev.EvaluacionDetenida, match="no autorizada"):
+        ev.main(["--solo-curva-ca1", "--modelo", str(pkl), "--salida", str(tmp_path / "x")])
+
+
+def test_solo_curva_sin_curva_en_el_artefacto_no_inventa(tmp_path, monkeypatch):
+    import joblib
+
+    pkl = tmp_path / "sintetico_sin_curva.pkl"
+    joblib.dump({"model": SinteticoEstimadorSinCurva(), "metadata": {}}, pkl)
+    monkeypatch.setattr(ev, "SHA256_MODELO_D", ev.sha256_archivo(pkl))
+    with pytest.raises(ev.EvaluacionDetenida, match="no se inventa"):
+        ev.solo_curva_ca1(pkl, tmp_path / "sintetico_salida")
+    assert not (tmp_path / "sintetico_salida").exists()
+
+
+def test_m1_arbol_sucio_detiene_solo_curva_sin_escribir(tmp_path, monkeypatch, capsys):
+    pkl = _sintetico_pkl(tmp_path, monkeypatch)
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_SUCIO))
+    salida = tmp_path / "sintetico_no_creado"
+    with pytest.raises(ev.EvaluacionDetenida, match="no limpio"):
+        ev.main(_cli_solo_curva(pkl, salida))
+    assert not salida.exists()
+    log = capsys.readouterr().out
+    assert "[estado_codigo]" in log and "scripts/evaluacion_modelo_d.py" in log and "sha256_script" in log
+
+
+def test_m1_arbol_sucio_detiene_main_antes_de_hashes(tmp_path, monkeypatch):
+    monkeypatch.setattr(ev, "estado_codigo", lambda: dict(SINTETICO_ESTADO_SUCIO))
+    monkeypatch.setattr(ev, "verificar_hashes", lambda *a, **k: pytest.fail("siguió con árbol sucio"))
+    with pytest.raises(ev.EvaluacionDetenida, match="no limpio"):
+        ev.main(["--dataset", str(tmp_path / "sintetico.parquet"), "--salida", str(tmp_path),
+                 "--confirmo-autorizacion-ejecucion"])
+
+
+def test_m1_arbol_limpio_registra_estado_en_el_log(capsys):
+    ev.exigir_arbol_limpio(SINTETICO_ESTADO_LIMPIO)
+    log = capsys.readouterr().out
+    assert log.startswith("[estado_codigo] ")
+    registrado = json.loads(log[len("[estado_codigo] "):])
+    assert registrado["git_status_porcelain"] == "" and registrado["sha256_script"] == "a" * 64
+
+
+def test_m1_estado_codigo_incluye_porcelain_y_hash_del_script():
+    estado = ev.estado_codigo()  # lee git del repo; no toca datos
+    assert set(estado) == {"head", "git_status_porcelain", "sha256_script", "sha256_script_lf"}
+    assert estado["sha256_script"] == ev.sha256_archivo(Path(ev.__file__))
+
+
+def test_m2_nota_de_empates_con_totales_y_por_anio():
+    nota = ev.nota_empates_zona(_sintetico_folds_empates())
+    assert "13/30 (43.3 %)" in nota
+    assert "2023 8/10 (80.0 %)" in nota and "2024 5/20 (25.0 %)" in nota
+    assert "grupo empatado del corte: 3" in nota
+
+
+def test_m2_matriz_zona_no_se_presenta_sin_empates(tmp_path):
+    p = tmp_path / "sintetico_sin_folds.json"
+    m = {"VP": 1, "FP": 2, "FN": 3, "VN": 4}
+    p.write_text(json.dumps({"sello": "SINTETICO", "zona_agregado_2023_2026": m,
+                             "dia_seleccionados_agregado_2023_2026": m}), encoding="utf-8")
+    with pytest.raises(ev.EvaluacionDetenida, match="M-2"):
+        ev.regenerar_figuras_desde_json(p, tmp_path / "sintetico_salida")
+
+
+def test_m2_figura_zona_lleva_la_nota(tmp_path, monkeypatch):
+    import matplotlib.figure
+
+    textos = []
+    original = matplotlib.figure.Figure.text
+    monkeypatch.setattr(matplotlib.figure.Figure, "text",
+                        lambda self, *a, **k: textos.append(a[2]) or original(self, *a, **k))
+    m = {"VP": 0, "FP": 1, "FN": 0, "VN": 9}
+    ev._figuras(tmp_path / "f", {"disponible": False}, m, dict(m), "SINTETICO", base=tmp_path, nota_zona="NOTA SINTETICA")
+    assert textos == ["NOTA SINTETICA"]
