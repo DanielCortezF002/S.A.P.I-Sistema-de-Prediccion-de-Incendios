@@ -1,0 +1,47 @@
+# S.A.P.I. - Seguridad (SAPI-89, artefacto A6 del Hito 3).
+#
+# Workflow separado del merge gate de ci.yml para no cambiar su definición de
+# 6 jobs. Para que bloquee el merge, marcar los jobs `secrets` y
+# `dependencies` como obligatorios en la protección de `main`.
+name: Seguridad
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install detect-secrets==1.5.0
+      - run: python scripts/secret_scan.py
+
+  dependencies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+      - run: pip install pip-audit==2.10.1
+      - run: python scripts/dependency_audit.py --json-out "${{ runner.temp }}/pip_audit.json"
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pip-audit-${{ github.sha }}
+          path: ${{ runner.temp }}/pip_audit.json

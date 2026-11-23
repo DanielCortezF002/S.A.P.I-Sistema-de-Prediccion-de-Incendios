@@ -10,7 +10,10 @@ xgboost==3.4.1
 pytest==9.1.1
 pytest-cov==7.1.0
 flake8==7.3.0
-black==26.5.1
+# Escaneo de secretos contra .secrets.baseline (SAPI-89, scripts/secret_scan.py).
+detect-secrets==1.5.0
+pip-audit==2.10.1
+black==26.10.1
 locust==2.46.5
 # fastapi/uvicorn: servicio ML de la arquitectura v2 (services/ml_api,
 # Dockerfile.ml-api, SAPI-55) y puente HTTP local de desarrollo n8n-bridge
