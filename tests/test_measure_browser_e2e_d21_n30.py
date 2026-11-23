@@ -11,6 +11,8 @@ import csv
 import json
 import math
 import random
+import shutil
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -434,7 +436,7 @@ class OrderTests(unittest.TestCase):
             _args("--order", "random")
 
 
-# ----------------------------------------------- 7) sleep(0.5) de expandir
+# ----------------------------------------------- 7) intervalo de expandir
 class _FakeClock:
     def __init__(self, step=0.01):
         self.t = 0.0
@@ -455,97 +457,431 @@ class _Summary:
         self.driver = driver
 
     def click(self):
+        self.driver.calls.append("click")
         self.driver.clicked_at = self.driver.fake_clock.t
 
 
-class _ExpandDriver:
-    """Expander cuyo grid aparece ``appear_after`` segundos después del clic."""
+_DEFAULT = object()
 
-    def __init__(self, fake_clock, appear_after=0.1, pre_open=False, pre_grid=False,
-                 has_expander=True, global_grid=False):
+
+class _EventExpandDriver:
+    """Driver simulado para el modo current (medida por evento en el navegador)."""
+
+    def __init__(self, fake_clock, result=_DEFAULT, armed=None, pre_open=False, pre_grid=False,
+                 has_expander=True, python_delay_s=0.0):
         self.fake_clock = fake_clock
-        self.appear_after = appear_after
+        self.result = result if result is not _DEFAULT else {
+            "t_click": 1000.0, "t_visible": 1123.5, "via": "mutation", "timed_out": False}
+        self.armed = armed if armed is not None else {"armed": True}
         self.pre_open = pre_open
         self.pre_grid = pre_grid
         self.has_expander = has_expander
-        self.global_grid = global_grid
+        self.python_delay_s = python_delay_s
+        self.calls = []
+        self.script_timeout = None
         self.clicked_at = None
-
-    def _grid_visible(self):
-        if self.clicked_at is None:
-            return self.pre_grid
-        return self.fake_clock.t - self.clicked_at >= self.appear_after
 
     def find_elements(self, by, selector):
         if by == "xpath":
             return [_Summary(self)] if self.has_expander else []
-        visible = self._grid_visible() or self.global_grid
-
-        class _G:
-            def is_displayed(self_inner):
-                return visible
-
-        return [_G()]
+        return []
 
     def execute_script(self, script, *args):
+        if "__sapiExpand" in script:
+            self.calls.append("arm")
+            self.arm_args = args
+            return self.armed
         if "d.open" in script:
             return self.pre_open
-        return self._grid_visible()
+        return self.pre_grid
+
+    def set_script_timeout(self, seconds):
+        self.script_timeout = seconds
+
+    def execute_async_script(self, script, *args):
+        self.calls.append("wait")
+        self.wait_args = args
+        self.fake_clock.t += self.python_delay_s  # ida y vuelta de WebDriver
+        return self.result
 
 
-class ExpandMethodTests(unittest.TestCase):
-    def test_current_method_has_no_fixed_sleep_in_interval(self):
+class CurrentExpandEventTests(unittest.TestCase):
+    """Ajuste 1 (Auditor, Orden 09): current sin ningún sleep dentro del intervalo."""
+
+    def _measure(self, drv, fc, timeout=5.0):
+        return h.measure_expand(drv, "current", timeout=timeout, clock=fc.clock, sleep=fc.sleep)
+
+    def test_delayed_grid_measured_by_browser_clock_without_any_sleep(self):
         fc = _FakeClock()
-        drv = _ExpandDriver(fc, appear_after=0.1)
-        ms, detail = h.measure_expand(drv, "current", clock=fc.clock, sleep=fc.sleep)
-        self.assertNotIn(h.LEGACY_EXPAND_SLEEP_S, fc.sleeps)
-        self.assertLess(ms, 500.0)
-        self.assertGreaterEqual(ms, 100.0)
-        self.assertIn("expand_method=current", detail)
+        drv = _EventExpandDriver(fc, result={"t_click": 500.0, "t_visible": 2500.0,
+                                             "via": "mutation", "timed_out": False},
+                                 python_delay_s=2.3)
+        ms, detail = self._measure(drv, fc)
+        self.assertEqual(ms, 2000.0)  # performance.now: 2500 - 500
+        self.assertEqual(fc.sleeps, [])  # ningún sleep de Python, ni de 50 ms ni de 500 ms
+        self.assertIn("via=mutation", detail)
+        self.assertIn("wall_python_ms=", detail)
 
-    def test_legacy_method_reproduces_sleep_inside_interval(self):
+    def test_no_real_sleep_called_during_current_measurement(self):
         fc = _FakeClock()
-        drv = _ExpandDriver(fc, appear_after=0.1)
-        ms, detail = h.measure_expand(drv, "legacy", clock=fc.clock, sleep=fc.sleep)
-        self.assertEqual(fc.sleeps[0], 0.5)
-        self.assertGreaterEqual(ms, 500.0)
-        self.assertIn("expand_method=legacy", detail)
+        with mock.patch.object(h.time, "sleep", side_effect=AssertionError("sleep")) as sl:
+            self._measure(_EventExpandDriver(fc), fc)
+        sl.assert_not_called()
 
-    def test_current_rejects_expander_already_open(self):
+    def test_latency_comes_from_browser_not_from_python_round_trip(self):
         fc = _FakeClock()
-        with self.assertRaises(RuntimeError) as cm:
-            h.measure_expand(_ExpandDriver(fc, pre_open=True), "current",
-                             clock=fc.clock, sleep=fc.sleep)
-        self.assertIn("Estado previo inválido", str(cm.exception))
-        with self.assertRaises(RuntimeError):
-            h.measure_expand(_ExpandDriver(fc, pre_grid=True), "current",
-                             clock=fc.clock, sleep=fc.sleep)
+        drv = _EventExpandDriver(fc, python_delay_s=9.0)
+        ms, _ = self._measure(drv, fc)
+        self.assertAlmostEqual(ms, 123.5)
 
-    def test_legacy_reports_open_state_without_rejecting(self):
+    def test_arm_before_click_and_wait_after_click(self):
         fc = _FakeClock()
-        ms, detail = h.measure_expand(_ExpandDriver(fc, pre_open=True), "legacy",
-                                      clock=fc.clock, sleep=fc.sleep)
-        self.assertIn("details.open=True", detail)
+        drv = _EventExpandDriver(fc)
+        self._measure(drv, fc, timeout=5.0)
+        self.assertEqual(drv.calls, ["arm", "click", "wait"])
+        self.assertEqual(drv.arm_args[1], h._GRID_SELECTOR)
+        self.assertEqual(drv.wait_args, (5000,))
+        self.assertGreater(drv.script_timeout, 5.0)
 
-    def test_current_ignores_grids_outside_the_expander(self):
+    def test_timeout_result_is_timeout_error(self):
         fc = _FakeClock()
-        drv = _ExpandDriver(fc, appear_after=10.0, global_grid=True)
+        drv = _EventExpandDriver(fc, result={"t_click": 1.0, "t_visible": None,
+                                             "via": None, "timed_out": True})
         with self.assertRaises(TimeoutError):
-            h.measure_expand(drv, "current", timeout=1.0, clock=fc.clock, sleep=fc.sleep)
+            self._measure(drv, fc)
+        self.assertEqual(fc.sleeps, [])
+
+    def test_click_not_registered_is_an_error(self):
+        fc = _FakeClock()
+        drv = _EventExpandDriver(fc, result={"t_click": None, "t_visible": None,
+                                             "via": None, "timed_out": True})
+        with self.assertRaises(RuntimeError) as cm:
+            self._measure(drv, fc)
+        self.assertIn("no registró el clic", str(cm.exception))
+
+    def test_invalid_or_incoherent_results_are_errors(self):
+        for res in ({"error": "medición no armada"}, None, "texto",
+                    {"t_click": 10.0, "t_visible": 5.0, "via": "raf", "timed_out": False}):
+            fc = _FakeClock()
+            with self.assertRaises(RuntimeError):
+                self._measure(_EventExpandDriver(fc, result=res), fc)
+
+    def test_arming_failure_aborts_before_click(self):
+        fc = _FakeClock()
+        drv = _EventExpandDriver(fc, armed={"armed": False, "reason": "sin <details>"})
+        with self.assertRaises(RuntimeError) as cm:
+            self._measure(drv, fc)
+        self.assertIn("sin <details>", str(cm.exception))
+        self.assertNotIn("click", drv.calls)
+
+    def test_invalid_pre_state_rejected_before_arming(self):
+        fc = _FakeClock()
+        for kw in ({"pre_open": True}, {"pre_grid": True}, {"pre_open": None}):
+            drv = _EventExpandDriver(fc, **kw)
+            with self.assertRaises(RuntimeError) as cm:
+                self._measure(drv, fc)
+            self.assertIn("Estado previo inválido", str(cm.exception))
+            self.assertEqual(drv.calls, [])
 
     def test_missing_expander_and_unknown_method(self):
         fc = _FakeClock()
         with self.assertRaises(RuntimeError):
-            h.measure_expand(_ExpandDriver(fc, has_expander=False), "current",
-                             clock=fc.clock, sleep=fc.sleep)
+            self._measure(_EventExpandDriver(fc, has_expander=False), fc)
         with self.assertRaises(ValueError):
-            h.measure_expand(_ExpandDriver(fc), "old", clock=fc.clock, sleep=fc.sleep)
+            h.measure_expand(_EventExpandDriver(fc), "old", clock=fc.clock, sleep=fc.sleep)
+
+    def test_event_scripts_do_not_poll(self):
+        self.assertIn("MutationObserver", h._EXPAND_ARM_JS)
+        self.assertIn("requestAnimationFrame", h._EXPAND_ARM_JS)
+        self.assertIn("capture: true", h._EXPAND_ARM_JS)
+        for js in (h._EXPAND_ARM_JS, h._EXPAND_WAIT_JS):
+            self.assertNotIn("setInterval", js)
+        self.assertNotIn("setTimeout", h._EXPAND_ARM_JS)
+        self.assertEqual(h._EXPAND_WAIT_JS.count("setTimeout"), 1)  # solo el plazo
+
+
+_NODE = shutil.which("node")
+
+_NODE_HARNESS = r"""
+const fs = require('fs');
+const [armSrc, waitSrc, scenario] = [fs.readFileSync(process.argv[2], 'utf8'),
+  fs.readFileSync(process.argv[3], 'utf8'), process.argv[4]];
+globalThis.window = globalThis;
+globalThis.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 16);
+const observers = [];
+globalThis.MutationObserver = class {
+  constructor(cb) { this.cb = cb; this.active = false; observers.push(this); }
+  observe() { this.active = true; }
+  disconnect() { this.active = false; }
+};
+const mutate = () => observers.forEach(o => o.active && o.cb([]));
+const grid = { shown: false,
+  getClientRects() { return this.shown ? [1] : []; },
+  get offsetHeight() { return this.shown ? 100 : 0; } };
+const details = { querySelectorAll: () => [grid] };
+const listeners = [];
+const summary = {
+  closest: (s) => (scenario === 'no_details' ? null : details),
+  addEventListener: (t, fn, opts) => listeners.push({ t, fn, opts }),
+};
+const click = () => listeners.filter(l => l.t === 'click').forEach(l => l.fn());
+const arm = new Function(armSrc);
+const wait = new Function(waitSrc);
+const out = (o) => { process.stdout.write(JSON.stringify(o)); process.exit(0); };
+
+if (scenario === 'wait_unarmed') { wait.apply(null, [500, out]); }
+else {
+  const armed = arm.apply(null, [summary, 'GRID']);
+  if (!armed.armed) { out({ armed }); }
+  else {
+    const opts = listeners[0] && listeners[0].opts;
+    if (scenario === 'mutation_delayed') {
+      click();
+      setTimeout(() => { grid.shown = true; mutate(); }, 200);
+      wait.apply(null, [3000, (r) => out({ r, opts })]);
+    } else if (scenario === 'layout_only') {
+      click();
+      setTimeout(() => { grid.shown = true; }, 120);  // sin mutación: lo ve rAF
+      wait.apply(null, [3000, (r) => out({ r, opts })]);
+    } else if (scenario === 'never') {
+      click();
+      wait.apply(null, [300, (r) => out({ r, opts })]);
+    } else if (scenario === 'visible_before_click') {
+      grid.shown = true; mutate();
+      setTimeout(() => {
+        const clickAt = performance.now(); click();
+        wait.apply(null, [1000, (r) => out({ r, opts, clickAt })]);
+      }, 100);
+    }
+  }
+}
+"""
+
+
+@unittest.skipIf(_NODE is None, "node no disponible")
+class EventScriptInNodeTests(unittest.TestCase):
+    """Ejecuta los scripts JS reales con un DOM mínimo simulado en Node."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        d = Path(cls._tmp.name)
+        (d / "arm.js").write_text(h._EXPAND_ARM_JS, encoding="utf-8")
+        (d / "wait.js").write_text(h._EXPAND_WAIT_JS, encoding="utf-8")
+        (d / "harness.js").write_text(_NODE_HARNESS, encoding="utf-8")
+        cls.dir = d
+
+    @classmethod
+    def tearDownClass(cls):
+        cls._tmp.cleanup()
+
+    def _run(self, scenario):
+        res = subprocess.run(
+            [_NODE, str(self.dir / "harness.js"), str(self.dir / "arm.js"),
+             str(self.dir / "wait.js"), scenario],
+            capture_output=True, text=True, timeout=30)
+        self.assertEqual(res.returncode, 0, res.stderr)
+        return json.loads(res.stdout)
+
+    def test_delayed_grid_detected_by_mutation_with_browser_timestamps(self):
+        out = self._run("mutation_delayed")
+        r = out["r"]
+        self.assertFalse(r["timed_out"])
+        self.assertEqual(r["via"], "mutation")  # el cambio de DOM se detecta en el acto
+        self.assertGreaterEqual(r["t_visible"] - r["t_click"], 190.0)
+        self.assertLess(r["t_visible"] - r["t_click"], 400.0)
+        self.assertEqual(out["opts"], {"capture": True, "once": True})
+
+    def test_visibility_without_mutation_detected_by_animation_frame(self):
+        r = self._run("layout_only")["r"]
+        self.assertEqual(r["via"], "raf")
+        self.assertGreaterEqual(r["t_visible"] - r["t_click"], 110.0)
+        self.assertLess(r["t_visible"] - r["t_click"], 400.0)
+
+    def test_never_visible_times_out(self):
+        r = self._run("never")["r"]
+        self.assertTrue(r["timed_out"])
+        self.assertIsNone(r["t_visible"])
+        self.assertIsNotNone(r["t_click"])
+
+    def test_nothing_is_recorded_before_the_click(self):
+        out = self._run("visible_before_click")
+        r = out["r"]
+        # La grilla ya era visible 100 ms antes: ni t_click ni t_visible pueden ser
+        # anteriores al clic real (el arnés Python rechaza además ese estado previo).
+        self.assertGreaterEqual(r["t_click"], out["clickAt"])
+        self.assertGreaterEqual(r["t_visible"], out["clickAt"])
+
+    def test_no_details_is_not_armed(self):
+        out = self._run("no_details")
+        self.assertFalse(out["armed"]["armed"])
+
+    def test_wait_without_arm_reports_error(self):
+        self.assertIn("error", self._run("wait_unarmed"))
+
+
+class _FakeTimeoutException(Exception):
+    pass
+
+
+_FakeTimeoutException.__name__ = "TimeoutException"
+
+
+class _LegacyDriver:
+    def __init__(self, fake_clock, pre_open=False):
+        self.fake_clock = fake_clock
+        self.pre_open = pre_open
+        self.calls = []
+        self.clicked_at = None
+
+    def find_elements(self, by, selector):
+        return [_Summary(self)] if by == "xpath" else []
+
+    def execute_script(self, script, *args):
+        if "d.open" in script:
+            return self.pre_open
+        return False
+
+
+def _legacy_factory(log, fake_clock, until_raises=None, until_after_s=0.0):
+    class _Wait:
+        def __init__(self, driver, timeout, *args, **kwargs):
+            log.append(("WebDriverWait", timeout, args, kwargs, fake_clock.t))
+
+        def until(self, condition):
+            log.append(("until", condition))
+            fake_clock.t += until_after_s
+            if until_raises is not None:
+                raise until_raises
+            return True
+
+    class _EC:
+        @staticmethod
+        def visibility_of_element_located(locator):
+            log.append(("visibility_of_element_located", locator))
+            return ("cond", locator)
+
+    return lambda: (_Wait, _EC)
+
+
+PARENT_LEGACY_SELECTOR = "div[data-testid='stDataFrame'], [data-testid='stTable']"
+
+
+class LegacyExpandParityTests(unittest.TestCase):
+    """Ajuste 2 (Auditor, Orden 09): legacy = intervalo idéntico a f8c5218:617-623."""
+
+    def _measure(self, drv, fc, log, **kw):
+        return h.measure_expand(drv, "legacy", clock=fc.clock, sleep=fc.sleep,
+                                wait_factory=_legacy_factory(log, fc, **kw))
+
+    def test_same_sequence_and_arguments_as_parent(self):
+        fc, log = _FakeClock(), []
+        drv = _LegacyDriver(fc)
+        orig_sleep = fc.sleep
+
+        def sleep(s):
+            log.append(("sleep", s))
+            orig_sleep(s)
+
+        fc.sleep = sleep
+        self._measure(drv, fc, log, until_after_s=0.08)
+        names = [e[0] for e in log]
+        self.assertEqual(names[0], "sleep")
+        self.assertEqual(log[0], ("sleep", 0.5))
+        self.assertEqual(names[1:], ["WebDriverWait", "visibility_of_element_located", "until"])
+        _, timeout, args, kwargs, t_at = log[1]
+        self.assertEqual(timeout, 5)  # mismo plazo que el padre
+        self.assertEqual((args, kwargs), ((), {}))  # sondeo por omisión (0,5 s), sin cambios
+        self.assertEqual(log[2][1], ("css selector", PARENT_LEGACY_SELECTOR))
+        self.assertEqual(drv.calls, ["click"])
+        self.assertGreaterEqual(t_at - drv.clicked_at, 0.5)  # el plazo arranca tras la pausa
+
+    def test_latency_includes_fixed_pause_and_wait(self):
+        fc, log = _FakeClock(), []
+        ms, detail = self._measure(_LegacyDriver(fc), fc, log, until_after_s=0.08)
+        self.assertGreaterEqual(ms, 580.0)
+        self.assertIn("intervalo de f8c5218", detail)
+
+    def test_parent_constants(self):
+        self.assertEqual(h.LEGACY_EXPAND_SLEEP_S, 0.5)
+        self.assertEqual(h.LEGACY_WAIT_TIMEOUT_S, 5)
+        self.assertEqual(h._GRID_SELECTOR, PARENT_LEGACY_SELECTOR)
+        self.assertEqual(h._EXPANDER_XPATH, "//summary[contains(., 'Ver ranking completo')]")
+
+    def test_selenium_timeout_becomes_timeout_error(self):
+        fc, log = _FakeClock(), []
+        with self.assertRaises(TimeoutError) as cm:
+            self._measure(_LegacyDriver(fc), fc, log, until_raises=_FakeTimeoutException("t"))
+        self.assertIsInstance(cm.exception.__cause__, _FakeTimeoutException)
+
+    def test_other_wait_errors_propagate_unchanged(self):
+        fc, log = _FakeClock(), []
+        with self.assertRaises(KeyError):
+            self._measure(_LegacyDriver(fc), fc, log, until_raises=KeyError("x"))
+
+    def test_open_pre_state_is_reported_not_rejected(self):
+        fc, log = _FakeClock(), []
+        ms, detail = self._measure(_LegacyDriver(fc, pre_open=True), fc, log)
+        self.assertIn("details.open=True", detail)
+
+    @unittest.skipIf(h.WebDriverWait is not None, "selenium instalado")
+    def test_legacy_without_selenium_fails_closed(self):
+        fc = _FakeClock()
+        with self.assertRaises(RuntimeError) as cm:
+            h.measure_expand(_LegacyDriver(fc), "legacy", clock=fc.clock, sleep=fc.sleep)
+        self.assertIn("requiere Selenium", str(cm.exception))
 
     def test_default_expand_method_is_current_and_cli_validates(self):
         self.assertEqual(_args().expand_method, "current")
         self.assertEqual(_args("--expand-method", "legacy").expand_method, "legacy")
         with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
             _args("--expand-method", "sleepy")
+
+
+class TimingColumnsTests(unittest.TestCase):
+    def test_every_row_declares_source_and_resolution_including_failures(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "samples.csv"
+            writer = h.IncrementalSampleWriter(path)
+            plan = h.build_schedule(h.SCENARIOS, 1, 0, "blocks")
+            outs = iter([_outcome(1.0), TimeoutError("t"), _outcome(2.0), RuntimeError("e")])
+
+            def sample(p):
+                o = next(outs)
+                if isinstance(o, BaseException):
+                    raise o
+                return o
+
+            h.execute_schedule(plan, sample, writer, log=_ListLog(),
+                               timing_fn=lambda p: h.timing_info(p.scenario, "current"))
+            writer.close()
+            with open(path, newline="", encoding="utf-8") as fh:
+                rows = list(csv.DictReader(fh))
+        self.assertIn("timing_source", rows[0])
+        by = {r["scenario"]: r for r in rows}
+        self.assertEqual(by["cold"]["timing_source"], "python_perf_counter")
+        self.assertIn("±50 ms", by["cold"]["timing_resolution"])
+        self.assertEqual(by["update"]["status"], "timeout")
+        self.assertIn("±50 ms", by["update"]["timing_resolution"])
+        self.assertEqual(by["expand"]["status"], "error")
+        self.assertEqual(by["expand"]["timing_source"], "browser_performance_now")
+        self.assertIn("sin sleep en Python", by["expand"]["timing_resolution"])
+
+    def test_legacy_resolution_declared(self):
+        src, res = h.timing_info("expand", "legacy")
+        self.assertEqual(src, "python_perf_counter")
+        self.assertIn("0,5 s", res)
+
+    def test_unknown_scenario_or_method_rejected(self):
+        with self.assertRaises(ValueError):
+            h.timing_info("nope")
+        with self.assertRaises(ValueError):
+            h.timing_info("expand", "sleepy")
+
+    def test_selenium_timeout_exception_classified_as_timeout(self):
+        self.assertEqual(h.classify_exception(_FakeTimeoutException("x")), "timeout")
+        self.assertEqual(h.classify_exception(TimeoutError("x")), "timeout")
+        self.assertEqual(h.classify_exception(RuntimeError("x")), "error")
 
 
 # -------------------------------------------------------- 8) KPI .sapi-card-kpi
@@ -719,7 +1055,15 @@ class _UpdateExpandDriver(_PanelDriver):
             return [_El("grid", displayed=self.opened)]
         return super().find_elements(by, selector)
 
+    def set_script_timeout(self, seconds):
+        self.script_timeout = seconds
+
+    def execute_async_script(self, script, *args):
+        return {"t_click": 10.0, "t_visible": 42.5, "via": "mutation", "timed_out": False}
+
     def execute_script(self, script, *args):
+        if "__sapiExpand" in script:
+            return {"armed": True}
         if "arguments[0].click()" in script:
             args[0].click()
             return None
@@ -794,7 +1138,7 @@ class UpdateAndExpandScenarioTests(unittest.TestCase):
         out = runner(h.PlannedSample("expand", "warmup", 1))
         self.assertTrue(out.content_verified, out.element_verified)
         self.assertIn("details.open=False", out.method_detail)
-        self.assertLess(out.latency_ms, 500.0)
+        self.assertEqual(out.latency_ms, 32.5)  # 42.5 - 10.0, reloj del navegador
         self.assertTrue(out.screenshot.startswith("expand_warmup_001"))
 
     def test_screenshot_first_skips_warmup(self):

@@ -18,8 +18,10 @@ SAPI-137 (HU-90.T2) amplía el arnés para medir n muestras por escenario sin
 medir nada por sí mismo: --repetitions, --warmup (registrado aparte y fuera del
 percentil), --order blocks|interleaved, percentil nearest_rank y lineal
 (ambos se calculan siempre), samples.csv escrito fila a fila con cada fallo y
-timeout como fila, --expand-method current|legacy (legacy reproduce el
-sleep(0.5) dentro del intervalo) y el chequeo del KPI contra .sapi-card-kpi.
+timeout como fila, --expand-method current|legacy (current mide por evento en
+el navegador sin sleep de Python; legacy usa un intervalo idéntico al de
+f8c5218), columnas timing_source y timing_resolution con la resolución
+declarada de cada escenario, y el chequeo del KPI contra .sapi-card-kpi.
 Los valores por defecto de esas opciones son PROVISIONALES: ver el bloque
 "VALORES POR DEFECTO PROVISIONALES" más abajo.
 """
@@ -46,9 +48,13 @@ from pathlib import Path
 try:
     from selenium import webdriver
     from selenium.webdriver.edge.options import Options
+    from selenium.webdriver.support import expected_conditions as EC
+    from selenium.webdriver.support.ui import WebDriverWait
 except ImportError:
     webdriver = None
     Options = None
+    EC = None
+    WebDriverWait = None
 
 
 def get_git_identities(repo_root: Path) -> tuple[str, str]:
@@ -493,7 +499,9 @@ def run_negative_test_stale_dom():
 #                                  y es OBLIGATORIA con --repetitions > 1
 #   P-3 carga en frío ............ navegador nuevo por muestra (única opción
 #                                  implementada; no reinicia web-v2)
-#   P-4 sleep(0.5) de expandir ... --expand-method current (sin sleep)
+#   P-4 sleep(0.5) de expandir ... --expand-method current (medida por evento en el
+#                                  navegador, sin sleep de Python; legacy = intervalo
+#                                  idéntico a f8c5218)
 #   P-5 orden .................... --order blocks
 #   P-6 n ........................ --repetitions 1
 # Método de percentil: se calculan SIEMPRE nearest-rank y lineal;
@@ -510,6 +518,8 @@ ORDERS = ("blocks", "interleaved")
 PERCENTILE_METHODS = ("nearest_rank", "linear")
 FAILURE_POLICIES = ("as_infinite", "ok_only")
 EXPAND_METHODS = ("current", "legacy")
+# legacy = intervalo idéntico a f8c5218:scripts/measure_browser_e2e_d21.py:617-623
+LEGACY_WAIT_TIMEOUT_S = 5
 SCREENSHOT_MODES = ("first", "all", "none")
 
 STATUS_OK = "ok"
@@ -534,7 +544,42 @@ SAMPLE_FIELDS = [
     "content_verified", "element_verified", "action", "browser_navigation_type",
     "method_detail", "error_type", "error_message", "commit_sha", "tree_sha",
     "candidate_sha", "screenshot", "screenshot_sha256", "notes",
+    "timing_source", "timing_resolution",
 ]
+
+# Fuente del reloj y resolución declarada de cada escenario (Auditor, Orden 09).
+# Las dos columnas se escriben en cada fila, también en las de falla.
+TIMING_SOURCE_PY = "python_perf_counter"
+TIMING_SOURCE_BROWSER = "browser_performance_now"
+TIMING_INFO = {
+    "cold": (TIMING_SOURCE_PY,
+             "sondeo cada 50 ms (+ costo de find_elements); resolución ±50 ms"),
+    "reload": (TIMING_SOURCE_PY,
+               "sondeo cada 50 ms (+ costo de find_elements); resolución ±50 ms"),
+    "update": (TIMING_SOURCE_PY,
+               "sleep(0.2) fijo y luego sondeo cada 50 ms; resolución ±50 ms"),
+    ("expand", "current"): (
+        TIMING_SOURCE_BROWSER,
+        "evento en el navegador: clic (listener en captura) y MutationObserver o "
+        "requestAnimationFrame; ≤ 1 cuadro (~16,7 ms a 60 Hz); sin sleep en Python",
+    ),
+    ("expand", "legacy"): (
+        TIMING_SOURCE_PY,
+        "sleep(0.5) fijo y luego WebDriverWait(driver, 5) con sondeo cada 0,5 s "
+        "(igual a f8c5218); resolución +0/+500 ms",
+    ),
+}
+
+
+def timing_info(scenario: str, expand_method: str = "current") -> tuple[str, str]:
+    """(timing_source, timing_resolution) declarados para un escenario."""
+    if scenario == "expand":
+        if expand_method not in EXPAND_METHODS:
+            raise ValueError(f"--expand-method desconocido: {expand_method!r}")
+        return TIMING_INFO[("expand", expand_method)]
+    if scenario not in TIMING_INFO:
+        raise ValueError(f"Escenario desconocido: {scenario!r}")
+    return TIMING_INFO[scenario]
 
 
 # ---------------------------------------------------------------- percentiles
@@ -700,7 +745,11 @@ def _utc_iso() -> str:
 
 
 def classify_exception(ex: BaseException) -> str:
-    return STATUS_TIMEOUT if isinstance(ex, TimeoutError) else STATUS_ERROR
+    """timeout para TimeoutError y para el TimeoutException de Selenium (que no
+    hereda de TimeoutError); error para cualquier otra excepción."""
+    if isinstance(ex, TimeoutError) or type(ex).__name__ == "TimeoutException":
+        return STATUS_TIMEOUT
+    return STATUS_ERROR
 
 
 def execute_schedule(
@@ -710,6 +759,7 @@ def execute_schedule(
     identity: dict | None = None,
     on_failure=None,
     log=print,
+    timing_fn=None,
 ) -> list[dict]:
     """Ejecuta cada muestra planificada y escribe una fila por intento.
 
@@ -718,6 +768,8 @@ def execute_schedule(
     con latencia pero sin contenido verificado, como ``content_unverified``.
     Ninguna fila se descarta y un fallo no detiene las muestras siguientes.
     ``on_failure(planned, ex)`` permite al llamador reiniciar su sesión.
+    ``timing_fn(planned) -> (timing_source, timing_resolution)`` rellena las
+    columnas de resolución en todas las filas, incluidas las de falla.
     """
     identity = identity or {}
     for seq, planned in enumerate(plan, start=1):
@@ -731,6 +783,8 @@ def execute_schedule(
             "tree_sha": identity.get("tree_sha", ""),
             "candidate_sha": identity.get("candidate_sha", ""),
         }
+        if timing_fn is not None:
+            row["timing_source"], row["timing_resolution"] = timing_fn(planned)
         try:
             out = sample_fn(planned)
         except Exception as ex:  # noqa: BLE001 - toda falla queda como fila
@@ -885,17 +939,159 @@ def _any_grid_visible(driver) -> bool:
     return any(_is_displayed(g) for g in grids)
 
 
+# --- current: medida por evento en el navegador ------------------------------
+# _EXPAND_ARM_JS se ejecuta ANTES del clic (fuera del intervalo). Registra un
+# listener de clic en fase de captura sobre el <summary> (t_click =
+# performance.now() al recibir el evento real del clic nativo de WebDriver), un
+# MutationObserver sobre el <details> y, desde el clic, un bucle
+# requestAnimationFrame. La primera comprobación que ve una grilla visible
+# DENTRO del <details> fija t_visible = performance.now(). Ambos instantes son
+# del mismo reloj del navegador: no entra la latencia de ida y vuelta de
+# WebDriver ni ningún sleep de Python.
+_EXPAND_ARM_JS = r"""
+var summary = arguments[0], sel = arguments[1];
+var d = summary && summary.closest ? summary.closest('details') : null;
+if (!d) { return {armed: false, reason: 'sin <details> alrededor del <summary>'}; }
+var st = {t_click: null, t_visible: null, via: null, done: false, cb: null, mo: null};
+function visible() {
+  return Array.from(d.querySelectorAll(sel)).some(function (g) {
+    return g.getClientRects().length > 0 && g.offsetHeight > 0;
+  });
+}
+function snapshot(timedOut) {
+  return {t_click: st.t_click, t_visible: st.t_visible, via: st.via, timed_out: !!timedOut};
+}
+function finish(via) {
+  if (st.done) { return; }
+  st.t_visible = performance.now();
+  st.via = via;
+  st.done = true;
+  if (st.mo) { st.mo.disconnect(); }
+  if (st.cb) { var cb = st.cb; st.cb = null; cb(snapshot(false)); }
+}
+function check(via) {
+  if (st.t_click !== null && !st.done && visible()) { finish(via); }
+}
+function frame() {
+  if (st.done) { return; }
+  check('raf');
+  if (!st.done) { requestAnimationFrame(frame); }
+}
+st.snapshot = snapshot;
+summary.addEventListener('click', function () {
+  if (st.t_click !== null) { return; }
+  st.t_click = performance.now();
+  requestAnimationFrame(frame);
+}, {capture: true, once: true});
+st.mo = new MutationObserver(function () { check('mutation'); });
+st.mo.observe(d, {subtree: true, childList: true, attributes: true, characterData: true});
+window.__sapiExpand = st;
+return {armed: true};
+"""
+
+# _EXPAND_WAIT_JS (execute_async_script) solo ENTREGA el resultado: los
+# instantes ya quedaron fijados por los eventos. El plazo se cuenta desde el clic.
+_EXPAND_WAIT_JS = r"""
+var timeoutMs = arguments[0], done = arguments[arguments.length - 1];
+var st = window.__sapiExpand;
+if (!st) { done({error: 'medición no armada'}); return; }
+if (st.done) { done(st.snapshot(st.t_visible === null)); return; }
+var elapsed = st.t_click === null ? 0 : performance.now() - st.t_click;
+var tid = setTimeout(function () {
+  st.cb = null;
+  st.done = true;
+  if (st.mo) { st.mo.disconnect(); }
+  done(st.snapshot(true));
+}, Math.max(0, timeoutMs - elapsed));
+st.cb = function (res) { clearTimeout(tid); done(res); };
+"""
+
+
+def _read_pre_state(driver, summary) -> tuple[object, object, str]:
+    pre_open = driver.execute_script(_DETAILS_OPEN_JS, summary)
+    pre_grid = driver.execute_script(_GRID_IN_DETAILS_JS, summary, _GRID_SELECTOR)
+    return pre_open, pre_grid, f"details.open={pre_open!r}; grilla_visible_previa={pre_grid!r}"
+
+
+def _measure_expand_current(driver, summary, pre_state: str, timeout: float,
+                            clock=time.perf_counter) -> tuple[float, str]:
+    armed = driver.execute_script(_EXPAND_ARM_JS, summary, _GRID_SELECTOR)
+    if not isinstance(armed, dict) or not armed.get("armed"):
+        reason = armed.get("reason") if isinstance(armed, dict) else repr(armed)
+        raise RuntimeError(f"No se pudo armar la medición por evento: {reason}")
+    driver.set_script_timeout(timeout + 5.0)
+    t_py0 = clock()
+    summary.click()
+    res = driver.execute_async_script(_EXPAND_WAIT_JS, int(round(timeout * 1000)))
+    wall_ms = (clock() - t_py0) * 1000.0
+    if not isinstance(res, dict) or res.get("error"):
+        detail = res.get("error") if isinstance(res, dict) else repr(res)
+        raise RuntimeError(f"Resultado inválido de la medición por evento: {detail}")
+    t_click, t_visible = res.get("t_click"), res.get("t_visible")
+    if t_click is None:
+        raise RuntimeError("El navegador no registró el clic en el expander "
+                           f"(expand_method=current; {pre_state})")
+    if res.get("timed_out") or t_visible is None:
+        raise TimeoutError(f"Grilla no visible dentro del expander tras {timeout} s "
+                           f"(expand_method=current; {pre_state})")
+    latency = float(t_visible) - float(t_click)
+    if latency < 0:
+        raise RuntimeError(f"Marcas incoherentes: t_visible < t_click ({res!r})")
+    detail = (f"expand_method=current; via={res.get('via')}; "
+              f"t_click={float(t_click):.3f}; t_visible={float(t_visible):.3f} "
+              f"(performance.now); wall_python_ms={wall_ms:.1f}; {pre_state}")
+    return latency, detail
+
+
+def _legacy_wait_factory():
+    if WebDriverWait is None or EC is None:
+        raise RuntimeError("--expand-method legacy requiere Selenium (WebDriverWait)")
+    return WebDriverWait, EC
+
+
+def _measure_expand_legacy(driver, summary, pre_state: str, clock=time.perf_counter,
+                           sleep=time.sleep, wait_factory=None) -> tuple[float, str]:
+    """Intervalo idéntico al del padre f8c5218 (scripts/measure_browser_e2e_d21.py:617-623):
+
+        t0 = perf_counter(); click(); sleep(0.5)
+        WebDriverWait(driver, 5).until(EC.visibility_of_element_located((CSS, grilla)))
+        t = (perf_counter() - t0) * 1000
+
+    Mismo plazo (5 s contados DESPUÉS de la pausa), mismo sondeo por omisión de
+    WebDriverWait (0,5 s), mismo localizador global (primer elemento que
+    coincide, no "cualquiera visible"). El TimeoutException de Selenium se
+    convierte en TimeoutError para clasificarlo como timeout.
+    """
+    wait_cls, ec = (wait_factory or _legacy_wait_factory)()
+    t0 = clock()
+    summary.click()
+    sleep(LEGACY_EXPAND_SLEEP_S)
+    try:
+        wait_cls(driver, LEGACY_WAIT_TIMEOUT_S).until(
+            ec.visibility_of_element_located(("css selector", _GRID_SELECTOR))
+        )
+    except Exception as ex:
+        if type(ex).__name__ == "TimeoutException":
+            raise TimeoutError(
+                f"Grilla no visible (legacy, WebDriverWait {LEGACY_WAIT_TIMEOUT_S} s "
+                f"tras sleep {LEGACY_EXPAND_SLEEP_S} s; {pre_state})"
+            ) from ex
+        raise
+    latency = (clock() - t0) * 1000.0
+    return latency, f"expand_method=legacy (intervalo de f8c5218); {pre_state}"
+
+
 def measure_expand(driver, expand_method: str, timeout: float = EXPAND_TIMEOUT_S,
-                   clock=time.perf_counter, sleep=time.sleep) -> tuple[float, str]:
+                   clock=time.perf_counter, sleep=time.sleep,
+                   wait_factory=None) -> tuple[float, str]:
     """Mide la apertura del expander «Ver ranking completo».
 
-    current: comprueba antes del clic que el ``<details>`` está cerrado y sin
-    grilla visible (si no, la muestra es un error y queda registrada); el
-    intervalo va del clic a la primera grilla visible DENTRO de ese expander,
-    sin ninguna espera fija.
-    legacy: reproduce el método del arnés anterior: ``sleep(0.5)`` dentro del
-    intervalo y la primera grilla visible en cualquier parte de la página.
-    El estado previo se informa, pero no invalida la muestra.
+    current: exige antes del clic el ``<details>`` cerrado y sin grilla visible
+    (si no, la muestra es un error registrado). Mide por evento en el
+    navegador: del clic a la primera grilla visible DENTRO de ese expander,
+    ambos con ``performance.now()``; ningún sleep de Python dentro del intervalo.
+    legacy: intervalo idéntico al arnés padre f8c5218 (ver
+    ``_measure_expand_legacy``). El estado previo se informa, pero no invalida.
     """
     if expand_method not in EXPAND_METHODS:
         raise ValueError(f"--expand-method desconocido: {expand_method!r}")
@@ -903,29 +1099,13 @@ def measure_expand(driver, expand_method: str, timeout: float = EXPAND_TIMEOUT_S
     if not summaries:
         raise RuntimeError("No se encontró el expander 'Ver ranking completo'")
     summary = summaries[0]
-    pre_open = driver.execute_script(_DETAILS_OPEN_JS, summary)
-    pre_grid = driver.execute_script(_GRID_IN_DETAILS_JS, summary, _GRID_SELECTOR)
-    pre_state = f"details.open={pre_open!r}; grilla_visible_previa={pre_grid!r}"
-    if expand_method == "current" and (pre_open is not False or pre_grid):
-        raise RuntimeError(f"Estado previo inválido del expander ({pre_state})")
-
-    t0 = clock()
-    summary.click()
-    if expand_method == "legacy":
-        sleep(LEGACY_EXPAND_SLEEP_S)
-    end = t0 + timeout
-    while True:
-        if expand_method == "legacy":
-            visible = _any_grid_visible(driver)
-        else:
-            visible = bool(driver.execute_script(_GRID_IN_DETAILS_JS, summary, _GRID_SELECTOR))
-        if visible:
-            return (clock() - t0) * 1000.0, f"expand_method={expand_method}; {pre_state}"
-        if clock() >= end:
-            raise TimeoutError(
-                f"Grilla no visible tras {timeout} s (expand_method={expand_method}; {pre_state})"
-            )
-        sleep(0.05)
+    pre_open, pre_grid, pre_state = _read_pre_state(driver, summary)
+    if expand_method == "current":
+        if pre_open is not False or pre_grid:
+            raise RuntimeError(f"Estado previo inválido del expander ({pre_state})")
+        return _measure_expand_current(driver, summary, pre_state, timeout, clock=clock)
+    return _measure_expand_legacy(driver, summary, pre_state, clock=clock, sleep=sleep,
+                                  wait_factory=wait_factory)
 
 
 class BrowserScenarioRunner:
@@ -938,11 +1118,12 @@ class BrowserScenarioRunner:
 
     def __init__(self, target_url: str, backend_url: str | None, artifacts_dir: Path,
                  expand_method: str, screenshots: str, driver_factory=None,
-                 clock=time.perf_counter, sleep=time.sleep):
+                 clock=time.perf_counter, sleep=time.sleep, wait_factory=None):
         self.target_url = target_url
         self.backend_url = backend_url
         self.artifacts_dir = Path(artifacts_dir)
         self.expand_method = expand_method
+        self.wait_factory = wait_factory
         self.screenshots = screenshots
         self.driver_factory = driver_factory or create_driver
         self.clock = clock
@@ -1093,7 +1274,7 @@ class BrowserScenarioRunner:
         wait_for_ranking_visible(drv, timeout=RELOAD_TIMEOUT_S, clock=self.clock,
                                  sleep=self.sleep)
         latency, detail = measure_expand(drv, self.expand_method, clock=self.clock,
-                                         sleep=self.sleep)
+                                         sleep=self.sleep, wait_factory=self.wait_factory)
         grid_ok, grid_msg = verify_expanded_grid(drv)
         kpi_ok, kpi_msg = verify_50_cells_integrity(drv, backend_url=self.backend_url)
         view_ok, view_msg = scroll_grid_into_view(drv)
@@ -1149,9 +1330,11 @@ def build_parser() -> argparse.ArgumentParser:
                         help="Variante primaria del percentil frente a fallas (P-2). Se "
                              "calculan ambas. Obligatorio con --repetitions > 1")
     parser.add_argument("--expand-method", choices=EXPAND_METHODS, default="current",
-                        help="current: sin sleep, grilla dentro del expander. legacy: "
-                             "sleep(0.5) dentro del intervalo, como el arnés anterior "
-                             "(provisional: current; P-4)")
+                        help="current: medida por evento en el navegador (clic y "
+                             "MutationObserver/requestAnimationFrame con performance.now), "
+                             "sin ningún sleep de Python en el intervalo; grilla dentro del "
+                             "expander. legacy: intervalo idéntico a f8c5218 (sleep(0.5) + "
+                             "WebDriverWait(driver, 5), sondeo 0,5 s). Provisional: current; P-4")
     parser.add_argument("--screenshots", choices=SCREENSHOT_MODES, default="first",
                         help="Capturas fuera del intervalo medido: first, all o none")
     return parser
@@ -1255,7 +1438,8 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
     try:
         rows = execute_schedule(
             plan, sample_fn, writer, identity=identity,
-            on_failure=runner.reset_session if runner else None, log=log)
+            on_failure=runner.reset_session if runner else None, log=log,
+            timing_fn=lambda planned: timing_info(planned.scenario, args.expand_method))
     except BaseException as ex:  # interrupción: se conserva lo escrito
         interrupted = f"{type(ex).__name__}: {ex}"
         rows = writer.rows
