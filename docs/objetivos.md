@@ -41,7 +41,7 @@ Las definiciones y las mediciones anteriores vienen del Informe del Hito 2 (Tabl
 |---|---|---|---|---|---|---|
 | KPI-01 | OE1, OE3 | % de ejecuciones verificadas con 50/50 celdas, rank 1–50 y metadatos de modelo y origen | Cumplido en la ejecución id=1 (16-10-2026) y en IT-02/IT-04 (28-10-2026). **Medición previa al sellado** | **meta pendiente de Daniel** | Prueba de contrato y consulta SQL por ejecución | Por medir |
 | KPI-02 | OE2 | Filas duplicadas al repetir una ejecución con iguales insumos | 0 en el replay del 16-10-2026 y en IT-05 del 28-10-2026. **Medición previa al sellado** | **meta pendiente de Daniel** | Replay y conteo SQL | Por medir |
-| KPI-03 | OE4 | Latencia visible p95 por escenario | **Línea base histórica del Hito 2**, medida el 28-10-2026 con n = 30: carga en frío **1.330,1 ms**; actualizar **1.919,1 ms**; recarga 938,9 ms; expandir tabla 615,8 ms. **Medición previa al sellado.** La meta «p95 ≤ 2.000 ms» del Hito 2 se fijó el 29-10-2026, después de medir, y **no se usa como meta cumplida** | **Sellada el 23-11-2026, decidido por Daniel Cortez:** p95 ≤ 2.000 ms **en cada escenario por separado** (carga en frío, actualizar, recarga, expandir tabla). Ver §5.1 | Arnés Selenium repetido con el mismo método de la línea base, n ≥ 30 por escenario (HU-90.T2, CP-90-02) | Por medir |
+| KPI-03 | OE4 | Latencia visible p95 por escenario | **Línea base histórica del Hito 2**, medida el 28-10-2026 con n = 30: carga en frío **1.330,1 ms**; actualizar **1.919,1 ms**; recarga 938,9 ms; expandir tabla 615,8 ms. **Medición previa al sellado.** La meta «p95 ≤ 2.000 ms» del Hito 2 se fijó el 29-10-2026, después de medir, y **no se usa como meta cumplida** | **Sellada el 23-11-2026, decidido por Daniel Cortez:** p95 ≤ 2.000 ms **en cada escenario por separado** (carga en frío, actualizar, recarga, expandir tabla). Ver §5.1 | Arnés Selenium de la PR #54 (`a3d08ee`), con el protocolo de §5.2: calentamiento más 30 rondas intercaladas (HU-90.T2, CP-90-02) | Por medir |
 | KPI-04 | OE4 | Suite sin fallos y cobertura en el SHA de entrega | En `main` el 28-10-2026: 2138 aprobadas, 1 fallida, cobertura 86,32 %, lint v2 FAIL (Informe del Hito 2, Tabla 53). **Medición previa al sellado** | **meta pendiente de Daniel** | pytest y Maven en CI sobre el SHA del tag `hito3` | Por medir |
 | KPI-05 | OE5 | Mejora sobre las bases en particiones con soporte ADEQUATE | 1 partición ADEQUATE (2024); no se alcanzó. **Medición previa al sellado** | **meta pendiente de Daniel**: con OE5 comparativo puede tener que reformularse | Walk-forward por año | Por medir |
 | KPI-06 | OE3 | Proporción de participantes que interpreta el score como relativo | Sin línea base: no hubo estudio con usuarios (Informe del Hito 2, Tabla 53) | **meta pendiente de Daniel** (según el Hito 2, se define con el docente) | Protocolo con usuarios (HU-91.T3, HU-79) | Por medir |
@@ -51,12 +51,44 @@ Las definiciones y las mediciones anteriores vienen del Informe del Hito 2 (Tabl
 Decisión registrada para la nueva evaluación del Hito 3. Se sella **antes** de cualquier medición de KPI-03 del Hito 3.
 
 - **Meta:** p95 de la latencia visible ≤ 2.000 ms, evaluado **por separado** en cada uno de los cuatro escenarios: carga en frío, actualizar, recarga y expandir tabla. Un escenario que supera 2.000 ms no se compensa con los demás.
-- **Tamaño de muestra:** mínimo n = 30 repeticiones por escenario, con el mismo método Selenium de la línea base del Hito 2.
-- **Cálculo del percentil:** el método (por ejemplo, rango más cercano o interpolación lineal) se declara por escrito, junto con el script que lo calcula, **antes** de medir. Al 23-11-2026 no se identificó en el repositorio qué método produjo la línea base del 28-10-2026: queda **pendiente** de documentar.
+- **Tamaño de muestra:** 30 rondas por escenario, después de un ciclo de calentamiento (protocolo en §5.2).
+- **Cálculo del percentil:** rango más cercano, posición ⌈0,95·n⌉ (§5.2). El método que produjo la línea base del 28-10-2026 no está documentado.
 - **Criterios de entrada:** candidato identificado por SHA, stack operativo durante toda la corrida y sin cargas concurrentes en la máquina. Si alguno no se cumple, la corrida se anula y se registra.
 - **Integridad de los datos:** se conservan las muestras crudas, los errores y los timeouts. No se descartan resultados desfavorables ni se ajusta la meta después de medir.
-- **Línea base:** la medición histórica del 28-10-2026 (n = 30) se conserva como **línea base**, no como cumplimiento de esta meta.
+- **Línea base:** la medición histórica del 28-10-2026 queda **«solo reportada»**. Su método difiere del de esta meta (§5.2, punto 13) y no cuenta como cumplimiento.
 - **Alcance:** latencia visible con **un usuario**. No acredita capacidad bajo concurrencia.
+
+### 5.2. Protocolo de medición de KPI-03 (aprobado por Daniel Cortez el 23-11-2026)
+
+Se sella **antes** de cualquier medición de KPI-03 del Hito 3. Arnés: `scripts/measure_browser_e2e_d21.py` en `a3d08eeeb8ead8f4be8d0d9611c4b9c44e8fa5d9` (PR #54). Las líneas citadas son de ese commit.
+
+1. **Meta:** p95 de la latencia visible ≤ 2.000 ms **en cada escenario**: carga en frío, actualizar, recarga y expandir tabla.
+2. **Percentil:** rango más cercano (*nearest rank*). Se ordenan las n muestras de menor a mayor y se toma la posición ⌈0,95·n⌉, contando desde 1. Con n = 30 es la **posición 29** (opción `--percentile-method nearest_rank`).
+3. **Calentamiento:** un ciclo completo de los 4 escenarios, separado y **fuera** de las muestras oficiales (`--warmup 1`; rol `warmup`, que no entra en el percentil).
+4. **Rondas:** después del calentamiento, **30 rondas** con los 4 escenarios intercalados (`--order interleaved`, `--repetitions 30`). Orden fijo registrado de antemano: **carga en frío → actualizar → recarga → expandir tabla** (el orden de `SCENARIOS`, línea 510). En total, 120 muestras oficiales.
+5. **Sin agrupar:** cada escenario conserva sus 30 muestras y su propio p95. No se combinan escenarios.
+6. **Fallos:** un fallo, un timeout o la ausencia del evento final cuentan como **+∞** y quedan dentro de las 30 (`--failure-policy as_infinite`). Una muestra fallida **no se reemplaza** con un nuevo intento.
+7. **Condición adicional de cumplimiento:** **cero fallos por escenario**. Un escenario con algún fallo no cumple, aunque su p95 sea finito.
+8. **Inicio y fin de cada medición, según el arnés:**
+   - **Expandir tabla** (`--expand-method current`): el inicio es `t_click = performance.now()` en un listener de clic en **fase de captura** sobre el `<summary>`; el fin es `t_visible = performance.now()` en la primera comprobación (MutationObserver o requestAnimationFrame) que ve la grilla visible dentro del `<details>` (líneas 943–1000). Los dos instantes salen del reloj del navegador y no hay `sleep` en Python.
+   - **Carga en frío, actualizar y recarga:** el arnés **no** usa `performance.now`. Mide con `time.perf_counter` de Python y sondea cada 50 ms (resolución declarada de ±50 ms; `TIMING_INFO`, líneas 550–572). Actualizar incluye un `sleep(0.2)` fijo dentro del intervalo (línea 419). Esto se declara como limitación del método.
+9. **Plazos de timeout auditados** (constantes de las líneas 535–538):
+
+   | Escenario | Plazo |
+   |---|---|
+   | Carga en frío | `COLD_TIMEOUT_S = 35.0` s |
+   | Recarga | `RELOAD_TIMEOUT_S = 30.0` s |
+   | Actualizar | `UPDATE_TIMEOUT_S = 30.0` s |
+   | Expandir | `EXPAND_TIMEOUT_S = 5.0` s |
+
+   Además, `set_page_load_timeout(45)` (línea 199). Una grilla que aparece después del plazo cuenta como timeout (líneas 966–970).
+10. **Precondiciones:** el candidato está identificado por su SHA; el stack (Docker Compose) está operativo durante toda la corrida; es la única carga en la máquina. Si alguna no se cumple, la corrida se anula y se registra.
+11. **Estado de caché y sesión por escenario:**
+    - **Carga en frío:** navegador Edge nuevo en **cada** ronda (`create_driver()` por muestra y `quit()` al terminar), que restablece su condición inicial. El calentamiento **no** la convierte en carga caliente.
+    - **Actualizar, recarga y expandir:** sesión compartida del navegador (`_get_session`), con caché y estado de esa sesión. Recarga usa `driver.refresh()` en esa misma sesión.
+12. **Lo que se conserva:** las muestras crudas (CSV o JSON de filas, incluidos los fallos), el orden de ejecución (`seq`), la fecha, las versiones (Edge, Selenium, Python, Docker), el SHA del sistema candidato y el SHA del arnés (`a3d08ee`, PR #54).
+13. **Comparación con el Hito 2:** el método histórico **difiere**. Aquel arnés usaba n = 1 por escenario y `sleep(0.5)` en expandir, el percentil no estaba documentado y las muestras crudas no se localizaron. Por eso la línea base del 28-10-2026 queda **«solo reportada»**: no se compara estadísticamente con el resultado del Hito 3.
+14. **Alcance:** un solo usuario. No acredita capacidad bajo concurrencia.
 
 **KPI-01, KPI-02, KPI-04, KPI-05 y KPI-06 siguen NO APROBADAS** («meta pendiente de Daniel»).
 
