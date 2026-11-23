@@ -65,6 +65,9 @@ V2_SERVICES = ("db-v2", "ml-api", "backend")
 # Streamlit; cualquier otro profile activo (legacy, ops) sigue siendo un FAIL.
 PROFILE_SERVICES = {"presentation": ("web-v2",)}
 CA1_PORTS = {"backend": 8080, "ml-api": 8000, "db-v2": 5432}
+# Puerto del panel cuando el profile presentation está activo (SAPI-90.CA1).
+WEB_PORT = 8501
+SERVICE_PORTS = {**CA1_PORTS, "web-v2": WEB_PORT}
 # flyway_schema_history guarda la versión tal como va en el archivo (V001 -> "001").
 EXPECTED_MIGRATIONS = ["001", "002", "003", "004"]
 CELL_COUNT = 50
@@ -468,7 +471,8 @@ class Preflight:
             f"{check_id}.json",
             json.dumps(projection, indent=2) + "\n" if rows else (out or err),
         )
-        for service in V2_SERVICES:
+        # Con el profile presentation, web-v2 también debe quedar healthy (SAPI-90).
+        for service in expected_services(active_profiles()):
             row = rows.get(service, {})
             observed = {"state": row.get("State"), "health": row.get("Health")}
             self.check(
@@ -479,19 +483,31 @@ class Preflight:
                 observed,
                 observed == {"state": "running", "health": "healthy"},
             )
-            port = published_port(row, CA1_PORTS[service])
+            port = published_port(row, SERVICE_PORTS[service])
             if port:
                 self.ports[service] = port[1]
             self.check(
                 f"{check_id}.{service}.port",
                 "CA1",
                 "docker compose ps --format json (Publishers)",
-                f"127.0.0.1:{CA1_PORTS[service]} -> {CA1_PORTS[service]}",
-                f"{port[0]}:{port[1]} -> {CA1_PORTS[service]}" if port else None,
-                port == ("127.0.0.1", CA1_PORTS[service]),
+                f"127.0.0.1:{SERVICE_PORTS[service]} -> {SERVICE_PORTS[service]}",
+                f"{port[0]}:{port[1]} -> {SERVICE_PORTS[service]}" if port else None,
+                port == ("127.0.0.1", SERVICE_PORTS[service]),
             )
 
     def health(self, check_id: str) -> None:
+        if "web-v2" in self.ports:
+            status, _, payload, _ = self.http(
+                "GET", self.ports["web-v2"], "/_stcore/health"
+            )
+            self.check(
+                f"{check_id}.web",
+                "CA2",
+                f"GET http://127.0.0.1:{self.ports['web-v2']}/_stcore/health",
+                {"status_code": 200, "body": "ok"},
+                {"status_code": status, "body": payload.decode(errors="replace")[:40]},
+                status == 200 and payload.strip() == b"ok",
+            )
         status, _, payload, _ = self.http("GET", self.ports["backend"], "/health")
         body = _json(payload)
         self.check(

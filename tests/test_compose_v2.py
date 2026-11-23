@@ -108,6 +108,15 @@ def test_http_healthchecks_bypass_any_injected_proxy() -> None:
     assert "ProxyHandler({})" in _healthcheck_command("ml-api")
 
 
+def test_sapi90_streamlit_has_a_healthcheck_on_its_own_endpoint() -> None:
+    """SAPI-90.CA1: con el profile presentation, `up --wait` también espera al panel."""
+    command = _healthcheck_command("web-v2")
+    assert command.split()[0] == "CMD"
+    assert "http://127.0.0.1:8501/_stcore/health" in command
+    assert "ProxyHandler({})" in command
+    assert not SERVICES["web-v2"]["healthcheck"].get("disable", False)
+
+
 def _db_secret_script() -> str:
     entrypoint = SERVICES["db-v2"]["entrypoint"]
     assert entrypoint[:2] == ["sh", "-ec"]
