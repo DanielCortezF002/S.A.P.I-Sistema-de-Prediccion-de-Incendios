@@ -63,10 +63,10 @@ Las medidas numéricas que todavía no están acordadas dicen **«meta pendiente
 | Parte | Valor |
 |---|---|
 | Fuente | El usuario del panel |
-| Estímulo | Carga en frío y acción «actualizar» del ranking |
-| Entorno | Stack local con Docker Compose, una única carga en la máquina |
+| Estímulo | Carga en frío, acción «actualizar» del ranking, recarga y expandir tabla |
+| Entorno | Stack local con Docker Compose operativo, candidato identificado por SHA, una única carga en la máquina (sin cargas concurrentes); un solo usuario |
 | Respuesta | El panel muestra el ranking completo |
-| Medida de respuesta | p95 por escenario, con n declarado: **meta pendiente de Daniel**. Línea base del Hito 2 en `docs/objetivos.md` (KPI-03) |
+| Medida de respuesta | **Sellada el 23-11-2026, decidido por Daniel Cortez:** p95 de la latencia visible ≤ 2.000 ms **por separado** en cada escenario (carga en frío, actualizar, recarga, expandir tabla), con n ≥ 30 repeticiones por escenario y el mismo método Selenium de la línea base. El método de cálculo del percentil se declara antes de medir. Se conservan las muestras crudas, los errores y los timeouts; no se descartan resultados desfavorables ni se ajusta la meta después de medir. La línea base del Hito 2 (28-10-2026, n = 30) es línea base, no cumplimiento. Alcance: un usuario; no acredita capacidad bajo concurrencia. Detalle en `docs/objetivos.md` §5.1 (KPI-03) |
 
 ### 3.3. RNF-07 Fiabilidad (HU-75)
 

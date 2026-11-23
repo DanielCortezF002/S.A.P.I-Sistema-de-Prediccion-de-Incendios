@@ -41,10 +41,24 @@ Las definiciones y las mediciones anteriores vienen del Informe del Hito 2 (Tabl
 |---|---|---|---|---|---|---|
 | KPI-01 | OE1, OE3 | % de ejecuciones verificadas con 50/50 celdas, rank 1–50 y metadatos de modelo y origen | Cumplido en la ejecución id=1 (16-10-2026) y en IT-02/IT-04 (28-10-2026). **Medición previa al sellado** | **meta pendiente de Daniel** | Prueba de contrato y consulta SQL por ejecución | Por medir |
 | KPI-02 | OE2 | Filas duplicadas al repetir una ejecución con iguales insumos | 0 en el replay del 16-10-2026 y en IT-05 del 28-10-2026. **Medición previa al sellado** | **meta pendiente de Daniel** | Replay y conteo SQL | Por medir |
-| KPI-03 | OE4 | Latencia visible p95 por escenario | **Línea base histórica del Hito 2**, medida el 28-10-2026 con n = 30: carga en frío **1.330,1 ms**; actualizar **1.919,1 ms**; recarga 938,9 ms; expandir tabla 615,8 ms. **Medición previa al sellado.** La meta «p95 ≤ 2.000 ms» del Hito 2 se fijó el 29-10-2026, después de medir, y **no se usa como meta cumplida** | **meta pendiente de Daniel** | Arnés Selenium repetido, mismo método, n declarado (HU-90.T2) | Por medir |
+| KPI-03 | OE4 | Latencia visible p95 por escenario | **Línea base histórica del Hito 2**, medida el 28-10-2026 con n = 30: carga en frío **1.330,1 ms**; actualizar **1.919,1 ms**; recarga 938,9 ms; expandir tabla 615,8 ms. **Medición previa al sellado.** La meta «p95 ≤ 2.000 ms» del Hito 2 se fijó el 29-10-2026, después de medir, y **no se usa como meta cumplida** | **Sellada el 23-11-2026, decidido por Daniel Cortez:** p95 ≤ 2.000 ms **en cada escenario por separado** (carga en frío, actualizar, recarga, expandir tabla). Ver §5.1 | Arnés Selenium repetido con el mismo método de la línea base, n ≥ 30 por escenario (HU-90.T2, CP-90-02) | Por medir |
 | KPI-04 | OE4 | Suite sin fallos y cobertura en el SHA de entrega | En `main` el 28-10-2026: 2138 aprobadas, 1 fallida, cobertura 86,32 %, lint v2 FAIL (Informe del Hito 2, Tabla 53). **Medición previa al sellado** | **meta pendiente de Daniel** | pytest y Maven en CI sobre el SHA del tag `hito3` | Por medir |
 | KPI-05 | OE5 | Mejora sobre las bases en particiones con soporte ADEQUATE | 1 partición ADEQUATE (2024); no se alcanzó. **Medición previa al sellado** | **meta pendiente de Daniel**: con OE5 comparativo puede tener que reformularse | Walk-forward por año | Por medir |
 | KPI-06 | OE3 | Proporción de participantes que interpreta el score como relativo | Sin línea base: no hubo estudio con usuarios (Informe del Hito 2, Tabla 53) | **meta pendiente de Daniel** (según el Hito 2, se define con el docente) | Protocolo con usuarios (HU-91.T3, HU-79) | Por medir |
+
+### 5.1. Meta de KPI-03 (sellada el 23-11-2026, decidido por Daniel Cortez)
+
+Decisión registrada para la nueva evaluación del Hito 3. Se sella **antes** de cualquier medición de KPI-03 del Hito 3.
+
+- **Meta:** p95 de la latencia visible ≤ 2.000 ms, evaluado **por separado** en cada uno de los cuatro escenarios: carga en frío, actualizar, recarga y expandir tabla. Un escenario que supera 2.000 ms no se compensa con los demás.
+- **Tamaño de muestra:** mínimo n = 30 repeticiones por escenario, con el mismo método Selenium de la línea base del Hito 2.
+- **Cálculo del percentil:** el método (por ejemplo, rango más cercano o interpolación lineal) se declara por escrito, junto con el script que lo calcula, **antes** de medir. Al 23-11-2026 no se identificó en el repositorio qué método produjo la línea base del 28-10-2026: queda **pendiente** de documentar.
+- **Criterios de entrada:** candidato identificado por SHA, stack operativo durante toda la corrida y sin cargas concurrentes en la máquina. Si alguno no se cumple, la corrida se anula y se registra.
+- **Integridad de los datos:** se conservan las muestras crudas, los errores y los timeouts. No se descartan resultados desfavorables ni se ajusta la meta después de medir.
+- **Línea base:** la medición histórica del 28-10-2026 (n = 30) se conserva como **línea base**, no como cumplimiento de esta meta.
+- **Alcance:** latencia visible con **un usuario**. No acredita capacidad bajo concurrencia.
+
+**KPI-01, KPI-02, KPI-04, KPI-05 y KPI-06 siguen NO APROBADAS** («meta pendiente de Daniel»).
 
 **Validación por un stakeholder:** cada resultado medido se presentará en la sesión de HU-79. Su aprobación queda con nombre, rol y fecha en el ticket. **Al 22-11-2026 no hay ninguna aprobación registrada.**
 
@@ -58,4 +72,4 @@ Las definiciones y las mediciones anteriores vienen del Informe del Hito 2 (Tabl
 
 **El plan general se escribió 5 minutos después de esta ejecución; se declara como brecha, no se modifica ninguna fecha.** Fechas de commit verificadas con `git log` el 22-11-2026: la medición es `2175742` (2026-11-22T06:02:42Z) y el plan general es `f7c340d` (2026-11-22T06:08:00Z).
 
-Esta brecha no cambia ninguna meta de la sección 5: todas siguen como «meta pendiente de Daniel».
+Esta brecha no cambia ninguna meta de la sección 5: al 22-11-2026 todas seguían como «meta pendiente de Daniel». La meta de KPI-03 se selló después, el 23-11-2026 (§5.1), y no tiene relación con esta medición de HU-83.
