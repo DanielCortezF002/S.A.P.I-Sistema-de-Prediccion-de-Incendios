@@ -48,7 +48,8 @@ SHA256_MODELO_D = "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff21
 # Blob en git (LF). En disco Windows puede tener CRLF -> se normaliza.
 SHA256_REFERENCIA = "4bbe4db0054c4c08c08c93cfc0253201475b2fab9562ec61ccd0acc8ae04f8cd"
 
-FIRMS_CSV = REPO_ROOT / "artifacts" / "hito1" / "reproducibility" / "firms" / "nasa_firms_2021-08-30_2026-08-30.csv"
+# Ruta canónica de la línea base FIRMS: vive solo en firms_source (test_firms_source).
+from src.procesamiento.firms_source import FIRMS_REPRODUCIBILITY_CSV as FIRMS_CSV  # noqa: E402
 MODELO_D_PKL = REPO_ROOT / "models" / "prototype_model_d.pkl"
 REFERENCIA_JSON = REPO_ROOT / "reports" / "experiment_abcd_h6_results.json"
 DIAS_CSV = REPO_ROOT / "docs" / "dias_prueba_seleccionados.csv"
