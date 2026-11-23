@@ -142,6 +142,36 @@ def verify_expanded_grid(driver: webdriver.Edge) -> tuple[bool, str]:
     return True, f"Grillas visibles={len(visible)} de {len(grids)}"
 
 
+_IN_VIEWPORT_JS = (
+    "const r = arguments[0].getBoundingClientRect();"
+    "return r.top >= 0 && r.bottom <= window.innerHeight && r.height > 0;"
+)
+
+
+def scroll_grid_into_view(driver) -> tuple[bool, str]:
+    """D-03: lleva la grilla visible al viewport y comprueba que quedó dentro.
+
+    Una captura solo demuestra la tabla si la tabla está en pantalla al
+    capturar. Devuelve (ok, detalle); ok=False si no hay grilla visible o si,
+    tras desplazarla, no queda completamente dentro del viewport.
+    """
+    try:
+        grids = [g for g in driver.find_elements("css selector", _GRID_SELECTOR) if _is_displayed(g)]
+    except Exception as ex:
+        return False, f"Error buscando grilla: {ex}"
+    if not grids:
+        return False, "Sin grilla visible que desplazar"
+    grid = grids[0]
+    try:
+        driver.execute_script("arguments[0].scrollIntoView({block: 'start'});", grid)
+        in_view = bool(driver.execute_script(_IN_VIEWPORT_JS, grid))
+    except Exception as ex:
+        return False, f"Error desplazando grilla: {ex}"
+    if not in_view:
+        return False, "Grilla fuera del viewport tras desplazar"
+    return True, "Grilla dentro del viewport"
+
+
 def create_driver() -> webdriver.Edge:
     if webdriver is None or Options is None:
         raise RuntimeError("Selenium no está instalado en este entorno.")
@@ -599,6 +629,9 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
                 print("            - Nota de virtualización: Glide Data Grid renderiza filas bajo demanda en canvas/virtual list")
                 print("            - Total de registros respaldados: 50 celdas (verificadas vía contrato y KPI)")
 
+                view_ok, view_msg = scroll_grid_into_view(driver)
+                print(f"            - Grilla en pantalla al capturar: {view_msg} (PASS={view_ok})")
+
                 shot_exp = artifacts_dir / "ca4_browser_table_expanded.png"
                 driver.save_screenshot(str(shot_exp))
                 print(f"            - Captura guardada: {shot_exp}")
@@ -610,8 +643,8 @@ def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, projec
                     "ui_visible_latency_ms": round(t_exp, 2),
                     "pre_timestamp": ts_cached,
                     "post_timestamp": ts_cached,
-                    "element_verified": f"stDataFrame ({grid_msg})",
-                    "content_verified": grid_ok and kpi_exp_ok,
+                    "element_verified": f"stDataFrame ({grid_msg}; {view_msg})",
+                    "content_verified": grid_ok and kpi_exp_ok and view_ok,
                     "action": "click:Ver ranking completo",
                     "browser_navigation_type": "n/a (expander, sin navegación)",
                     "commit_sha": commit_sha,

@@ -20,6 +20,7 @@ import unittest
 from pathlib import Path
 
 from scripts.measure_browser_e2e_d21 import (
+    scroll_grid_into_view,
     get_browser_navigation_type,
     is_confirmed_update,
     parse_backend_timestamp,
@@ -219,3 +220,47 @@ class TestEvidenceInstrumentationCA4(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ScrollGridIntoViewTests(unittest.TestCase):
+    """D-03 (SAPI-86.T4): la captura de RUN-04 exige la tabla en pantalla."""
+
+    class _Grid:
+        def is_displayed(self):
+            return True
+
+    def _driver(self, in_view):
+        grid = self._Grid()
+
+        class _Driver:
+            scrolled = False
+
+            def find_elements(self, by, selector):
+                return [grid]
+
+            def execute_script(self, script, *args):
+                if "scrollIntoView" in script:
+                    _Driver.scrolled = True
+                    return None
+                return in_view
+
+        return _Driver()
+
+    def test_grid_scrolled_and_in_viewport_passes(self):
+        driver = self._driver(in_view=True)
+        ok, detail = scroll_grid_into_view(driver)
+        self.assertTrue(ok)
+        self.assertTrue(type(driver).scrolled)
+
+    def test_grid_outside_viewport_fails(self):
+        ok, detail = scroll_grid_into_view(self._driver(in_view=False))
+        self.assertFalse(ok)
+        self.assertIn("fuera del viewport", detail)
+
+    def test_no_visible_grid_fails(self):
+        class _Driver:
+            def find_elements(self, by, selector):
+                return []
+
+        ok, detail = scroll_grid_into_view(_Driver())
+        self.assertFalse(ok)
