@@ -37,7 +37,7 @@ Para que «Aprobado» valga, también hacen falta la aprobación del stakeholder
 | Must sin prueba ejecutada | RF-07, RNF-03, RNF-07, RNF-08 | Declarados como No hecho, con su motivo |
 | Pruebas sin requisito | 0 en las HU del S3 | Las pruebas heredadas del S1 y el S2 están en `docs/hito2/TRAZABILIDAD_HU_CA_EVIDENCIAS.md` |
 | HU «Hechas» sin criterios o sin aprobación de un stakeholder | 0 | Ninguna HU del S3 está en Finalizado todavía |
-| Must sin elemento del modelo | Pendiente | Depende del modelamiento del S3 (HU-92.T8) |
+| Must sin elemento del modelo | 0 | Cada requisito Must aparece en un contenedor o componente de `docs/arquitectura/README.md` (§2 y §3) |
 | HU sin sprint | 0 | Todas están en el sprint 37 de Jira |
 | Riesgos sin requisito u objetivo afectado | 0 | Ver `docs/riesgos.md` |
 
