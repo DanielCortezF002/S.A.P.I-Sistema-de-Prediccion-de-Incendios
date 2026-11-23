@@ -231,7 +231,7 @@ def test_v0_freshness_state_is_explicit_pending_not_a_banner(
     mock_st.warning.assert_not_called()
     mock_st.info.assert_called_once()
     msg = mock_st.info.call_args[0][0]
-    assert "no informada por el backend" in msg
+    assert "el backend no envía la antigüedad" in msg
     assert "No se asume que el ranking represente el riesgo actual" in msg
     assert "hace" not in msg  # ninguna antigüedad calculada localmente
 
@@ -823,3 +823,12 @@ def test_sapi86_caso_negativo_texto_legado_no_vuelve() -> None:
     """Si alguien restaura el texto vacío genérico en el módulo, esta prueba falla."""
     source = Path(view_mod.__file__).read_text(encoding="utf-8")
     assert _LEGACY_EMPTY_TEXT not in source
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_sapi80_cabecera_sin_referencia_a_sprint(mock_st: MagicMock) -> None:
+    """HU-80 CA1: el subtítulo de la primera pantalla no menciona un sprint."""
+    view_mod._render_header(v0_view())
+    text = _markdown_blob(mock_st)
+    assert "S.A.P.I." in text
+    assert "Sprint" not in text and "Defensa Académica" not in text

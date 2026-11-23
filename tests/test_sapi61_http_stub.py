@@ -539,7 +539,7 @@ def test_apptest_v0_payload_never_invents_freshness_station_or_meteo(
     assert "DATOS HISTÓRICOS" not in text
     assert not at.warning
     infos = " ".join(i.value for i in at.info)
-    assert "no informada por el backend" in infos
+    assert "el backend no envía la antigüedad" in infos
     assert f"Estación meteorológica: {NOT_PROVIDED}" in text
     assert "°C" not in text and "km/h" not in text
     assert "Historial FIRMS: 0" not in text and "Historial FIRMS</span><b>0" not in text

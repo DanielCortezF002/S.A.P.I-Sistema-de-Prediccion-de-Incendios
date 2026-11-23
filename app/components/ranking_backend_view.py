@@ -1479,7 +1479,6 @@ def _render_header(view: RankingView) -> None:
                 <div class="sapi-v2-sub">
                     Sistema de Alerta y Priorización de Riesgo de Incendios
                 </div>
-                <div class="sapi-v2-academic">Defensa Académica · Sprint 2</div>
             </div>
             <div class="sapi-v2-status">
                 <span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>
@@ -1505,8 +1504,9 @@ def _render_freshness_state(view: RankingView) -> None:
     """Banner de frescura y advertencia histórica obligatoria."""
     if not view.freshness_available:
         st.info(
-            "Frescura de la observación meteorológica: no informada por el backend. "
-            "No se asume que el ranking represente el riesgo actual."
+            "Frescura de la observación meteorológica: sin dato (el backend no envía "
+            "la antigüedad en esta ejecución). No se asume que el ranking represente "
+            "el riesgo actual."
         )
         return
     if view.freshness == FRESHNESS_HISTORICAL_LABEL:
