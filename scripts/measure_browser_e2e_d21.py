@@ -504,6 +504,8 @@ def run_negative_test_stale_dom():
 #                                  idéntico a f8c5218)
 #   P-5 orden .................... --order blocks
 #   P-6 n ........................ --repetitions 1
+# --protocol kpi03-h3 reemplaza estos valores provisionales por los del
+# protocolo KPI-03 aprobado (PROTOCOL_PRESETS) y rechaza flags que lo contradigan.
 # Método de percentil: se calculan SIEMPRE nearest-rank y lineal;
 # --percentile-method elige el primario y es OBLIGATORIO con --repetitions > 1.
 
@@ -545,7 +547,45 @@ SAMPLE_FIELDS = [
     "method_detail", "error_type", "error_message", "commit_sha", "tree_sha",
     "candidate_sha", "screenshot", "screenshot_sha256", "notes",
     "timing_source", "timing_resolution",
+    # SAPI-137, protocolo KPI-03: SHA del sistema, SHA del arnés y versiones en cada fila
+    "system_sha", "harness_commit_sha", "harness_sha256", "harness_dirty",
+    "python_version", "selenium_version", "platform", "browser_version",
+    "driver_version", "protocol",
 ]
+
+IDENTITY_ROW_FIELDS = (
+    "commit_sha", "tree_sha", "candidate_sha", "system_sha", "harness_commit_sha",
+    "harness_sha256", "harness_dirty", "python_version", "selenium_version", "platform",
+    "browser_version", "driver_version", "protocol",
+)
+
+# ---- Protocolo KPI-03 del Hito 3 (sellado en #45, ed8fdaa; aprobado por Daniel 23-11-2026)
+PROTOCOL_KPI03_H3 = "kpi03-h3"
+PROTOCOL_PRESETS = {
+    PROTOCOL_KPI03_H3: {
+        "scenarios": ",".join(SCENARIOS),  # orden fijo: cold, update, reload, expand
+        "repetitions": 30,
+        "warmup": 1,                       # un ciclo completo de calentamiento, aparte
+        "order": "interleaved",            # 30 rondas intercaladas = 120 muestras
+        "percentile": 95.0,
+        "percentile_method": "nearest_rank",  # x_(k), k = ceil(0,95 * n), desde 1
+        "failure_policy": "as_infinite",   # fallos, timeouts y sin evento final = +inf
+        "target_ms": 2000.0,
+        "min_n": 30,
+    },
+}
+# Valores provisionales cuando no se usa --protocol (P-1..P-6 de la preparación)
+PROVISIONAL_DEFAULTS = {
+    "scenarios": ",".join(SCENARIOS),
+    "repetitions": 1,
+    "warmup": 0,
+    "order": "blocks",
+    "percentile": 95.0,
+    "expand_method": "current",
+}
+VERDICT_PASS = "PASS"
+VERDICT_FAIL = "FAIL"
+VERDICT_NO_EVAL = "NO_EVALUABLE"
 
 # Fuente del reloj y resolución declarada de cada escenario (Auditor, Orden 09).
 # Las dos columnas se escriben en cada fila, también en las de falla.
@@ -779,9 +819,6 @@ def execute_schedule(
             "role": planned.role,
             "iteration": planned.iteration,
             "start_time_iso": _utc_iso(),
-            "commit_sha": identity.get("commit_sha", ""),
-            "tree_sha": identity.get("tree_sha", ""),
-            "candidate_sha": identity.get("candidate_sha", ""),
         }
         if timing_fn is not None:
             row["timing_source"], row["timing_resolution"] = timing_fn(planned)
@@ -796,6 +833,7 @@ def execute_schedule(
                 "error_message": str(ex)[:2000],
             })
             row["end_time_iso"] = _utc_iso()
+            _fill_identity(row, identity)
             writer.write(row)
             log(f"[{row['status'].upper()}] #{seq} {planned.scenario}/{planned.role}"
                 f"#{planned.iteration}: {type(ex).__name__}: {ex}")
@@ -820,10 +858,23 @@ def execute_schedule(
             "error_message": "",
         })
         row["end_time_iso"] = _utc_iso()
+        _fill_identity(row, identity)
         writer.write(row)
         log(f"[{row['status'].upper()}] #{seq} {planned.scenario}/{planned.role}"
             f"#{planned.iteration}: {float(out.latency_ms):.1f} ms")
     return writer.rows
+
+
+def _fill_identity(row: dict, identity: dict) -> None:
+    """Copia a la fila la identidad vigente: SHA del sistema, del arnés y versiones.
+
+    ``identity`` es un dict compartido: el runner del navegador completa
+    ``browser_version`` y ``driver_version`` cuando abre el primer navegador,
+    por lo que cada fila lleva lo que se sabía al terminar esa muestra.
+    """
+    for key in IDENTITY_ROW_FIELDS:
+        value = identity.get(key, "")
+        row[key] = "" if value is None else value
 
 
 # ---------------------------------------------------------------- resumen
@@ -835,7 +886,8 @@ def _row_latency(row: dict) -> float | None:
 
 
 def summarize_rows(rows, percentile: float, primary_method: str | None,
-                   failure_policy: str | None) -> dict:
+                   failure_policy: str | None, target_ms: float | None = None,
+                   min_n: int | None = None) -> dict:
     """Resumen por escenario. Los calentamientos se cuentan aparte y no entran
     al percentil. Se informan siempre ambos métodos y ambas políticas de fallas.
     """
@@ -892,14 +944,62 @@ def summarize_rows(rows, percentile: float, primary_method: str | None,
             "as_infinite": _pcts(inf_vals),
             "ok_only": _pcts(ok_vals),
         }
+        n = len(measure)
+        entry["nearest_rank_k"] = (
+            math.ceil(Fraction(str(percentile)) * n / 100) if n else None)
         if primary_method and failure_policy:
             entry["primary"] = {
                 "method": primary_method,
                 "failure_policy": failure_policy,
                 **entry[failure_policy][primary_method],
             }
+        if target_ms is not None:
+            entry["verdict"], entry["verdict_reasons"] = scenario_verdict(
+                entry, pkey, target_ms, min_n)
         out["scenarios"][s] = entry
+    out["target_ms"] = target_ms
+    out["min_n"] = min_n
     return out
+
+
+def scenario_verdict(entry: dict, pkey: str, target_ms: float,
+                     min_n: int | None) -> tuple[str, list[str]]:
+    """PASS solo si p95 <= meta Y cero fallos (timeout, error o sin verificar)
+    entre las muestras medidas del escenario. Los calentamientos no cuentan.
+    NO_EVALUABLE si faltan muestras (n < min_n) o no hay percentil primario.
+    """
+    reasons = []
+    n = entry["n_attempted"]
+    if min_n is not None and n < min_n:
+        return VERDICT_NO_EVAL, [f"n={n} < n mínimo {min_n}"]
+    primary = entry.get("primary")
+    if not primary or primary.get(pkey) is None:
+        return VERDICT_NO_EVAL, ["sin percentil primario (método y política obligatorios)"]
+    failures = n - entry["n_ok"]
+    if failures:
+        reasons.append(
+            f"{failures} fallo(s): timeout={entry['n_timeout']}, error={entry['n_error']}, "
+            f"sin verificar={entry['n_content_unverified']}")
+    value = primary[pkey]
+    if not (value <= target_ms):
+        reasons.append(f"{pkey}={value} > {target_ms} ms")
+    return (VERDICT_FAIL, reasons) if reasons else (VERDICT_PASS, [])
+
+
+def overall_verdict(summary: dict, expected_scenarios, planned: int, recorded: int,
+                    interrupted) -> tuple[str, list[str]]:
+    """Veredicto global: PASS solo si cada escenario esperado da PASS por separado."""
+    if interrupted or recorded != planned:
+        return VERDICT_NO_EVAL, [f"corrida incompleta: {recorded}/{planned} ({interrupted})"]
+    verdicts = {s: summary["scenarios"].get(s, {}).get("verdict") for s in expected_scenarios}
+    missing = [s for s, v in verdicts.items() if v is None]
+    if missing:
+        return VERDICT_NO_EVAL, [f"escenarios sin veredicto: {missing}"]
+    if any(v == VERDICT_NO_EVAL for v in verdicts.values()):
+        return VERDICT_NO_EVAL, [f"{s}: {v}" for s, v in verdicts.items() if v != VERDICT_PASS]
+    if all(v == VERDICT_PASS for v in verdicts.values()):
+        return VERDICT_PASS, []
+    return VERDICT_FAIL, [f"{s}: {v}" for s, v in verdicts.items() if v != VERDICT_PASS]
 
 
 def _json_safe(obj):
@@ -1149,11 +1249,29 @@ class BrowserScenarioRunner:
         self._session = None
         self._session_resets = 0
         self._shot_taken: set[str] = set()
+        self.identity: dict | None = None  # dict compartido con execute_schedule
+        self._cold_sessions: set[str] = set()
+
+    def _record_versions(self, drv) -> None:
+        """Anota en la identidad compartida la versión del navegador y del driver."""
+        if self.identity is None:
+            return
+        caps = getattr(drv, "capabilities", None) or {}
+        if not isinstance(caps, dict):
+            return
+        if caps.get("browserVersion") and not self.identity.get("browser_version"):
+            name = caps.get("browserName", "")
+            self.identity["browser_version"] = f"{name} {caps['browserVersion']}".strip()
+        edge = caps.get("msedge") or {}
+        driver_v = edge.get("msedgedriverVersion") if isinstance(edge, dict) else None
+        if driver_v and not self.identity.get("driver_version"):
+            self.identity["driver_version"] = str(driver_v).split(" ")[0]
 
     # -- sesión compartida
     def _get_session(self):
         if self._session is None:
             drv = self.driver_factory()
+            self._record_versions(drv)
             try:
                 drv.get(self.target_url)
                 wait_for_ranking_visible(drv, timeout=COLD_TIMEOUT_S, clock=self.clock,
@@ -1203,8 +1321,21 @@ class BrowserScenarioRunner:
         return handler(planned)
 
     def _cold(self, planned) -> SampleOutcome:
+        """Carga en frío: restablece la condición inicial en cada muestra.
+
+        Navegador nuevo (perfil temporal propio, sin caché, cookies ni sesión de
+        Streamlit) cuya sesión WebDriver no puede repetirse, y primera navegación
+        de tipo 'navigate'. Una sesión repetida es un error; otro tipo de
+        navegación deja la muestra sin verificar. No vacía la caché del servidor
+        (st.cache_data): eso no forma parte de la condición inicial.
+        """
         drv = self.driver_factory()
+        self._record_versions(drv)
         try:
+            session_id = str(getattr(drv, "session_id", "") or f"obj-{id(drv)}")
+            if session_id in self._cold_sessions:
+                raise RuntimeError(f"Sesión de navegador reutilizada en frío: {session_id}")
+            self._cold_sessions.add(session_id)
             t0 = self.clock()
             drv.get(self.target_url)
             wait_for_ranking_visible(drv, timeout=COLD_TIMEOUT_S, clock=self.clock,
@@ -1219,14 +1350,14 @@ class BrowserScenarioRunner:
             shot, shot_sha = self._screenshot(drv, planned)
             return SampleOutcome(
                 latency_ms=latency,
-                content_verified=has_cell and has_priority and kpi_ok,
+                content_verified=has_cell and has_priority and kpi_ok and nav == "navigate",
                 element_verified=(
                     f"Celda VP={has_cell}; Grupo prioritario={has_priority}; {kpi_msg}"
                 ),
                 action="driver.get (navegador nuevo)",
                 browser_navigation_type=nav,
                 post_timestamp=ts.raw if ts else "N/D",
-                method_detail="cold=new_browser_per_sample",
+                method_detail=f"cold=new_browser_per_sample; session={session_id}",
                 screenshot=shot, screenshot_sha256=shot_sha,
             )
         finally:
@@ -1330,24 +1461,35 @@ def build_parser() -> argparse.ArgumentParser:
                         help="SHA candidato declarado; se registra y se compara con HEAD")
     parser.add_argument("--negative-only", action="store_true",
                         help="Ejecutar únicamente la prueba negativa")
-    parser.add_argument("--scenarios", default=",".join(SCENARIOS),
+    parser.add_argument("--protocol", choices=sorted(PROTOCOL_PRESETS), default=None,
+                        help="Fija el protocolo sellado. kpi03-h3: cold,update,reload,expand; "
+                             "1 ciclo de calentamiento; 30 rondas intercaladas (120 muestras); "
+                             "p95 nearest_rank; fallos = +inf; PASS si p95 <= 2000 ms y cero "
+                             "fallos por escenario. Exige --candidate-sha y --expand-method; "
+                             "rechaza flags que lo contradigan")
+    parser.add_argument("--scenarios", default=None,
                         help="Lista separada por comas: cold,update,reload,expand")
-    parser.add_argument("--repetitions", type=int, default=1,
+    parser.add_argument("--repetitions", type=int, default=None,
                         help="Muestras medidas por escenario (provisional: 1; P-6)")
-    parser.add_argument("--warmup", type=int, default=0,
+    parser.add_argument("--warmup", type=int, default=None,
                         help="Calentamientos por escenario, registrados y excluidos del "
                              "percentil (provisional: 0; P-1)")
-    parser.add_argument("--order", choices=ORDERS, default="blocks",
+    parser.add_argument("--order", choices=ORDERS, default=None,
                         help="blocks o interleaved (provisional: blocks; P-5)")
-    parser.add_argument("--percentile", type=float, default=95.0,
+    parser.add_argument("--percentile", type=float, default=None,
                         help="Percentil a informar además de p50 (por omisión 95)")
+    parser.add_argument("--target-ms", type=float, default=None,
+                        help="Meta en ms: con ella se emite el veredicto PASS/FAIL por "
+                             "escenario (PASS solo si pXX <= meta y cero fallos)")
+    parser.add_argument("--min-n", type=int, default=None,
+                        help="Muestras medidas mínimas por escenario para evaluar el veredicto")
     parser.add_argument("--percentile-method", choices=PERCENTILE_METHODS, default=None,
                         help="Método primario: nearest_rank o linear. Se calculan ambos. "
                              "Obligatorio con --repetitions > 1")
     parser.add_argument("--failure-policy", choices=FAILURE_POLICIES, default=None,
                         help="Variante primaria del percentil frente a fallas (P-2). Se "
                              "calculan ambas. Obligatorio con --repetitions > 1")
-    parser.add_argument("--expand-method", choices=EXPAND_METHODS, default="current",
+    parser.add_argument("--expand-method", choices=EXPAND_METHODS, default=None,
                         help="current: medida por evento en el navegador (clic y "
                              "MutationObserver/requestAnimationFrame con performance.now), "
                              "sin ningún sleep de Python en el intervalo; grilla dentro del "
@@ -1356,6 +1498,54 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--screenshots", choices=SCREENSHOT_MODES, default="first",
                         help="Capturas fuera del intervalo medido: first, all o none")
     return parser
+
+
+def resolve_args(args) -> list[str]:
+    """Aplica --protocol o los valores provisionales. Devuelve errores de conflicto.
+
+    Con --protocol, cada valor del preset se impone; un flag explícito distinto
+    es un error (nunca se sobrescribe en silencio). --candidate-sha y
+    --expand-method son obligatorios con --protocol (P-4 no está decidido).
+    """
+    errors = []
+    args.protocol = getattr(args, "protocol", None)
+    if args.protocol:
+        preset = PROTOCOL_PRESETS[args.protocol]
+        for key, value in preset.items():
+            current = getattr(args, key, None)
+            if current is None:
+                setattr(args, key, value)
+                continue
+            same = current == value
+            if key == "scenarios":
+                given = [x.strip() for x in str(current).split(",") if x.strip()]
+                same = given == value.split(",")
+            if not same:
+                errors.append(f"--{key.replace('_', '-')}={current} contradice "
+                              f"--protocol {args.protocol} ({value})")
+        if not args.candidate_sha or not re.fullmatch(r"[0-9a-f]{7,40}", args.candidate_sha):
+            errors.append(f"--protocol {args.protocol} exige --candidate-sha (SHA hexadecimal "
+                          "de 7 a 40 caracteres del sistema medido)")
+        if args.expand_method is None:
+            errors.append(f"--protocol {args.protocol} exige --expand-method explícito "
+                          "(current o legacy; P-4 sin decidir)")
+    for key, value in PROVISIONAL_DEFAULTS.items():
+        if getattr(args, key, None) is None:
+            setattr(args, key, value)
+    for key in ("target_ms", "min_n"):
+        if not hasattr(args, key):
+            setattr(args, key, None)
+    return errors
+
+
+def parse_args(argv=None):
+    """parse_args + resolve_args; los conflictos terminan con exit 2."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    errors = resolve_args(args)
+    if errors:
+        parser.error("; ".join(errors))
+    return args
 
 
 def validate_args(args) -> list[str]:
@@ -1381,6 +1571,16 @@ def validate_args(args) -> list[str]:
     if args.repetitions > 1 and args.failure_policy is None:
         errors.append("--failure-policy es obligatorio con --repetitions > 1 "
                       "(no hay política por omisión)")
+    target = getattr(args, "target_ms", None)
+    if target is not None and not (target > 0):
+        errors.append("--target-ms debe ser > 0")
+    if target is not None and (args.percentile_method is None or args.failure_policy is None):
+        errors.append("--target-ms exige --percentile-method y --failure-policy")
+    min_n = getattr(args, "min_n", None)
+    if min_n is not None and min_n < 1:
+        errors.append("--min-n debe ser >= 1")
+    if min_n is not None and args.repetitions < min_n:
+        errors.append(f"--repetitions={args.repetitions} < --min-n={min_n}")
     return errors
 
 
@@ -1403,7 +1603,7 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
     interrupción). ``sample_fn`` se inyecta en las pruebas unitarias; si es
     None se usa el navegador real.
     """
-    errors = validate_args(args)
+    errors = resolve_args(args) + validate_args(args)
     if errors:
         raise ValueError("; ".join(errors))
 
@@ -1417,8 +1617,21 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
 
     artifacts_dir = Path(artifacts_dir)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
-    identity = {"commit_sha": commit_sha, "tree_sha": tree_sha,
-                "candidate_sha": args.candidate_sha}
+    tools = _tool_versions()
+    identity = {
+        "commit_sha": commit_sha, "tree_sha": tree_sha,
+        "candidate_sha": args.candidate_sha,
+        "system_sha": args.candidate_sha,
+        "harness_commit_sha": commit_sha,
+        "harness_sha256": sha256_file(Path(__file__).resolve()),
+        "harness_dirty": harness_is_dirty(repo_root),
+        "python_version": tools["python"],
+        "selenium_version": tools["selenium"] or "",
+        "platform": tools["platform"],
+        "browser_version": "", "driver_version": "",
+        "protocol": getattr(args, "protocol", None) or "",
+    }
+    schedule_path = write_schedule(artifacts_dir / "schedule.csv", plan)
     manifest = {
         "started_utc": _utc_iso(),
         "argv": sys.argv,
@@ -1429,6 +1642,9 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
             "percentile": args.percentile, "percentile_method": args.percentile_method,
             "failure_policy": args.failure_policy, "expand_method": args.expand_method,
             "screenshots": args.screenshots, "cold_mode": "new_browser_per_sample",
+            "protocol": getattr(args, "protocol", None),
+            "target_ms": getattr(args, "target_ms", None),
+            "min_n": getattr(args, "min_n", None),
         },
         "provisional_defaults_note": (
             "repetitions=1, warmup=0, order=blocks, expand_method=current y "
@@ -1439,8 +1655,11 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
             (args.candidate_sha == commit_sha) if args.candidate_sha else None
         ),
         "containers": get_container_identities(args.project_name),
-        "tools": _tool_versions(),
+        "tools": tools,
         "planned_samples": len(plan),
+        "schedule_csv": schedule_path.name,
+        "schedule_sha256": sha256_file(schedule_path),
+        "schedule": [[i, p.scenario, p.role, p.iteration] for i, p in enumerate(plan, 1)],
     }
     (artifacts_dir / "run_manifest.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -1450,6 +1669,7 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
     if sample_fn is None:
         runner = BrowserScenarioRunner(
             args.url, args.backend_url, artifacts_dir, args.expand_method, args.screenshots)
+        runner.identity = identity
         sample_fn = runner
     rows: list[dict] = []
     interrupted = None
@@ -1466,8 +1686,13 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
         writer.close()
         if runner is not None:
             runner.close()
+        target_ms = getattr(args, "target_ms", None)
         summary = summarize_rows(rows, args.percentile, args.percentile_method,
-                                 args.failure_policy)
+                                 args.failure_policy, target_ms=target_ms,
+                                 min_n=getattr(args, "min_n", None))
+        if target_ms is not None:
+            summary["verdict"], summary["verdict_reasons"] = overall_verdict(
+                summary, scenarios, len(plan), len(rows), interrupted)
         summary.update({
             "finished_utc": _utc_iso(),
             "planned_samples": len(plan),
@@ -1479,12 +1704,43 @@ def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int
         })
         (artifacts_dir / "summary.json").write_text(
             json.dumps(_json_safe(summary), ensure_ascii=False, indent=2), encoding="utf-8")
-    return exit_code_for(rows) if len(rows) == len(plan) else 1
+    if len(rows) != len(plan):
+        return 1
+    if getattr(args, "target_ms", None) is not None:
+        return 0 if summary.get("verdict") == VERDICT_PASS else 1
+    return exit_code_for(rows)
+
+
+def write_schedule(path: Path, plan) -> Path:
+    """Registra el orden de las muestras ANTES de medir (no se reescribe)."""
+    path = Path(path)
+    if path.exists():
+        raise FileExistsError(f"{path} ya existe: el calendario no se sobrescribe")
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["seq", "scenario", "role", "iteration"])
+        for i, p in enumerate(plan, start=1):
+            writer.writerow([i, p.scenario, p.role, p.iteration])
+    return path
+
+
+def harness_is_dirty(repo_root: Path) -> str:
+    """'true' si el script del arnés tiene cambios sin commit; 'unknown' si no hay git."""
+    try:
+        res = subprocess.run(
+            ["git", "status", "--porcelain", "--", "scripts/measure_browser_e2e_d21.py"],
+            cwd=repo_root, capture_output=True, text=True, check=True)
+    except Exception:
+        return "unknown"
+    return "true" if res.stdout.strip() else "false"
 
 
 def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
+    conflicts = resolve_args(args)
+    if conflicts:
+        parser.error("; ".join(conflicts))
 
     if args.negative_only:
         ok = run_negative_test_stale_dom()

@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover - numpy está en requirements.txt
 
 
 def _args(*extra):
-    return h.build_parser().parse_args(list(extra))
+    return h.parse_args(list(extra))
 
 
 def _outcome(ms, verified=True):
@@ -1275,6 +1275,323 @@ class IdentityAndCliTests(unittest.TestCase):
     def test_create_driver_requires_selenium(self):
         with self.assertRaises(RuntimeError):
             h.create_driver()
+
+
+# ------------------------------------------------- protocolo KPI-03 (kpi03-h3)
+_PROTO = ["--protocol", "kpi03-h3", "--candidate-sha", "abc1234", "--expand-method", "current"]
+
+
+def _rows_for(scenario, values, statuses=None, role="measure"):
+    statuses = statuses or ["ok"] * len(values)
+    return [{"scenario": scenario, "role": role, "iteration": i + 1, "status": st,
+             "ui_visible_latency_ms": "" if v is None else repr(float(v))}
+            for i, (v, st) in enumerate(zip(values, statuses))]
+
+
+class ProtocolPresetTests(unittest.TestCase):
+    def test_preset_fixes_every_protocol_value(self):
+        a = _args(*_PROTO)
+        self.assertEqual(a.scenarios, "cold,update,reload,expand")
+        self.assertEqual((a.repetitions, a.warmup, a.order), (30, 1, "interleaved"))
+        self.assertEqual((a.percentile, a.percentile_method, a.failure_policy),
+                         (95.0, "nearest_rank", "as_infinite"))
+        self.assertEqual((a.target_ms, a.min_n), (2000.0, 30))
+        self.assertEqual(h.validate_args(a), [])
+
+    def test_preset_schedule_is_one_warmup_cycle_plus_30_interleaved_rounds(self):
+        a = _args(*_PROTO)
+        plan = h.build_schedule(a.scenarios.split(","), a.repetitions, a.warmup, a.order)
+        self.assertEqual(len(plan), 124)
+        self.assertEqual([(p.scenario, p.role) for p in plan[:4]],
+                         [(s, "warmup") for s in ("cold", "update", "reload", "expand")])
+        measured = plan[4:]
+        self.assertEqual(len(measured), 120)
+        for r in range(30):
+            block = measured[4 * r:4 * r + 4]
+            self.assertEqual([p.scenario for p in block], ["cold", "update", "reload", "expand"])
+            self.assertTrue(all(p.iteration == r + 1 and p.role == "measure" for p in block))
+
+    def test_explicit_flags_equal_to_preset_are_accepted(self):
+        a = _args(*_PROTO, "--repetitions", "30", "--order", "interleaved",
+                  "--scenarios", "cold, update, reload, expand", "--target-ms", "2000")
+        self.assertEqual(a.repetitions, 30)
+
+    def test_conflicting_flags_are_rejected(self):
+        for extra in (["--repetitions", "20"], ["--warmup", "0"], ["--order", "blocks"],
+                      ["--percentile", "90"], ["--percentile-method", "linear"],
+                      ["--failure-policy", "ok_only"], ["--target-ms", "2500"],
+                      ["--min-n", "10"], ["--scenarios", "update,cold,reload,expand"],
+                      ["--scenarios", "cold,update,reload"]):
+            with mock.patch("sys.stderr"), self.assertRaises(SystemExit) as cm:
+                _args(*_PROTO, *extra)
+            self.assertEqual(cm.exception.code, 2, extra)
+
+    def test_protocol_requires_candidate_sha_and_expand_method(self):
+        for argv in (["--protocol", "kpi03-h3", "--expand-method", "current"],
+                     ["--protocol", "kpi03-h3", "--candidate-sha", "xyz",
+                      "--expand-method", "current"],
+                     ["--protocol", "kpi03-h3", "--candidate-sha", "abc1234"]):
+            with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+                _args(*argv)
+        errs = h.resolve_args(h.build_parser().parse_args(["--protocol", "kpi03-h3"]))
+        self.assertTrue(any("--candidate-sha" in e for e in errs))
+        self.assertTrue(any("--expand-method" in e for e in errs))
+
+    def test_unknown_protocol_rejected_and_defaults_stay_provisional(self):
+        with mock.patch("sys.stderr"), self.assertRaises(SystemExit):
+            _args("--protocol", "kpi99")
+        a = _args()
+        self.assertIsNone(a.protocol)
+        self.assertEqual((a.repetitions, a.warmup, a.order, a.expand_method),
+                         (1, 0, "blocks", "current"))
+        self.assertIsNone(a.target_ms)
+
+    def test_target_and_min_n_validation(self):
+        self.assertTrue(any("--target-ms exige" in e
+                            for e in h.validate_args(_args("--target-ms", "2000"))))
+        self.assertIn("--target-ms debe ser > 0", h.validate_args(
+            _args("--target-ms", "0", "--percentile-method", "linear",
+                  "--failure-policy", "ok_only")))
+        self.assertIn("--min-n debe ser >= 1", h.validate_args(_args("--min-n", "0")))
+        self.assertTrue(any("< --min-n" in e for e in h.validate_args(_args("--min-n", "5"))))
+
+
+class VerdictTests(unittest.TestCase):
+    def _summ(self, rows, target=2000.0, min_n=30):
+        return h.summarize_rows(rows, 95, "nearest_rank", "as_infinite",
+                                target_ms=target, min_n=min_n)
+
+    def test_p95_is_rank_29_of_30_per_scenario(self):
+        vals = list(range(1, 31))
+        e = self._summ(_rows_for("cold", vals))["scenarios"]["cold"]
+        self.assertEqual(e["nearest_rank_k"], 29)
+        self.assertEqual(e["primary"]["p95"], 29.0)
+
+    def test_pass_at_boundary_equal_to_target(self):
+        vals = [100.0] * 28 + [2000.0, 9000.0]  # k=29 -> 2000
+        e = self._summ(_rows_for("cold", vals))["scenarios"]["cold"]
+        self.assertEqual(e["verdict"], "PASS")
+
+    def test_fail_just_over_target(self):
+        vals = [100.0] * 28 + [2000.001, 9000.0]
+        e = self._summ(_rows_for("cold", vals))["scenarios"]["cold"]
+        self.assertEqual(e["verdict"], "FAIL")
+        self.assertIn("p95=2000.001 > 2000.0 ms", e["verdict_reasons"][0])
+
+    def test_a_single_failure_fails_even_if_p95_is_under_target(self):
+        for bad in ("timeout", "error", "content_unverified"):
+            vals = [100.0] * 29 + [None if bad != "content_unverified" else 150.0]
+            sts = ["ok"] * 29 + [bad]
+            e = self._summ(_rows_for("update", vals, sts))["scenarios"]["update"]
+            self.assertLessEqual(e["primary"]["p95"], 2000.0)  # 1 +inf queda en k=30
+            self.assertEqual(e["verdict"], "FAIL", bad)
+            self.assertIn("1 fallo(s)", e["verdict_reasons"][0])
+
+    def test_two_failures_make_p95_infinite(self):
+        sts = ["ok"] * 28 + ["timeout", "error"]
+        e = self._summ(_rows_for("reload", [100.0] * 28 + [None, None], sts))
+        e = e["scenarios"]["reload"]
+        self.assertEqual(e["primary"]["p95"], math.inf)
+        self.assertEqual(e["verdict"], "FAIL")
+
+    def test_warmup_is_outside_the_verdict(self):
+        rows = _rows_for("expand", [None], ["timeout"], role="warmup") + \
+            _rows_for("expand", [100.0] * 30)
+        e = self._summ(rows)["scenarios"]["expand"]
+        self.assertEqual(e["n_attempted"], 30)
+        self.assertEqual(e["verdict"], "PASS")
+        self.assertEqual(e["warmup_statuses"], ["timeout"])
+
+    def test_scenarios_are_not_pooled(self):
+        rows = _rows_for("cold", [100.0] * 30) + _rows_for("update", [3000.0] * 30)
+        s = self._summ(rows)["scenarios"]
+        self.assertEqual(s["cold"]["primary"]["p95"], 100.0)
+        self.assertEqual(s["cold"]["verdict"], "PASS")
+        self.assertEqual(s["update"]["verdict"], "FAIL")
+
+    def test_too_few_samples_is_not_evaluable(self):
+        e = self._summ(_rows_for("cold", [100.0] * 29))["scenarios"]["cold"]
+        self.assertEqual(e["verdict"], "NO_EVALUABLE")
+
+    def test_missing_primary_is_not_evaluable(self):
+        summ = h.summarize_rows(_rows_for("cold", [1.0] * 30), 95, None, None,
+                                target_ms=2000.0, min_n=30)
+        self.assertEqual(summ["scenarios"]["cold"]["verdict"], "NO_EVALUABLE")
+
+    def test_no_target_no_verdict(self):
+        e = h.summarize_rows(_rows_for("cold", [1.0]), 95, "linear", "ok_only")
+        self.assertNotIn("verdict", e["scenarios"]["cold"])
+
+    def test_overall_verdict(self):
+        rows = [r for s in h.SCENARIOS for r in _rows_for(s, [100.0] * 30)]
+        summ = self._summ(rows)
+        self.assertEqual(h.overall_verdict(summ, h.SCENARIOS, 120, 120, None)[0], "PASS")
+        self.assertEqual(h.overall_verdict(summ, h.SCENARIOS, 124, 120, None)[0],
+                         "NO_EVALUABLE")
+        self.assertEqual(h.overall_verdict(summ, h.SCENARIOS, 120, 120, "Ctrl-C")[0],
+                         "NO_EVALUABLE")
+        partial = self._summ([r for r in rows if r["scenario"] != "expand"])
+        self.assertEqual(h.overall_verdict(partial, h.SCENARIOS, 120, 120, None)[0],
+                         "NO_EVALUABLE")
+        bad = self._summ(rows[:-1] + _rows_for("expand", [None], ["timeout"]))
+        verdict, reasons = h.overall_verdict(bad, h.SCENARIOS, 120, 120, None)
+        self.assertEqual(verdict, "FAIL")
+        self.assertEqual(reasons, ["expand: FAIL"])
+
+
+class ProtocolRunTests(unittest.TestCase):
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.out = Path(self._tmp.name) / "run"
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _run(self, sample):
+        args = _args(*_PROTO)
+        with mock.patch.object(h, "get_container_identities", return_value={}), \
+                mock.patch.object(h, "run_negative_test_stale_dom", return_value=True):
+            return h.run_measurement(args, self.out, sample_fn=sample, log=_ListLog())
+
+    def _csv(self, name):
+        with open(self.out / name, newline="", encoding="utf-8") as fh:
+            return list(csv.DictReader(fh))
+
+    def test_schedule_registered_before_first_sample_and_rows_follow_it(self):
+        seen = {}
+
+        def sample(p):
+            if not seen:
+                seen["schedule"] = self._csv("schedule.csv")
+                seen["manifest"] = json.loads(
+                    (self.out / "run_manifest.json").read_text(encoding="utf-8"))
+            return _outcome(100.0)
+
+        code = self._run(sample)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(seen["schedule"]), 124)
+        self.assertEqual(seen["manifest"]["schedule_sha256"],
+                         h.sha256_file(self.out / "schedule.csv"))
+        self.assertEqual(len(seen["manifest"]["schedule"]), 124)
+        rows = self._csv("samples.csv")
+        self.assertEqual([(r["seq"], r["scenario"], r["role"], r["iteration"]) for r in rows],
+                         [(s["seq"], s["scenario"], s["role"], s["iteration"])
+                          for s in seen["schedule"]])
+        summary = json.loads((self.out / "summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["verdict"], "PASS")
+        self.assertEqual({s: e["n_attempted"] for s, e in summary["scenarios"].items()},
+                         {s: 30 for s in h.SCENARIOS})
+
+    def test_one_timeout_in_30_fails_without_retry(self):
+        calls = {"n": 0}
+
+        def sample(p):
+            calls["n"] += 1
+            if p.role == "measure" and p.scenario == "update" and p.iteration == 7:
+                raise TimeoutError("sin evento final")
+            return _outcome(100.0)
+
+        code = self._run(sample)
+        self.assertEqual(code, 1)
+        self.assertEqual(calls["n"], 124)  # sin reintentos sustitutos
+        summary = json.loads((self.out / "summary.json").read_text(encoding="utf-8"))
+        self.assertEqual(summary["verdict"], "FAIL")
+        upd = summary["scenarios"]["update"]
+        self.assertEqual((upd["n_attempted"], upd["n_timeout"], upd["verdict"]),
+                         (30, 1, "FAIL"))
+        self.assertEqual(summary["scenarios"]["cold"]["verdict"], "PASS")
+
+    def test_every_row_carries_order_date_versions_and_shas(self):
+        def sample(p):
+            if p.scenario == "reload" and p.iteration == 3 and p.role == "measure":
+                raise RuntimeError("falla")
+            return _outcome(100.0)
+
+        self._run(sample)
+        rows = self._csv("samples.csv")
+        script = Path(h.__file__).resolve()
+        for r in rows:
+            self.assertTrue(r["seq"] and r["start_time_iso"] and r["end_time_iso"])
+            self.assertEqual(r["system_sha"], "abc1234")
+            self.assertEqual(r["candidate_sha"], "abc1234")
+            self.assertEqual(r["harness_sha256"], h.sha256_file(script))
+            self.assertTrue(r["harness_commit_sha"])
+            self.assertIn(r["harness_dirty"], ("true", "false", "unknown"))
+            self.assertTrue(r["python_version"] and r["platform"])
+            self.assertEqual(r["protocol"], "kpi03-h3")
+        self.assertIn("error", [r["status"] for r in rows])
+
+    def test_existing_schedule_is_not_overwritten(self):
+        self.out.mkdir(parents=True)
+        (self.out / "schedule.csv").write_text("previo", encoding="utf-8")
+        with self.assertRaises(FileExistsError):
+            self._run(lambda p: _outcome(1.0))
+        self.assertEqual((self.out / "schedule.csv").read_text(encoding="utf-8"), "previo")
+
+    def test_harness_dirty_flag(self):
+        for out, expected in (("", "false"), (" M scripts/measure_browser_e2e_d21.py\n", "true")):
+            with mock.patch.object(h.subprocess, "run",
+                                   return_value=mock.Mock(stdout=out)):
+                self.assertEqual(h.harness_is_dirty(REPO_ROOT), expected)
+        with mock.patch.object(h.subprocess, "run", side_effect=OSError("git")):
+            self.assertEqual(h.harness_is_dirty(REPO_ROOT), "unknown")
+
+
+class _CapsDriver(_PanelDriver):
+    def __init__(self, session_id=None, nav="navigate"):
+        super().__init__()
+        if session_id is not None:
+            self.session_id = session_id
+        self.nav = nav
+        self.capabilities = {"browserName": "MicrosoftEdge", "browserVersion": "142.0.1",
+                             "msedge": {"msedgedriverVersion": "142.0.1 (abc)"}}
+
+    def execute_script(self, script, *args):
+        if "navigation" in script:
+            return self.nav
+        return super().execute_script(script, *args)
+
+
+class ColdInitialConditionTests(unittest.TestCase):
+    def setUp(self):
+        _PanelDriver.instances = []
+        self.fc = _FakeClock()
+
+    def _runner(self, factory):
+        r = h.BrowserScenarioRunner("http://x", None, Path("."), "current", "none",
+                                    driver_factory=factory, clock=self.fc.clock,
+                                    sleep=self.fc.sleep)
+        r.identity = {}
+        return r
+
+    def test_each_round_gets_a_fresh_browser_separate_from_the_session(self):
+        runner = self._runner(_CapsDriver)
+        for i in (1, 2, 3):
+            runner(h.PlannedSample("cold", "measure", i))
+            runner(h.PlannedSample("reload", "measure", i))
+        colds = [d for d in _PanelDriver.instances if d.gets == 1 and d.quit_called]
+        self.assertEqual(len(colds), 3)  # tres navegadores en frío, cada uno cerrado
+        self.assertEqual(len(_PanelDriver.instances), 4)  # + 1 sesión compartida
+        runner.close()
+
+    def test_reused_browser_session_is_an_error(self):
+        runner = self._runner(lambda: _CapsDriver(session_id="S1"))
+        runner(h.PlannedSample("cold", "measure", 1))
+        with self.assertRaises(RuntimeError) as cm:
+            runner(h.PlannedSample("cold", "measure", 2))
+        self.assertIn("reutilizada", str(cm.exception))
+
+    def test_cold_requires_a_navigate_entry(self):
+        runner = self._runner(lambda: _CapsDriver(nav="reload"))
+        out = runner(h.PlannedSample("cold", "measure", 1))
+        self.assertFalse(out.content_verified)
+        self.assertIn("session=", out.method_detail)
+
+    def test_browser_and_driver_versions_recorded(self):
+        runner = self._runner(_CapsDriver)
+        runner(h.PlannedSample("cold", "measure", 1))
+        self.assertEqual(runner.identity["browser_version"], "MicrosoftEdge 142.0.1")
+        self.assertEqual(runner.identity["driver_version"], "142.0.1")
 
 
 if __name__ == "__main__":
