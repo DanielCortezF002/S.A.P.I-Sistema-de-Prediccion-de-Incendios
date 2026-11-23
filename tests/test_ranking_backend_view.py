@@ -398,7 +398,7 @@ def test_selected_panel_v0_territory_from_reference_and_unavailable_states(
     assert "Territorio (referencia)" in text
     assert "Topografía de referencia" in text
     assert f"Historial FIRMS</span><b>{NOT_IN_CONTRACT}" in text
-    assert f"Meteorología usada</span><b>{NOT_PROVIDED}" in text
+    assert f"Meteorología usada</span><b>{view_mod.METEO_NOT_IN_RANKING}" in text
     assert "T+6h" in text and "01 sep 2026 06:00 UTC" in text
     # VP-038 no tiene cobertura DEM en la tabla congelada: N/D, nunca "0 m".
     assert "Elevación</span><b>N/D" in text and "Sin cobertura DEM" in text
@@ -750,3 +750,76 @@ def test_reference_topography_missing_or_corrupt_file_degrades_to_empty(
     table = load_reference_topography(broken)
     assert set(table) == {"VP-001"}
     assert table["VP-001"].elevation is None and table["VP-001"].dem_available is False
+
+
+# ---------------------------------------------------------------------------
+# SAPI-86: ningún dato ausente se muestra como «no informado por el backend».
+# ---------------------------------------------------------------------------
+_LEGACY_EMPTY_TEXT = "no informado por el backend"
+
+
+def _dmc_strip_text(mock_st: MagicMock, data: dict) -> str:
+    mock_st.session_state = {"sapi_dmc_data": data}
+    col = MagicMock()
+    col.__enter__ = MagicMock(return_value=col)
+    col.__exit__ = MagicMock(return_value=False)
+    mock_st.columns.return_value = (col, col)
+    mock_st.button.return_value = False
+    view_mod._render_dmc_top_strip()
+    return _markdown_blob(mock_st)
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_sapi86_panel_sin_meteo_da_motivo_y_no_texto_legado(mock_st: MagicMock) -> None:
+    view_mod._render_selected_panel(v0_view(), "VP-038")
+    text = _markdown_blob(mock_st)
+    assert _LEGACY_EMPTY_TEXT not in text
+    assert view_mod.METEO_NOT_IN_RANKING in text
+    # Un solo motivo, no cuatro filas vacías repetidas.
+    assert text.count("Meteorología usada") == 1
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_sapi86_cabecera_sin_metadatos_no_usa_texto_legado(mock_st: MagicMock) -> None:
+    view_mod._render_header(v0_view())
+    assert _LEGACY_EMPTY_TEXT not in _markdown_blob(mock_st)
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_sapi86_barra_dmc_muestra_valor_y_antiguedad(mock_st: MagicMock) -> None:
+    text = _dmc_strip_text(
+        mock_st,
+        {
+            "status": "RECIENTE",
+            "temperatura_c": 18.4,
+            "humedad_pct": 61.0,
+            "viento_kmh": 12.3,
+            "momento_cl": "22-11-2026 20:00 -03",
+            "age_hours": 1.5,
+        },
+    )
+    assert "18.4 °C" in text and "61 %" in text and "12.3 km/h" in text
+    assert "hace 1,5 h" in text
+    assert "N/D" not in text and _LEGACY_EMPTY_TEXT not in text
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_sapi86_barra_dmc_sin_datos_da_motivo(mock_st: MagicMock) -> None:
+    text = _dmc_strip_text(mock_st, {"status": "NO DISPONIBLE"})
+    assert view_mod.DMC_FIELD_MISSING in text
+    assert "sin lectura: no hay observación ingerida de Rodelillo" in text
+    assert "N/D" not in text and _LEGACY_EMPTY_TEXT not in text
+
+
+@pytest.mark.parametrize(
+    ("hours", "expected"),
+    [(0.25, "15 min"), (1.5, "1,5 h"), (72.0, "3,0 días")],
+)
+def test_sapi86_antiguedad_legible(hours: float, expected: str) -> None:
+    assert view_mod._human_age(hours) == expected
+
+
+def test_sapi86_caso_negativo_texto_legado_no_vuelve() -> None:
+    """Si alguien restaura el texto vacío genérico en el módulo, esta prueba falla."""
+    source = Path(view_mod.__file__).read_text(encoding="utf-8")
+    assert _LEGACY_EMPTY_TEXT not in source

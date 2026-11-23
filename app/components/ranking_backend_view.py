@@ -68,7 +68,14 @@ _CONTRACT_METADATA_FIELDS = tuple(
 )
 
 FRESHNESS_HISTORICAL_LABEL = "DATOS HISTÓRICOS / DESACTUALIZADOS"
-NOT_PROVIDED = "no informado por el backend"
+# SAPI-86: todo dato ausente se muestra con su motivo, nunca como un vacío genérico.
+NOT_PROVIDED = "sin dato: el contrato API v0 no incluye este campo"
+METEO_NOT_IN_RANKING = (
+    "sin dato: el ranking histórico no trae la meteorología que usó "
+    "(campo fuera del contrato API v0). La observación DMC actual está en la barra superior."
+)
+METEO_SHORT_MISSING = "sin dato en el ranking"
+DMC_FIELD_MISSING = "sin dato en la última ingesta"
 NOT_IN_CONTRACT = "Detalle FIRMS por celda no expuesto por API v0"
 FIXED_DISCLAIMER = (
     "El score corresponde a un ranking relativo exploratorio "
@@ -237,6 +244,15 @@ def _human_hm(ts: datetime) -> str:
 
 def _iso_utc(ts: datetime) -> str:
     return _utc(ts).strftime("%Y-%m-%d %H:%M:%S UTC")
+
+
+def _human_age(age_hours: float) -> str:
+    """Antigüedad legible de una observación: minutos, horas o días."""
+    if age_hours < 1:
+        return f"{max(int(round(age_hours * 60)), 0)} min"
+    if age_hours < 48:
+        return f"{age_hours:.1f} h".replace(".", ",")
+    return f"{age_hours / 24:.1f} días".replace(".", ",")
 
 
 def _fmt_nd(value: Optional[float], unit: str = "", decimals: int = 0) -> str:
@@ -1527,19 +1543,24 @@ def _render_dmc_top_strip() -> None:
         badge_class = "no_disponible"
 
     temp = data.get("temperatura_c")
-    temp_str = f"{temp:.1f} °C" if temp is not None else "N/D"
+    temp_str = f"{temp:.1f} °C" if temp is not None else DMC_FIELD_MISSING
 
     hum = data.get("humedad_pct")
-    hum_str = f"{int(round(hum))} %" if hum is not None else "N/D"
+    hum_str = f"{int(round(hum))} %" if hum is not None else DMC_FIELD_MISSING
 
     viento_kmh = data.get("viento_kmh")
-    viento_str = f"{viento_kmh:.1f} km/h" if viento_kmh is not None else "N/D"
+    viento_str = (
+        f"{viento_kmh:.1f} km/h" if viento_kmh is not None else DMC_FIELD_MISSING
+    )
 
     momento_cl = data.get("momento_cl")
     if momento_cl:
         obs_time = momento_cl.split()[1][:5] + " Chile (-03:00)"
+        age_hours = data.get("age_hours")
+        if age_hours is not None:
+            obs_time += f" · hace {_human_age(age_hours)}"
     else:
-        obs_time = "Sin lectura"
+        obs_time = "sin lectura: no hay observación ingerida de Rodelillo"
 
     c_strip, c_btn = st.columns([0.83, 0.17], gap="small")
     with c_strip:
@@ -1763,15 +1784,11 @@ def _render_selected_panel(
             f"<li><span>Viento</span><b>{viento_val}</b></li>"
         )
     else:
-        temp_val = NOT_PROVIDED
-        hum_val = NOT_PROVIDED
-        viento_val = NOT_PROVIDED
-        meteo_rows = (
-            f"<li><span>Meteorología usada</span><b>{_esc(NOT_PROVIDED)}</b></li>"
-            f"<li><span>Viento</span><b>{_esc(NOT_PROVIDED)}</b></li>"
-            f"<li><span>Humedad</span><b>{_esc(NOT_PROVIDED)}</b></li>"
-            f"<li><span>Temperatura</span><b>{_esc(NOT_PROVIDED)}</b></li>"
-        )
+        # Un solo motivo explícito en vez de cuatro filas vacías repetidas.
+        temp_val = METEO_SHORT_MISSING
+        hum_val = METEO_SHORT_MISSING
+        viento_val = METEO_SHORT_MISSING
+        meteo_rows = f"<li><span>Meteorología usada</span><b>{_esc(METEO_NOT_IN_RANKING)}</b></li>"
 
     window_end = view.window_end
     if window_end is not None:

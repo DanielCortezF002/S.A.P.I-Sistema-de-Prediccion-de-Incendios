@@ -11,7 +11,7 @@ Principios:
 - Tolerante a cambios aditivos: los campos desconocidos se ignoran. Los nueve
   campos opcionales del contrato (frescura, estación y procedencia FIRMS) se
   leen solo si llegan. Si no llegan quedan en `None`, que la vista muestra
-  como "no informado por el backend"; jamás se derivan localmente.
+  con su motivo explícito (SAPI-86); jamás se derivan localmente.
   `model_status` y `meteo_actual` no forman parte del contrato: se leen si
   un payload los trae y no se inventan si faltan.
 - Errores tipados con mensaje genérico para el usuario (RN-09): sin host,
