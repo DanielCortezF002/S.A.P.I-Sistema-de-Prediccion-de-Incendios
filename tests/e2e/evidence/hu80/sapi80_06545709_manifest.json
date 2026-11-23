@@ -1,0 +1,95 @@
+{
+  "harness": "tests/e2e/hu86_capture_panel.py",
+  "captured_at_utc": "2026-11-23T04:03:26+00:00",
+  "label": "sapi80_06545709",
+  "revision": "06545709da1e58a75088854bcf8998e612c43bc1",
+  "viewport": {
+    "width": 1366,
+    "height": 768
+  },
+  "backend": "stub HTTP local (no Spring real)",
+  "results": [
+    {
+      "scenario": "contrato_v0_fixture_real",
+      "checks": {
+        "HU-80_CA3_una_advertencia": true,
+        "HU-80_CA3_detalle_en_expander_plegado": true,
+        "HU-80_CA4_mapa_sobre_el_pliegue": true,
+        "HU-80_CA1_sin_sprint": true,
+        "HU-86_sin_texto_legado": true
+      },
+      "screenshot": "sapi80_06545709_contrato_v0_fixture_real_1366x768.png",
+      "screenshot_sha256": "04C1F04B59D2A308EE0AB31171D738AA63D9D980A1A02D4ADF392BC10BB16B55",
+      "metrics": {
+        "viewport": {
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "map": {
+          "top": 383,
+          "bottom": 763,
+          "height": 380,
+          "visible_px": 380
+        },
+        "alerts_in_view": [
+          "Frescura sin dato. No se asume que el ranking represente el riesgo actual.\n\nEl score corresponde a un ranking relativo exploratorio y no a una probabilidad cali"
+        ],
+        "disclaimers_in_view": [
+          ""
+        ],
+        "subtitle": "S.A.P.I.\nSistema de Alerta y Priorización de Riesgo de Incendios",
+        "header_mentions_sprint": false,
+        "scope_detail_expanders": [
+          {
+            "top": 157,
+            "open": false
+          }
+        ],
+        "dmc_strip_top": 1001,
+        "forbidden_text_present": false
+      }
+    },
+    {
+      "scenario": "payload_extendido_prueba",
+      "checks": {
+        "HU-80_CA3_una_advertencia": true,
+        "HU-80_CA3_detalle_en_expander_plegado": true,
+        "HU-80_CA4_mapa_sobre_el_pliegue": true,
+        "HU-80_CA1_sin_sprint": true,
+        "HU-86_sin_texto_legado": true
+      },
+      "screenshot": "sapi80_06545709_payload_extendido_prueba_1366x768.png",
+      "screenshot_sha256": "9A211228707CA9726FE0552ED189A92F294C28289FDAC139AA21D408CFCA18CB",
+      "metrics": {
+        "viewport": {
+          "width": 1366,
+          "height": 768
+        },
+        "scroll_height": 768,
+        "map": {
+          "top": 383,
+          "bottom": 763,
+          "height": 380,
+          "visible_px": 380
+        },
+        "alerts_in_view": [
+          "DATOS HISTÓRICOS · última observación hace 157 h (antigüedad medida por el servicio al evaluar). El ranking corresponde al instante indicado y NO representa el "
+        ],
+        "disclaimers_in_view": [
+          ""
+        ],
+        "subtitle": "S.A.P.I.\nSistema de Alerta y Priorización de Riesgo de Incendios",
+        "header_mentions_sprint": false,
+        "scope_detail_expanders": [
+          {
+            "top": 157,
+            "open": false
+          }
+        ],
+        "dmc_strip_top": 1001,
+        "forbidden_text_present": false
+      }
+    }
+  ]
+}
