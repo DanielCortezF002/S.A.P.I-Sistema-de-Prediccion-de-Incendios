@@ -142,7 +142,7 @@ La sección siguiente es la entrega de SAPI-ML y se incorpora **sin modificacion
 
 - Archivo: `reports/sapi83/hu83_ca6_hito3.md`
 - Commit: `b759990cfa048e62a52c6b15e2e9dc8f0f17e32f` (rama `ml/sapi-83-preregistro`, sin integrar en `main`)
-- SHA-256 del archivo en ese commit: `ba0140fdf2821b5bc68c7d834fbeb7ac20c29858052850f212e43c7c904043ed` (recalculado hoy). El bloque entre los marcadores `INICIO CA6` y `FIN CA6` reproduce ese archivo byte a byte. Comprobación: `awk '/<!-- INICIO CA6/{f=1;next}/<!-- FIN CA6 -->/{f=0}f' docs/informe-hito3/INFORME_HITO3.md | sha256sum` sobre el blob commiteado.
+- SHA-256 del archivo en ese commit: `ba0140fdf2821b5bc68c7d834fbeb7ac20c29858052850f212e43c7c904043ed` (recalculado hoy). El bloque entre los marcadores `INICIO CA6` y `FIN CA6` reproduce ese archivo byte a byte. Comprobación: `awk '/^<!-- INICIO CA6/{f=1;next}/^<!-- FIN CA6 -->$/{f=0}f' docs/informe-hito3/INFORME_HITO3.md | sha256sum` sobre el blob commiteado.
 - Los enlaces a imágenes y JSON del bloque son relativos a `reports/sapi83/` del commit `b759990`. Desde esta carpeta no resuelven y esos archivos no están en `main` (L-09). Los SHA-256 de los tres PNG se recalcularon hoy desde ese commit y coinciden con los del bloque (sección 14).
 
 <!-- INICIO CA6 · reports/sapi83/hu83_ca6_hito3.md @ b759990cfa048e62a52c6b15e2e9dc8f0f17e32f · no editar -->
