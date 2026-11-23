@@ -102,6 +102,8 @@ Se sella **antes** de cualquier medición de KPI-03 del Hito 3. Arnés: `scripts
 
     `--protocol kpi03-h3` fija los valores de los puntos 2 a 7 y rechaza con exit 2 cualquier flag que los contradiga. El exit code es 0 solo si el veredicto global es PASS. Las URL son las que propuso UX; el proyecto Compose y la carpeta de artefactos se fijan al medir.
 
+    **Sistema candidato:** `a3d08eeeb8ead8f4be8d0d9611c4b9c44e8fa5d9`. Es el árbol del que Plataforma construyó el stack medido (proyecto Compose `sapi-kpi03-a3d08ee`; informe de Plataforma `reports/orden09-kpi03-stack/README.md`, SHA-256 `6c9eaec5d7e976520a67b4a6808785709bcaff0c523c5e86ee0b3030bfaa2e51`). Sus `app/` y `services/` son idénticos a los de la PR #48 (`f8c5218805f94eaa3cbec3572a7825efc6c79bf2`): `git diff f8c5218 a3d08ee` solo cambia archivos de `scripts/` y `tests/` (verificado el 23-11-2026). El arnés (`961c879`) es una herramienta de medición y no forma parte del sistema candidato.
+
 **KPI-01, KPI-02, KPI-04, KPI-05 y KPI-06 siguen NO APROBADAS** («meta pendiente de Daniel»).
 
 **Validación por un stakeholder:** cada resultado medido se presentará en la sesión de HU-79. Su aprobación queda con nombre, rol y fecha en el ticket. **Al 22-11-2026 no hay ninguna aprobación registrada.**
