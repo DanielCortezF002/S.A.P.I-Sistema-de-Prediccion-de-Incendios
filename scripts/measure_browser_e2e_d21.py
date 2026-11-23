@@ -1024,10 +1024,44 @@ _EXPANDER_XPATH = "//summary[contains(., 'Ver ranking completo')]"
 _DETAILS_OPEN_JS = (
     "var d = arguments[0].closest('details'); return d ? d.open : null;"
 )
+# Criterio de visibilidad de la grilla dentro del expander (Instrumentación B,
+# Edge 158): el contenido de un <details> cerrado CONSERVA su caja de layout
+# (getClientRects y offsetHeight > 0) aunque no se pinta. Se exige details.open y
+# checkVisibility() (que respeta content-visibility, visibility y opacity); si el
+# navegador no tiene checkVisibility, se cae al criterio de caja.
+# Además, Streamlit anima la apertura: el <details> crece de ~48 px a su altura
+# final en ~400 ms con overflow oculto, así que la grilla puede pasar
+# checkVisibility() estando todavía recortada (altura visible 0). Se exige área
+# visible > 0 tras recortar por cada ancestro con overflow distinto de 'visible'
+# hasta el <details> inclusive: es la misma semántica que is_displayed de
+# Selenium (parte visible, sin considerar el scroll de la página), que usan el
+# modo legacy y verify_expanded_grid.
+_GRID_VISIBLE_FN_JS = (
+    "function sapiGridVisible(d, g) {"
+    "  if (!d || !d.open) { return false; }"
+    "  if (typeof g.checkVisibility === 'function') {"
+    "    if (!g.checkVisibility({contentVisibilityAuto: true, opacityProperty: true,"
+    "                            visibilityProperty: true})) { return false; }"
+    "  } else if (!(g.getClientRects().length > 0 && g.offsetHeight > 0)) { return false; }"
+    "  var r = g.getBoundingClientRect();"
+    "  var top = r.top, bottom = r.bottom, left = r.left, right = r.right;"
+    "  for (var e = g.parentElement; e; e = e.parentElement) {"
+    "    var cs = getComputedStyle(e);"
+    "    if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {"
+    "      var er = e.getBoundingClientRect();"
+    "      top = Math.max(top, er.top); bottom = Math.min(bottom, er.bottom);"
+    "      left = Math.max(left, er.left); right = Math.min(right, er.right);"
+    "    }"
+    "    if (e === d) { break; }"
+    "  }"
+    "  return bottom - top > 0 && right - left > 0;"
+    "}"
+)
 _GRID_IN_DETAILS_JS = (
-    "var d = arguments[0].closest('details'); if (!d) return null;"
+    _GRID_VISIBLE_FN_JS
+    + "var d = arguments[0].closest('details'); if (!d) return null;"
     "return Array.from(d.querySelectorAll(arguments[1])).some(function (g) {"
-    "  return g.getClientRects().length > 0 && g.offsetHeight > 0; });"
+    "  return sapiGridVisible(d, g); });"
 )
 
 
@@ -1048,7 +1082,7 @@ def _any_grid_visible(driver) -> bool:
 # DENTRO del <details> fija t_visible = performance.now(). Ambos instantes son
 # del mismo reloj del navegador: no entra la latencia de ida y vuelta de
 # WebDriver ni ningún sleep de Python.
-_EXPAND_ARM_JS = r"""
+_EXPAND_ARM_JS = _GRID_VISIBLE_FN_JS + r"""
 var summary = arguments[0], sel = arguments[1], timeoutMs = arguments[2];
 var d = summary && summary.closest ? summary.closest('details') : null;
 if (!d) { return {armed: false, reason: 'sin <details> alrededor del <summary>'}; }
@@ -1059,7 +1093,7 @@ var st = {t_click: null, t_visible: null, via: null, done: false, cb: null, mo: 
           timeout_ms: timeoutMs};
 function visible() {
   return Array.from(d.querySelectorAll(sel)).some(function (g) {
-    return g.getClientRects().length > 0 && g.offsetHeight > 0;
+    return sapiGridVisible(d, g);
   });
 }
 function snapshot(timedOut) {
@@ -1224,6 +1258,35 @@ def measure_expand(driver, expand_method: str, timeout: float = EXPAND_TIMEOUT_S
         return _measure_expand_current(driver, summary, pre_state, timeout, clock=clock)
     return _measure_expand_legacy(driver, summary, pre_state, clock=clock, sleep=sleep,
                                   wait_factory=wait_factory)
+
+
+_STREAMLIT_RUNNING_JS = (
+    "var w = document.querySelector('[data-testid=\"stStatusWidget\"]');"
+    "if (w && w.innerText && w.innerText.indexOf('Running') >= 0) { return true; }"
+    "return !!document.querySelector('.stSpinner');"
+)
+
+
+def wait_for_expander_ready(driver, timeout: float = RELOAD_TIMEOUT_S,
+                            clock=time.perf_counter, sleep=time.sleep) -> None:
+    """Preparación de «expandir», FUERA del intervalo medido.
+
+    Tras recargar, el primer chip VP- aparece antes de que Streamlit termine de
+    renderizar la página; el expander «Ver ranking completo» llega después
+    (Instrumentación B: «No se encontró el expander» en Edge real). Espera a que
+    exista el <summary> y a que Streamlit no esté en «Running».
+    """
+    end = clock() + timeout
+    while True:
+        found = driver.find_elements("xpath", _EXPANDER_XPATH)
+        running = bool(driver.execute_script(_STREAMLIT_RUNNING_JS))
+        if found and not running:
+            return
+        if clock() >= end:
+            raise TimeoutError(
+                f"Expander 'Ver ranking completo' no listo tras {timeout} s "
+                f"(encontrado={bool(found)}, running={running})")
+        sleep(0.05)
 
 
 class BrowserScenarioRunner:
@@ -1422,6 +1485,8 @@ class BrowserScenarioRunner:
         drv.refresh()
         wait_for_ranking_visible(drv, timeout=RELOAD_TIMEOUT_S, clock=self.clock,
                                  sleep=self.sleep)
+        wait_for_expander_ready(drv, timeout=RELOAD_TIMEOUT_S, clock=self.clock,
+                                sleep=self.sleep)
         latency, detail = measure_expand(drv, self.expand_method, clock=self.clock,
                                          sleep=self.sleep, wait_factory=self.wait_factory)
         grid_ok, grid_msg = verify_expanded_grid(drv)

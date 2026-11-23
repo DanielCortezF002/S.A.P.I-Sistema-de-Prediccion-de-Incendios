@@ -491,8 +491,12 @@ class _EventExpandDriver:
             self.calls.append("arm")
             self.arm_args = args
             return self.armed
+        if "sapiGridVisible" in script:
+            return self.pre_grid
         if "d.open" in script:
             return self.pre_open
+        if "stStatusWidget" in script:
+            return False
         return self.pre_grid
 
     def set_script_timeout(self, seconds):
@@ -651,8 +655,9 @@ _NODE = shutil.which("node")
 
 _NODE_HARNESS = r"""
 const fs = require('fs');
-const [armSrc, waitSrc, scenario] = [fs.readFileSync(process.argv[2], 'utf8'),
-  fs.readFileSync(process.argv[3], 'utf8'), process.argv[4]];
+const [armSrc, waitSrc, gridSrc, scenario] = [fs.readFileSync(process.argv[2], 'utf8'),
+  fs.readFileSync(process.argv[3], 'utf8'), fs.readFileSync(process.argv[4], 'utf8'),
+  process.argv[5]];
 globalThis.window = globalThis;
 let fakeNow = null;  // reloj controlado para los casos de borde
 const realNow = performance.now.bind(performance);
@@ -666,21 +671,51 @@ globalThis.MutationObserver = class {
   disconnect() { this.active = false; }
 };
 const mutate = () => observers.forEach(o => o.active && o.cb([]));
-const grid = { shown: false,
+// DOM mínimo con el comportamiento observado en Edge 158 (Instrumentación B):
+// la grilla dentro de un <details> cerrado conserva su caja de layout, pero
+// checkVisibility() es false; abierto, el <details> recorta (overflow) mientras
+// su altura crece durante la animación.
+const details = { open: false, clipH: 1000, querySelectorAll: () => [grid],
+  parentElement: null,
+  getBoundingClientRect() { return { top: 0, bottom: this.clipH, left: 0, right: 800 }; } };
+const grid = { shown: false, parentElement: details,
   getClientRects() { return this.shown ? [1] : []; },
-  get offsetHeight() { return this.shown ? 100 : 0; } };
-const details = { querySelectorAll: () => [grid] };
+  get offsetHeight() { return this.shown ? 280 : 0; },
+  checkVisibility() { return this.shown && details.open; },
+  getBoundingClientRect() { return { top: 300, bottom: 580, left: 0, right: 700 }; } };
+globalThis.getComputedStyle = (e) => (e === details
+  ? { overflowX: 'hidden', overflowY: 'hidden' } : { overflowX: 'visible', overflowY: 'visible' });
 const listeners = [];
 const summary = {
   closest: (s) => (scenario === 'no_details' ? null : details),
   addEventListener: (t, fn, opts) => listeners.push({ t, fn, opts }),
 };
-const click = () => listeners.filter(l => l.t === 'click').forEach(l => l.fn());
+const click = () => {  // listener en captura y luego la acción por omisión: abrir
+  listeners.filter(l => l.t === 'click').forEach(l => l.fn());
+  details.open = true; mutate();
+};
+const gridVisible = () => new Function(gridSrc).apply(null, [summary, 'GRID']);
 const arm = new Function(armSrc);
 const wait = new Function(waitSrc);
 const out = (o) => { process.stdout.write(JSON.stringify(o)); process.exit(0); };
 
 if (scenario === 'wait_unarmed') { wait.apply(null, [500, out]); }
+else if (scenario === 'grid_states') {
+  const st = {};
+  grid.shown = true;                       // caja de layout presente
+  st.closed_with_layout_box = gridVisible();
+  details.open = true; details.clipH = 200;  // abierto, pero recortado (grilla en 300)
+  st.open_clipped = gridVisible();
+  details.clipH = 350;                     // empieza a asomar
+  st.open_partly_revealed = gridVisible();
+  details.open = false;
+  st.closed_again = gridVisible();
+  delete grid.checkVisibility; details.open = true;
+  st.fallback_open = gridVisible();
+  details.open = false;
+  st.fallback_closed = gridVisible();
+  out(st);
+}
 else {
   const ARM_TIMEOUT = { never: 300, visible_before_click: 1000, late_query: 50,
     border_equal: 50, border_over: 50, bad_timeout: 0 };
@@ -710,6 +745,13 @@ else {
       fakeNow = scenario === 'border_equal' ? 150 : 150.001;
       grid.shown = true; mutate();
       wait.apply(null, [T, (r) => out({ r, opts })]);
+    } else if (scenario === 'clip_reveal') {
+      // Como en Edge: la grilla ya está renderizada, el <details> se abre a 48 px y
+      // crece sin mutaciones; la grilla asoma cuando la altura supera 300 px.
+      grid.shown = true; details.clipH = 48;
+      click();
+      setTimeout(() => { details.clipH = 400; }, 120);
+      wait.apply(null, [3000, (r) => out({ r, opts })]);
     } else if (scenario === 'visible_before_click') {
       grid.shown = true; mutate();
       setTimeout(() => {
@@ -732,6 +774,7 @@ class EventScriptInNodeTests(unittest.TestCase):
         d = Path(cls._tmp.name)
         (d / "arm.js").write_text(h._EXPAND_ARM_JS, encoding="utf-8")
         (d / "wait.js").write_text(h._EXPAND_WAIT_JS, encoding="utf-8")
+        (d / "grid.js").write_text(h._GRID_IN_DETAILS_JS, encoding="utf-8")
         (d / "harness.js").write_text(_NODE_HARNESS, encoding="utf-8")
         cls.dir = d
 
@@ -742,7 +785,7 @@ class EventScriptInNodeTests(unittest.TestCase):
     def _run(self, scenario):
         res = subprocess.run(
             [_NODE, str(self.dir / "harness.js"), str(self.dir / "arm.js"),
-             str(self.dir / "wait.js"), scenario],
+             str(self.dir / "wait.js"), str(self.dir / "grid.js"), scenario],
             capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(res.returncode, 0, res.stderr)
         return json.loads(res.stdout)
@@ -801,12 +844,108 @@ class EventScriptInNodeTests(unittest.TestCase):
         self.assertFalse(out["armed"]["armed"])
         self.assertIn("plazo inválido", out["armed"]["reason"])
 
+    def test_closed_details_layout_box_is_not_visible(self):
+        # Defecto B-1 (Edge 158): con el expander cerrado la grilla tiene caja de
+        # layout; el criterio anterior (rects + offsetHeight) la daba por visible.
+        st = self._run("grid_states")
+        self.assertFalse(st["closed_with_layout_box"])
+        self.assertFalse(st["closed_again"])
+        self.assertFalse(st["fallback_closed"])
+
+    def test_open_but_clipped_grid_is_not_visible_until_revealed(self):
+        # Defecto B-2 (Edge 158): durante la animación el <details> recorta la grilla.
+        st = self._run("grid_states")
+        self.assertFalse(st["open_clipped"])
+        self.assertTrue(st["open_partly_revealed"])
+        self.assertTrue(st["fallback_open"])
+
+    def test_clip_reveal_is_detected_by_frame_not_at_click(self):
+        r = self._run("clip_reveal")["r"]
+        self.assertFalse(r["timed_out"])
+        self.assertEqual(r["via"], "raf")
+        self.assertGreaterEqual(r["t_visible"] - r["t_click"], 110.0)  # no ~0 ms al abrir
+        self.assertLess(r["t_visible"] - r["t_click"], 400.0)
+
     def test_no_details_is_not_armed(self):
         out = self._run("no_details")
         self.assertFalse(out["armed"]["armed"])
 
     def test_wait_without_arm_reports_error(self):
         self.assertIn("error", self._run("wait_unarmed"))
+
+
+class _ReadyDriver:
+    """Página que tarda en mostrar el expander y en salir de «Running»."""
+
+    def __init__(self, fc, expander_after_s=0.3, running_until_s=0.5):
+        self.fc = fc
+        self.expander_after_s = expander_after_s
+        self.running_until_s = running_until_s
+
+    def find_elements(self, by, selector):
+        if by == "xpath" and self.fc.t >= self.expander_after_s:
+            return [object()]
+        return []
+
+    def execute_script(self, script, *args):
+        return self.fc.t < self.running_until_s
+
+
+class ExpanderReadyTests(unittest.TestCase):
+    """Defecto B-3 (Edge 158): tras recargar, el expander llega después del primer
+    chip VP-; la preparación (fuera del intervalo) debe esperarlo."""
+
+    def test_waits_for_expander_and_streamlit_idle(self):
+        fc = _FakeClock()
+        h.wait_for_expander_ready(_ReadyDriver(fc), timeout=5.0, clock=fc.clock, sleep=fc.sleep)
+        self.assertGreaterEqual(fc.t, 0.5)
+
+    def test_returns_immediately_when_ready(self):
+        fc = _FakeClock()
+        h.wait_for_expander_ready(_ReadyDriver(fc, 0.0, 0.0), timeout=5.0,
+                                  clock=fc.clock, sleep=fc.sleep)
+        self.assertEqual(fc.sleeps, [])
+
+    def test_times_out_if_expander_never_appears(self):
+        fc = _FakeClock()
+        with self.assertRaises(TimeoutError) as cm:
+            h.wait_for_expander_ready(_ReadyDriver(fc, 99.0, 0.0), timeout=1.0,
+                                      clock=fc.clock, sleep=fc.sleep)
+        self.assertIn("encontrado=False", str(cm.exception))
+
+    def test_times_out_if_streamlit_stays_running(self):
+        fc = _FakeClock()
+        with self.assertRaises(TimeoutError) as cm:
+            h.wait_for_expander_ready(_ReadyDriver(fc, 0.0, 99.0), timeout=1.0,
+                                      clock=fc.clock, sleep=fc.sleep)
+        self.assertIn("running=True", str(cm.exception))
+
+    def test_expand_scenario_prepares_before_measuring(self):
+        calls = []
+        orig_ready, orig_measure = h.wait_for_expander_ready, h.measure_expand
+        with mock.patch.object(h, "wait_for_expander_ready",
+                               side_effect=lambda *a, **k: calls.append("ready")), \
+                mock.patch.object(h, "measure_expand",
+                                  side_effect=lambda *a, **k: (calls.append("measure"),
+                                                               (5.0, "d"))[1]):
+            fc = _FakeClock()
+            runner = h.BrowserScenarioRunner("http://x", None, Path("."), "current", "none",
+                                             driver_factory=_PanelDriver, clock=fc.clock,
+                                             sleep=fc.sleep)
+            try:
+                runner(h.PlannedSample("expand", "measure", 1))
+            except Exception:
+                pass
+            runner.close()
+        self.assertEqual(calls[:2], ["ready", "measure"])
+        self.assertIs(h.wait_for_expander_ready, orig_ready)
+        self.assertIs(h.measure_expand, orig_measure)
+
+    def test_grid_js_requires_open_details(self):
+        self.assertIn("!d.open", h._GRID_IN_DETAILS_JS)
+        self.assertIn("checkVisibility", h._GRID_IN_DETAILS_JS)
+        self.assertIn("overflowY", h._GRID_IN_DETAILS_JS)
+        self.assertIn("sapiGridVisible", h._EXPAND_ARM_JS)
 
 
 class _FakeTimeoutException(Exception):
@@ -827,6 +966,8 @@ class _LegacyDriver:
         return [_Summary(self)] if by == "xpath" else []
 
     def execute_script(self, script, *args):
+        if "sapiGridVisible" in script:
+            return False
         if "d.open" in script:
             return self.pre_open
         return False
@@ -1156,9 +1297,9 @@ class _UpdateExpandDriver(_PanelDriver):
         if "arguments[0].click()" in script:
             args[0].click()
             return None
-        if "d.open" in script:
+        if "sapiGridVisible" in script:
             return self.opened
-        if "querySelectorAll(arguments[1])" in script:
+        if "d.open" in script:
             return self.opened
         if "scrollIntoView" in script:
             return None
