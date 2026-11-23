@@ -36,6 +36,8 @@ CA1_PORTS = {
 }
 # `${VAR}` de .env; `$${VAR}` es una variable del contenedor (escapada), no de .env.
 INTERPOLATION = re.compile(r"(?<!\$)\$\{([A-Z0-9_]+)")
+# URL completa dentro de un comando de health check: termina en espacio o comilla.
+PROBE_URL = re.compile(r"https?://[^\s'\"]+")
 
 
 def _strings(node) -> list[str]:
@@ -51,6 +53,11 @@ def _strings(node) -> list[str]:
 def _healthcheck_command(service: str) -> str:
     test = SERVICES[service]["healthcheck"]["test"]
     return " ".join(test) if isinstance(test, list) else test
+
+
+def _probed_urls(command: str) -> list[str]:
+    """URLs completas que consulta un health check, para compararlas exactas."""
+    return PROBE_URL.findall(command)
 
 
 def test_presentation_profile_reaches_backend_without_joining_the_default_route() -> (
@@ -98,9 +105,16 @@ def test_healthchecks_probe_the_real_endpoints() -> None:
     # TCP: el servidor temporal de inicialización de la imagen solo usa socket Unix.
     assert "pg_isready -h 127.0.0.1 -p 5432" in _healthcheck_command("db-v2")
     assert "http://127.0.0.1:8000/health" in _healthcheck_command("ml-api")
+    assert _probed_urls(_healthcheck_command("ml-api")) == [
+        "http://127.0.0.1:8000/health"
+    ]
     # -f: curl falla con cualquier código HTTP >= 400.
     assert SERVICES["backend"]["healthcheck"]["test"][:3] == ["CMD", "curl", "-fsS"]
     assert "http://127.0.0.1:8080/health" in _healthcheck_command("backend")
+    # La URL es el último argumento de curl: comparación exacta, no por subcadena.
+    assert SERVICES["backend"]["healthcheck"]["test"][-1] == (
+        "http://127.0.0.1:8080/health"
+    )
 
 
 def test_http_healthchecks_bypass_any_injected_proxy() -> None:
@@ -113,8 +127,31 @@ def test_sapi90_streamlit_has_a_healthcheck_on_its_own_endpoint() -> None:
     command = _healthcheck_command("web-v2")
     assert command.split()[0] == "CMD"
     assert "http://127.0.0.1:8501/_stcore/health" in command
+    # Exacta: «/_stcore/healthz» contiene la subcadena anterior y no es el endpoint.
+    assert _probed_urls(command) == ["http://127.0.0.1:8501/_stcore/health"]
+    assert ".open('http://127.0.0.1:8501/_stcore/health', timeout=4)" in command
     assert "ProxyHandler({})" in command
     assert not SERVICES["web-v2"]["healthcheck"].get("disable", False)
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/_stcore/healthz", "/_stcore/health/", "/_stcore/health?x=1", "/healthz"],
+)
+def test_probed_urls_tell_a_near_miss_endpoint_apart(path: str) -> None:
+    """Regresión del Auditor (orden 08, M-1): una ruta vecina ya no pasa.
+
+    Usa una plantilla fija con la forma del health check de web-v2, no el
+    compose versionado, para que el caso no dependa del archivo bajo prueba.
+    """
+    command = (
+        "CMD python -c import sys, urllib.request as u; "
+        "r = u.build_opener(u.ProxyHandler({}))"
+        f".open('http://127.0.0.1:8501{path}', timeout=4); "
+        "sys.exit(0 if r.status == 200 else 1)"
+    )
+    assert _probed_urls(command) == [f"http://127.0.0.1:8501{path}"]
+    assert _probed_urls(command) != ["http://127.0.0.1:8501/_stcore/health"]
 
 
 def _db_secret_script() -> str:
