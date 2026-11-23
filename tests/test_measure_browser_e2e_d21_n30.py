@@ -1535,13 +1535,28 @@ class VerdictTests(unittest.TestCase):
         self.assertEqual(e["primary"]["p95"], math.inf)
         self.assertEqual(e["verdict"], "FAIL")
 
-    def test_warmup_is_outside_the_verdict(self):
+    def test_warmup_is_outside_the_calculation_but_a_failed_one_annuls(self):
+        # Fuera del cálculo: no entra en n ni en el p95. Pero si falla, la corrida
+        # queda anulada (M-1): el escenario NO puede salir PASS.
         rows = _rows_for("expand", [None], ["timeout"], role="warmup") + \
             _rows_for("expand", [100.0] * 30)
-        e = self._summ(rows)["scenarios"]["expand"]
+        summ = self._summ(rows)
+        e = summ["scenarios"]["expand"]
         self.assertEqual(e["n_attempted"], 30)
-        self.assertEqual(e["verdict"], "PASS")
+        self.assertEqual(e["primary"]["p95"], 100.0)
         self.assertEqual(e["warmup_statuses"], ["timeout"])
+        self.assertEqual(e["verdict"], "NO_EVALUABLE")
+        self.assertEqual(e["verdict_without_annulment"], "PASS")
+        self.assertTrue(summ["annulled"])
+        self.assertIn("expand=timeout", e["verdict_reasons"][0])
+
+    def test_ok_warmup_keeps_normal_verdict(self):
+        rows = _rows_for("expand", [50.0], role="warmup") + _rows_for("expand", [100.0] * 30)
+        summ = self._summ(rows)
+        self.assertFalse(summ["annulled"])
+        self.assertEqual(summ["warmup_failures"], [])
+        self.assertEqual(summ["scenarios"]["expand"]["verdict"], "PASS")
+        self.assertNotIn("verdict_without_annulment", summ["scenarios"]["expand"])
 
     def test_scenarios_are_not_pooled(self):
         rows = _rows_for("cold", [100.0] * 30) + _rows_for("update", [3000.0] * 30)
@@ -1578,6 +1593,74 @@ class VerdictTests(unittest.TestCase):
         verdict, reasons = h.overall_verdict(bad, h.SCENARIOS, 120, 120, None)
         self.assertEqual(verdict, "FAIL")
         self.assertEqual(reasons, ["expand: FAIL"])
+
+
+class WarmupAnnulmentRunTests(unittest.TestCase):
+    """M-1 (Auditor, 961c879): veredicto del JSON con 120 muestras ok y un
+    calentamiento no ok -> NO_EVALUABLE global y por escenario, exit code 1."""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.out = Path(self._tmp.name) / "run"
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def _run(self, warm_failure):
+        def sample(p):
+            if p.role == "warmup" and p.scenario == "cold" and warm_failure is not None:
+                if isinstance(warm_failure, BaseException):
+                    raise warm_failure
+                return warm_failure
+            return _outcome(100.0)
+
+        args = _args(*_PROTO)
+        with mock.patch.object(h, "get_container_identities", return_value={}), \
+                mock.patch.object(h, "run_negative_test_stale_dom", return_value=True):
+            code = h.run_measurement(args, self.out, sample_fn=sample, log=_ListLog())
+        summary = json.loads((self.out / "summary.json").read_text(encoding="utf-8"))
+        return code, summary
+
+    def _assert_annulled(self, warm_failure, status):
+        code, summary = self._run(warm_failure)
+        self.assertEqual(code, 1)
+        self.assertEqual(summary["verdict"], "NO_EVALUABLE")
+        self.assertTrue(summary["annulled"])
+        self.assertEqual(summary["warmup_failures"],
+                         [{"scenario": "cold", "iteration": 1, "status": status}])
+        self.assertIn("cold=" + status, summary["verdict_reasons"][0])
+        for s in h.SCENARIOS:
+            e = summary["scenarios"][s]
+            self.assertEqual(e["n_ok"], 30)  # las 120 muestras medidas, todas ok
+            self.assertEqual(e["verdict"], "NO_EVALUABLE", s)
+            self.assertEqual(e["verdict_without_annulment"], "PASS", s)
+
+    def test_warmup_timeout_annuls(self):
+        self._assert_annulled(TimeoutError("plazo"), "timeout")
+
+    def test_warmup_error_annuls(self):
+        self._assert_annulled(RuntimeError("botón ausente"), "error")
+
+    def test_warmup_without_final_event_annuls(self):
+        # «Sin evento final»: el arnés lo levanta como TimeoutError (p. ej. el
+        # ranking nunca visible, o actualizar sin nueva marca de obtención).
+        self._assert_annulled(TimeoutError("No se detectó el ranking visible tras 35 s"),
+                              "timeout")
+
+    def test_warmup_content_unverified_annuls(self):
+        self._assert_annulled(_outcome(100.0, verified=False), "content_unverified")
+
+    def test_ok_warmup_gives_normal_pass(self):
+        code, summary = self._run(None)
+        self.assertEqual(code, 0)
+        self.assertEqual(summary["verdict"], "PASS")
+        self.assertFalse(summary["annulled"])
+        self.assertTrue(all(summary["scenarios"][s]["verdict"] == "PASS" for s in h.SCENARIOS))
+
+    def test_overall_verdict_checks_annulment_first(self):
+        summ = {"annulled": True, "annulment_reason": "corrida anulada: x", "scenarios": {}}
+        self.assertEqual(h.overall_verdict(summ, h.SCENARIOS, 1, 1, None),
+                         ("NO_EVALUABLE", ["corrida anulada: x"]))
 
 
 class ProtocolRunTests(unittest.TestCase):

@@ -959,6 +959,24 @@ def summarize_rows(rows, percentile: float, primary_method: str | None,
         out["scenarios"][s] = entry
     out["target_ms"] = target_ms
     out["min_n"] = min_n
+    # M-1 (Auditor, 961c879): un calentamiento distinto de ok ANULA la corrida.
+    # Decisión: el veredicto global y el de CADA escenario pasan a NO_EVALUABLE;
+    # el veredicto que habría salido sin anulación se conserva aparte, solo como
+    # dato («verdict_without_annulment»), nunca como resultado.
+    warm_bad = [{"scenario": r["scenario"], "iteration": r.get("iteration"),
+                 "status": r["status"]}
+                for r in rows if r["role"] == ROLE_WARMUP and r["status"] != STATUS_OK]
+    out["warmup_failures"] = warm_bad
+    out["annulled"] = bool(warm_bad)
+    if warm_bad:
+        reason = "corrida anulada: calentamiento no ok (" + ", ".join(
+            f"{w['scenario']}={w['status']}" for w in warm_bad) + ")"
+        out["annulment_reason"] = reason
+        if target_ms is not None:
+            for entry in out["scenarios"].values():
+                entry["verdict_without_annulment"] = entry.get("verdict")
+                entry["verdict"] = VERDICT_NO_EVAL
+                entry["verdict_reasons"] = [reason] + list(entry.get("verdict_reasons") or [])
     return out
 
 
@@ -988,7 +1006,13 @@ def scenario_verdict(entry: dict, pkey: str, target_ms: float,
 
 def overall_verdict(summary: dict, expected_scenarios, planned: int, recorded: int,
                     interrupted) -> tuple[str, list[str]]:
-    """Veredicto global: PASS solo si cada escenario esperado da PASS por separado."""
+    """Veredicto global: PASS solo si cada escenario esperado da PASS por separado.
+
+    NO_EVALUABLE si la corrida quedó incompleta o si quedó anulada porque algún
+    calentamiento no dio ok (M-1).
+    """
+    if summary.get("annulled"):
+        return VERDICT_NO_EVAL, [summary.get("annulment_reason", "corrida anulada")]
     if interrupted or recorded != planned:
         return VERDICT_NO_EVAL, [f"corrida incompleta: {recorded}/{planned} ({interrupted})"]
     verdicts = {s: summary["scenarios"].get(s, {}).get("verdict") for s in expected_scenarios}
