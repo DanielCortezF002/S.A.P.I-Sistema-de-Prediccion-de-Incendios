@@ -1,0 +1,2002 @@
+{
+  "sello": "commit 71722ef4b16b · 2026-11-22T06:01:11+00:00",
+  "hashes": {
+    "dataset": "14b36ad8db680cf57f6e0c655cb0a1940ed4b4c63e810d59e470055babc530fe",
+    "firms": "a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271",
+    "modelo_d": "ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f",
+    "referencia": "4bbe4db0054c4c08c08c93cfc0253201475b2fab9562ec61ccd0acc8ae04f8cd"
+  },
+  "aviso": "Score = ranking relativo, no probabilidad calibrada.",
+  "folds": {
+    "2023": {
+      "zona": {
+        "agregado": {
+          "VP": 1,
+          "FP": 7299,
+          "FN": 18,
+          "VN": 65663,
+          "precision": 0.000136986301369863,
+          "sensibilidad": 0.05263157894736842,
+          "especificidad": 0.8999616238589951
+        },
+        "por_celda": {
+          "VP-001": {
+            "VP": 1,
+            "FP": 1383,
+            "FN": 0,
+            "VN": 75,
+            "precision": 0.000722543352601156,
+            "sensibilidad": 1.0,
+            "especificidad": 0.051440329218107
+          },
+          "VP-002": {
+            "VP": 0,
+            "FP": 1215,
+            "FN": 0,
+            "VN": 245,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.1678082191780822
+          },
+          "VP-003": {
+            "VP": 0,
+            "FP": 955,
+            "FN": 0,
+            "VN": 505,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.3458904109589041
+          },
+          "VP-004": {
+            "VP": 0,
+            "FP": 861,
+            "FN": 0,
+            "VN": 599,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.41027397260273973
+          },
+          "VP-005": {
+            "VP": 0,
+            "FP": 892,
+            "FN": 0,
+            "VN": 568,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.38904109589041097
+          },
+          "VP-006": {
+            "VP": 0,
+            "FP": 32,
+            "FN": 0,
+            "VN": 1428,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9780821917808219
+          },
+          "VP-007": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1459,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993150684931507
+          },
+          "VP-008": {
+            "VP": 0,
+            "FP": 152,
+            "FN": 0,
+            "VN": 1308,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.8958904109589041
+          },
+          "VP-009": {
+            "VP": 0,
+            "FP": 17,
+            "FN": 0,
+            "VN": 1443,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9883561643835617
+          },
+          "VP-010": {
+            "VP": 0,
+            "FP": 17,
+            "FN": 0,
+            "VN": 1443,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9883561643835617
+          },
+          "VP-011": {
+            "VP": 0,
+            "FP": 361,
+            "FN": 0,
+            "VN": 1099,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7527397260273972
+          },
+          "VP-012": {
+            "VP": 0,
+            "FP": 368,
+            "FN": 0,
+            "VN": 1092,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7479452054794521
+          },
+          "VP-013": {
+            "VP": 0,
+            "FP": 340,
+            "FN": 0,
+            "VN": 1120,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7671232876712328
+          },
+          "VP-014": {
+            "VP": 0,
+            "FP": 5,
+            "FN": 0,
+            "VN": 1455,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9965753424657534
+          },
+          "VP-015": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1459,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993150684931507
+          },
+          "VP-016": {
+            "VP": 0,
+            "FP": 83,
+            "FN": 0,
+            "VN": 1377,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9431506849315069
+          },
+          "VP-017": {
+            "VP": 0,
+            "FP": 18,
+            "FN": 0,
+            "VN": 1442,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9876712328767123
+          },
+          "VP-018": {
+            "VP": 0,
+            "FP": 19,
+            "FN": 0,
+            "VN": 1441,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.986986301369863
+          },
+          "VP-019": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-020": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-021": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 0,
+            "VN": 1457,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9979452054794521
+          },
+          "VP-022": {
+            "VP": 0,
+            "FP": 232,
+            "FN": 0,
+            "VN": 1228,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.8410958904109589
+          },
+          "VP-023": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1459,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993150684931507
+          },
+          "VP-024": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-025": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-026": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-027": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-028": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 1,
+            "VN": 1456,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9986282578875172
+          },
+          "VP-029": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-030": {
+            "VP": 0,
+            "FP": 22,
+            "FN": 2,
+            "VN": 1434,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9848901098901099
+          },
+          "VP-031": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-032": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-033": {
+            "VP": 0,
+            "FP": 241,
+            "FN": 1,
+            "VN": 1217,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8347050754458162
+          },
+          "VP-034": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 0,
+            "VN": 1458,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9986301369863013
+          },
+          "VP-035": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 1,
+            "VN": 1451,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.99519890260631
+          },
+          "VP-036": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-037": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 1,
+            "VN": 1455,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9979423868312757
+          },
+          "VP-038": {
+            "VP": 0,
+            "FP": 13,
+            "FN": 3,
+            "VN": 1441,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9910591471801926
+          },
+          "VP-039": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-040": {
+            "VP": 0,
+            "FP": 15,
+            "FN": 2,
+            "VN": 1441,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9896978021978022
+          },
+          "VP-041": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-042": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-043": {
+            "VP": 0,
+            "FP": 10,
+            "FN": 1,
+            "VN": 1448,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9931412894375857
+          },
+          "VP-044": {
+            "VP": 0,
+            "FP": 8,
+            "FN": 0,
+            "VN": 1452,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9945205479452055
+          },
+          "VP-045": {
+            "VP": 0,
+            "FP": 5,
+            "FN": 1,
+            "VN": 1453,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9965706447187929
+          },
+          "VP-046": {
+            "VP": 0,
+            "FP": 6,
+            "FN": 2,
+            "VN": 1450,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9958791208791209
+          },
+          "VP-047": {
+            "VP": 0,
+            "FP": 6,
+            "FN": 2,
+            "VN": 1450,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9958791208791209
+          },
+          "VP-048": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 1,
+            "VN": 1455,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9979423868312757
+          },
+          "VP-049": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-050": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1460,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          }
+        },
+        "n_T": 1460,
+        "n_T_empate_en_corte": 1265,
+        "n_positivos_en_grupo_empatado_del_corte": 8,
+        "n_T_con_menos_de_50_celdas": 14
+      },
+      "dia_seleccionados": {
+        "VP": 1,
+        "FP": 0,
+        "FN": 1,
+        "VN": 2,
+        "precision": 1.0,
+        "sensibilidad": 0.5,
+        "especificidad": 1.0,
+        "umbral_p90": 0.3905600818301973,
+        "NO_EVALUABLE": []
+      },
+      "dia_todos": {
+        "VP": 4,
+        "FP": 50,
+        "FN": 7,
+        "VN": 304,
+        "precision": 0.07407407407407407,
+        "sensibilidad": 0.36363636363636365,
+        "especificidad": 0.8587570621468926,
+        "umbral_p90": 0.3905600818301973,
+        "NO_EVALUABLE": []
+      }
+    },
+    "2024": {
+      "zona": {
+        "agregado": {
+          "VP": 5,
+          "FP": 7315,
+          "FN": 41,
+          "VN": 65788,
+          "precision": 0.0006830601092896175,
+          "sensibilidad": 0.10869565217391304,
+          "especificidad": 0.8999357071529213
+        },
+        "por_celda": {
+          "VP-001": {
+            "VP": 0,
+            "FP": 162,
+            "FN": 0,
+            "VN": 1302,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.889344262295082
+          },
+          "VP-002": {
+            "VP": 0,
+            "FP": 141,
+            "FN": 2,
+            "VN": 1318,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9033584647018505
+          },
+          "VP-003": {
+            "VP": 0,
+            "FP": 177,
+            "FN": 2,
+            "VN": 1283,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8787671232876713
+          },
+          "VP-004": {
+            "VP": 0,
+            "FP": 140,
+            "FN": 1,
+            "VN": 1322,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9042407660738714
+          },
+          "VP-005": {
+            "VP": 0,
+            "FP": 151,
+            "FN": 0,
+            "VN": 1313,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.8968579234972678
+          },
+          "VP-006": {
+            "VP": 0,
+            "FP": 289,
+            "FN": 1,
+            "VN": 1173,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8023255813953488
+          },
+          "VP-007": {
+            "VP": 0,
+            "FP": 107,
+            "FN": 1,
+            "VN": 1355,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.926812585499316
+          },
+          "VP-008": {
+            "VP": 0,
+            "FP": 772,
+            "FN": 0,
+            "VN": 692,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.4726775956284153
+          },
+          "VP-009": {
+            "VP": 0,
+            "FP": 686,
+            "FN": 0,
+            "VN": 778,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.5314207650273224
+          },
+          "VP-010": {
+            "VP": 0,
+            "FP": 667,
+            "FN": 0,
+            "VN": 797,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.5443989071038251
+          },
+          "VP-011": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1463,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993169398907104
+          },
+          "VP-012": {
+            "VP": 0,
+            "FP": 176,
+            "FN": 2,
+            "VN": 1283,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8793694311172036
+          },
+          "VP-013": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 2,
+            "VN": 1458,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9986301369863013
+          },
+          "VP-014": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 1,
+            "VN": 1455,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9952120383036935
+          },
+          "VP-015": {
+            "VP": 0,
+            "FP": 122,
+            "FN": 1,
+            "VN": 1340,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9165526675786594
+          },
+          "VP-016": {
+            "VP": 1,
+            "FP": 57,
+            "FN": 2,
+            "VN": 1401,
+            "precision": 0.017241379310344827,
+            "sensibilidad": 0.3333333333333333,
+            "especificidad": 0.9609053497942387
+          },
+          "VP-017": {
+            "VP": 1,
+            "FP": 318,
+            "FN": 1,
+            "VN": 1141,
+            "precision": 0.003134796238244514,
+            "sensibilidad": 0.5,
+            "especificidad": 0.7820424948594928
+          },
+          "VP-018": {
+            "VP": 0,
+            "FP": 685,
+            "FN": 0,
+            "VN": 779,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.532103825136612
+          },
+          "VP-019": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1464,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-020": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1464,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-021": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1464,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-022": {
+            "VP": 0,
+            "FP": 4,
+            "FN": 2,
+            "VN": 1456,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9972602739726028
+          },
+          "VP-023": {
+            "VP": 0,
+            "FP": 5,
+            "FN": 2,
+            "VN": 1455,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9965753424657534
+          },
+          "VP-024": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 1,
+            "VN": 1461,
+            "precision": null,
+            "sensibilidad": 0.0,
+            "especificidad": 1.0
+          },
+          "VP-025": {
+            "VP": 0,
+            "FP": 119,
+            "FN": 0,
+            "VN": 1345,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9187158469945356
+          },
+          "VP-026": {
+            "VP": 0,
+            "FP": 133,
+            "FN": 0,
+            "VN": 1331,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9091530054644809
+          },
+          "VP-027": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 1,
+            "VN": 1455,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9952120383036935
+          },
+          "VP-028": {
+            "VP": 0,
+            "FP": 105,
+            "FN": 2,
+            "VN": 1355,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.928082191780822
+          },
+          "VP-029": {
+            "VP": 0,
+            "FP": 160,
+            "FN": 1,
+            "VN": 1302,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8905608755129959
+          },
+          "VP-030": {
+            "VP": 0,
+            "FP": 100,
+            "FN": 0,
+            "VN": 1364,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9316939890710383
+          },
+          "VP-031": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1464,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-032": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 2,
+            "VN": 1459,
+            "precision": null,
+            "sensibilidad": 0.0,
+            "especificidad": 1.0
+          },
+          "VP-033": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 2,
+            "VN": 1458,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9986301369863013
+          },
+          "VP-034": {
+            "VP": 0,
+            "FP": 18,
+            "FN": 0,
+            "VN": 1446,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9877049180327869
+          },
+          "VP-035": {
+            "VP": 0,
+            "FP": 12,
+            "FN": 3,
+            "VN": 1446,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9917695473251029
+          },
+          "VP-036": {
+            "VP": 0,
+            "FP": 98,
+            "FN": 0,
+            "VN": 1366,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9330601092896175
+          },
+          "VP-037": {
+            "VP": 1,
+            "FP": 234,
+            "FN": 1,
+            "VN": 1226,
+            "precision": 0.00425531914893617,
+            "sensibilidad": 0.5,
+            "especificidad": 0.8397260273972603
+          },
+          "VP-038": {
+            "VP": 1,
+            "FP": 159,
+            "FN": 2,
+            "VN": 1299,
+            "precision": 0.00625,
+            "sensibilidad": 0.3333333333333333,
+            "especificidad": 0.8909465020576132
+          },
+          "VP-039": {
+            "VP": 0,
+            "FP": 126,
+            "FN": 1,
+            "VN": 1336,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9138166894664843
+          },
+          "VP-040": {
+            "VP": 1,
+            "FP": 135,
+            "FN": 0,
+            "VN": 1327,
+            "precision": 0.007352941176470588,
+            "sensibilidad": 1.0,
+            "especificidad": 0.9076607387140903
+          },
+          "VP-041": {
+            "VP": 0,
+            "FP": 47,
+            "FN": 0,
+            "VN": 1417,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.967896174863388
+          },
+          "VP-042": {
+            "VP": 0,
+            "FP": 143,
+            "FN": 1,
+            "VN": 1319,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9021887824897401
+          },
+          "VP-043": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 2,
+            "VN": 1459,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9993150684931507
+          },
+          "VP-044": {
+            "VP": 0,
+            "FP": 51,
+            "FN": 0,
+            "VN": 1413,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9651639344262295
+          },
+          "VP-045": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 0,
+            "VN": 1461,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9979508196721312
+          },
+          "VP-046": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 0,
+            "VN": 1462,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9986338797814208
+          },
+          "VP-047": {
+            "VP": 0,
+            "FP": 285,
+            "FN": 1,
+            "VN": 1177,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8050615595075239
+          },
+          "VP-048": {
+            "VP": 0,
+            "FP": 140,
+            "FN": 1,
+            "VN": 1322,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9042407660738714
+          },
+          "VP-049": {
+            "VP": 0,
+            "FP": 6,
+            "FN": 0,
+            "VN": 1458,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9959016393442623
+          },
+          "VP-050": {
+            "VP": 0,
+            "FP": 560,
+            "FN": 0,
+            "VN": 904,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6174863387978142
+          }
+        },
+        "n_T": 1464,
+        "n_T_empate_en_corte": 1303,
+        "n_positivos_en_grupo_empatado_del_corte": 6,
+        "n_T_con_menos_de_50_celdas": 21
+      },
+      "dia_seleccionados": {
+        "VP": 3,
+        "FP": 1,
+        "FN": 0,
+        "VN": 2,
+        "precision": 0.75,
+        "sensibilidad": 1.0,
+        "especificidad": 0.6666666666666666,
+        "umbral_p90": 0.6409825717184167,
+        "NO_EVALUABLE": []
+      },
+      "dia_todos": {
+        "VP": 7,
+        "FP": 40,
+        "FN": 13,
+        "VN": 306,
+        "precision": 0.14893617021276595,
+        "sensibilidad": 0.35,
+        "especificidad": 0.884393063583815,
+        "umbral_p90": 0.6409825717184167,
+        "NO_EVALUABLE": []
+      }
+    },
+    "2025": {
+      "zona": {
+        "agregado": {
+          "VP": 4,
+          "FP": 7211,
+          "FN": 3,
+          "VN": 64925,
+          "precision": 0.0005544005544005544,
+          "sensibilidad": 0.5714285714285714,
+          "especificidad": 0.9000360430298325
+        },
+        "por_celda": {
+          "VP-001": {
+            "VP": 0,
+            "FP": 121,
+            "FN": 0,
+            "VN": 1322,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9161469161469161
+          },
+          "VP-002": {
+            "VP": 0,
+            "FP": 295,
+            "FN": 0,
+            "VN": 1148,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7955647955647955
+          },
+          "VP-003": {
+            "VP": 0,
+            "FP": 122,
+            "FN": 1,
+            "VN": 1319,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9153365718251214
+          },
+          "VP-004": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1442,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993069993069993
+          },
+          "VP-005": {
+            "VP": 0,
+            "FP": 17,
+            "FN": 0,
+            "VN": 1426,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9882189882189882
+          },
+          "VP-006": {
+            "VP": 0,
+            "FP": 4,
+            "FN": 0,
+            "VN": 1439,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9972279972279973
+          },
+          "VP-007": {
+            "VP": 0,
+            "FP": 31,
+            "FN": 0,
+            "VN": 1412,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9785169785169785
+          },
+          "VP-008": {
+            "VP": 0,
+            "FP": 537,
+            "FN": 0,
+            "VN": 906,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6278586278586279
+          },
+          "VP-009": {
+            "VP": 0,
+            "FP": 390,
+            "FN": 0,
+            "VN": 1053,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7297297297297297
+          },
+          "VP-010": {
+            "VP": 0,
+            "FP": 500,
+            "FN": 0,
+            "VN": 943,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6534996534996536
+          },
+          "VP-011": {
+            "VP": 0,
+            "FP": 236,
+            "FN": 0,
+            "VN": 1207,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.8364518364518364
+          },
+          "VP-012": {
+            "VP": 0,
+            "FP": 57,
+            "FN": 0,
+            "VN": 1386,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9604989604989606
+          },
+          "VP-013": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 0,
+            "VN": 1436,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9951489951489951
+          },
+          "VP-014": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1443,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-015": {
+            "VP": 0,
+            "FP": 47,
+            "FN": 0,
+            "VN": 1396,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9674289674289674
+          },
+          "VP-016": {
+            "VP": 0,
+            "FP": 18,
+            "FN": 0,
+            "VN": 1425,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9875259875259875
+          },
+          "VP-017": {
+            "VP": 0,
+            "FP": 57,
+            "FN": 0,
+            "VN": 1386,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9604989604989606
+          },
+          "VP-018": {
+            "VP": 0,
+            "FP": 504,
+            "FN": 0,
+            "VN": 939,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6507276507276507
+          },
+          "VP-019": {
+            "VP": 0,
+            "FP": 113,
+            "FN": 0,
+            "VN": 1330,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9216909216909217
+          },
+          "VP-020": {
+            "VP": 0,
+            "FP": 128,
+            "FN": 0,
+            "VN": 1315,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9112959112959113
+          },
+          "VP-021": {
+            "VP": 0,
+            "FP": 12,
+            "FN": 0,
+            "VN": 1431,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9916839916839917
+          },
+          "VP-022": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1443,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-023": {
+            "VP": 0,
+            "FP": 557,
+            "FN": 0,
+            "VN": 886,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.613998613998614
+          },
+          "VP-024": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1443,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-025": {
+            "VP": 0,
+            "FP": 8,
+            "FN": 0,
+            "VN": 1435,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9944559944559944
+          },
+          "VP-026": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1443,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-027": {
+            "VP": 0,
+            "FP": 520,
+            "FN": 0,
+            "VN": 923,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6396396396396397
+          },
+          "VP-028": {
+            "VP": 1,
+            "FP": 667,
+            "FN": 0,
+            "VN": 774,
+            "precision": 0.0014970059880239522,
+            "sensibilidad": 1.0,
+            "especificidad": 0.5371269951422624
+          },
+          "VP-029": {
+            "VP": 0,
+            "FP": 124,
+            "FN": 0,
+            "VN": 1319,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9140679140679141
+          },
+          "VP-030": {
+            "VP": 0,
+            "FP": 41,
+            "FN": 0,
+            "VN": 1402,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9715869715869716
+          },
+          "VP-031": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 0,
+            "VN": 1440,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.997920997920998
+          },
+          "VP-032": {
+            "VP": 0,
+            "FP": 4,
+            "FN": 0,
+            "VN": 1439,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9972279972279973
+          },
+          "VP-033": {
+            "VP": 0,
+            "FP": 148,
+            "FN": 0,
+            "VN": 1295,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.8974358974358975
+          },
+          "VP-034": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1442,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993069993069993
+          },
+          "VP-035": {
+            "VP": 0,
+            "FP": 118,
+            "FN": 0,
+            "VN": 1325,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9182259182259183
+          },
+          "VP-036": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 1443,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-037": {
+            "VP": 0,
+            "FP": 49,
+            "FN": 0,
+            "VN": 1394,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.966042966042966
+          },
+          "VP-038": {
+            "VP": 2,
+            "FP": 730,
+            "FN": 0,
+            "VN": 709,
+            "precision": 0.00273224043715847,
+            "sensibilidad": 1.0,
+            "especificidad": 0.4927032661570535
+          },
+          "VP-039": {
+            "VP": 0,
+            "FP": 29,
+            "FN": 0,
+            "VN": 1414,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9799029799029799
+          },
+          "VP-040": {
+            "VP": 1,
+            "FP": 183,
+            "FN": 0,
+            "VN": 1258,
+            "precision": 0.005434782608695652,
+            "sensibilidad": 1.0,
+            "especificidad": 0.8730048577376822
+          },
+          "VP-041": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 0,
+            "VN": 1436,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9951489951489951
+          },
+          "VP-042": {
+            "VP": 0,
+            "FP": 135,
+            "FN": 1,
+            "VN": 1306,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9063150589868147
+          },
+          "VP-043": {
+            "VP": 0,
+            "FP": 10,
+            "FN": 0,
+            "VN": 1433,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9930699930699931
+          },
+          "VP-044": {
+            "VP": 0,
+            "FP": 47,
+            "FN": 0,
+            "VN": 1396,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9674289674289674
+          },
+          "VP-045": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 0,
+            "VN": 1440,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.997920997920998
+          },
+          "VP-046": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 1442,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9993069993069993
+          },
+          "VP-047": {
+            "VP": 0,
+            "FP": 107,
+            "FN": 1,
+            "VN": 1334,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9257460097154754
+          },
+          "VP-048": {
+            "VP": 0,
+            "FP": 12,
+            "FN": 0,
+            "VN": 1431,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9916839916839917
+          },
+          "VP-049": {
+            "VP": 0,
+            "FP": 48,
+            "FN": 0,
+            "VN": 1395,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9667359667359667
+          },
+          "VP-050": {
+            "VP": 0,
+            "FP": 462,
+            "FN": 0,
+            "VN": 981,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6798336798336798
+          }
+        },
+        "n_T": 1443,
+        "n_T_empate_en_corte": 1075,
+        "n_positivos_en_grupo_empatado_del_corte": 1,
+        "n_T_con_menos_de_50_celdas": 6
+      },
+      "dia_seleccionados": {
+        "VP": 1,
+        "FP": 1,
+        "FN": 1,
+        "VN": 1,
+        "precision": 0.5,
+        "sensibilidad": 0.5,
+        "especificidad": 0.5,
+        "umbral_p90": 0.7506935938466885,
+        "NO_EVALUABLE": []
+      },
+      "dia_todos": {
+        "VP": 2,
+        "FP": 23,
+        "FN": 4,
+        "VN": 332,
+        "precision": 0.08,
+        "sensibilidad": 0.3333333333333333,
+        "especificidad": 0.9352112676056338,
+        "umbral_p90": 0.7506935938466885,
+        "NO_EVALUABLE": []
+      }
+    },
+    "2026": {
+      "zona": {
+        "agregado": {
+          "VP": 2,
+          "FP": 4818,
+          "FN": 8,
+          "VN": 43362,
+          "precision": 0.0004149377593360996,
+          "sensibilidad": 0.2,
+          "especificidad": 0.9
+        },
+        "por_celda": {
+          "VP-001": {
+            "VP": 0,
+            "FP": 31,
+            "FN": 0,
+            "VN": 933,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9678423236514523
+          },
+          "VP-002": {
+            "VP": 0,
+            "FP": 21,
+            "FN": 0,
+            "VN": 943,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9782157676348547
+          },
+          "VP-003": {
+            "VP": 0,
+            "FP": 9,
+            "FN": 0,
+            "VN": 955,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9906639004149378
+          },
+          "VP-004": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-005": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-006": {
+            "VP": 0,
+            "FP": 106,
+            "FN": 2,
+            "VN": 854,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8895833333333333
+          },
+          "VP-007": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 0,
+            "VN": 962,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9979253112033195
+          },
+          "VP-008": {
+            "VP": 0,
+            "FP": 232,
+            "FN": 0,
+            "VN": 732,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7593360995850622
+          },
+          "VP-009": {
+            "VP": 0,
+            "FP": 40,
+            "FN": 0,
+            "VN": 924,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9585062240663901
+          },
+          "VP-010": {
+            "VP": 0,
+            "FP": 47,
+            "FN": 0,
+            "VN": 917,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9512448132780082
+          },
+          "VP-011": {
+            "VP": 0,
+            "FP": 14,
+            "FN": 0,
+            "VN": 950,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9854771784232366
+          },
+          "VP-012": {
+            "VP": 0,
+            "FP": 20,
+            "FN": 0,
+            "VN": 944,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.979253112033195
+          },
+          "VP-013": {
+            "VP": 0,
+            "FP": 28,
+            "FN": 0,
+            "VN": 936,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.970954356846473
+          },
+          "VP-014": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-015": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 0,
+            "VN": 962,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9979253112033195
+          },
+          "VP-016": {
+            "VP": 0,
+            "FP": 582,
+            "FN": 0,
+            "VN": 382,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.3962655601659751
+          },
+          "VP-017": {
+            "VP": 0,
+            "FP": 369,
+            "FN": 0,
+            "VN": 595,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.6172199170124482
+          },
+          "VP-018": {
+            "VP": 0,
+            "FP": 265,
+            "FN": 0,
+            "VN": 699,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.725103734439834
+          },
+          "VP-019": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-020": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-021": {
+            "VP": 0,
+            "FP": 1,
+            "FN": 0,
+            "VN": 963,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9989626556016598
+          },
+          "VP-022": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-023": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-024": {
+            "VP": 0,
+            "FP": 66,
+            "FN": 1,
+            "VN": 896,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.9313929313929314
+          },
+          "VP-025": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 0,
+            "VN": 957,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9927385892116183
+          },
+          "VP-026": {
+            "VP": 0,
+            "FP": 7,
+            "FN": 0,
+            "VN": 957,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9927385892116183
+          },
+          "VP-027": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-028": {
+            "VP": 1,
+            "FP": 544,
+            "FN": 0,
+            "VN": 418,
+            "precision": 0.001834862385321101,
+            "sensibilidad": 1.0,
+            "especificidad": 0.43451143451143454
+          },
+          "VP-029": {
+            "VP": 0,
+            "FP": 204,
+            "FN": 0,
+            "VN": 760,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7883817427385892
+          },
+          "VP-030": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-031": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-032": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-033": {
+            "VP": 0,
+            "FP": 125,
+            "FN": 1,
+            "VN": 837,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8700623700623701
+          },
+          "VP-034": {
+            "VP": 0,
+            "FP": 14,
+            "FN": 0,
+            "VN": 950,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9854771784232366
+          },
+          "VP-035": {
+            "VP": 0,
+            "FP": 117,
+            "FN": 1,
+            "VN": 845,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8783783783783784
+          },
+          "VP-036": {
+            "VP": 0,
+            "FP": 3,
+            "FN": 0,
+            "VN": 961,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9968879668049793
+          },
+          "VP-037": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-038": {
+            "VP": 1,
+            "FP": 528,
+            "FN": 1,
+            "VN": 432,
+            "precision": 0.001890359168241966,
+            "sensibilidad": 0.5,
+            "especificidad": 0.45
+          },
+          "VP-039": {
+            "VP": 0,
+            "FP": 80,
+            "FN": 0,
+            "VN": 884,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.91701244813278
+          },
+          "VP-040": {
+            "VP": 0,
+            "FP": 217,
+            "FN": 0,
+            "VN": 747,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.774896265560166
+          },
+          "VP-041": {
+            "VP": 0,
+            "FP": 4,
+            "FN": 0,
+            "VN": 960,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.995850622406639
+          },
+          "VP-042": {
+            "VP": 0,
+            "FP": 520,
+            "FN": 0,
+            "VN": 444,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.4605809128630705
+          },
+          "VP-043": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-044": {
+            "VP": 0,
+            "FP": 233,
+            "FN": 1,
+            "VN": 729,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.7577962577962578
+          },
+          "VP-045": {
+            "VP": 0,
+            "FP": 155,
+            "FN": 1,
+            "VN": 807,
+            "precision": 0.0,
+            "sensibilidad": 0.0,
+            "especificidad": 0.8388773388773388
+          },
+          "VP-046": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-047": {
+            "VP": 0,
+            "FP": 196,
+            "FN": 0,
+            "VN": 768,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.7966804979253111
+          },
+          "VP-048": {
+            "VP": 0,
+            "FP": 0,
+            "FN": 0,
+            "VN": 964,
+            "precision": null,
+            "sensibilidad": null,
+            "especificidad": 1.0
+          },
+          "VP-049": {
+            "VP": 0,
+            "FP": 2,
+            "FN": 0,
+            "VN": 962,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9979253112033195
+          },
+          "VP-050": {
+            "VP": 0,
+            "FP": 27,
+            "FN": 0,
+            "VN": 937,
+            "precision": 0.0,
+            "sensibilidad": null,
+            "especificidad": 0.9719917012448133
+          }
+        },
+        "n_T": 964,
+        "n_T_empate_en_corte": 747,
+        "n_positivos_en_grupo_empatado_del_corte": 2,
+        "n_T_con_menos_de_50_celdas": 8
+      },
+      "dia_seleccionados": {
+        "VP": 1,
+        "FP": 1,
+        "FN": 1,
+        "VN": 1,
+        "precision": 0.5,
+        "sensibilidad": 0.5,
+        "especificidad": 0.5,
+        "umbral_p90": 0.7683359049895669,
+        "NO_EVALUABLE": []
+      },
+      "dia_todos": {
+        "VP": 3,
+        "FP": 30,
+        "FN": 5,
+        "VN": 203,
+        "precision": 0.09090909090909091,
+        "sensibilidad": 0.375,
+        "especificidad": 0.871244635193133,
+        "umbral_p90": 0.7683359049895669,
+        "NO_EVALUABLE": []
+      }
+    }
+  },
+  "zona_agregado_2023_2026": {
+    "VP": 12,
+    "FP": 26643,
+    "FN": 70,
+    "VN": 239738,
+    "precision": 0.0004501969611705121,
+    "sensibilidad": 0.14634146341463414,
+    "especificidad": 0.899981605294672
+  },
+  "dia_seleccionados_agregado_2023_2026": {
+    "VP": 6,
+    "FP": 3,
+    "FN": 3,
+    "VN": 6,
+    "precision": 0.6666666666666666,
+    "sensibilidad": 0.6666666666666666,
+    "especificidad": 0.6666666666666666
+  },
+  "curva_entrenamiento_desplegado": {
+    "disponible": false,
+    "nota": "curva no disponible en el artefacto"
+  },
+  "figuras": [
+    "C:\\Users\\danie\\orca\\workspaces\\SAPI\\vaquita\\reports\\figuras_sapi83\\matriz_zona_top5_2023_2026.png",
+    "C:\\Users\\danie\\orca\\workspaces\\SAPI\\vaquita\\reports\\figuras_sapi83\\matriz_dia_con_sin_incendio.png"
+  ]
+}

@@ -1,0 +1,3 @@
+# inicio 2026-11-22T06:00:54Z HEAD=71722ef4b16bc6b4ae6a372d8588fe8b79c94f4d
+# cmd: .venv/Scripts/python -I scripts/evaluacion_modelo_d.py --dataset C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet --confirmo-autorizacion-ejecucion
+# fin 2026-11-22T06:01:28Z exit=0

@@ -10,6 +10,8 @@ xgboost==3.4.1
 pytest==9.1.1
 pytest-cov==7.1.0
 flake8==7.3.0
+# Figuras de HU-83 (scripts/evaluacion_modelo_d.py): version del venv que genero las figuras (preregistro HU-83, D2).
+matplotlib==3.11.2
 black==26.5.1
 locust==2.46.5
 # fastapi/uvicorn: servicio ML de la arquitectura v2 (services/ml_api,

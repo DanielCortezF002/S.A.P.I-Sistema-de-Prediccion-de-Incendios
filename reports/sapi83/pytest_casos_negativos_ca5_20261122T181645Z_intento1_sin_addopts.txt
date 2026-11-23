@@ -1,0 +1,5 @@
+ERROR: usage: python -m pytest [options] [file_or_dir] [file_or_dir] [...]
+python -m pytest: error: unrecognized arguments: --cov=app --cov=src --cov-report=term-missing --cov-fail-under=80
+  inifile: C:\Users\danie\orca\workspaces\SAPI\vaquita\pytest.ini
+  rootdir: C:\Users\danie\orca\workspaces\SAPI\vaquita
+

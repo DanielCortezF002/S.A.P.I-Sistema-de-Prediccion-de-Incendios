@@ -1,0 +1,4 @@
+# 2026-11-22T18:17:25Z HEAD=afb872508e0373caf4f2f634072cb126ced345be — solo fixtures sinteticos — comando: .venv/Scripts/python -m pytest tests/test_sapi83_evaluacion_modelo_d.py -q -o addopts="" -p no:cacheprovider (desviacion D5)
+.........................................................                [100%]
+57 passed in 3.63s
+# rc=0

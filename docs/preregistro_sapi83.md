@@ -1,0 +1,217 @@
+# Preregistro SAPI-83 (HU-83): evaluación del Modelo D con datos reales
+
+| Campo | Valor |
+|---|---|
+| Issue | SAPI-83 «HU-83 (S3-10) — Evaluación del Modelo D con datos reales» (Jira, leído en solo lectura el 22-11-2026) |
+| Autorización | Preparación y preregistro autorizados por el dueño el 22-11-2026. **No autoriza ejecutar la evaluación.** |
+| Rama | `ml/sapi-83-preregistro` (desde `main` @ `9e70867`) |
+| Estado | PREREGISTRO. Nada de este documento es un resultado. No se ha ejecutado `scripts/experiment_abcd.py` ni `scripts/evaluacion_modelo_d.py` con datos reales. |
+
+Este documento fija, **antes de ver cualquier salida del modelo sobre 2023–2026**, qué se evaluará, con qué datos, con qué reglas y qué cuenta como éxito o como parada. Cualquier cambio posterior se registra en la sección 10 («Desviaciones») con fecha y motivo; no se reescribe el texto original.
+
+## 1. Pregunta
+
+¿Cuántas veces el Modelo D, evaluado con el protocolo walk-forward del proyecto, puso en su Top 5 las zonas que de verdad recibieron una nueva detección FIRMS, y cuántas veces marcó como «de alerta» los días en que de verdad hubo detecciones FIRMS en la grilla, para los años 2023 a 2026?
+
+El score del Modelo D es un **ranking relativo**, no una probabilidad calibrada de incendio. Ninguna métrica de este preregistro se presentará como probabilidad de incendio.
+
+## 2. Artefactos y hashes esperados (SHA-256)
+
+El script verifica estos hashes **antes de leer cualquier contenido**. Si uno no coincide, se detiene con error y no evalúa nada.
+
+| Artefacto | Ruta | SHA-256 esperado | Nota |
+|---|---|---|---|
+| Dataset temporal h6 | `C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet` (se pasa por argumento; no se copia al repo) | `14b36ad8db680cf57f6e0c655cb0a1940ed4b4c63e810d59e470055babc530fe` | Verificado por SAPI-ML el 22-11-2026. Este preregistro no abrió, copió ni movió el archivo. Coincide con `dataset_hash` de `models/prototype_model_d_metadata.json`. |
+| FIRMS línea base | `artifacts/hito1/reproducibility/firms/nasa_firms_2021-08-30_2026-08-30.csv` | `a9a85db4431b3e54f936b724e4de5a7fbb0cc19f5721f5e1a344a192bf9bb271` | Versionado con `-text` (bytes exactos). Recalculado el 22-11-2026 en este worktree: coincide. |
+| Modelo D desplegado | `models/prototype_model_d.pkl` | `ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f` | Recalculado el 22-11-2026: coincide. Solo se lee; nunca se reescribe. |
+| Resultados walk-forward de referencia | `reports/experiment_abcd_h6_results.json` | `4bbe4db0054c4c08c08c93cfc0253201475b2fab9562ec61ccd0acc8ae04f8cd` | Hash del **blob en git** (`git show 9e70867:reports/experiment_abcd_h6_results.json`, fin de línea LF). En un checkout Windows con `core.autocrlf=true` el archivo en disco tiene CRLF y su hash crudo es `20da64d2dda535610571d4359c3884acafb4bebe116c4685c2a71c7347f406e4`. El script normaliza `\r\n`→`\n` antes de hashear y compara contra el hash del blob. |
+| Días de prueba | `docs/dias_prueba_seleccionados.csv` | se registra en el commit de sello | Generado después del commit que fija el criterio (sección 6). |
+
+El script de evaluación usa como FIRMS la ruta congelada de reproducibilidad (mismo hash que `FIRMS_BASELINE_CSV` de `src/procesamiento/firms_source.py`); si se le pasa otra ruta, igual exige el hash `a9a85db4…`.
+
+## 3. Protocolo walk-forward (de `scripts/experiment_abcd.py`, sin modificar)
+
+Leído, no ejecutado. El script de HU-83 **importa** sus constantes y funciones (`MODELOS`, `RANDOM_STATE`, `_prep_xy`) en lugar de copiarlas, para que cualquier diferencia de protocolo sea imposible sin tocar ese archivo.
+
+1. Se cargan solo las filas `eligible_for_training == True` del dataset (las filas en cooldown, `excluded=True`, nunca entran).
+2. Bloque temporal = año calendario UTC de `forecast_time`. Bloques presentes en la referencia: 2021–2026.
+3. Fold *i*: entrena con todos los años anteriores al año de prueba y prueba con ese año. La referencia tiene 5 folds (prueba 2022…2026); el fold 2022 quedó sin entrenar (1 positivo en 2021).
+4. Modelo D = features `FEATURES_D` (historial FIRMS, meteo actual, lags 6/12/24/48 h, topografía). Sin `cell_id`. Sin imputación (`_prep_xy`).
+5. Clasificador: `HistGradientBoostingClassifier(random_state=42, max_depth=4, class_weight="balanced")`, demás hiperparámetros por defecto. Guard: si la clase minoritaria del train tiene < 2 ejemplos, el fold no se entrena.
+6. Score = `predict_proba(x_test)[:, 1]`, usado solo como ranking.
+
+**Alcance de HU-83:** se evalúan los folds con año de prueba **2023, 2024, 2025 y 2026** (2026 cubre hasta el último `forecast_time` del dataset, 2026-08-29 18:00 UTC según la metadata del modelo).
+
+**Qué modelo se evalúa:** el D **re-entrenado por fold** con este protocolo (modelo entrenado solo con años anteriores). El artefacto desplegado `models/prototype_model_d.pkl` fue entrenado con 2021-08-30 → 2026-08-29, es decir, **incluye los años de prueba**; usarlo para puntuar 2023–2026 sería evaluación dentro de la muestra. Por eso el desplegado se usa solo para (a) verificar su hash y (b) leer su curva de entrenamiento (sección 8). No se entrena ni se guarda ningún modelo nuevo en `models/`.
+
+## 4. Control de reproducción (CA4) y regla de parada
+
+Antes de cualquier matriz, para cada fold de la referencia en que `modelo_D` tiene PR-AUC (prueba 2023, 2024, 2025, 2026):
+
+- se re-entrena el D del fold con el protocolo de la sección 3;
+- se recalcula la PR-AUC por fila (`average_precision_score`) sobre el test del fold;
+- se compara con `folds[k].resultados.fila.modelo_D.pr_auc` de la referencia.
+
+**Criterio SÍ:** para los 4 folds, `|PR-AUC recalculada − PR-AUC referencia| ≤ 1e-9`, y además `n_test` y `n_positivos_test_filas` coinciden exactamente. El fold 2022 debe volver a quedar sin entrenar (mismo guard); si en la reproducción sí entrena, es NO.
+
+**Regla de parada:** si el control no da SÍ (cualquier fold fuera de tolerancia, conteos distintos, fold faltante o hash de referencia distinto), la ejecución **se detiene con error, no calcula umbrales ni matrices y no escribe figuras**. Solo se escribe el informe del control con el motivo. No se ajusta la tolerancia ni se re-intenta con otras versiones para «hacerlo pasar» sin registrarlo como desviación.
+
+Tolerancia 1e-9: el proceso es determinista (`random_state=42`) y las versiones de librerías son las del manifiesto; una diferencia mayor indica que algo del protocolo, de los datos o del entorno cambió.
+
+## 5. Matriz por zona (regla Top 5 de la pantalla, CA2)
+
+Regla tomada de `app/utils/score_contract.py` (y de `src/inference/prototype_service.py`, que produce el ranking que ese contrato valida):
+
+- `TOP_N = 5`; el Top 5 de la pantalla son las celdas con `rank` 1..5 (`DashboardView.top = cells[:TOP_N]`, ordenadas por `rank`).
+- `rank` es la posición 1..N **siempre única**; se obtiene como en `prototype_service.score_current_grid`: `pd.Series(scores, index=cell_id).sort_values(ascending=False)` y se numera en ese orden. La serie de entrada se ordena por `cell_id` ascendente (orden de la grilla, VP-001…VP-050, el mismo orden en que la inferencia construye las filas).
+- **Empates:** `display_rank = 1 + nº de celdas con score estrictamente mayor` (método «min») y `tie_group_size = nº de celdas con exactamente el mismo score`, idéntico a la validación `tie_metadata_inconsistent` de `score_contract.validate`. El corte Top 5 **no** reparte los empates: entra quien tenga `rank ≤ 5`, aunque comparta score con celdas de `rank > 5`.
+
+Construcción, por fold (año de prueba) y para cada `forecast_time` *T* del año de prueba:
+
+1. Se rankean las filas elegibles de *T* con el score del D del fold.
+2. Predicho positivo = `rank ≤ 5`. Real positivo = `target == 1` (nueva detección FIRMS en la celda en (T, T+6h], definición del dataset).
+3. Se acumulan VP, FP, FN, VN por fold, por celda (zona) y agregados 2023–2026.
+
+Se informa además, por fold:
+- `n_T_empate_en_corte`: nº de *T* en que la celda de `rank 5` comparte score con alguna celda de `rank > 5`;
+- `n_positivos_en_grupo_empatado_del_corte`: positivos reales dentro de esos grupos empatados (para dimensionar cuánto depende la matriz del orden de desempate);
+- `n_T_con_menos_de_50_celdas`: *T* en que algunas celdas no son elegibles (cooldown). En esos *T* se rankean solo las celdas elegibles (igual que `_rank_metrics` de `experiment_abcd.py`); la pantalla rankea siempre las 50. Esta diferencia es una limitación declarada, no se corrige.
+
+## 6. Criterio de selección de días (fijado antes de generar el CSV)
+
+Base: **solo** el registro FIRMS congelado (`a9a85db4…`). Se usan únicamente las columnas `latitude`, `longitude` y `acq_date`. No se usa ninguna salida de ningún modelo, ni el dataset, ni la meteorología. Sin filtro de `confidence` (el pipeline del dataset tampoco filtra: `assign_episodes` usa todas las detecciones).
+
+Definiciones:
+- Día = `acq_date` de FIRMS (fecha UTC).
+- Detección en la grilla = `src.geo.grid.assign_cell(lat, lon)` no nulo (contención estricta en las 50 celdas).
+- `n_celdas(d)` = nº de celdas distintas con ≥ 1 detección en la grilla el día *d*; `n_det(d)` = nº de detecciones en la grilla el día *d*.
+- **Día con incendio** = `n_celdas(d) ≥ 1`.
+- Período elegible: 2023-01-01 a 2026-08-29 (último día con `forecast_time` en el dataset). Años de prueba: 2023, 2024, 2025, 2026.
+- Orden de candidatos: `n_celdas` descendente, luego `n_det` descendente, luego fecha ascendente.
+
+**9 días con incendio:**
+1. Inclusión forzada de **2024-02-02 y 2024-02-03** (megaincendio de febrero de 2024; pedido explícito en el comentario de SAPI-83 del 20-11-2026). Si alguno no es día con incendio según la definición, se detiene y se reporta; no se sustituye.
+2. Cuota de 2 días por año de prueba. La cuota de 2024 la llenan los dos días forzados. Para 2023, 2025 y 2026 se toman los 2 primeros candidatos del año según el orden.
+3. El 9.º día es el mejor candidato restante de los cuatro años según el mismo orden.
+4. Si un año tiene menos de 2 candidatos, se toman los que haya y el faltante pasa al cupo global (paso 3), registrándolo.
+
+**9 días sin incendio (uno emparejado con cada día con incendio):** procesando los días con incendio en orden cronológico, para cada día *d* se elige el día *c* que cumpla:
+- mismo año calendario que *d* y dentro del período elegible;
+- **ninguna detección en la grilla en todo el intervalo [c−3, c+3]** (los 7 días dentro de la cobertura FIRMS 2021-08-30…2026-08-30);
+- no elegido antes;
+- `|c − d|` mínimo (misma época); empate → el más temprano; búsqueda limitada a `|c − d| ≤ 60` días.
+
+Si para algún *d* no existe *c*, se detiene y se reporta; no se inventa ni se relaja el criterio sin registrar una desviación.
+
+Salida: `docs/dias_prueba_seleccionados.csv` con columnas `fecha, clase (con_incendio|sin_incendio), anio, n_celdas, n_det, motivo, dia_emparejado`. El script de evaluación recalcula la selección desde FIRMS y **se detiene si no coincide con el CSV commiteado**.
+
+Limitaciones conocidas del criterio: los días con incendio no son independientes (02 y 03-02-2024 son el mismo evento); 9 + 9 días no permiten inferencia estadística, solo descripción; «día con incendio» es detección satelital en la grilla, no un incendio confirmado en terreno.
+
+## 7. Matriz por día con/sin incendio (CA3)
+
+Para cada fold (año de prueba *Y*, modelo D del fold *M_Y*):
+
+1. **Score del día** `S(d)` = máximo del score de *M_Y* sobre todas las filas elegibles (todas las celdas y los 4 `forecast_time`) cuya fecha UTC de `forecast_time` es *d*.
+2. **Umbral** `τ_Y` = percentil 90 (`numpy.percentile`, `method="linear"`) de `S(d)` sobre **todos los días de los años de entrenamiento** (años < *Y*), puntuados con el mismo *M_Y*. **Ningún día del año de prueba ni posterior entra al umbral**; la función que lo calcula recibe el año de prueba y levanta error si algún día de entrada es de un año ≥ *Y* (caso negativo CA5-a).
+3. Predicho «día de alerta» si `S(d) ≥ τ_Y`. Real = clase del CSV (con/sin incendio).
+4. Matriz 2×2 (VP, FP, FN, VN) **primaria** sobre los 18 días del CSV, por fold y agregada.
+5. Matriz **secundaria** (descriptiva) sobre todos los días de 2023–2026 con al menos una fila elegible, con la misma definición de día con incendio de la sección 6.
+
+Limitación declarada: `τ_Y` se calcula con scores de *M_Y* sobre sus propios datos de entrenamiento (dentro de la muestra), por lo que tiende a ser más alto que un umbral fuera de la muestra. Se acepta porque CA3 exige usar solo años de entrenamiento; no se cambia después de ver resultados.
+
+Un día del CSV sin filas elegibles en el dataset se reporta como `NO_EVALUABLE` y no se reemplaza.
+
+## 8. Curva de entrenamiento del D desplegado (CA1)
+
+Se lee `models/prototype_model_d.pkl` (tras verificar su hash) con `joblib` y se grafican, si existen, `train_score_` y `validation_score_` por iteración (`n_iter_`), que el propio `HistGradientBoostingClassifier` guardó durante su entrenamiento original. No se re-entrena. Si el artefacto no tiene esos atributos (sin early stopping), se reporta «curva no disponible en el artefacto» y no se reconstruye ni se inventa.
+
+## 9. Métricas preespecificadas
+
+| Bloque | Métrica | Unidad |
+|---|---|---|
+| CA4 | PR-AUC por fila del D re-entrenado vs referencia; `n_test`, `n_positivos_test_filas` | por fold 2023–2026 |
+| Zona | VP, FP, FN, VN; precisión = VP/(VP+FP); sensibilidad = VP/(VP+FN); `n_T`, `n_T_empate_en_corte`, `n_positivos_en_grupo_empatado_del_corte`, `n_T_con_menos_de_50_celdas` | por fold, por celda y agregado |
+| Día | `τ_Y`; VP, FP, FN, VN; sensibilidad; especificidad = VN/(VN+FP); precisión | 18 días del CSV (primaria) y todos los días 2023–2026 (secundaria) |
+| Curva | `train_score_`, `validation_score_`, `n_iter_` del desplegado | iteración |
+
+Cocientes con denominador 0 se informan como `null` («no evaluable»), nunca como 0 o 1. No se reportan intervalos de confianza ni pruebas de hipótesis: con 9 + 9 días no hay potencia y no se hará afirmación inferencial. No se agregan métricas después de ver resultados sin registrarlas como desviación.
+
+Salidas previstas (al ejecutar, no ahora): `reports/evaluacion_modelo_d_<fecha>.json`, `reports/evaluacion_modelo_d_control_ca4_<fecha>.json`, figuras en `reports/figuras_sapi83/`, cada una con fecha y SHA del commit.
+
+## 10. Desviaciones registradas
+
+| # | Fecha | Desviación | Impacto esperado |
+|---|---|---|---|
+| D1 | 22-11-2026 | Python **3.14.10** en `.venv` del worktree; el manifiesto y la metadata del modelo declaran **3.14.6** (3.14.6 no instalado en el equipo). numpy 2.5.2, scipy 1.18.1, scikit-learn 1.9.0, joblib 1.5.3 sí coinciden. | Bajo (misma versión menor). Si CA4 no da SÍ, esta es la primera causa a revisar y el resultado no se fuerza. |
+| D2 | 22-11-2026 | Paquetes adicionales instalados (pines de `requirements*.txt`): pandas 3.0.5, pyarrow 25.0.1, python-dotenv 1.2.3, geopandas 1.1.4, shapely 2.1.2, pyproj 3.7.2 (los exige la cadena de imports de `experiment_abcd.py`: `episodes` → `meteo_fire_joiner` → `config`/`raw_parser`), pytest 9.1.1. Lista completa en `docs/pip_freeze_sapi83.txt`. | Ninguno sobre el protocolo. |
+| D3 | 22-11-2026 | El hash de `reports/experiment_abcd_h6_results.json` se fija sobre el blob de git (LF), no sobre el archivo en disco (CRLF por `core.autocrlf`). | Ninguno: el script normaliza fin de línea antes de comparar. |
+| D4 | 22-11-2026 | El fold 2022 queda fuera del alcance de las matrices (no tiene D entrenado en la referencia). | Ninguno; ya era así en la referencia. |
+| D5 | 22-11-2026 | Las pruebas de HU-83 se corren con `-o addopts=""` (sin el umbral global de cobertura 80 % de `pytest.ini`, que aplica a la suite completa). | Ninguno sobre la evaluación. |
+| D6 | 22-11-2026 | Paquetes agregados después del commit del criterio (`c15993c`), solo para que corran las pruebas y las figuras: imbalanced-learn 0.14.2 y SQLAlchemy 2.0.52 (los importa `tests/conftest.py` vía `src.procesamiento.features` → `src.db`), matplotlib 3.11.2 (figuras de CA1; no está fijado en `requirements*.txt`, se usó la versión que resolvió pip). | Ninguno sobre el protocolo ni sobre la selección de días. |
+| D7 | 22-11-2026 | Para generar el CSV se importó y llamó `seleccionar_dias()` de `scripts/evaluacion_modelo_d.py` sobre el FIRMS congelado (columnas `latitude`, `longitude`, `acq_date`). **No** se ejecutó `main()`, no se leyó el dataset ni el modelo, no hubo evaluación. | Ninguno; deja la selección reproducible con el mismo código que la verifica. |
+| D8 | 22-11-2026 | El desempate del ranking replica `sort_values(ascending=False)` de pandas (quicksort, no estable), igual que producción; entre celdas con score idéntico el orden lo fija ese algoritmo, no el `cell_id`. Por eso se reportan los empates en el corte (sección 5). | Declarado; no se cambia la regla de la pantalla. |
+| D9 | 22-11-2026 | **Cooldown en la matriz por día (CA3).** La sección 5 declaró el cooldown solo para la matriz por zona, pero también afecta a `S(d)` (sección 7): las celdas en cooldown (`eligible_for_training=False`, normalmente las que ya están ardiendo) no entran al máximo diario. Conteo del Auditor (informe `ola1-parte5-preregistro-hu83-20261122.md`, SHA-256 `f865f5bc6e2523ca6f21876187f679333a347b45f7d5833666306e5810891d0b`; solo `forecast_time`, `eligible_for_training` y `target`, sin el modelo) en días con incendio del CSV: 2024-02-03 con 185/200 filas elegibles, 2024-02-04 con 183/200 y 2023-12-09/10 con 196/200 cada uno. Es decir, quedan fuera **hasta 17/200 filas** (2024-02-04). | Pequeño y declarado antes de ejecutar; no se cambia el protocolo ni la definición de `S(d)`. Se informará junto a la matriz por día. |
+
+**Hash del CSV de días (pendiente desde la sección 2, registrado en el re-sello):** `docs/dias_prueba_seleccionados.csv` fijado en el commit `3a8f45c` y sin cambios en `7c8498b`. SHA-256 del blob en git (fin de línea LF): `4024917c5c8872e2f138d9e4f867fb29dd5171a770d14fd3fee06182dadeae15`. SHA-256 de la copia de trabajo con CRLF (checkout Windows con `core.autocrlf=true`, la que midió el Auditor): `80119cc7f3e9e4dc17d8ab9d06cb6349955d817fe0edf5dbc2787e638b9a59b6`. Ambos corresponden al mismo contenido; `main()` lee el CSV con pandas, de modo que el fin de línea no altera la comparación con la selección recalculada.
+
+## 11. Registro de preparación (22-11-2026)
+
+- Commit del criterio (antes del CSV): `c15993c`.
+- Script y pruebas: `9f7b023`. CSV de días: `3a8f45c`.
+- Resultado de la selección (solo FIRMS): días con incendio 2023-12-09, 2023-12-10, 2024-02-02, 2024-02-03, 2024-02-04 (cupo global), 2025-01-15, 2025-11-02, 2026-02-01, 2026-02-14; cada uno con su control emparejado sin detección en ±3 días en `docs/dias_prueba_seleccionados.csv`.
+- Entorno: `.venv` local (ignorado por `.gitignore`, patrón `.venv*/`), Python 3.14.10; `pip freeze` en `docs/pip_freeze_sapi83.txt`.
+- Pruebas: `tests/test_sapi83_evaluacion_modelo_d.py`, solo fixtures sintéticos, ejecutadas con `pytest -o addopts=""`.
+- **No ejecutado:** `scripts/experiment_abcd.py`, `main()` de `scripts/evaluacion_modelo_d.py`, ningún entrenamiento, ninguna lectura del dataset `14b36ad8…`.
+- Pendiente para la fase de ejecución (requiere autorización nueva): correr `python scripts/evaluacion_modelo_d.py --dataset C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet --confirmo-autorizacion-ejecucion`; si CA4 = NO, se detiene y se reporta.
+
+## 12. Registro de ejecución R2–R6 (22-11-2026)
+
+Autorización: Orden 01 del 22-11-2026 (Daniel Cortez). GO final del Auditor: `ola1-parte5b-resello-hu83-20261122.md` (SHA-256 `55239c673b0896b53335ae90c055ac20d6aeccfe1cc0fa5a3eb9b72c831e22f6`). Esta sección solo registra; las secciones 1–10 no cambian.
+
+**Precondiciones verificadas antes de ejecutar:** HEAD = `71722ef4b16bc6b4ae6a372d8588fe8b79c94f4d` con árbol limpio; dataset `C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet` (solo lectura, no copiado) con SHA-256 `14b36ad8…530fe`; `docs/dias_prueba_seleccionados.csv` sin cambios desde `3a8f45c`.
+
+**Comando** (2026-11-22T06:00:54Z → 06:01:28Z, exit 0):
+`.venv/Scripts/python -I scripts/evaluacion_modelo_d.py --dataset C:/SAPI-DATOS-VERIFICADOS/20261122/temporal_dataset_h6.parquet --confirmo-autorizacion-ejecucion`
+Log: `reports/sapi83/ejecucion_r2_r6_20261122T060054Z.log`.
+
+**Hashes verificados por el script:** dataset `14b36ad8…`, FIRMS `a9a85db4…`, modelo D `ac017bef…`, referencia `4bbe4db0…` (todos coinciden).
+
+**CA4 (reproducción): SÍ.** PR-AUC del D re-entrenado = referencia, diferencia 0 en los 4 folds: 2023 `0.0008561319756338858`, 2024 `0.010692228032479597`, 2025 `0.0009183479102241013`, 2026 `0.0010260189942317172`; fold 2022 sin entrenar en ambos. Archivo: `reports/evaluacion_modelo_d_control_ca4_20261122.json`.
+
+**Matriz por zona, Top 5 (2023–2026 agregado):** VP 12, FP 26 643, FN 70, VN 239 738; sensibilidad 0,146 (12/82); precisión 0,00045. Por año (VP/FN): 2023 1/18, 2024 5/41, 2025 4/3, 2026 2/8. Empate en el corte en 1265/1460, 1303/1464, 1075/1443 y 747/964 forecast_times (2023…2026); positivos dentro del grupo empatado del corte: 8, 6, 1, 2. Referencia descriptiva, no prueba: un Top 5 al azar de 50 celdas acierta en promedio el 10 % de los positivos.
+
+**Matriz por día, 18 días del CSV (primaria):** VP 6, FN 3, FP 3, VN 6 (sensibilidad 6/9, especificidad 6/9). Umbrales p90 (solo años de entrenamiento): 2023 0,3906; 2024 0,6410; 2025 0,7507; 2026 0,7683. Ningún día NO_EVALUABLE. Secundaria (todos los días con filas elegibles): 2023 VP4 FP50 FN7 VN304; 2024 VP7 FP40 FN13 VN306; 2025 VP2 FP23 FN4 VN332; 2026 VP3 FP30 FN5 VN203. Con 9 + 9 días no hay inferencia (sección 9).
+
+**Resultados completos:** `reports/evaluacion_modelo_d_20261122.json`. Figuras: `reports/figuras_sapi83/matriz_zona_top5_2023_2026.png`, `reports/figuras_sapi83/matriz_dia_con_sin_incendio.png`.
+
+**Casos negativos CA5 (HU-83.T4):** `reports/sapi83/pytest_casos_negativos_ca5_20261122T060209Z.txt`: 37 passed, solo fixtures sintéticos. Incluye CA5-a (umbral con año de prueba y con año posterior → `FugaDeUmbral`), CA5-b (PR-AUC o referencia alterada y 7 mutaciones → `EvaluacionDetenida`) y la integración de `main()` con CA4 = NO. El script no tiene un modo de verificación negativa con datos reales.
+
+**Defectos encontrados en la ejecución:**
+- **E1 (CA1 incumplido, bloquea la curva).** `models/prototype_model_d.pkl` es un dict `{"model", "metadata"}`; producción lo desenvuelve (`payload["model"]`, `prototype_service.py:219`), pero `main()` pasa el dict entero a `curva_entrenamiento()`, que por eso respondió «curva no disponible en el artefacto». La curva **sí existe**: lectura de solo lectura posterior, sin re-entrenar, muestra `HistGradientBoostingClassifier` con `early_stopping="auto"` activo, `n_iter_ = 22`, y 23 valores en `train_score_` y en `validation_score_`. No se corrigió ni se generó la figura fuera del código sellado: la corrección (`payload["model"]`) es un commit posterior al sello y requiere nueva revisión antes de re-ejecutar solo la parte de la curva.
+- **E2 (cosmético).** En las matrices, la cifra de la celda oscura (VN) se dibuja en negro sobre azul oscuro y se lee mal.
+- **E3 (menor).** `figuras` en el JSON guarda rutas absolutas locales de Windows.
+- **Observación.** Los empates en el corte Top 5 ocurren en el 77–89 % de los forecast_times, así que la matriz por zona depende mucho del orden de desempate (D8). Hay que decirlo junto a la cifra.
+
+**Declaración de E1–E3 como defectos de implementación (22-11-2026, corrección autorizada por el Director dentro del alcance R2–R6).** Son errores del código de `scripts/evaluacion_modelo_d.py`, no cambios de protocolo: no alteran el walk-forward, CA4, el umbral p90 ni las matrices, y los resultados ya generados (`reports/evaluacion_modelo_d_20261122.json`, `reports/evaluacion_modelo_d_control_ca4_20261122.json`, figuras y log) **no se reescriben**.
+- **E1 (implementación).** Corrección: `extraer_estimador()` desenvuelve `payload["model"]` como `prototype_service.py:219`, y `curva_entrenamiento()` ahora levanta `TypeError` si recibe el dict entero, en lugar de responder «no disponible». `models/` no se toca. Prueba sintética: `test_e1_curva_rechaza_el_dict_entero_del_artefacto`.
+- **E2 (implementación, cosmético).** Corrección: la cifra se dibuja en blanco sobre las celdas oscuras (`_color_texto`). Se agrega `regenerar_figuras_desde_json()` (CLI `--regenerar-figuras-desde-json <json> --confirmo-autorizacion-ejecucion`), que redibuja desde el JSON existente sin leer el dataset ni recalcular matrices y conserva el sello original anotando el commit de la regeneración.
+- **E3 (implementación, menor).** Corrección: las futuras salidas guardan en `figuras` rutas relativas al directorio del JSON (`--salida`), con `/`.
+- **Pendiente, requiere GO del Auditor:** re-ejecutar solo la curva CA1 con el código corregido y regenerar las figuras de matriz desde `reports/evaluacion_modelo_d_20261122.json`. Hasta entonces CA1 (curva) sigue incumplido.
+
+**Modo `--solo-curva-ca1` y condiciones del Auditor sobre R2–R6 (22-11-2026; flag aprobado por el Director; informe `orden01-hu83-ejecucion-r2r6-20261122.md`, SHA-256 `c722649ff6537d0f9ed83dbabb979248b234c33ff9e0e61116f5fb382c86a884`; dictamen GO CA2–CA5, NO GO CA1).**
+- **`--solo-curva-ca1`** (exige `--confirmo-autorizacion-ejecucion`). Funciona así:
+  - verifica el SHA-256 del pkl (`ac017bef…`) antes de cargarlo;
+  - no lee el dataset ni FIRMS, y no recalcula CA4 ni matrices;
+  - desenvuelve el estimador (E1) y escribe solo `curva_entrenamiento_modelo_d.png` y `curva_ca1.json`, con rutas relativas, en un `--salida` **nuevo**;
+  - falla si ese destino ya existe, y falla sin escribir nada si el artefacto no tiene curva.
+- **M-1.** Los tres modos (evaluación, `--solo-curva-ca1`, `--regenerar-figuras-desde-json`) registran en stdout (log) una línea `[estado_codigo]` con HEAD, `git status --porcelain` y el SHA-256 del script ejecutado, y la guardan en sus JSON. **Se detienen si el árbol git no está limpio.**
+- **A-1 (corrección de CA1).** La frase «curva no disponible en el artefacto» del JSON de `2175742` es errónea. No se reescribe: la corrige el anexo `reports/sapi83/anexo_correccion_ca1.md`, y la reemplazará el `curva_ca1.json` que genere `--solo-curva-ca1` tras el GO.
+- **M-2.** La matriz por zona se presenta siempre con el dato de empates en el corte. `nota_empates_zona()` se incluye en el JSON (`nota_empates_zona`) y se dibuja en la figura de zona, también al regenerarla desde JSON; sin datos de empates por fold, la figura no se genera.
+- **Corrección de una cifra de esta sección:** donde arriba dice «77–89 %» de forecast_times con empate en el corte, el valor correcto es **74.5–89.0 %** (2023 86.6 %, 2024 89.0 %, 2025 74.5 %, 2026 77.5 %; total 4390/5331 = 82.3 %), calculado desde `reports/evaluacion_modelo_d_20261122.json`.
+
+**Ejecución de curva CA1 y regeneración de figuras (Orden 02, 22-11-2026; GO del Auditor, informe `orden01-hu83-ca1-afb8725-20261122.md`).** HEAD ejecutado `afb872508e0373caf4f2f634072cb126ced345be`, árbol limpio antes y después de cada comando. SHA-256 del script `scripts/evaluacion_modelo_d.py`: `8f75266e69298f40225f0d8eb9b2a0eef325c39327b55458795f6bac692d1025` (copia de trabajo CRLF) / `c89fca89f81d5b5aad51520886f3c79929fcb50de21c3646ecf198f9782c7df1` (LF, blob git). Pkl verificado `ac017bef…2173f`. Salidas escritas fuera del worktree y copiadas después.
+- 2026-11-22T18:16:45Z — `.venv/Scripts/python -I scripts/evaluacion_modelo_d.py --solo-curva-ca1 --salida <OUT>/curva_ca1 --confirmo-autorizacion-ejecucion` → código 0. `curva_ca1.json`: `n_iter = 22`, 23 valores de `train_score` y `validation_score` (log-loss negativo interno; no es accuracy). Validación interna: mejor valor −0,5078 en la iteración 12, −0,5591 en la 22. Copia: `reports/sapi83/curva_ca1_20261122T181645Z/` (`curva_ca1.json` `b8a05ef2…80eb`, `curva_entrenamiento_modelo_d.png` `792f3b61…d812`). Log: `reports/sapi83/ejecucion_curva_ca1_20261122T181645Z.log`. Con esto CA1 (curva) queda cumplido y sustituye la frase errónea corregida por A-1.
+- 2026-11-22T18:17:00Z — `.venv/Scripts/python -I scripts/evaluacion_modelo_d.py --regenerar-figuras-desde-json reports/evaluacion_modelo_d_20261122.json --salida <OUT>/figuras_regeneradas --confirmo-autorizacion-ejecucion` → código 0. Figuras con texto blanco en celdas oscuras (E2) y nota de empates M-2 (4390/5331 = 82,3 %; 17 positivos en el grupo empatado). Copia: `reports/sapi83/figuras_regeneradas_20261122T181645Z/figuras_sapi83/`. Log: `reports/sapi83/regenerar_figuras_20261122T181645Z.log`. `reports/figuras_sapi83/` no se modificó (SHA-256 igual antes y después).
+- CA4 no se re-ejecutó: resultado existente SÍ en `2175742` (`reports/evaluacion_modelo_d_control_ca4_20261122.json`, PR-AUC referencia = recalculada en 2023–2026).
+- Casos negativos HU-83.T4: `pytest tests/test_sapi83_evaluacion_modelo_d.py -q` falló en el primer intento por `addopts` de cobertura sin `pytest-cov` instalado (código 4; guardado como `..._intento1_sin_addopts.txt`); repetido con `-o addopts="" -p no:cacheprovider` según D5: 57 passed. `reports/sapi83/pytest_casos_negativos_ca5_20261122T181645Z.txt`.
+- Nota: el sello de las figuras regeneradas cita el SHA-256 del JSON con finales LF (`e1402d05…`, blob git); en disco, con `core.autocrlf=true`, el archivo mide `721f134e…`.
