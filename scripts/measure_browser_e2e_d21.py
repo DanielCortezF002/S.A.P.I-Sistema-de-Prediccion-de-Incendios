@@ -949,17 +949,27 @@ def _any_grid_visible(driver) -> bool:
 # del mismo reloj del navegador: no entra la latencia de ida y vuelta de
 # WebDriver ni ningún sleep de Python.
 _EXPAND_ARM_JS = r"""
-var summary = arguments[0], sel = arguments[1];
+var summary = arguments[0], sel = arguments[1], timeoutMs = arguments[2];
 var d = summary && summary.closest ? summary.closest('details') : null;
 if (!d) { return {armed: false, reason: 'sin <details> alrededor del <summary>'}; }
-var st = {t_click: null, t_visible: null, via: null, done: false, cb: null, mo: null};
+if (typeof timeoutMs !== 'number' || !(timeoutMs > 0)) {
+  return {armed: false, reason: 'plazo inválido: ' + timeoutMs};
+}
+var st = {t_click: null, t_visible: null, via: null, done: false, cb: null, mo: null,
+          timeout_ms: timeoutMs};
 function visible() {
   return Array.from(d.querySelectorAll(sel)).some(function (g) {
     return g.getClientRects().length > 0 && g.offsetHeight > 0;
   });
 }
 function snapshot(timedOut) {
-  return {t_click: st.t_click, t_visible: st.t_visible, via: st.via, timed_out: !!timedOut};
+  // El plazo se fijó al armar: una grilla vista después del plazo es timeout,
+  // aunque la consulta (execute_async_script) llegue tarde (Orden 09, delta 07f814a).
+  var late = st.t_click !== null && st.t_visible !== null &&
+             (st.t_visible - st.t_click) > st.timeout_ms;
+  return {t_click: st.t_click, t_visible: st.t_visible, via: st.via,
+          timed_out: !!timedOut || late || st.t_visible === null,
+          late: late, timeout_ms: st.timeout_ms};
 }
 function finish(via) {
   if (st.done) { return; }
@@ -995,14 +1005,14 @@ _EXPAND_WAIT_JS = r"""
 var timeoutMs = arguments[0], done = arguments[arguments.length - 1];
 var st = window.__sapiExpand;
 if (!st) { done({error: 'medición no armada'}); return; }
-if (st.done) { done(st.snapshot(st.t_visible === null)); return; }
+if (st.done) { done(st.snapshot(false)); return; }
 var elapsed = st.t_click === null ? 0 : performance.now() - st.t_click;
 var tid = setTimeout(function () {
   st.cb = null;
   st.done = true;
   if (st.mo) { st.mo.disconnect(); }
   done(st.snapshot(true));
-}, Math.max(0, timeoutMs - elapsed));
+}, Math.max(0, st.timeout_ms - elapsed));
 st.cb = function (res) { clearTimeout(tid); done(res); };
 """
 
@@ -1015,14 +1025,15 @@ def _read_pre_state(driver, summary) -> tuple[object, object, str]:
 
 def _measure_expand_current(driver, summary, pre_state: str, timeout: float,
                             clock=time.perf_counter) -> tuple[float, str]:
-    armed = driver.execute_script(_EXPAND_ARM_JS, summary, _GRID_SELECTOR)
+    timeout_ms = float(timeout) * 1000.0
+    armed = driver.execute_script(_EXPAND_ARM_JS, summary, _GRID_SELECTOR, timeout_ms)
     if not isinstance(armed, dict) or not armed.get("armed"):
         reason = armed.get("reason") if isinstance(armed, dict) else repr(armed)
         raise RuntimeError(f"No se pudo armar la medición por evento: {reason}")
     driver.set_script_timeout(timeout + 5.0)
     t_py0 = clock()
     summary.click()
-    res = driver.execute_async_script(_EXPAND_WAIT_JS, int(round(timeout * 1000)))
+    res = driver.execute_async_script(_EXPAND_WAIT_JS, timeout_ms)
     wall_ms = (clock() - t_py0) * 1000.0
     if not isinstance(res, dict) or res.get("error"):
         detail = res.get("error") if isinstance(res, dict) else repr(res)
@@ -1031,12 +1042,19 @@ def _measure_expand_current(driver, summary, pre_state: str, timeout: float,
     if t_click is None:
         raise RuntimeError("El navegador no registró el clic en el expander "
                            f"(expand_method=current; {pre_state})")
-    if res.get("timed_out") or t_visible is None:
+    if t_visible is None:
         raise TimeoutError(f"Grilla no visible dentro del expander tras {timeout} s "
                            f"(expand_method=current; {pre_state})")
     latency = float(t_visible) - float(t_click)
     if latency < 0:
         raise RuntimeError(f"Marcas incoherentes: t_visible < t_click ({res!r})")
+    # Defensa propia, independiente del JS: una duración mayor que el plazo es
+    # timeout aunque el evento haya llegado. Igual al plazo todavía es válida.
+    if latency > timeout_ms or res.get("timed_out"):
+        raise TimeoutError(
+            f"Grilla vista tras {latency:.3f} ms, fuera del plazo de {timeout_ms:.0f} ms "
+            f"(expand_method=current; via={res.get('via')}; timed_out_js="
+            f"{res.get('timed_out')!r}; {pre_state})")
     detail = (f"expand_method=current; via={res.get('via')}; "
               f"t_click={float(t_click):.3f}; t_visible={float(t_visible):.3f} "
               f"(performance.now); wall_python_ms={wall_ms:.1f}; {pre_state}")

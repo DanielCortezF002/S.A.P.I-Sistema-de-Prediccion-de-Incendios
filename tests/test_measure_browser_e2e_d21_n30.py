@@ -540,7 +540,8 @@ class CurrentExpandEventTests(unittest.TestCase):
         self._measure(drv, fc, timeout=5.0)
         self.assertEqual(drv.calls, ["arm", "click", "wait"])
         self.assertEqual(drv.arm_args[1], h._GRID_SELECTOR)
-        self.assertEqual(drv.wait_args, (5000,))
+        self.assertEqual(drv.arm_args[2], 5000.0)  # el plazo se fija al armar
+        self.assertEqual(drv.wait_args, (5000.0,))
         self.assertGreater(drv.script_timeout, 5.0)
 
     def test_timeout_result_is_timeout_error(self):
@@ -550,6 +551,52 @@ class CurrentExpandEventTests(unittest.TestCase):
         with self.assertRaises(TimeoutError):
             self._measure(drv, fc)
         self.assertEqual(fc.sleeps, [])
+
+    def test_late_event_with_js_flag_false_is_still_timeout(self):
+        # Defensa en Python, independiente del JS: 5000,001 ms con plazo de 5 s.
+        fc = _FakeClock()
+        drv = _EventExpandDriver(fc, result={"t_click": 1000.0, "t_visible": 6000.001,
+                                             "via": "mutation", "timed_out": False})
+        with self.assertRaises(TimeoutError) as cm:
+            self._measure(drv, fc, timeout=5.0)
+        self.assertIn("fuera del plazo", str(cm.exception))
+
+    def test_duration_equal_to_timeout_is_success(self):
+        fc = _FakeClock()
+        drv = _EventExpandDriver(fc, result={"t_click": 1000.0, "t_visible": 6000.0,
+                                             "via": "raf", "timed_out": False})
+        ms, _ = self._measure(drv, fc, timeout=5.0)
+        self.assertEqual(ms, 5000.0)
+
+    def test_js_timed_out_flag_wins_even_with_both_marks(self):
+        fc = _FakeClock()
+        drv = _EventExpandDriver(fc, result={"t_click": 1000.0, "t_visible": 1100.0,
+                                             "via": "mutation", "timed_out": True})
+        with self.assertRaises(TimeoutError):
+            self._measure(drv, fc, timeout=5.0)
+
+    def test_late_sample_is_a_timeout_row_and_infinite_in_percentile(self):
+        fc = _FakeClock()
+        late = {"t_click": 0.0, "t_visible": 5000.5, "via": "mutation", "timed_out": False}
+        ok = {"t_click": 0.0, "t_visible": 100.0, "via": "mutation", "timed_out": False}
+        results = iter([ok, late])
+
+        def sample(planned):
+            drv = _EventExpandDriver(fc, result=next(results))
+            ms, detail = self._measure(drv, fc, timeout=5.0)
+            return h.SampleOutcome(latency_ms=ms, content_verified=True, method_detail=detail)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            writer = h.IncrementalSampleWriter(Path(tmp) / "samples.csv")
+            rows = h.execute_schedule(h.build_schedule(["expand"], 2, 0, "blocks"), sample,
+                                      writer, log=_ListLog())
+            writer.close()
+        self.assertEqual([r["status"] for r in rows], ["ok", "timeout"])
+        self.assertEqual(rows[1]["ui_visible_latency_ms"], "")
+        self.assertIn("5000.500 ms", rows[1]["error_message"])
+        summ = h.summarize_rows(rows, 95, "nearest_rank", "as_infinite")["scenarios"]["expand"]
+        self.assertEqual(summ["as_infinite"]["nearest_rank"]["p95"], math.inf)
+        self.assertEqual(summ["n_timeout"], 1)
 
     def test_click_not_registered_is_an_error(self):
         fc = _FakeClock()
@@ -607,6 +654,10 @@ const fs = require('fs');
 const [armSrc, waitSrc, scenario] = [fs.readFileSync(process.argv[2], 'utf8'),
   fs.readFileSync(process.argv[3], 'utf8'), process.argv[4]];
 globalThis.window = globalThis;
+let fakeNow = null;  // reloj controlado para los casos de borde
+const realNow = performance.now.bind(performance);
+Object.defineProperty(globalThis, 'performance', { configurable: true,
+  value: { now: () => (fakeNow === null ? realNow() : fakeNow) } });
 globalThis.requestAnimationFrame = (cb) => setTimeout(() => cb(performance.now()), 16);
 const observers = [];
 globalThis.MutationObserver = class {
@@ -631,7 +682,10 @@ const out = (o) => { process.stdout.write(JSON.stringify(o)); process.exit(0); }
 
 if (scenario === 'wait_unarmed') { wait.apply(null, [500, out]); }
 else {
-  const armed = arm.apply(null, [summary, 'GRID']);
+  const ARM_TIMEOUT = { never: 300, visible_before_click: 1000, late_query: 50,
+    border_equal: 50, border_over: 50, bad_timeout: 0 };
+  const T = scenario in ARM_TIMEOUT ? ARM_TIMEOUT[scenario] : 3000;
+  const armed = arm.apply(null, [summary, 'GRID', T]);
   if (!armed.armed) { out({ armed }); }
   else {
     const opts = listeners[0] && listeners[0].opts;
@@ -646,6 +700,16 @@ else {
     } else if (scenario === 'never') {
       click();
       wait.apply(null, [300, (r) => out({ r, opts })]);
+    } else if (scenario === 'late_query') {
+      // Reproducción del Auditor: plazo 50 ms, mutación a los 75 ms, consulta a los 125 ms.
+      click();
+      setTimeout(() => { grid.shown = true; mutate(); }, 75);
+      setTimeout(() => wait.apply(null, [T, (r) => out({ r, opts })]), 125);
+    } else if (scenario === 'border_equal' || scenario === 'border_over') {
+      fakeNow = 100; click();
+      fakeNow = scenario === 'border_equal' ? 150 : 150.001;
+      grid.shown = true; mutate();
+      wait.apply(null, [T, (r) => out({ r, opts })]);
     } else if (scenario === 'visible_before_click') {
       grid.shown = true; mutate();
       setTimeout(() => {
@@ -679,7 +743,7 @@ class EventScriptInNodeTests(unittest.TestCase):
         res = subprocess.run(
             [_NODE, str(self.dir / "harness.js"), str(self.dir / "arm.js"),
              str(self.dir / "wait.js"), scenario],
-            capture_output=True, text=True, timeout=30)
+            capture_output=True, text=True, encoding="utf-8", timeout=30)
         self.assertEqual(res.returncode, 0, res.stderr)
         return json.loads(res.stdout)
 
@@ -711,6 +775,31 @@ class EventScriptInNodeTests(unittest.TestCase):
         # anteriores al clic real (el arnés Python rechaza además ese estado previo).
         self.assertGreaterEqual(r["t_click"], out["clickAt"])
         self.assertGreaterEqual(r["t_visible"], out["clickAt"])
+
+    def test_late_query_after_deadline_is_timeout_not_success(self):
+        # Negativo (Auditor, delta 07f814a): el evento llega a los ~75 ms con plazo de
+        # 50 ms y la consulta a los 125 ms; antes salía timed_out=false.
+        r = self._run("late_query")["r"]
+        self.assertGreater(r["t_visible"] - r["t_click"], 50.0)
+        self.assertTrue(r["timed_out"])  # en 07f814a: False
+        self.assertTrue(r["late"])
+        self.assertEqual(r["timeout_ms"], 50)
+
+    def test_duration_equal_to_deadline_is_accepted(self):
+        r = self._run("border_equal")["r"]
+        self.assertEqual(r["t_visible"] - r["t_click"], 50.0)
+        self.assertFalse(r["late"])
+        self.assertFalse(r["timed_out"])
+
+    def test_duration_just_over_deadline_is_timeout(self):
+        r = self._run("border_over")["r"]
+        self.assertGreater(r["t_visible"] - r["t_click"], 50.0)
+        self.assertTrue(r["timed_out"])
+
+    def test_invalid_deadline_is_not_armed(self):
+        out = self._run("bad_timeout")
+        self.assertFalse(out["armed"]["armed"])
+        self.assertIn("plazo inválido", out["armed"]["reason"])
 
     def test_no_details_is_not_armed(self):
         out = self._run("no_details")
