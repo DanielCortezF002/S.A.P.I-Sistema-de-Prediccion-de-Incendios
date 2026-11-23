@@ -184,6 +184,15 @@ services:
       SAPI_UI_LEGACY_MODES: "0"
     ports:
       - "127.0.0.1:${SAPI_WEB_PORT:-8501}:8501"
+    healthcheck:
+      # SAPI-90.CA1: Streamlit también queda `healthy`, así `up --wait`
+      # espera al panel. /_stcore/health devuelve 200 "ok" cuando el servidor
+      # atiende; no llama al backend. Sin proxy, como ml-api.
+      test: ["CMD", "python", "-c", "import sys, urllib.request as u; r = u.build_opener(u.ProxyHandler({})).open('http://127.0.0.1:8501/_stcore/health', timeout=4); sys.exit(0 if r.status == 200 else 1)"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 30s
     depends_on:
       backend:
         condition: service_started

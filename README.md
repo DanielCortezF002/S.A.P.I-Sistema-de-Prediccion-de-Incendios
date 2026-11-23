@@ -47,11 +47,11 @@ implementado de lo planificado:
 | Componente | Estado | Evidencia |
 |---|---|---|
 | Servicio ML FastAPI (`GET /health`, `POST /predict`) | Implementado (SAPI-55) | `services/ml_api/`, `tests/test_ml_api.py` |
-| Backend Spring Boot | `GET /health` (SAPI-54) y `GET /api/v1/ranking`, que consulta al servicio ML (SAPI-57, en revisión); registro de ejecuciones pendiente (SAPI-59) | `services/backend/` |
+| Backend Spring Boot | `GET /health` (SAPI-54) y `GET /api/v1/ranking`, que consulta al servicio ML (SAPI-57) y persiste cada ejecución sin duplicarla (SAPI-59) | `services/backend/` |
 | Contratos OpenAPI v0 | Definidos (SAPI-56) | `contracts/openapi/` |
-| Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V003 definidas (SAPI-58); persistencia de resultados pendiente (SAPI-59) | `db/migration/`, `db/README.md` |
+| Esquema PostgreSQL/PostGIS v2 | Migraciones V001–V004 aplicadas por Flyway (SAPI-58, F1); persistencia de resultados implementada (SAPI-59) | `db/migration/`, `db/README.md` |
 | Streamlit | Implementado. El modo Prototipo consume `GET /api/v1/ranking` del backend (SAPI-61). El scoring en proceso queda solo en el modo legacy (`SAPI_UI_LEGACY_MODES=1`) | `app/` |
-| Docker Compose de la arquitectura v2 | Pendiente al checkpoint (SAPI-60); ver la nota bajo la tabla | `docker-compose.yml` |
+| Docker Compose de la arquitectura v2 | Implementado (SAPI-60); arranca sin `.env` (SAPI-66). Procedimiento de demostración y verificación: `docs/despliegue-hito3.md` (SAPI-90) | `docker-compose.yml` |
 | Ruta legacy (RF/XGBoost, `src/modelo/`, `src/pipeline/`) | Conservada solo como histórico; no es la ruta activa del Modelo D | `docs/architecture-stack-freeze-sprint2.md` §1 |
 
 Desde SAPI-60, `docker compose up --build` levanta la arquitectura v2
@@ -208,7 +208,7 @@ curl http://localhost:8080/api/v1/ranking
 `GET /api/v1/ranking` pide el ranking al servicio ML, lo valida y lo guarda en
 PostgreSQL (una fila en `ejecuciones` y 50 en `predicciones_celda`) antes de
 responder 200; repetir la misma evaluación no la duplica. El esquema lo crea
-Flyway al arrancar el backend, desde `db/migration` (V001–V003).
+Flyway al arrancar el backend, desde `db/migration` (V001–V004).
 
 **Modo de datos: reproducible (ADR-009).** El servicio ML puntúa con el
 Modelo D versionado y el snapshot real congelado de Hito 1
