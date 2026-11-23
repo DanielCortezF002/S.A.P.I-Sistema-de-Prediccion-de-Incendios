@@ -11,6 +11,7 @@ import copy
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import folium
@@ -223,23 +224,36 @@ def test_v0_header_shows_human_window_when_horizon_present(mock_st: MagicMock) -
     assert "próximas" not in text.lower()
 
 
+def _freshness_mock(mock_st: MagicMock) -> None:
+    _mock_expander(mock_st)
+    col = MagicMock()
+    col.__enter__ = MagicMock(return_value=col)
+    col.__exit__ = MagicMock(return_value=False)
+    mock_st.columns.return_value = (col, col)
+
+
 @patch("app.components.ranking_backend_view.st")
 def test_v0_freshness_state_is_explicit_pending_not_a_banner(
     mock_st: MagicMock,
 ) -> None:
+    _freshness_mock(mock_st)
     view_mod._render_freshness_state(v0_view())
-    mock_st.warning.assert_not_called()
-    mock_st.info.assert_called_once()
-    msg = mock_st.info.call_args[0][0]
-    assert "el backend no envía la antigüedad" in msg
+    mock_st.info.assert_not_called()
+    mock_st.warning.assert_called_once()
+    msg = mock_st.warning.call_args[0][0]
+    assert "DATOS HISTÓRICOS" not in msg
     assert "No se asume que el ranking represente el riesgo actual" in msg
     assert "hace" not in msg  # ninguna antigüedad calculada localmente
+    detail = _markdown_blob(mock_st)
+    assert "el backend no envía la antigüedad" in detail
+    assert "hace" not in detail
 
 
 @patch("app.components.ranking_backend_view.st")
 def test_extended_historical_freshness_renders_banner_and_badge(
     mock_st: MagicMock,
 ) -> None:
+    _freshness_mock(mock_st)
     view = extended_view()
     view_mod._render_freshness_state(view)
     mock_st.info.assert_not_called()
@@ -247,6 +261,7 @@ def test_extended_historical_freshness_renders_banner_and_badge(
     banner = mock_st.warning.call_args[0][0]
     assert "DATOS HISTÓRICOS" in banner and "hace 157 h" in banner
     assert "NO representa el riesgo actual" in banner
+    mock_st.markdown.reset_mock()
     view_mod._render_header(view)
     header = _markdown_blob(mock_st)
     assert header.count("DATOS HISTÓRICOS") == 1
@@ -258,10 +273,13 @@ def test_extended_historical_freshness_renders_banner_and_badge(
 def test_extended_non_historical_freshness_has_no_banner(
     mock_st: MagicMock, label: str
 ) -> None:
+    _freshness_mock(mock_st)
     view = extended_view(freshness=label, age_hours=3.0)
     view_mod._render_freshness_state(view)
-    mock_st.warning.assert_not_called()
     mock_st.info.assert_not_called()
+    # Solo queda el alcance del score: ningún aviso histórico ni de frescura.
+    mock_st.warning.assert_called_once_with(FIXED_DISCLAIMER)
+    mock_st.markdown.reset_mock()
     view_mod._render_header(view)
     assert "DATOS HISTÓRICOS" not in _markdown_blob(mock_st)
 
@@ -270,11 +288,43 @@ def test_extended_non_historical_freshness_has_no_banner(
 def test_partial_freshness_fields_are_not_rendered_as_a_banner(
     mock_st: MagicMock,
 ) -> None:
+    _freshness_mock(mock_st)
     payload = real_payload()
     payload["freshness"] = FRESHNESS_HISTORICAL_LABEL  # sin age_hours/weather_timestamp
     view_mod._render_freshness_state(parse_ranking(payload))
-    mock_st.warning.assert_not_called()
-    mock_st.info.assert_called_once()
+    mock_st.info.assert_not_called()
+    mock_st.warning.assert_called_once()
+    msg = mock_st.warning.call_args[0][0]
+    assert "DATOS HISTÓRICOS" not in msg and "hace" not in msg
+
+
+@pytest.mark.parametrize(
+    "view_factory",
+    [v0_view, extended_view, lambda: extended_view(freshness="DATOS RECIENTES")],
+    ids=["contrato-v0", "historico", "reciente"],
+)
+@patch("app.components.ranking_backend_view.st")
+def test_sapi80_ca3_advertencia_unica_con_detalle_en_expander(
+    mock_st: MagicMock, view_factory: Any
+) -> None:
+    """HU-80 CA3: una sola advertencia visible; el detalle va en un expander plegado."""
+    _freshness_mock(mock_st)
+    view_mod._render_freshness_state(view_factory())
+    assert mock_st.warning.call_count == 1
+    mock_st.info.assert_not_called()
+    mock_st.error.assert_not_called()
+    msg = mock_st.warning.call_args[0][0]
+    # El texto de la advertencia del score se reproduce sin cambios.
+    assert msg.endswith(FIXED_DISCLAIMER) and msg.count(FIXED_DISCLAIMER) == 1
+    mock_st.expander.assert_called_once()
+    assert mock_st.expander.call_args.kwargs.get("expanded") is False
+
+
+def test_sapi80_ca3_texto_de_la_advertencia_del_score_no_cambia() -> None:
+    assert FIXED_DISCLAIMER == (
+        "El score corresponde a un ranking relativo exploratorio "
+        "y no a una probabilidad calibrada de incendio."
+    )
 
 
 # ── KPIs / disclaimer ────────────────────────────────────────────────────────
@@ -355,18 +405,20 @@ def test_disclaimer_from_backend_is_escaped_and_rn01_text_kept(
     mock_st: MagicMock,
 ) -> None:
     view = extended_view(disclaimer="<script>alert(1)</script> aviso")
-    view_mod._render_disclaimer(view)
+    view_mod._render_scope_detail(view)
     text = _markdown_blob(mock_st)
     assert "<script>" not in text and "&lt;script&gt;" in text
-    assert FIXED_DISCLAIMER in text
+    assert FIXED_DISCLAIMER in view_mod._scope_warning_text(view)
 
 
 @patch("app.components.ranking_backend_view.st")
 def test_disclaimer_absent_uses_fixed_text_once(mock_st: MagicMock) -> None:
     payload = real_payload()
     del payload["disclaimer"]
-    view_mod._render_disclaimer(parse_ranking(payload))
-    assert _markdown_blob(mock_st).count(FIXED_DISCLAIMER) == 1
+    view = parse_ranking(payload)
+    view_mod._render_scope_detail(view)
+    assert FIXED_DISCLAIMER not in _markdown_blob(mock_st)
+    assert view_mod._scope_warning_text(view).count(FIXED_DISCLAIMER) == 1
 
 
 # ── paneles (CA3 ranking/empates, CA5) ───────────────────────────────────────
@@ -832,3 +884,27 @@ def test_sapi80_cabecera_sin_referencia_a_sprint(mock_st: MagicMock) -> None:
     text = _markdown_blob(mock_st)
     assert "S.A.P.I." in text
     assert "Sprint" not in text and "Defensa Académica" not in text
+
+
+@pytest.mark.parametrize("factory", [v0_view, extended_view], ids=["v0", "historico"])
+@patch("app.components.ranking_backend_view.st")
+def test_sapi80_hist_badge_en_linea_sin_linea_vacia(
+    mock_st: MagicMock, factory: Any
+) -> None:
+    """`hist_badge` va pegado a la etiqueta anterior: una línea vacía dentro del
+    bloque HTML haría que Markdown mostrara el resto de la cabecera como código."""
+    view_mod._render_header(factory())
+    html_block = _markdown_blob(mock_st)
+    lines = html_block.strip().splitlines()
+    assert all(line.strip() for line in lines), "línea vacía dentro del bloque HTML"
+    assert "BACKEND REST</span>" in html_block
+
+
+@patch("app.components.ranking_backend_view.st")
+def test_sapi80_ca4_selector_compacto_oculta_la_etiqueta(mock_st: MagicMock) -> None:
+    mock_st.session_state = {}
+    mock_st.radio.return_value = "Prioridades"
+    view_mod._render_map_mode_selector(compact=True)
+    assert mock_st.radio.call_args.kwargs["label_visibility"] == "collapsed"
+    view_mod._render_map_mode_selector()
+    assert mock_st.radio.call_args.kwargs["label_visibility"] == "visible"

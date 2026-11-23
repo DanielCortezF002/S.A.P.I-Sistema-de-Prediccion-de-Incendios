@@ -10,7 +10,7 @@ Implementación definitiva de la interfaz aprobada para la Defensa Académica:
     - Derecha: Hallazgo principal con grupo prioritario, selector de celda (50 disponibles) y
       resumen territorial de la celda seleccionada.
   * Módulo DMC Rodelillo (330007) consolidado:
-    - Resumen meteorológico activo en barra superior con acción única de consulta.
+    - Resumen meteorológico DMC en la franja bajo el mapa, con acción única de consulta.
     - Detalle extendido en expander secundario plegado por defecto (expanded=False).
   * Encuadre geográfico riguroso centrado en las 50 celdas (Viña del Mar, Quilpué, Villa Alemana,
     Limache) sin exceso de océano.
@@ -62,6 +62,9 @@ _ORDER_PRIORITY_OFFICIAL = "Orden entregado por el backend"
 _ORDER_PRIORITY_TIES_BY_ID = "Prioridad con empates ordenados por ID"
 _ORDER_CELL_ID = "Identificador de celda (VP-001 → VP-050)"
 _CACHE_TTL_SECONDS = 300
+# HU-80 CA4: altura con la que el mapa completo cabe sobre el pliegue a 1366×768
+# (medido con tests/e2e/hu86_capture_panel.py).
+COMPACT_MAP_HEIGHT = 380
 
 _CONTRACT_METADATA_FIELDS = tuple(
     name for name in ADDITIVE_FIELDS if name not in {"model_status", "meteo_actual"}
@@ -72,7 +75,7 @@ FRESHNESS_HISTORICAL_LABEL = "DATOS HISTÓRICOS / DESACTUALIZADOS"
 NOT_PROVIDED = "sin dato: el contrato API v0 no incluye este campo"
 METEO_NOT_IN_RANKING = (
     "sin dato: el ranking histórico no trae la meteorología que usó "
-    "(campo fuera del contrato API v0). La observación DMC actual está en la barra superior."
+    "(campo fuera del contrato API v0). La observación DMC actual está en la franja bajo el mapa."
 )
 METEO_SHORT_MISSING = "sin dato en el ranking"
 DMC_FIELD_MISSING = "sin dato en la última ingesta"
@@ -312,7 +315,7 @@ def cell_from_click(event: Any) -> Optional[str]:
         return None
 
 
-def _render_map_mode_selector() -> str:
+def _render_map_mode_selector(compact: bool = False) -> str:
     """Selector «Vista del mapa» (SAPI-61.CA3/CA5; restaurado en F2, resolución D15).
 
     El modo se copia en una clave de sesión que no pertenece a ningún widget: los
@@ -328,6 +331,7 @@ def _render_map_mode_selector() -> str:
         index=options.index(persisted) if persisted in options else 0,
         horizontal=True,
         key=_SESSION_MAP_MODE,
+        label_visibility="collapsed" if compact else "visible",
         help="Solo cambia la representación visual. No consulta ni recalcula nada.",
     )
     st.session_state[_SESSION_MAP_MODE_PERSISTED] = mode
@@ -647,7 +651,7 @@ def _inject_css(mode: str | None = None) -> None:
         }}
 
         .block-container {{
-            padding-top: 3.40rem !important;
+            padding-top: 2.90rem !important;
             padding-bottom: 0.85rem !important;
             max-width: 1720px !important;
         }}
@@ -1465,6 +1469,8 @@ def _render_header(view: RankingView) -> None:
         if view.station_available
         else f"Estación meteorológica: {NOT_PROVIDED}"
     )
+    # `hist_badge` va en la misma línea que la etiqueta anterior: si quedara sola y
+    # vacía, Markdown cerraría el bloque HTML y mostraría el resto como código.
     hist_badge = (
         '<span class="sapi-v2-badge sapi-v2-badge--hist">DATOS HISTÓRICOS</span>'
         if view.freshness_available and view.freshness == FRESHNESS_HISTORICAL_LABEL
@@ -1482,8 +1488,7 @@ def _render_header(view: RankingView) -> None:
             </div>
             <div class="sapi-v2-status">
                 <span class="sapi-v2-badge sapi-v2-badge--violet">PROTOTIPO EXPLORATORIO</span>
-                <span class="sapi-v2-badge sapi-v2-badge--rest">BACKEND REST</span>
-                {hist_badge}
+                <span class="sapi-v2-badge sapi-v2-badge--rest">BACKEND REST</span>{hist_badge}
             </div>
             <div class="sapi-v2-meta">
                 <div><b>Ranking histórico T: {date_line}</b></div>
@@ -1500,21 +1505,63 @@ def _render_header(view: RankingView) -> None:
     )
 
 
-def _render_freshness_state(view: RankingView) -> None:
-    """Banner de frescura y advertencia histórica obligatoria."""
+FRESHNESS_PENDING_DETAIL = (
+    "Frescura de la observación meteorológica: sin dato (el backend no envía "
+    "la antigüedad en esta ejecución)."
+)
+FRESHNESS_NOT_ASSUMED = "No se asume que el ranking represente el riesgo actual."
+
+
+def _scope_warning_text(view: RankingView) -> str:
+    """Texto de la única advertencia visible de la primera pantalla (HU-80 CA3).
+
+    Reúne el aviso de frescura que corresponda y el texto fijo del alcance del
+    score (`FIXED_DISCLAIMER`), que se reproduce sin modificar.
+    """
+    parts: list[str] = []
     if not view.freshness_available:
-        st.info(
-            "Frescura de la observación meteorológica: sin dato (el backend no envía "
-            "la antigüedad en esta ejecución). No se asume que el ranking represente "
-            "el riesgo actual."
-        )
-        return
-    if view.freshness == FRESHNESS_HISTORICAL_LABEL:
-        st.warning(
+        parts.append(f"Frescura sin dato. {FRESHNESS_NOT_ASSUMED}")
+    elif view.freshness == FRESHNESS_HISTORICAL_LABEL:
+        parts.append(
             f"DATOS HISTÓRICOS · última observación hace {view.age_hours:.0f} h "
-            "(antigüedad medida por el servicio al evaluar)\n\n"
+            "(antigüedad medida por el servicio al evaluar). "
             "El ranking corresponde al instante indicado y NO representa el riesgo actual."
         )
+    parts.append(FIXED_DISCLAIMER)
+    return "\n\n".join(parts)
+
+
+def _render_scope_detail(view: RankingView) -> None:
+    """Contenido del expander de detalle de la advertencia única (HU-80 CA3)."""
+    if not view.freshness_available:
+        st.markdown(f"**{FRESHNESS_PENDING_DETAIL}** {FRESHNESS_NOT_ASSUMED}")
+    else:
+        st.markdown(
+            f"**Frescura informada por el servicio:** {_esc(view.freshness)} · "
+            f"última observación hace {view.age_hours:.0f} h al evaluar."
+        )
+    st.markdown(
+        "**Meteorología DMC reciente:** la última observación de Rodelillo (330007) "
+        "se muestra bajo el mapa como referencia y no se utilizó para calcular el "
+        "ranking histórico."
+    )
+    text = (
+        view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
+    )
+    if text and FIXED_DISCLAIMER not in text:
+        st.markdown(
+            f'<p class="sapi-v2-disclaimer">Aviso del backend: {_esc(text)}</p>',
+            unsafe_allow_html=True,
+        )
+
+
+def _render_freshness_state(view: RankingView) -> None:
+    """Una sola advertencia visible; el detalle queda en un expander (HU-80 CA3)."""
+    warn_col, detail_col = st.columns([0.70, 0.30], gap="small")
+    with warn_col:
+        st.warning(_scope_warning_text(view))
+    with detail_col, st.expander("Detalle del aviso y de los datos", expanded=False):
+        _render_scope_detail(view)
 
 
 def _render_dmc_top_strip() -> None:
@@ -1882,7 +1929,7 @@ def _render_dmc_observation_panel() -> None:
         if not data:
             st.markdown(
                 '<div style="font-size:0.78rem;color:var(--sapi-text-muted);padding:0.3rem 0;">'
-                "Haga clic en <b>«Releer última ingesta»</b> en la barra superior para "
+                "Haga clic en <b>«Releer última ingesta»</b> en la franja DMC bajo el mapa para "
                 "releer la última observación ingerida de la estación Rodelillo (330007)."
                 "</div>",
                 unsafe_allow_html=True,
@@ -2267,27 +2314,6 @@ def _render_bottom_modules(view: RankingView) -> None:
         _render_ranking_expander(view)
 
 
-def _render_disclaimer(view: RankingView) -> None:
-    """Disclaimer científico explícito."""
-    text = (
-        view.disclaimer.strip() if view.disclaimer and view.disclaimer.strip() else None
-    )
-    if text and FIXED_DISCLAIMER not in text:
-        st.markdown(
-            f'<div class="sapi-v2-disclaimer">'
-            f"<div>{_esc(text)}</div>"
-            '<div style="margin-top:0.25rem;opacity:0.85;font-size:0.76rem">'
-            f"{FIXED_DISCLAIMER}</div>"
-            "</div>",
-            unsafe_allow_html=True,
-        )
-    else:
-        st.markdown(
-            f'<p class="sapi-v2-disclaimer">{_esc(text or FIXED_DISCLAIMER)}</p>',
-            unsafe_allow_html=True,
-        )
-
-
 def _render_backend_error(exc: BackendError) -> None:
     """Estado de error controlado."""
     st.markdown("## S.A.P.I. — PROTOTIPO EXPLORATORIO")
@@ -2350,13 +2376,10 @@ def render_ranking_backend_dashboard() -> None:
 
         render_appearance_toggle(location="sidebar")
 
-    # 2. Alerta histórica obligatoria
+    # 2. Advertencia única (frescura + alcance del score); detalle en expander (HU-80 CA3)
     _render_freshness_state(view)
 
-    # 3. Resumen DMC en primera pantalla sin scroll (TAREA C y D)
-    _render_dmc_top_strip()
-
-    # 4. Fila de 5 tarjetas de indicadores superiores (TAREA C)
+    # 3. Fila de 5 tarjetas de indicadores superiores (TAREA C)
     _render_kpi_strip(view, st.session_state[_SESSION_SELECTED])
 
     # 5. Fila principal: Mapa protagonista (~68%) + Panel Hallazgo principal (~32%) (TAREA A y B)
@@ -2416,7 +2439,7 @@ def render_ranking_backend_dashboard() -> None:
         map_col, side_col = st.columns([2.12, 1], gap="medium")
 
         with map_col:
-            m_head_left, m_head_right = st.columns([6.8, 3.2])
+            m_head_left, m_head_right = st.columns([5.2, 4.8])
             with m_head_left:
                 horizon_str = (
                     f"T+{view.horizon_hours}h" if view.horizon_hours else "T+6h"
@@ -2440,27 +2463,17 @@ def render_ranking_backend_dashboard() -> None:
                     f"</span>"
                     f"</span>"
                     f"</div>"
-                    f'<div class="sapi-map-sub">Cada celda muestra el score relativo '
-                    f"(no es una probabilidad calibrada).</div>"
                     f"</div>"
                     f"</div>",
                     unsafe_allow_html=True,
                 )
             with m_head_right:
-                r_col1, r_col2 = st.columns([1.6, 1.4])
+                # HU-80 CA4: el selector de vista sube a la fila del título para que el
+                # mapa quede sobre el pliegue; la escala de color sigue en la barra de
+                # leyenda bajo el mapa.
+                r_col1, r_col2 = st.columns([2.5, 1.5])
                 with r_col1:
-                    st.markdown(
-                        """
-                        <div class="sapi-map-risk-widget">
-                            <span class="sapi-map-risk-label">Riesgo (score)</span>
-                            <div class="sapi-map-risk-bar"></div>
-                            <div class="sapi-map-risk-scale">
-                                <span>Bajo</span><span>Alto</span>
-                            </div>
-                        </div>
-                        """,
-                        unsafe_allow_html=True,
-                    )
+                    map_mode = _render_map_mode_selector(compact=True)
                 with r_col2:
                     if st.button(
                         "⤢ Expandir",
@@ -2470,11 +2483,10 @@ def render_ranking_backend_dashboard() -> None:
                         st.session_state[_SESSION_EXPANDED] = True
                         st.rerun()
 
-            map_mode = _render_map_mode_selector()
             fmap = build_map(view, map_mode, st.session_state[_SESSION_SELECTED])
             event = st_folium(
                 fmap,
-                height=450,
+                height=COMPACT_MAP_HEIGHT,
                 use_container_width=True,
                 key="ranking_v2_map_compact",
                 returned_objects=["last_clicked"],
@@ -2523,8 +2535,10 @@ def render_ranking_backend_dashboard() -> None:
             # BLOQUE 3: Detalle meteorológico DMC secundario (plegado por defecto)
             _render_dmc_observation_panel()
 
-    # 6. Disclaimer científico explícito (transición inmediata sin vacío estructural)
-    _render_disclaimer(view)
+    # 6. Última observación DMC: va después del mapa porque no se usó para calcular el
+    #    ranking y así el mapa queda sobre el pliegue a 1366×768 (HU-80 CA4). El texto
+    #    del alcance del score ya está en la advertencia única (paso 2).
+    _render_dmc_top_strip()
 
     # 7. Fila secundaria con módulos balanceados (~50/50): Información técnica y Ranking completo
     _render_bottom_modules(view)

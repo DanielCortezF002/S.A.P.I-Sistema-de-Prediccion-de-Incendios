@@ -22,7 +22,12 @@ import pytest
 import requests
 from streamlit.testing.v1 import AppTest
 
-from app.components.ranking_backend_view import NOT_PROVIDED, refresh_ranking_cache
+from app.components import ranking_backend_view as view_mod
+from app.components.ranking_backend_view import (
+    FIXED_DISCLAIMER,
+    NOT_PROVIDED,
+    refresh_ranking_cache,
+)
 from app.utils.backend_client import (
     ERROR_KIND_CONNECTION,
     ERROR_KIND_HTTP_BACKEND,
@@ -537,9 +542,11 @@ def test_apptest_v0_payload_never_invents_freshness_station_or_meteo(
     at = run_app(monkeypatch, stub.base_url)
     text = markdown_blob(at)
     assert "DATOS HISTÓRICOS" not in text
-    assert not at.warning
-    infos = " ".join(i.value for i in at.info)
-    assert "el backend no envía la antigüedad" in infos
+    # HU-80 CA3: una sola advertencia (sin aviso histórico inventado); el motivo
+    # de la frescura ausente queda en el expander de detalle.
+    assert len(at.warning) == 1 and "DATOS HISTÓRICOS" not in at.warning[0].value
+    assert not at.info
+    assert "el backend no envía la antigüedad" in text
     assert f"Estación meteorológica: {NOT_PROVIDED}" in text
     assert "°C" not in text and "km/h" not in text
     assert "Historial FIRMS: 0" not in text and "Historial FIRMS</span><b>0" not in text
@@ -553,7 +560,7 @@ def test_apptest_extended_payload_renders_freshness_and_traceability(
     )
     at = run_app(monkeypatch, stub.base_url)
     text = markdown_blob(at)
-    assert at.warning and "DATOS HISTÓRICOS" in at.warning[0].value
+    assert len(at.warning) == 1 and "DATOS HISTÓRICOS" in at.warning[0].value
     assert "hace 157 h" in at.warning[0].value
     assert not at.info
     assert "DMC Rodelillo · 330007" in text
@@ -745,3 +752,51 @@ def test_apptest_legacy_mode_only_appears_behind_the_flag(
     radio = at.sidebar.radio[0]
     assert radio.value == PROTOTYPE_MODE
     assert radio.options[-1] == "Prototipo local (legacy Hito 1)"
+
+
+# ── HU-80 CA3 / CA4: primera pantalla ────────────────────────────────────────
+
+
+@pytest.mark.parametrize("extended", [False, True], ids=["contrato-v0", "extendido"])
+def test_sapi80_ca3_primera_pantalla_tiene_una_sola_advertencia(
+    stub: StubBackend, monkeypatch: pytest.MonkeyPatch, extended: bool
+) -> None:
+    if extended:
+        stub.responder = StubBackend.respond_json(
+            200, {**real_payload(), **copy.deepcopy(EXTENDED_FIELDS)}
+        )
+    at = run_app(monkeypatch, stub.base_url)
+    assert len(at.warning) == 1 and not at.info and not at.error
+    assert at.warning[0].value.endswith(FIXED_DISCLAIMER)
+    # El alcance del score no se repite como bloque aparte en la primera pantalla.
+    assert FIXED_DISCLAIMER not in markdown_blob(at)
+    detail = [e for e in at.expander if e.label == "Detalle del aviso y de los datos"]
+    assert len(detail) == 1
+
+
+def test_sapi80_ca4_mapa_compacto_con_altura_sobre_el_pliegue(
+    stub: StubBackend, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """HU-80 CA4: la altura del mapa compacto es la medida a 1366×768 y la franja
+    DMC se dibuja después del mapa (la medición en navegador está en
+    tests/e2e/hu86_capture_panel.py)."""
+    calls: list[dict] = []
+    order: list[str] = []
+    real_strip = view_mod._render_dmc_top_strip
+
+    def fake_folium(fmap: object, **kwargs: object) -> dict:
+        calls.append(kwargs)
+        order.append("map")
+        return {}
+
+    def spy_strip() -> None:
+        order.append("dmc")
+        real_strip()
+
+    monkeypatch.setattr(view_mod, "st_folium", fake_folium)
+    monkeypatch.setattr(view_mod, "_render_dmc_top_strip", spy_strip)
+    run_app(monkeypatch, stub.base_url)
+    assert calls and calls[0]["height"] == view_mod.COMPACT_MAP_HEIGHT
+    assert view_mod.COMPACT_MAP_HEIGHT <= 380
+    assert calls[0]["key"] == "ranking_v2_map_compact"
+    assert order == ["map", "dmc"]
