@@ -148,7 +148,7 @@ La sección siguiente es la entrega de SAPI-ML y se incorpora **sin modificacion
 <!-- INICIO CA6 · reports/sapi83/hu83_ca6_hito3.md @ b759990cfa048e62a52c6b15e2e9dc8f0f17e32f · no editar -->
 # Hito 3 · HU-83 (SAPI-83), CA6 · Lectura de las figuras del Modelo D
 
-El Modelo D ordena celdas por score de forma exploratoria. La unidad de evaluación por zona es la celda en el instante de pronóstico `T`. El positivo corresponde a una detección válida de NASA FIRMS en `T < t <= T+6h`. FIRMS registra anomalías térmicas satelitales y la etiqueta refleja esa observación. El score expresa un orden relativo. La calibración probabilística y la validación científica para uso operativo siguen pendientes (`scientific_model_validation=false`). SAPI prioriza territorio según las condiciones que favorecen la complejidad y propagación de un incendio (30-30-30); es un sistema complementario de apoyo a la planificación de recursos de cada cuartel. En el Modelo D esas condiciones entran como temperatura, humedad relativa y viento de Rodelillo; los indicadores binarios de la regla 30-30-30 tuvieron importancia 0 % en el artefacto desplegado (HU-88, PR #46). La ignición depende de factores humanos que el modelo no observa (limitación declarada, L-01).
+El Modelo D ordena celdas por score de forma exploratoria. La unidad de evaluación por zona es la celda en el instante de pronóstico `T`. El positivo corresponde a una detección válida de NASA FIRMS en `T < t <= T+6h`. FIRMS registra anomalías térmicas satelitales y la etiqueta refleja esa observación. El score expresa un orden relativo. La calibración probabilística y la validación científica para uso operativo siguen pendientes (`scientific_model_validation=false`).
 
 ## Procedencia e integridad
 
@@ -192,6 +192,8 @@ El 23 de noviembre de 2026 se cotejaron los tres SHA-256 con la Orden 08 del Aud
 
 Pendiente de cierre de CA6. Gobernanza debe integrar esta sección en el informe del Hito 3. Daniel debe comprobar en la versión integrada que aparecen los tres PNG originales y sus rutas, fechas, hashes completos e interpretaciones, y enviar el delta a revisión independiente.
 <!-- FIN CA6 -->
+
+> **Nota de lenguaje (fuera del bloque CA6, que no se edita).** SAPI prioriza territorio según las condiciones que favorecen la complejidad y propagación de un incendio (30-30-30); es un sistema complementario de apoyo a la planificación de recursos de cada cuartel. En el Modelo D esas condiciones entran como temperatura, humedad relativa y viento de Rodelillo; los indicadores binarios de la regla 30-30-30 tuvieron importancia 0 % en el artefacto desplegado (HU-88, PR #46). La ignición depende de factores humanos que el modelo no observa (limitación declarada, L-01).
 
 ### 6.3 Modelo D frente al Modelo A (S5, DIR-4)
 
