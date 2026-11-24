@@ -207,7 +207,7 @@ class SapiDashboard:
         recall_val = xgb.get("recall")
         auc_val = xgb.get("auc_roc")
         lines = [
-            "S.A.P.I. - Reporte de Riesgo de Ignición",
+            "S.A.P.I. - Reporte de prioridad territorial",
             f"Fecha consultada: {fecha.isoformat()}",
             f"Build: {APP_BUILD} · Query: {QUERY_ENGINE_VERSION}",
             f"Celdas analizadas: {len(gdf)}",
