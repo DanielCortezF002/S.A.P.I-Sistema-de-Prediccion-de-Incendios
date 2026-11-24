@@ -50,7 +50,7 @@ Puntajes del Hito 2 tomados de F-C1 (máx. / oral / escrito).
 |---|---|---|---|---|---|---|---|---|
 | M1 | Must | 6.3 y 9.2 HU | HU como enunciados técnicos | HU desde el operador (capitán de bomberos, Bomberos de La Cruz); técnica como subtareas | 3 | SAPI-64..93 | Pendiente de verificar por HU (L-14) | b |
 | M2 | Must | 9.2 Tareas | Sin subtareas en las 14 HU | 83 subtareas `HU-XX.T#` y `.V` | 3.2 | SAPI-94..177 | Hecho en Jira (L-13) | b |
-| M3 | Must | 12.3 KPI-03 | Meta p95 ≤ 2.000 ms fijada el 29-10 después de medir: «Es un error metodológico.» | KPI-03 declarado como **línea base histórica del Hito 2**; metas del Hito 3 «pendientes de Daniel» antes de medir | 8 | SAPI-173 | En PR sin integrar (#45). Metas sin fijar: **NO APROBADAS** | a |
+| M3 | Must | 12.3 KPI-03 | Meta p95 ≤ 2.000 ms fijada el 29-10 después de medir: «Es un error metodológico.» | KPI-03 declarado como **línea base histórica del Hito 2**; meta del Hito 3 de KPI-03 sellada el 23-11-2026 antes de medir (`docs/objetivos.md` §5.1 en `9657bad`: p95 ≤ 2.000 ms por escenario); metas de las otras cinco KPI «pendientes de Daniel» | 8 | SAPI-173 | En PR sin integrar (#45). KPI-03 sin medición oficial (variante NO GO, sección 10); las otras cinco, sin meta: **NO APROBADAS** | a |
 | M4 | Must | 11.2.4 y 13 Release | Gate 4/6, IT-13 falla, lint falla, sin tag, 11 PR abiertos | Gate 6/6 en `main` (run 41932911572); inventario de PR y ramas | 7.1, 12 | SAPI-85 | Parcial: gate 6/6 en main; IT-13, tag `hito3` e integración pendientes (L-08, L-09) | b |
 | M5 | Must | 9.3 Backlog S3 | Backlog del Sprint 3 ausente de Jira al 29-10 | Sprint 37 cargado con 15 HU, CA y subtareas | 3 | Sprint 37 | Hecho en Jira; sprint sin fechas (L-12) | b |
 | S1 | Should | Review y retro | No están en el informe | Secciones 11.2 y 11.3 | 11 | SAPI-161, SAPI-162 | **Pendiente** | c |
@@ -241,7 +241,7 @@ Lectura: en PR-AUC el Modelo A supera al D en 2023, 2024 y 2026; el D solo es me
 
 ## 8. Objetivos y KPI
 
-Fuente: `docs/objetivos.md` (PR #45). **Las seis KPI están NO APROBADAS:** ninguna tiene meta del Hito 3 fijada ni aprobación de un stakeholder.
+Fuente: `docs/objetivos.md` (PR #45). **Las seis KPI están NO APROBADAS:** ninguna tiene medición del Hito 3 ni aprobación de un stakeholder. Solo KPI-03 tiene meta sellada (23-11-2026, `docs/objetivos.md` §5.1 en `9657bad`: p95 ≤ 2.000 ms en cada escenario), pero sigue sin medición oficial: arnés en validación, 120 muestras pendientes (arnés congelado en `8813828`, sección 10). Las otras cinco siguen sin meta.
 
 | KPI | OE | Métrica | Línea base (origen) | Meta H3 | Resultado H3 | Estado |
 |---|---|---|---|---|---|---|
@@ -270,7 +270,7 @@ Impedimentos abiertos (borrador `08_riesgos_bloqueos.md`, códigos provisorios G
 | G-B2 | Fecha, formato y pauta del informe sin confirmar; sprint sin fechas | Cierre del sprint, Review | Respuesta de César (SAPI-158) |
 | G-B3 | ¿Docker Compose local cuenta como «desplegado»? ADR-011 sin firma | HU-90 | Respuesta de Matías (SAPI-138) |
 | G-B4 | Decisión B-13: completar el DEM o declarar la limitación | HU-86 CA2 | Respuesta de César (SAPI-119) |
-| G-B5 | Metas del Hito 3 sin sellar | HU-90.T2, HU-91.T3, HU-75.T3 | Commit de metas (Daniel) |
+| G-B5 | Metas del Hito 3 sin sellar, salvo KPI-03 (sellada el 23-11-2026 en `9657bad` §5.1, sin medición oficial) | HU-91.T3, HU-75.T3; HU-90.T2 queda en variante NO GO (arnés `8813828` en validación) | Commit de metas (Daniel) |
 
 **PENDIENTE (Daniel):** historial de severidad por fecha de los riesgos críticos durante el sprint.
 
@@ -382,7 +382,7 @@ Que un hash coincida prueba que el archivo es el citado, no que su contenido sea
 
 ### (c) Pendiente
 
-- Metas del Hito 3 de KPI-01..06 y sus mediciones (todas **NO APROBADAS**).
+- Metas del Hito 3 de KPI-01, 02, 04, 05 y 06, y las mediciones de las seis KPI (todas **NO APROBADAS**). La meta de KPI-03 está sellada (`9657bad` §5.1); su medición oficial está pendiente (arnés en validación, 120 muestras pendientes).
 - Aprobación de stakeholder por HU (`.V`, sesión HU-79).
 - Actas semanales, Sprint Review y retrospectiva.
 - Integración de #45–#52, tag `hito3` y corrida desde clon limpio.
