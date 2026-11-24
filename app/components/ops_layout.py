@@ -29,7 +29,7 @@ _LEGEND_COPY = {
     ),
     "alto": (
         "Alto",
-        "Tres condiciones o probabilidad ≥66 %. Prioridad operativa inmediata.",
+        "Tres condiciones o índice relativo de prioridad ≥66/100. Prioridad operativa inmediata.",
     ),
     "sin_dato": (
         "Sin dato",

@@ -31,7 +31,7 @@ def render_risk_sparkline(dates: list[date] | None = None) -> None:
     """Mini evolución de 7 días (ventana del seed), datos reales del demo."""
     series = daily_max_probability_series(dates)
     st.caption(
-        "Evolución · máximo diario de probabilidad (escenario sembrado, no serie horaria)"
+        "Evolución · máximo diario del índice relativo de prioridad (escenario sembrado, no serie horaria; no es una probabilidad)"
     )
-    chart_df = series.mul(100).rename("Probabilidad máx. (%)").to_frame()
+    chart_df = series.mul(100).rename("Índice relativo máx. (0-100)").to_frame()
     st.line_chart(chart_df, height=180)

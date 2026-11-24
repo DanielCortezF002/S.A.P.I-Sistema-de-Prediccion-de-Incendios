@@ -254,7 +254,7 @@ def render_folium_map(
         popup_html = (
             f"<b>Celda:</b> {cell_id or 'N/A'}<br>"
             f"<b>Zona climática:</b> {zona}<br>"
-            f"<b>Probabilidad:</b> {prob:.2%}<br>"
+            f"<b>Índice relativo de prioridad:</b> {prob * 100:.0f}/100 (no es una probabilidad)<br>"
             f"<b>Nivel:</b> {nivel}<br>"
             f"<b>Temperatura:</b> {row.get('temperatura', 'N/A')} °C<br>"
             f"<b>Humedad:</b> {row.get('humedad_relativa', 'N/A')} %<br>"

@@ -227,7 +227,7 @@ class SapiDashboard:
                     f"Riesgo bajo: {bajo}",
                     f"Riesgo medio: {medio}",
                     f"Riesgo alto: {alto}",
-                    f"Probabilidad máxima: {gdf['probabilidad'].max():.2%}",
+                    f"Índice relativo de prioridad máximo: {gdf['probabilidad'].max() * 100:.0f}/100 (no es una probabilidad)",
                     f"Regla 30-30-30 activa: {regla} celda(s)",
                     "",
                     "Nota: seed zonal demo (no alerta oficial CONAF/SENAPRED).",

@@ -67,7 +67,7 @@ def render_data_mode_badge() -> None:
     elif SAPI_DATA_MODE == "demo_seed":
         st.sidebar.markdown("### Modo Demo")
         st.sidebar.caption(
-            "`SAPI_DATA_MODE=demo_seed` — probabilidades y niveles de riesgo provienen "
+            "`SAPI_DATA_MODE=demo_seed` — índice relativo de prioridad y niveles de riesgo provienen "
             "del escenario sembrado (`demo_seed`), no de inferencia XGBoost en runtime."
         )
     elif SAPI_DATA_MODE == "postgis_inference":
