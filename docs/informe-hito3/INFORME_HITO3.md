@@ -148,7 +148,7 @@ La sección siguiente es la entrega de SAPI-ML y se incorpora **sin modificacion
 <!-- INICIO CA6 · reports/sapi83/hu83_ca6_hito3.md @ b759990cfa048e62a52c6b15e2e9dc8f0f17e32f · no editar -->
 # Hito 3 · HU-83 (SAPI-83), CA6 · Lectura de las figuras del Modelo D
 
-El Modelo D ordena celdas por score de forma exploratoria. La unidad de evaluación por zona es la celda en el instante de pronóstico `T`. El positivo corresponde a una detección válida de NASA FIRMS en `T < t <= T+6h`. FIRMS registra anomalías térmicas satelitales y la etiqueta refleja esa observación. El score expresa un orden relativo. La calibración probabilística y la validación científica para uso operativo siguen pendientes (`scientific_model_validation=false`).
+El Modelo D ordena celdas por score de forma exploratoria. La unidad de evaluación por zona es la celda en el instante de pronóstico `T`. El positivo corresponde a una detección válida de NASA FIRMS en `T < t <= T+6h`. FIRMS registra anomalías térmicas satelitales y la etiqueta refleja esa observación. El score expresa un orden relativo. La calibración probabilística y la validación científica para uso operativo siguen pendientes (`scientific_model_validation=false`). SAPI prioriza territorio según las condiciones que favorecen la complejidad y propagación de un incendio (30-30-30); es un sistema complementario de apoyo a la planificación de recursos de cada cuartel. En el Modelo D esas condiciones entran como temperatura, humedad relativa y viento de Rodelillo; los indicadores binarios de la regla 30-30-30 tuvieron importancia 0 % en el artefacto desplegado (HU-88, PR #46). La ignición depende de factores humanos que el modelo no observa (limitación declarada, L-01).
 
 ## Procedencia e integridad
 
@@ -310,7 +310,7 @@ Decisiones con fecha, motivo y ticket que constan en las fuentes:
 
 | ID | Limitación | Efecto | Acción / ticket |
 |---|---|---|---|
-| L-01 | El score es un orden relativo, no una probabilidad calibrada; `scientific_model_validation=false` | No sirve para decisiones operacionales | Se mantiene; DoD condición 6 |
+| L-01 | El score es un orden relativo, no una probabilidad calibrada; `scientific_model_validation=false`. La ignición depende de factores humanos que el modelo no observa | No sirve para decisiones operacionales | Se mantiene; DoD condición 6 |
 | L-02 | La etiqueta es una detección NASA FIRMS en `T < t ≤ T+6h`, no un incendio confirmado; no hay fuente CONAF | La verdad terreno es una anomalía térmica satelital | R-03, aceptado |
 | L-03 | Meteorología de una sola estación (330007): las 20 variables valen lo mismo en las 50 celdas de un instante | La meteorología no discrimina entre celdas | R-04, aceptado |
 | L-04 | 20 de 50 celdas sin DEM (B-13) | Variables topográficas incompletas | SAPI-119, bloqueado |
