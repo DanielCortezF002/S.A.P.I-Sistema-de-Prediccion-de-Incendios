@@ -76,3 +76,19 @@ Paquetes auditados: 62. Con avisos: 1.
 - `org.apache.tomcat.embed:tomcat-embed-core` 11.0.24: 4 avisos (GHSA-9xv2-5v5q-p794, GHSA-f525-44xv-f2qj, GHSA-gcx9-497g-6cp6, GHSA-h3x4-894j-xpx5)
 - `tools.jackson.core:jackson-core` 3.1.5: 2 avisos (GHSA-7hhh-6rmp-j9qf, GHSA-p6pp-m3f8-5c89)
 - `tools.jackson.core:jackson-databind` 3.1.5: 5 avisos (GHSA-cxp5-3px4-pw24, GHSA-gx83-3vf8-gh7j, GHSA-q4xh-88c3-wmh7, GHSA-wjgm-6hv5-3cvf, GHSA-wv8q-qhhj-9h54)
+
+## Agregado manual (2026-11-25, corrección del Auditor B-1 y B-2)
+
+Esta sección no la genera `resumir_escaneos.py`; se agregó a mano después de generar el resumen.
+
+### Entorno de ejecución (B-1)
+
+Hardware: AMD Ryzen AI 7 350 (8 núcleos, 16 hilos), 31 GB de RAM, Windows 11 Home 10.0.26200 (mismo equipo que `reports/orden-25-11-h3/INFORME.md`).
+
+Ejecutado en el computador local, no en ambiente desplegado.
+
+### `pillow` 12.3.0: Trivy y pip-audit no cuentan lo mismo (B-2)
+
+- Trivy: 43 CVE únicos para `pillow` 12.3.0 en cada imagen (`web-v2` y `ml-api`); el JSON crudo trae 86 entradas para ese paquete (cada CVE aparece dos veces). Verificado el 2026-11-25 contando `VulnerabilityID` distintos en `crudos/trivy-sapi-h3-518c0b5-{web-v2,ml-api}.json.gz`.
+- pip-audit: 42 avisos para `pillow` 12.3.0 en cada imagen (`crudos/pip-audit-sapi-h3-518c0b5-{web-v2,ml-api}.json`).
+- La diferencia de 1 entre 43 y 42 queda sin resolver: no se cruzó aviso por aviso y no se explica aquí sin esa evidencia.
