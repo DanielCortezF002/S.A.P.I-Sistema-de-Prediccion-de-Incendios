@@ -1,0 +1,484 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: /scripts/rnf03_api_1vu.js
+        output: json (/out/medicion-muestras.json)
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 40m30s max duration (incl. graceful stop):
+              * medicion: 30 iterations for each of 1 VUs (maxDuration: 40m0s, gracefulStop: 30s)
+
+
+running (00m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+medicion   [   0% ] 1 VUs  00m01.0s/40m0s  00/30 iters, 30 per VU
+
+running (00m02.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+medicion   [   0% ] 1 VUs  00m02.0s/40m0s  00/30 iters, 30 per VU
+
+running (00m03.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+medicion   [   0% ] 1 VUs  00m03.0s/40m0s  00/30 iters, 30 per VU
+
+running (00m04.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+medicion   [   0% ] 1 VUs  00m04.0s/40m0s  00/30 iters, 30 per VU
+
+running (00m05.0s), 1/1 VUs, 1 complete and 0 interrupted iterations
+medicion   [   3% ] 1 VUs  00m05.0s/40m0s  01/30 iters, 30 per VU
+
+running (00m06.0s), 1/1 VUs, 1 complete and 0 interrupted iterations
+medicion   [   3% ] 1 VUs  00m06.0s/40m0s  01/30 iters, 30 per VU
+
+running (00m07.0s), 1/1 VUs, 1 complete and 0 interrupted iterations
+medicion   [   3% ] 1 VUs  00m07.0s/40m0s  01/30 iters, 30 per VU
+
+running (00m08.0s), 1/1 VUs, 1 complete and 0 interrupted iterations
+medicion   [   3% ] 1 VUs  00m08.0s/40m0s  01/30 iters, 30 per VU
+
+running (00m09.0s), 1/1 VUs, 1 complete and 0 interrupted iterations
+medicion   [   3% ] 1 VUs  00m09.0s/40m0s  01/30 iters, 30 per VU
+
+running (00m10.0s), 1/1 VUs, 2 complete and 0 interrupted iterations
+medicion   [   7% ] 1 VUs  00m10.0s/40m0s  02/30 iters, 30 per VU
+
+running (00m11.0s), 1/1 VUs, 2 complete and 0 interrupted iterations
+medicion   [   7% ] 1 VUs  00m11.0s/40m0s  02/30 iters, 30 per VU
+
+running (00m12.0s), 1/1 VUs, 2 complete and 0 interrupted iterations
+medicion   [   7% ] 1 VUs  00m12.0s/40m0s  02/30 iters, 30 per VU
+
+running (00m13.0s), 1/1 VUs, 2 complete and 0 interrupted iterations
+medicion   [   7% ] 1 VUs  00m13.0s/40m0s  02/30 iters, 30 per VU
+
+running (00m14.0s), 1/1 VUs, 3 complete and 0 interrupted iterations
+medicion   [  10% ] 1 VUs  00m14.0s/40m0s  03/30 iters, 30 per VU
+
+running (00m15.0s), 1/1 VUs, 3 complete and 0 interrupted iterations
+medicion   [  10% ] 1 VUs  00m15.0s/40m0s  03/30 iters, 30 per VU
+
+running (00m16.0s), 1/1 VUs, 3 complete and 0 interrupted iterations
+medicion   [  10% ] 1 VUs  00m16.0s/40m0s  03/30 iters, 30 per VU
+
+running (00m17.0s), 1/1 VUs, 3 complete and 0 interrupted iterations
+medicion   [  10% ] 1 VUs  00m17.0s/40m0s  03/30 iters, 30 per VU
+
+running (00m18.0s), 1/1 VUs, 3 complete and 0 interrupted iterations
+medicion   [  10% ] 1 VUs  00m18.0s/40m0s  03/30 iters, 30 per VU
+
+running (00m19.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m19.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m20.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m20.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m21.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m21.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m22.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m22.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m23.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m23.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m24.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m24.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m25.0s), 1/1 VUs, 4 complete and 0 interrupted iterations
+medicion   [  13% ] 1 VUs  00m25.0s/40m0s  04/30 iters, 30 per VU
+
+running (00m26.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m26.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m27.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m27.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m28.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m28.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m29.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m29.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m30.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m30.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m31.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m31.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m32.0s), 1/1 VUs, 5 complete and 0 interrupted iterations
+medicion   [  17% ] 1 VUs  00m32.0s/40m0s  05/30 iters, 30 per VU
+
+running (00m33.0s), 1/1 VUs, 6 complete and 0 interrupted iterations
+medicion   [  20% ] 1 VUs  00m33.0s/40m0s  06/30 iters, 30 per VU
+
+running (00m34.0s), 1/1 VUs, 6 complete and 0 interrupted iterations
+medicion   [  20% ] 1 VUs  00m34.0s/40m0s  06/30 iters, 30 per VU
+
+running (00m35.0s), 1/1 VUs, 6 complete and 0 interrupted iterations
+medicion   [  20% ] 1 VUs  00m35.0s/40m0s  06/30 iters, 30 per VU
+
+running (00m36.0s), 1/1 VUs, 6 complete and 0 interrupted iterations
+medicion   [  20% ] 1 VUs  00m36.0s/40m0s  06/30 iters, 30 per VU
+
+running (00m37.0s), 1/1 VUs, 6 complete and 0 interrupted iterations
+medicion   [  20% ] 1 VUs  00m37.0s/40m0s  06/30 iters, 30 per VU
+
+running (00m38.0s), 1/1 VUs, 7 complete and 0 interrupted iterations
+medicion   [  23% ] 1 VUs  00m38.0s/40m0s  07/30 iters, 30 per VU
+
+running (00m39.0s), 1/1 VUs, 7 complete and 0 interrupted iterations
+medicion   [  23% ] 1 VUs  00m39.0s/40m0s  07/30 iters, 30 per VU
+
+running (00m40.0s), 1/1 VUs, 7 complete and 0 interrupted iterations
+medicion   [  23% ] 1 VUs  00m40.0s/40m0s  07/30 iters, 30 per VU
+
+running (00m41.0s), 1/1 VUs, 7 complete and 0 interrupted iterations
+medicion   [  23% ] 1 VUs  00m41.0s/40m0s  07/30 iters, 30 per VU
+
+running (00m42.0s), 1/1 VUs, 7 complete and 0 interrupted iterations
+medicion   [  23% ] 1 VUs  00m42.0s/40m0s  07/30 iters, 30 per VU
+
+running (00m43.0s), 1/1 VUs, 8 complete and 0 interrupted iterations
+medicion   [  27% ] 1 VUs  00m43.0s/40m0s  08/30 iters, 30 per VU
+
+running (00m44.0s), 1/1 VUs, 8 complete and 0 interrupted iterations
+medicion   [  27% ] 1 VUs  00m44.0s/40m0s  08/30 iters, 30 per VU
+
+running (00m45.0s), 1/1 VUs, 8 complete and 0 interrupted iterations
+medicion   [  27% ] 1 VUs  00m45.0s/40m0s  08/30 iters, 30 per VU
+
+running (00m46.0s), 1/1 VUs, 8 complete and 0 interrupted iterations
+medicion   [  27% ] 1 VUs  00m46.0s/40m0s  08/30 iters, 30 per VU
+
+running (00m47.0s), 1/1 VUs, 8 complete and 0 interrupted iterations
+medicion   [  27% ] 1 VUs  00m47.0s/40m0s  08/30 iters, 30 per VU
+
+running (00m48.0s), 1/1 VUs, 9 complete and 0 interrupted iterations
+medicion   [  30% ] 1 VUs  00m48.0s/40m0s  09/30 iters, 30 per VU
+
+running (00m49.0s), 1/1 VUs, 9 complete and 0 interrupted iterations
+medicion   [  30% ] 1 VUs  00m49.0s/40m0s  09/30 iters, 30 per VU
+
+running (00m50.0s), 1/1 VUs, 9 complete and 0 interrupted iterations
+medicion   [  30% ] 1 VUs  00m50.0s/40m0s  09/30 iters, 30 per VU
+
+running (00m51.0s), 1/1 VUs, 9 complete and 0 interrupted iterations
+medicion   [  30% ] 1 VUs  00m51.0s/40m0s  09/30 iters, 30 per VU
+
+running (00m52.0s), 1/1 VUs, 10 complete and 0 interrupted iterations
+medicion   [  33% ] 1 VUs  00m52.0s/40m0s  10/30 iters, 30 per VU
+
+running (00m53.0s), 1/1 VUs, 10 complete and 0 interrupted iterations
+medicion   [  33% ] 1 VUs  00m53.0s/40m0s  10/30 iters, 30 per VU
+
+running (00m54.0s), 1/1 VUs, 10 complete and 0 interrupted iterations
+medicion   [  33% ] 1 VUs  00m54.0s/40m0s  10/30 iters, 30 per VU
+
+running (00m55.0s), 1/1 VUs, 10 complete and 0 interrupted iterations
+medicion   [  33% ] 1 VUs  00m55.0s/40m0s  10/30 iters, 30 per VU
+
+running (00m56.0s), 1/1 VUs, 10 complete and 0 interrupted iterations
+medicion   [  33% ] 1 VUs  00m56.0s/40m0s  10/30 iters, 30 per VU
+
+running (00m57.0s), 1/1 VUs, 11 complete and 0 interrupted iterations
+medicion   [  37% ] 1 VUs  00m57.0s/40m0s  11/30 iters, 30 per VU
+
+running (00m58.0s), 1/1 VUs, 11 complete and 0 interrupted iterations
+medicion   [  37% ] 1 VUs  00m58.0s/40m0s  11/30 iters, 30 per VU
+
+running (00m59.0s), 1/1 VUs, 11 complete and 0 interrupted iterations
+medicion   [  37% ] 1 VUs  00m59.0s/40m0s  11/30 iters, 30 per VU
+
+running (01m00.0s), 1/1 VUs, 11 complete and 0 interrupted iterations
+medicion   [  37% ] 1 VUs  01m00.0s/40m0s  11/30 iters, 30 per VU
+
+running (01m01.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m01.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m02.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m02.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m03.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m03.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m04.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m04.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m05.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m05.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m06.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m06.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m07.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m07.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m08.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m08.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m09.0s), 1/1 VUs, 12 complete and 0 interrupted iterations
+medicion   [  40% ] 1 VUs  01m09.0s/40m0s  12/30 iters, 30 per VU
+
+running (01m10.0s), 1/1 VUs, 13 complete and 0 interrupted iterations
+medicion   [  43% ] 1 VUs  01m10.0s/40m0s  13/30 iters, 30 per VU
+
+running (01m11.0s), 1/1 VUs, 13 complete and 0 interrupted iterations
+medicion   [  43% ] 1 VUs  01m11.0s/40m0s  13/30 iters, 30 per VU
+
+running (01m12.0s), 1/1 VUs, 13 complete and 0 interrupted iterations
+medicion   [  43% ] 1 VUs  01m12.0s/40m0s  13/30 iters, 30 per VU
+
+running (01m13.0s), 1/1 VUs, 13 complete and 0 interrupted iterations
+medicion   [  43% ] 1 VUs  01m13.0s/40m0s  13/30 iters, 30 per VU
+
+running (01m14.0s), 1/1 VUs, 13 complete and 0 interrupted iterations
+medicion   [  43% ] 1 VUs  01m14.0s/40m0s  13/30 iters, 30 per VU
+
+running (01m15.0s), 1/1 VUs, 14 complete and 0 interrupted iterations
+medicion   [  47% ] 1 VUs  01m15.0s/40m0s  14/30 iters, 30 per VU
+
+running (01m16.0s), 1/1 VUs, 14 complete and 0 interrupted iterations
+medicion   [  47% ] 1 VUs  01m16.0s/40m0s  14/30 iters, 30 per VU
+
+running (01m17.0s), 1/1 VUs, 14 complete and 0 interrupted iterations
+medicion   [  47% ] 1 VUs  01m17.0s/40m0s  14/30 iters, 30 per VU
+
+running (01m18.0s), 1/1 VUs, 14 complete and 0 interrupted iterations
+medicion   [  47% ] 1 VUs  01m18.0s/40m0s  14/30 iters, 30 per VU
+
+running (01m19.0s), 1/1 VUs, 15 complete and 0 interrupted iterations
+medicion   [  50% ] 1 VUs  01m19.0s/40m0s  15/30 iters, 30 per VU
+
+running (01m20.0s), 1/1 VUs, 15 complete and 0 interrupted iterations
+medicion   [  50% ] 1 VUs  01m20.0s/40m0s  15/30 iters, 30 per VU
+
+running (01m21.0s), 1/1 VUs, 15 complete and 0 interrupted iterations
+medicion   [  50% ] 1 VUs  01m21.0s/40m0s  15/30 iters, 30 per VU
+
+running (01m22.0s), 1/1 VUs, 15 complete and 0 interrupted iterations
+medicion   [  50% ] 1 VUs  01m22.0s/40m0s  15/30 iters, 30 per VU
+
+running (01m23.0s), 1/1 VUs, 16 complete and 0 interrupted iterations
+medicion   [  53% ] 1 VUs  01m23.0s/40m0s  16/30 iters, 30 per VU
+
+running (01m24.0s), 1/1 VUs, 16 complete and 0 interrupted iterations
+medicion   [  53% ] 1 VUs  01m24.0s/40m0s  16/30 iters, 30 per VU
+
+running (01m25.0s), 1/1 VUs, 16 complete and 0 interrupted iterations
+medicion   [  53% ] 1 VUs  01m25.0s/40m0s  16/30 iters, 30 per VU
+
+running (01m26.0s), 1/1 VUs, 16 complete and 0 interrupted iterations
+medicion   [  53% ] 1 VUs  01m26.0s/40m0s  16/30 iters, 30 per VU
+
+running (01m27.0s), 1/1 VUs, 16 complete and 0 interrupted iterations
+medicion   [  53% ] 1 VUs  01m27.0s/40m0s  16/30 iters, 30 per VU
+
+running (01m28.0s), 1/1 VUs, 17 complete and 0 interrupted iterations
+medicion   [  57% ] 1 VUs  01m28.0s/40m0s  17/30 iters, 30 per VU
+
+running (01m29.0s), 1/1 VUs, 17 complete and 0 interrupted iterations
+medicion   [  57% ] 1 VUs  01m29.0s/40m0s  17/30 iters, 30 per VU
+
+running (01m30.0s), 1/1 VUs, 17 complete and 0 interrupted iterations
+medicion   [  57% ] 1 VUs  01m30.0s/40m0s  17/30 iters, 30 per VU
+
+running (01m31.0s), 1/1 VUs, 17 complete and 0 interrupted iterations
+medicion   [  57% ] 1 VUs  01m31.0s/40m0s  17/30 iters, 30 per VU
+
+running (01m32.0s), 1/1 VUs, 18 complete and 0 interrupted iterations
+medicion   [  60% ] 1 VUs  01m32.0s/40m0s  18/30 iters, 30 per VU
+
+running (01m33.0s), 1/1 VUs, 18 complete and 0 interrupted iterations
+medicion   [  60% ] 1 VUs  01m33.0s/40m0s  18/30 iters, 30 per VU
+
+running (01m34.0s), 1/1 VUs, 18 complete and 0 interrupted iterations
+medicion   [  60% ] 1 VUs  01m34.0s/40m0s  18/30 iters, 30 per VU
+
+running (01m35.0s), 1/1 VUs, 18 complete and 0 interrupted iterations
+medicion   [  60% ] 1 VUs  01m35.0s/40m0s  18/30 iters, 30 per VU
+
+running (01m36.0s), 1/1 VUs, 19 complete and 0 interrupted iterations
+medicion   [  63% ] 1 VUs  01m36.0s/40m0s  19/30 iters, 30 per VU
+
+running (01m37.0s), 1/1 VUs, 19 complete and 0 interrupted iterations
+medicion   [  63% ] 1 VUs  01m37.0s/40m0s  19/30 iters, 30 per VU
+
+running (01m38.0s), 1/1 VUs, 19 complete and 0 interrupted iterations
+medicion   [  63% ] 1 VUs  01m38.0s/40m0s  19/30 iters, 30 per VU
+
+running (01m39.0s), 1/1 VUs, 19 complete and 0 interrupted iterations
+medicion   [  63% ] 1 VUs  01m39.0s/40m0s  19/30 iters, 30 per VU
+
+running (01m40.0s), 1/1 VUs, 19 complete and 0 interrupted iterations
+medicion   [  63% ] 1 VUs  01m40.0s/40m0s  19/30 iters, 30 per VU
+
+running (01m41.0s), 1/1 VUs, 20 complete and 0 interrupted iterations
+medicion   [  67% ] 1 VUs  01m41.0s/40m0s  20/30 iters, 30 per VU
+
+running (01m42.0s), 1/1 VUs, 20 complete and 0 interrupted iterations
+medicion   [  67% ] 1 VUs  01m42.0s/40m0s  20/30 iters, 30 per VU
+
+running (01m43.0s), 1/1 VUs, 20 complete and 0 interrupted iterations
+medicion   [  67% ] 1 VUs  01m43.0s/40m0s  20/30 iters, 30 per VU
+
+running (01m44.0s), 1/1 VUs, 20 complete and 0 interrupted iterations
+medicion   [  67% ] 1 VUs  01m44.0s/40m0s  20/30 iters, 30 per VU
+
+running (01m45.0s), 1/1 VUs, 20 complete and 0 interrupted iterations
+medicion   [  67% ] 1 VUs  01m45.0s/40m0s  20/30 iters, 30 per VU
+
+running (01m46.0s), 1/1 VUs, 21 complete and 0 interrupted iterations
+medicion   [  70% ] 1 VUs  01m46.0s/40m0s  21/30 iters, 30 per VU
+
+running (01m47.0s), 1/1 VUs, 21 complete and 0 interrupted iterations
+medicion   [  70% ] 1 VUs  01m47.0s/40m0s  21/30 iters, 30 per VU
+
+running (01m48.0s), 1/1 VUs, 21 complete and 0 interrupted iterations
+medicion   [  70% ] 1 VUs  01m48.0s/40m0s  21/30 iters, 30 per VU
+
+running (01m49.0s), 1/1 VUs, 21 complete and 0 interrupted iterations
+medicion   [  70% ] 1 VUs  01m49.0s/40m0s  21/30 iters, 30 per VU
+
+running (01m50.0s), 1/1 VUs, 21 complete and 0 interrupted iterations
+medicion   [  70% ] 1 VUs  01m50.0s/40m0s  21/30 iters, 30 per VU
+
+running (01m51.0s), 1/1 VUs, 22 complete and 0 interrupted iterations
+medicion   [  73% ] 1 VUs  01m51.0s/40m0s  22/30 iters, 30 per VU
+
+running (01m52.0s), 1/1 VUs, 22 complete and 0 interrupted iterations
+medicion   [  73% ] 1 VUs  01m52.0s/40m0s  22/30 iters, 30 per VU
+
+running (01m53.0s), 1/1 VUs, 22 complete and 0 interrupted iterations
+medicion   [  73% ] 1 VUs  01m53.0s/40m0s  22/30 iters, 30 per VU
+
+running (01m54.0s), 1/1 VUs, 22 complete and 0 interrupted iterations
+medicion   [  73% ] 1 VUs  01m54.0s/40m0s  22/30 iters, 30 per VU
+
+running (01m55.0s), 1/1 VUs, 22 complete and 0 interrupted iterations
+medicion   [  73% ] 1 VUs  01m55.0s/40m0s  22/30 iters, 30 per VU
+
+running (01m56.0s), 1/1 VUs, 23 complete and 0 interrupted iterations
+medicion   [  77% ] 1 VUs  01m56.0s/40m0s  23/30 iters, 30 per VU
+
+running (01m57.0s), 1/1 VUs, 23 complete and 0 interrupted iterations
+medicion   [  77% ] 1 VUs  01m57.0s/40m0s  23/30 iters, 30 per VU
+
+running (01m58.0s), 1/1 VUs, 23 complete and 0 interrupted iterations
+medicion   [  77% ] 1 VUs  01m58.0s/40m0s  23/30 iters, 30 per VU
+
+running (01m59.0s), 1/1 VUs, 23 complete and 0 interrupted iterations
+medicion   [  77% ] 1 VUs  01m59.0s/40m0s  23/30 iters, 30 per VU
+
+running (02m00.0s), 1/1 VUs, 24 complete and 0 interrupted iterations
+medicion   [  80% ] 1 VUs  02m00.0s/40m0s  24/30 iters, 30 per VU
+
+running (02m01.0s), 1/1 VUs, 24 complete and 0 interrupted iterations
+medicion   [  80% ] 1 VUs  02m01.0s/40m0s  24/30 iters, 30 per VU
+
+running (02m02.0s), 1/1 VUs, 24 complete and 0 interrupted iterations
+medicion   [  80% ] 1 VUs  02m02.0s/40m0s  24/30 iters, 30 per VU
+
+running (02m03.0s), 1/1 VUs, 24 complete and 0 interrupted iterations
+medicion   [  80% ] 1 VUs  02m03.0s/40m0s  24/30 iters, 30 per VU
+
+running (02m04.0s), 1/1 VUs, 24 complete and 0 interrupted iterations
+medicion   [  80% ] 1 VUs  02m04.0s/40m0s  24/30 iters, 30 per VU
+
+running (02m05.0s), 1/1 VUs, 25 complete and 0 interrupted iterations
+medicion   [  83% ] 1 VUs  02m05.0s/40m0s  25/30 iters, 30 per VU
+
+running (02m06.0s), 1/1 VUs, 25 complete and 0 interrupted iterations
+medicion   [  83% ] 1 VUs  02m06.0s/40m0s  25/30 iters, 30 per VU
+
+running (02m07.0s), 1/1 VUs, 25 complete and 0 interrupted iterations
+medicion   [  83% ] 1 VUs  02m07.0s/40m0s  25/30 iters, 30 per VU
+
+running (02m08.0s), 1/1 VUs, 25 complete and 0 interrupted iterations
+medicion   [  83% ] 1 VUs  02m08.0s/40m0s  25/30 iters, 30 per VU
+
+running (02m09.0s), 1/1 VUs, 26 complete and 0 interrupted iterations
+medicion   [  87% ] 1 VUs  02m09.0s/40m0s  26/30 iters, 30 per VU
+
+running (02m10.0s), 1/1 VUs, 26 complete and 0 interrupted iterations
+medicion   [  87% ] 1 VUs  02m10.0s/40m0s  26/30 iters, 30 per VU
+
+running (02m11.0s), 1/1 VUs, 26 complete and 0 interrupted iterations
+medicion   [  87% ] 1 VUs  02m11.0s/40m0s  26/30 iters, 30 per VU
+
+running (02m12.0s), 1/1 VUs, 26 complete and 0 interrupted iterations
+medicion   [  87% ] 1 VUs  02m12.0s/40m0s  26/30 iters, 30 per VU
+
+running (02m13.0s), 1/1 VUs, 26 complete and 0 interrupted iterations
+medicion   [  87% ] 1 VUs  02m13.0s/40m0s  26/30 iters, 30 per VU
+
+running (02m14.0s), 1/1 VUs, 27 complete and 0 interrupted iterations
+medicion   [  90% ] 1 VUs  02m14.0s/40m0s  27/30 iters, 30 per VU
+
+running (02m15.0s), 1/1 VUs, 27 complete and 0 interrupted iterations
+medicion   [  90% ] 1 VUs  02m15.0s/40m0s  27/30 iters, 30 per VU
+
+running (02m16.0s), 1/1 VUs, 27 complete and 0 interrupted iterations
+medicion   [  90% ] 1 VUs  02m16.0s/40m0s  27/30 iters, 30 per VU
+
+running (02m17.0s), 1/1 VUs, 27 complete and 0 interrupted iterations
+medicion   [  90% ] 1 VUs  02m17.0s/40m0s  27/30 iters, 30 per VU
+
+running (02m18.0s), 1/1 VUs, 28 complete and 0 interrupted iterations
+medicion   [  93% ] 1 VUs  02m18.0s/40m0s  28/30 iters, 30 per VU
+
+running (02m19.0s), 1/1 VUs, 28 complete and 0 interrupted iterations
+medicion   [  93% ] 1 VUs  02m19.0s/40m0s  28/30 iters, 30 per VU
+
+running (02m20.0s), 1/1 VUs, 28 complete and 0 interrupted iterations
+medicion   [  93% ] 1 VUs  02m20.0s/40m0s  28/30 iters, 30 per VU
+
+running (02m21.0s), 1/1 VUs, 28 complete and 0 interrupted iterations
+medicion   [  93% ] 1 VUs  02m21.0s/40m0s  28/30 iters, 30 per VU
+
+running (02m22.0s), 1/1 VUs, 29 complete and 0 interrupted iterations
+medicion   [  97% ] 1 VUs  02m22.0s/40m0s  29/30 iters, 30 per VU
+
+running (02m23.0s), 1/1 VUs, 29 complete and 0 interrupted iterations
+medicion   [  97% ] 1 VUs  02m23.0s/40m0s  29/30 iters, 30 per VU
+
+running (02m24.0s), 1/1 VUs, 29 complete and 0 interrupted iterations
+medicion   [  97% ] 1 VUs  02m24.0s/40m0s  29/30 iters, 30 per VU
+
+running (02m25.0s), 1/1 VUs, 29 complete and 0 interrupted iterations
+medicion   [  97% ] 1 VUs  02m25.0s/40m0s  29/30 iters, 30 per VU
+
+running (02m26.0s), 1/1 VUs, 29 complete and 0 interrupted iterations
+medicion   [  97% ] 1 VUs  02m26.0s/40m0s  29/30 iters, 30 per VU
+
+     ✗ ranking 200
+      ↳  96% — ✓ 29 / ✗ 1
+     ✗ ranking 50 celdas
+      ↳  96% — ✓ 29 / ✗ 1
+     ✗ score_semantics relative_rank
+      ↳  96% — ✓ 29 / ✗ 1
+
+     checks.........................: 96.66% 87 out of 90
+     data_received..................: 168 kB 1.1 kB/s
+     data_sent......................: 3.2 kB 22 B/s
+     http_req_blocked...............: min=6.38µs   med=8.92µs   avg=366.62µs p(90)=13.81µs p(95)=2.16ms   max=6.81ms   count=30
+     http_req_connecting............: min=0s       med=0s       avg=209.33µs p(90)=0s      p(95)=1.4ms    max=3.72ms   count=30
+     http_req_duration..............: min=4.22s    med=4.51s    avg=4.87s    p(90)=5.5s    p(95)=7.13s    max=8.6s     count=30
+     ✗ { endpoint:ranking }.........: min=4.22s    med=4.51s    avg=4.87s    p(90)=5.5s    p(95)=7.13s    max=8.6s     count=30
+       { expected_response:true }...: min=4.22s    med=4.5s     avg=4.81s    p(90)=5.28s   p(95)=6.67s    max=8.6s     count=29
+   ✗ http_req_failed................: 3.33%  1 out of 30
+     http_req_receiving.............: min=172.48µs med=425.61µs avg=696.07µs p(90)=1.43ms  p(95)=1.54ms   max=3.49ms   count=30
+     http_req_sending...............: min=23.19µs  med=32.11µs  avg=44.39µs  p(90)=72.87µs p(95)=119.43µs max=170.29µs count=30
+     http_req_tls_handshaking.......: min=0s       med=0s       avg=0s       p(90)=0s      p(95)=0s       max=0s       count=30
+     http_req_waiting...............: min=4.22s    med=4.51s    avg=4.87s    p(90)=5.5s    p(95)=7.13s    max=8.6s     count=30
+     http_reqs......................: 30     0.20491/s
+     iteration_duration.............: min=4.22s    med=4.51s    avg=4.88s    p(90)=5.5s    p(95)=7.13s    max=8.6s     count=30
+     iterations.....................: 30     0.20491/s
+     vus............................: 1      min=1        max=1
+     vus_max........................: 1      min=1        max=1
+
+
+running (02m26.4s), 0/1 VUs, 30 complete and 0 interrupted iterations
+medicion ✓ [ 100% ] 1 VUs  02m26.4s/40m0s  30/30 iters, 30 per VU
+time="2026-11-25T11:56:39Z" level=error msg="thresholds on metrics 'http_req_duration{endpoint:ranking}, http_req_failed' have been crossed"
+k6 exit=99

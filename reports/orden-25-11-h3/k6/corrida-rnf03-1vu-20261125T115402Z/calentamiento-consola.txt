@@ -1,0 +1,56 @@
+
+         /\      Grafana   /‾‾/  
+    /\  /  \     |\  __   /  /   
+   /  \/    \    | |/ /  /   ‾‾\ 
+  /          \   |   (  |  (‾)  |
+ / __________ \  |_|\_\  \_____/ 
+
+     execution: local
+        script: /scripts/rnf03_api_1vu.js
+        output: json (/out/calentamiento-muestras.json)
+
+     scenarios: (100.00%) 1 scenario, 1 max VUs, 3m30s max duration (incl. graceful stop):
+              * calentamiento: 1 iterations for each of 1 VUs (maxDuration: 3m0s, gracefulStop: 30s)
+
+
+running (0m01.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+calentamiento   [   0% ] 1 VUs  0m01.0s/3m0s  0/1 iters, 1 per VU
+
+running (0m02.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+calentamiento   [   0% ] 1 VUs  0m02.0s/3m0s  0/1 iters, 1 per VU
+
+running (0m03.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+calentamiento   [   0% ] 1 VUs  0m03.0s/3m0s  0/1 iters, 1 per VU
+
+running (0m04.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+calentamiento   [   0% ] 1 VUs  0m04.0s/3m0s  0/1 iters, 1 per VU
+
+running (0m05.0s), 1/1 VUs, 0 complete and 0 interrupted iterations
+calentamiento   [   0% ] 1 VUs  0m05.0s/3m0s  0/1 iters, 1 per VU
+
+     ✓ ranking 200
+     ✓ ranking 50 celdas
+     ✓ score_semantics relative_rank
+
+     checks.........................: 100.00% 3 out of 3
+     data_received..................: 5.8 kB  986 B/s
+     data_sent......................: 106 B   18 B/s
+     http_req_blocked...............: min=32.27ms med=32.27ms avg=32.27ms p(90)=32.27ms p(95)=32.27ms max=32.27ms count=1
+     http_req_connecting............: min=4.43ms  med=4.43ms  avg=4.43ms  p(90)=4.43ms  p(95)=4.43ms  max=4.43ms  count=1
+     http_req_duration..............: min=5.79s   med=5.79s   avg=5.79s   p(90)=5.79s   p(95)=5.79s   max=5.79s   count=1
+       { expected_response:true }...: min=5.79s   med=5.79s   avg=5.79s   p(90)=5.79s   p(95)=5.79s   max=5.79s   count=1
+     http_req_failed................: 0.00%   0 out of 1
+     http_req_receiving.............: min=2.22ms  med=2.22ms  avg=2.22ms  p(90)=2.22ms  p(95)=2.22ms  max=2.22ms  count=1
+     http_req_sending...............: min=2.97ms  med=2.97ms  avg=2.97ms  p(90)=2.97ms  p(95)=2.97ms  max=2.97ms  count=1
+     http_req_tls_handshaking.......: min=0s      med=0s      avg=0s      p(90)=0s      p(95)=0s      max=0s      count=1
+     http_req_waiting...............: min=5.79s   med=5.79s   avg=5.79s   p(90)=5.79s   p(95)=5.79s   max=5.79s   count=1
+     http_reqs......................: 1       0.170516/s
+     iteration_duration.............: min=5.85s   med=5.85s   avg=5.85s   p(90)=5.85s   p(95)=5.85s   max=5.85s   count=1
+     iterations.....................: 1       0.170516/s
+     vus............................: 1       min=1      max=1
+     vus_max........................: 1       min=1      max=1
+
+
+running (0m05.9s), 0/1 VUs, 1 complete and 0 interrupted iterations
+calentamiento ✓ [ 100% ] 1 VUs  0m05.9s/3m0s  1/1 iters, 1 per VU
+k6 exit=0

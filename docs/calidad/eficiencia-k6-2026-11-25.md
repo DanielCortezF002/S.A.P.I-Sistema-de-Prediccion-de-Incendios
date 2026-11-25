@@ -1,5 +1,7 @@
 # C4 · Eficiencia · k6 contra `GET /api/v1/ranking` · 25-11-2026
 
+> **N=2 no se corrió, sustituida por RNF-03:** [reporte de la corrida RNF-03 a nivel API, 1 VU, 25-11](../../reports/orden-25-11-h3/k6/REPORTE-rnf03-1vu-2026-11-25.md) (NO CUMPLE). La declaración de abajo se conserva tal cual.
+
 > **Esto no es KPI-03.** KPI-03 es la latencia visible en Edge, con su propio protocolo sellado y congelado (`docs/objetivos.md` §5.2 en `9657bad`). Esta prueba mide la API del backend bajo concurrencia; sus cifras no se comparan con la meta de 2.000 ms ni se presentan como latencia de la interfaz.
 
 - Stack: `sapi-h3-518c0b5`, código `518c0b58e6b229317f51b1da56ac23346dc2ef74`, backend en `127.0.0.1:18080`. El ml-api corre con `--workers 2` (`docker-compose.yml`).

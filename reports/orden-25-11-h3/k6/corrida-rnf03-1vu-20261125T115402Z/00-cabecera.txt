@@ -1,0 +1,24 @@
+inicio_utc: 2026-11-25T11:54:02Z
+sha_repo_HEAD: 2a9e2781b30f0bbb5fda0b07b57f3e5c33114b1a
+sha_codigo_stack: 518c0b58e6b229317f51b1da56ac23346dc2ef74
+imagenes:
+CONTAINER                   REPOSITORY                TAG                 PLATFORM            IMAGE ID            SIZE                CREATED
+sapi-h3-518c0b5-backend-1   sapi-h3-518c0b5-backend   latest              linux/amd64         738e2f76e7ed        525MB               47 hours ago
+sapi-h3-518c0b5-db-v2-1     postgis/postgis           15-3.4              linux/amd64         3f4a5d48e0be        844MB               2 years ago
+sapi-h3-518c0b5-ml-api-1    sapi-h3-518c0b5-ml-api    latest              linux/amd64         54d486969316        3.55GB              8 hours ago
+sapi-h3-518c0b5-web-v2-1    sapi-h3-518c0b5-web-v2    latest              linux/amd64         43e4b8116802        2.87GB              8 hours ago
+contenedores_en_marcha:
+sapi-h3-518c0b5-web-v2-1 sapi-h3-518c0b5-web-v2 Up 8 hours
+sapi-h3-518c0b5-backend-1 sapi-h3-518c0b5-backend Up 8 hours (healthy)
+sapi-h3-518c0b5-ml-api-1 sapi-h3-518c0b5-ml-api Up 8 hours (healthy)
+sapi-h3-518c0b5-db-v2-1 postgis/postgis:15-3.4 Up 8 hours (healthy)
+sapi-web-v2-1 sapi-web-v2 Up 15 hours
+sapi-backend-1 sapi-backend Up 15 hours (healthy)
+sapi-ml-api-1 sapi-ml-api Up 15 hours (healthy)
+sapi-db-v2-1 postgis/postgis:15-3.4 Up 15 hours (healthy)
+N=1 VU; calentamiento 1 iteración (excluida); medición 30 iteraciones secuenciales sin pausa; timeout 90 s
+umbral: p95 rango más cercano <= 2000 ms y 0 fallos
+luz_verde: Daniel 25-11 08:50 Chile vía Director (task_d961225e01aa)
+calentamiento_inicio_utc: 2026-11-25T11:54:04Z
+medicion_inicio_utc: 2026-11-25T11:54:12Z
+fin_utc: 2026-11-25T11:56:40Z

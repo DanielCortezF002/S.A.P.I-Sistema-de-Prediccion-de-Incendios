@@ -3,6 +3,7 @@
 - Fecha de preparación: 2026-11-25. SHA del código: `518c0b58e6b229317f51b1da56ac23346dc2ef74`.
 - Hardware: AMD Ryzen AI 7 350 (8 núcleos, 16 hilos), 31 GB de RAM, Windows 11 Home 10.0.26200; Docker 29.9.2.
 - Ejecutado en el computador local, no en ambiente desplegado.
+- Actualización 25-11: estos escenarios no se corrieron. Se corrió en su lugar RNF-03 con 1 VU: [REPORTE-rnf03-1vu-2026-11-25.md](REPORTE-rnf03-1vu-2026-11-25.md).
 - **Estado: LISTO, NO EJECUTADO. N de VUs ejecutados: 0.** Cada corrida necesita luz verde explícita y propia del Director (sesión SUS de Daniel en curso).
 
 ## Archivos
