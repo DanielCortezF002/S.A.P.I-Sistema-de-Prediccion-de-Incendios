@@ -1,0 +1,16 @@
+services/ml_api/main.py
+src/config.py
+src/geo/grid.py
+src/inference/prototype_service.py
+src/inference/scoring_inputs.py
+src/ingesta/firms_schema.py
+src/procesamiento/dem_features.py
+src/procesamiento/episodes.py
+src/procesamiento/firms_source.py
+src/procesamiento/meteo_fire_joiner.py
+src/procesamiento/raw_parser.py
+src/procesamiento/regional_meteo.py
+src/procesamiento/shared_thresholds.py
+src/procesamiento/station_catalog.py
+src/procesamiento/temporal_features.py
+tools/n8n_bridge/contract.py
