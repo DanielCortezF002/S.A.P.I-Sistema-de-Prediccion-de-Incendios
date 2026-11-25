@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "inicio_utc": "2026-11-25T04:28:39.184853+00:00",
+    "edge": "158.0.4370.33",
+    "viewport": "1600x1000",
+    "url": "http://127.0.0.1:18501/",
+    "fin_utc": "2026-11-25T04:29:32.808750+00:00",
+    "errores_consola": []
+  },
+  "pasos": [
+    {
+      "paso": "1. Abrir",
+      "inicio_utc": "2026-11-25T04:28:39.185145+00:00",
+      "fin_utc": "2026-11-25T04:29:24.739193+00:00",
+      "ok": true,
+      "observado": "selector visible; traceback=False"
+    },
+    {
+      "paso": "2. Leer ranking",
+      "inicio_utc": "2026-11-25T04:29:24.739230+00:00",
+      "fin_utc": "2026-11-25T04:29:25.282464+00:00",
+      "ok": true,
+      "observado": {
+        "disclaimer": "PROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, NO una probabilidad calibrada de incendio. No usar para decisiones operacionales. Ver docs/auditoria-consistencia-2026-09-06.md para el estado metodológico completo.\nEl score corresponde a un ranking relativo exploratorio y no a una probabilidad calibrada de incendio.",
+        "menciona_probabilidad_calibrada": true,
+        "menciona_historico": true
+      }
+    },
+    {
+      "paso": "3. Seleccionar",
+      "inicio_utc": "2026-11-25T04:29:25.282562+00:00",
+      "fin_utc": "2026-11-25T04:29:28.733233+00:00",
+      "ok": true,
+      "observado": "celda elegida VP-002"
+    },
+    {
+      "paso": "4. Entender datos",
+      "inicio_utc": "2026-11-25T04:29:28.733263+00:00",
+      "fin_utc": "2026-11-25T04:29:28.985569+00:00",
+      "ok": true,
+      "observado": "ficha VP-002"
+    },
+    {
+      "paso": "5. Actualizar",
+      "inicio_utc": "2026-11-25T04:29:28.985599+00:00",
+      "fin_utc": "2026-11-25T04:29:32.344098+00:00",
+      "ok": true,
+      "observado": "pulsado una vez; selector visible tras la consulta"
+    },
+    {
+      "paso": "6a. Abrir grilla",
+      "inicio_utc": "2026-11-25T04:29:32.344125+00:00",
+      "fin_utc": "2026-11-25T04:29:32.808725+00:00",
+      "ok": true,
+      "observado": {
+        "filtro_50": true
+      }
+    }
+  ]
+}

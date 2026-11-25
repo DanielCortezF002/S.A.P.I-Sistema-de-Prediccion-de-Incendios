@@ -1,0 +1,26 @@
+﻿# Identidad de stacks, capturada 2026-11-25T04:38:17.6166882Z
+# worktree HEAD: 518c0b58e6b229317f51b1da56ac23346dc2ef74
+# checkout del stack sapi (C:\Proyecto SAPI\SAPI) HEAD hoy: fd371cc3d5e04c226331b449863504748c588868 (no prueba con que SHA se construyeron sus imagenes)
+/sapi-h3-518c0b5-web-v2-1 id=a3504e48d6d0f54aff993637ca9f6f9f6f7b30bc8c2bb50bc8d68e6b253a0e22 image=sha256:43e4b8116802bbeed355a7f356602a33a2c6de4f3c9551a582a06d823612eeda status=running health=sin-healthcheck started=2026-11-25T04:07:45.132945833Z
+  repodigests=["sapi-h3-518c0b5-web-v2@sha256:43e4b8116802bbeed355a7f356602a33a2c6de4f3c9551a582a06d823612eeda"] created=2026-11-25T04:07:16.882897243Z layers=9
+/sapi-web-v2-1 id=b09f94fcf4964e15fc7db27ee99497d05556f99cd947c249f1439cfba4dcf6a9 image=sha256:a21c5bbfc9b99bc65928ce4be261b8800bfc2ed0b2c2f570c4fe6d5791dd6394 status=running health=sin-healthcheck started=2026-11-24T20:59:02.941629341Z
+  repodigests=["sapi-web-v2@sha256:a21c5bbfc9b99bc65928ce4be261b8800bfc2ed0b2c2f570c4fe6d5791dd6394"] created=2026-11-24T16:52:18.959729978Z layers=9
+/sapi-h3-518c0b5-backend-1 id=1b3e510e8083e601a8878c0a779dc9c27560529a129f32aba1988984c517f851 image=sha256:738e2f76e7eda6c4056d4070e967104ef9ffb7986b552653cd353570b80be369 status=running health=healthy started=2026-11-25T04:07:44.539556922Z
+  repodigests=["sapi-h3-518c0b5-backend@sha256:738e2f76e7eda6c4056d4070e967104ef9ffb7986b552653cd353570b80be369"] created=2026-11-23T13:10:47.209936519Z layers=9
+/sapi-backend-1 id=4b84521c681afb1c3bbb3ea6197004905ad1c2f405620a6bd9bab835edf3789b image=sha256:4fa463257f567fec6eb5ae6250c12bc5cc05987036850026de1c596058419265 status=running health=healthy started=2026-11-24T20:59:02.339990435Z
+  repodigests=["sapi-backend@sha256:4fa463257f567fec6eb5ae6250c12bc5cc05987036850026de1c596058419265"] created=2026-11-23T13:10:47.209936519Z layers=9
+/sapi-h3-518c0b5-ml-api-1 id=48aefe903df84876018717cb2dcb75fde868757235b973d53a42b049ba5a589c image=sha256:54d48696931638db3de0180128487999ba2af9712336f6e77b8949bf2a8915dd status=running health=healthy started=2026-11-25T04:07:28.539635409Z
+  repodigests=["sapi-h3-518c0b5-ml-api@sha256:54d48696931638db3de0180128487999ba2af9712336f6e77b8949bf2a8915dd"] created=2026-11-25T04:07:20.713469611Z layers=10
+/sapi-ml-api-1 id=f28286d4d2a1c39161685d1e13088b98d424aac9b899be418285218b25937fb3 image=sha256:ec6c0efc607a24fd68082b132eccac2dc89db047b0ff9a03690c783ebba64c6f status=running health=healthy started=2026-11-24T20:59:01.731130162Z
+  repodigests=["sapi-ml-api@sha256:ec6c0efc607a24fd68082b132eccac2dc89db047b0ff9a03690c783ebba64c6f"] created=2026-11-24T16:53:32.702131249Z layers=10
+/sapi-h3-518c0b5-db-v2-1 id=92c817e6b39137c84fd66835e505cec767caae042a005b6392124521dd1ccea9 image=sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd status=running health=healthy started=2026-11-25T04:07:27.669726847Z
+  repodigests=["postgis/postgis@sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd"] created=2024-10-14T05:29:56.951335493Z layers=18
+/sapi-db-v2-1 id=fc4f413615350a8e3859ca7bd3da3c7f0ffad82e05838496c48c6b480fed91da image=sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd status=running health=healthy started=2026-11-24T20:59:01.215750861Z
+  repodigests=["postgis/postgis@sha256:3f4a5d48e0be9580ed70ed618cd039ce57bbb2dd113053d3836e28513f1f87cd"] created=2024-10-14T05:29:56.951335493Z layers=18
+NAME                        IMAGE                     COMMAND                  SERVICE   CREATED          STATUS                    PORTS
+sapi-h3-518c0b5-backend-1   sapi-h3-518c0b5-backend   "java -jar /app/app.…"   backend   30 minutes ago   Up 30 minutes (healthy)   127.0.0.1:18080->8080/tcp
+sapi-h3-518c0b5-db-v2-1     postgis/postgis:15-3.4    "sh -ec 'secret=/run…"   db-v2     30 minutes ago   Up 30 minutes (healthy)   127.0.0.1:15432->5432/tcp
+sapi-h3-518c0b5-ml-api-1    sapi-h3-518c0b5-ml-api    "uvicorn services.ml…"   ml-api    30 minutes ago   Up 30 minutes (healthy)   127.0.0.1:18000->8000/tcp
+sapi-h3-518c0b5-web-v2-1    sapi-h3-518c0b5-web-v2    "python -m streamlit…"   web-v2    30 minutes ago   Up 30 minutes             127.0.0.1:18501->8501/tcp
+sapi-h3-518c0b5_sapi_v2_pgdata
+sapi-h3-518c0b5_sapi_v2_secrets

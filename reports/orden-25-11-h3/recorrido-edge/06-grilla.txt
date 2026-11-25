@@ -1,0 +1,179 @@
+2026-11-25T04:29:32.808017+00:00 http://127.0.0.1:18501/
+50 options available.
+
+Modo de datos
+
+Prototipo (datos reales)
+
+Demo (escenario sembrado)
+
+Actualizar ranking
+
+Claro
+
+Oscuro
+
+Consultando el ranking al backend...
+
+S.A.P.I.
+Sistema de Alerta y Priorización de Riesgo de Incendios
+PROTOTIPO EXPLORATORIO
+BACKEND REST
+DATOS HISTÓRICOS
+Ranking histórico T: 01 sep 2026
+Ventana de análisis: 00:00 → 06:00 UTC
+ DMC Rodelillo · 330007
+● Obtenido del backend: 04:29 UTC (Consulta REST)
+
+◐
+
+DATOS HISTÓRICOS · última observación hace 2044 h (antigüedad medida por el servicio al evaluar)
+
+El ranking corresponde al instante indicado y NO representa el riesgo actual.
+
+ÚLTIMA OBSERVACIÓN DMC · RODELILLO (330007)
+NO DISPONIBLE
+sin dato en la última ingesta
+|
+HR sin dato en la última ingesta
+|
+Viento sin dato en la última ingesta
+|
+sin lectura: no hay observación ingerida de Rodelillo
+La meteorología DMC reciente no se utilizó para calcular el ranking histórico.
+
+Releer última ingesta
+
+CELDAS EVALUADAS
+50
+en la ventana analizada
+GRUPO PRIORITARIO
+#1
+7 celdas (empate)
+SCORE RELATIVO (TOP)
+0.1313
+VP-001 (empate x7)
+TERRITORIO
+285 m
+Elevación (VP-002)
+VENTANA DE ANÁLISIS
+01 sep 2026
+00:00 – 06:00 UTC (h+6)
+Mapa de riesgo relativo de incendio
+CORTE DE MATRIZ:
+01 SEP 2026 · 00:00 UTC
+VENTANA: T+6H → 06:00 UTC
+Cada celda muestra el score relativo (no es una probabilidad calibrada).
+RIESGO (SCORE)
+Bajo
+Alto
+
+⤢ Expandir
+
+Vista del mapa
+
+Prioridades
+
+Todas las celdas
+
+SCORE DE RIESGO RELATIVO (EXPLORATORIO)
+0.00
+0.05
+0.10
+0.15
+0.20+
+Celda seleccionada
+Grupo prioritario #1
+Otras celdas evaluadas
+La meteorología DMC reciente no se utilizó para calcular el ranking histórico.
+Hallazgo principal
+▲
+Grupo prioritario #1
+7 celdas empatadas con mayor riesgo relativo
+›
+Score relativo: 0.131293
+
+Las celdas del grupo #1 presentan el mayor score relativo (0.1313) dentro del territorio evaluado, con un empate simultáneo de 7 celdas bajo el Modelo D.
+
+VP-001VP-002VP-016VP-013VP-012VP-011VP-033
+Empate real del modelo · 7 celdas con score idéntico
+
+Seleccionar celda (50 disponibles)
+
+VP-002
+Prioridad #1
+Score relativo: 0.131293 · empate ×7
+ELEVACIÓN
+285 m
+PENDIENTE
+11.2°
+TEMP. REG. T
+sin dato en el ranking
+VIENTO REG. T
+sin dato en el ranking
+TERRITORIO (REFERENCIA)
+Elevación
+285 m
+Pendiente
+11.2°
+Historial FIRMS
+Detalle FIRMS por celda no expuesto por API v0
+Topografía de referencia (DEM Copernicus GLO-30, tabla congelada Hito 1)
+METEOROLOGÍA REG.
+Meteorología usada
+sin dato: el ranking histórico no trae la meteorología que usó (campo fuera del contrato API v0). La observación DMC actual está en la barra superior.
+VENTANA
+T
+01 sep 2026 00:00 UTC
+T+6h
+01 sep 2026 06:00 UTC
+keyboard_arrow_right
+
+Detalle meteorológico DMC Rodelillo (330007)
+
+PROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, NO una probabilidad calibrada de incendio. No usar para decisiones operacionales. Ver docs/auditoria-consistencia-2026-09-06.md para el estado metodológico completo.
+El score corresponde a un ranking relativo exploratorio y no a una probabilidad calibrada de incendio.
+Trazabilidad técnica y fuentes
+MODELO
+prototype_model_d_v1
+SAPI - ranking_v0
+ORIGEN DEL RANKING
+GET /api/v1/ranking
+Spring Boot (cache 5 min)
+FORECAST TIME
+2026-09-01 00:00 UTC
+(h+6)
+FUENTE DE DATOS
+NASA FIRMS
+Cobertura hasta 2026-08-30 (evaluado respecto al instante histórico T)
+keyboard_arrow_right
+
+Ver detalle técnico y metadatos completos
+
+Vista previa del ranking (Top 5)
+#	CELDA	GRUPO	SCORE RELATIVO	EMPATE
+1	VP-001	Grupo 1	0.1313	x7
+1	VP-002	Grupo 1	0.1313	x7
+1	VP-016	Grupo 1	0.1313	x7
+1	VP-013	Grupo 1	0.1313	x7
+1	VP-012	Grupo 1	0.1313	x7
+keyboard_arrow_down
+
+Ver ranking completo (50 celdas) y filtros
+
+CORTE TEMPORAL DE LA MATRIZ:
+01 sep 2026 · 00:00 UTC
+VENTANA: T+6 h → 06:00 UTC
+50 CELDAS EVALUADAS
+
+Criterio de ordenación
+
+Orden entregado por el backend
+
+Prioridad con empates ordenados por ID
+
+Identificador de celda (VP-001 → VP-050)
+
+Filtrar por grupo de prioridad relativa
+
+Orden y empates tal como los emitió el backend: celdas con score idéntico comparten el mismo número de prioridad. Criterio exploratorio relativo del Modelo D.
