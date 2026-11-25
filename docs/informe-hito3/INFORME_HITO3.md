@@ -130,7 +130,7 @@ El modelamiento del incremento está en `docs/arquitectura/README.md` (PR #45): 
 
 ### 6.1 Qué aprende el Modelo D (DIR-1)
 
-**Fuentes de esta sección (únicas):** la ficha del Modelo D, `docs/defensa/ficha-modelo-d.md` en la punta `6b0015b` de `DanielCortezF002/ficha-modelo-d` (en adelante, «ficha»), y las Tablas 51 y 52 del Informe del Hito 2, v1.9, p. 55 (`Informe Hito 2 SAPI Daniel Cortez.pdf`, SHA-256 `6f3eece39309cef235959749f33557b664fedcc5820e1dc2c60a8c6b326324bc`, recalculado el 25-11-2026). Lo que no sale de ellas se marca.
+**Fuentes de esta sección (únicas):** la ficha del Modelo D, `docs/defensa/ficha-modelo-d.md` en el commit `b4db9ee` (en adelante, «ficha»), y las Tablas 51 y 52 del Informe del Hito 2, v1.9, p. 55 (`Informe Hito 2 SAPI Daniel Cortez.pdf`, SHA-256 `6f3eece39309cef235959749f33557b664fedcc5820e1dc2c60a8c6b326324bc`, recalculado el 25-11-2026). Lo que no sale de ellas se marca.
 
 - **Artefacto.** `models/prototype_model_d.pkl`, SHA-256 `ac017bef1f42a30ac74ba3e3787368c4418798b2d562adcfba01c923cff2173f`, commit `5e721f2` (ficha, encabezado). Que sea el artefacto que corre en el despliegue: **dato pendiente** (SAPI-ML, 24-11-2026: el ítem 39 está detenido).
 - **Tipo.** `HistGradientBoostingClassifier` de scikit-learn 1.9.0. Se eligió por el manejo nativo de NaN, no por desempeño (ficha §1).
@@ -138,7 +138,7 @@ El modelamiento del incremento está en `docs/arquitectura/README.md` (PR #45): 
 - **Variables.** 25 (2 de historial FIRMS, 20 meteorológicas de una sola estación, DMC 330007, entre actuales y rezagos de 6, 12, 24 y 48 h, y 3 topográficas del DEM Copernicus); 22 árboles ajustados de `max_iter = 100` (ficha §3 y §6). La meteorología es idéntica en las 50 celdas de un instante y 20 celdas no tienen DEM (ficha §3 y §12).
 - **Etiqueta.** 1 si hay un primer arribo FIRMS de un episodio a la celda en (T, T+6 h]; horizonte de 6 h (ficha §4).
 - **Datos y separación.** Del 30-08-2021 al 29-08-2026, 362.883 filas y 107 positivas. El artefacto se ajustó con todas las filas, sin partición de prueba; la parada temprana usó una partición aleatoria estratificada, no temporal (ficha §5).
-- **Importancia por gain** del .pkl `ac017bef…`: calor 60,28 %, humedad 16,15 %, historial FIRMS 12,53 %, viento 8,60 %, topografía 2,44 % (ficha §9, `docs/defensa/salidas/ficha-modelo-d-gain.json`). Para el artefacto desplegado, la importancia de la regla 30-30-30 es **dato pendiente** (ver la nota después del bloque CA6).
+- **Importancia por gain** del .pkl `ac017bef…`: calor 60,28 %, humedad 16,15 %, historial FIRMS 12,53 %, viento 8,60 %, topografía 2,44 % (ficha §9, `docs/defensa/salidas/ficha-modelo-d-gain.json`). La regla 30-30-30 y sus rezagos solo toman 0 o NaN en el dataset sellado (ficha §14) y tienen gain cero en el .pkl analizado (ficha §9). La atribución 30-30-30 en el servicio sigue como **dato pendiente** de evidencia de ML (ver la nota después del bloque CA6).
 - **Métricas.** El artefacto no tiene métricas propias. Las que existen vienen de reentrenamientos walk-forward (ficha §8 y §11). Tabla 51 (p. 55), Modelo D por año de prueba:
 
   | Año | PR-AUC D | ROC-AUC D | Soporte |
@@ -149,13 +149,25 @@ El modelamiento del incremento está en `docs/arquitectura/README.md` (PR #45): 
   | 2025 | 0,0009183 | 0,6431 | 7 positivos de evaluación |
   | 2026 (parcial) | 0,001026 | 0,8136 | 10 positivos de evaluación |
 
-- **Tabla 52 (p. 55).** En los cuatro años entrenables, el PR-AUC de D supera a la prevalencia y al mejor baseline sin entrenamiento. En ROC-AUC no lo supera en 2025: el historial crudo obtiene 0,7766 frente a 0,6431. El propio informe declara que estas diferencias no satisfacen el criterio de éxito: solo 2024 tiene soporte ADEQUATE, está dominado por el evento del 03-02-2024 y no hay intervalos de incertidumbre.
+- **Tabla 52 (p. 55).** En los cuatro años entrenables, el PR-AUC de D supera a la prevalencia y al mejor baseline sin entrenamiento. En ROC-AUC no lo supera en 2025: el historial crudo obtiene 0,7766 frente a 0,6431. El criterio de éxito exige mejora consistente en al menos dos cortes con soporte ADEQUATE. Solo 2024 tiene ese soporte, con 23 de sus 46 positivos el 03-02-2024. La evaluación carece de intervalos de incertidumbre.
 - **Advertencia de César.** El incendio de febrero de 2024 fue provocado y queda excluido de la validación: el resultado de 2024 no es evidencia de desempeño (ficha §11).
 - **Limitaciones** (ficha §12): una sola estación meteorológica, 20 celdas sin DEM, celdas de unos 15 km² (la grilla de 1 km² es un objetivo no cumplido), sin prueba fuera de muestra para el artefacto, 107 positivos, la ignición humana no se observa y 41 de 50 celdas comparten score.
 
 La explicación en una página (`docs/modelo_d_una_pagina.md`) y el script `scripts/explicar_modelo_d.py` están en la PR #46 (head `a693a27928444c2192a849660755ed93583e3290`); no son fuente de esta sección.
 
 Pendientes de HU-88 según el Auditor: CA3 (modificación de código en vivo), CA4 (tres preguntas a La Cruz y acta `.V`), CA5 (defensa) y aprobación del stakeholder.
+
+### 6.1.1 Demo histórica y evidencia de Compose
+
+Por decisión de Daniel del 25-11-2026 (08:50), la defensa usa el snapshot congelado del Hito 1. El dashboard muestra datos históricos. El CSV FIRMS termina el 29-08-2026 y ese mismo día, a las 18:00 UTC, termina el Parquet H6 sellado. Las observaciones de Rodelillo (DMC 330007) llegan al 31-08-2026 a las 23:45. La ventana del ranking observada en Edge, 01-09-2026 00:00–06:00 UTC, es el horizonte del snapshot. Actualizar genera una consulta del ranking histórico. La hoja de ruta mantiene la ingesta diaria de FIRMS y meteorología como requisito previo para una evaluación prospectiva. El gate de César para la RNN sigue pendiente.
+
+Fuentes: `b4db9ee:docs/defensa/hoja-de-ruta-modelo.md` y ficha §5; `9e70867:artifacts/hito1/reproducibility/firms/nasa_firms_2021-08-30_2026-08-30.csv` (campo `acq_date`); `reports/backfill_dmc_330007_manifest.json:139` (`max_timestamp`); `C:/Users/danie/.orca/bots/sapi-director-de-sprint/reports/oos-modelo-d-factibilidad-20261125.md` (SHA-256 `5fce66720a85d18f975ff637be4d0050f64de72a0a8b84fc8daf671046af5a07`).
+
+Plataforma documentó el recorrido local del 25-11 en Compose `sapi-h3-518c0b5`, código `518c0b58e6b229317f51b1da56ac23346dc2ef74`. Streamlit presentó el índice relativo de prioridad, Spring Boot registró la consulta a FastAPI y el GET directo devolvió HTTP 200, 50 celdas y `score_semantics=relative_rank`. PostgreSQL/PostGIS figuró saludable y la persistencia de una corrida queda por verificar. En Edge, pasos 1–4 y 6a PASS con las salvedades de la matriz (3 y 4 comparten captura). Paso 5 PARCIAL, con HTTP 200 en el log y la interfaz capturada durante la recarga. Paso 6b en UI y resiliencia de ML NO_EVALUABLE para este candidato. Sigue pendiente la aceptación del entorno local como despliegue (SAPI-138, ADR-011).
+
+El PASS histórico de lectura de 50 filas en Edge corresponde al candidato `a3d08ee`, mediante sonda de solo lectura (50/50 identidades frente al GET, cero discrepancias), según `0e8ae8c:docs/sprint3/evidencia/matriz-recorrido-hito3.md` y el CSV de cotejo de A4. Ese hallazgo pertenece al ítem 40.
+
+Evidencia de Plataforma: `3407602:reports/orden-25-11-h3/INFORME.md` y `3407602:reports/orden-25-11-h3/recorrido-edge/MATRIZ.md`. La incorporación de resultados de k6 requiere un dictamen verificable de Plataforma para este candidato. KPI-03 mantiene la variante NO GO (sección 10).
 
 ### 6.2 HU-83 CA6 — Lectura de las figuras del Modelo D
 
@@ -216,7 +228,9 @@ El 23 de noviembre de 2026 se cotejaron los tres SHA-256 con la Orden 08 del Aud
 Pendiente de cierre de CA6. Gobernanza debe integrar esta sección en el informe del Hito 3. Daniel debe comprobar en la versión integrada que aparecen los tres PNG originales y sus rutas, fechas, hashes completos e interpretaciones, y enviar el delta a revisión independiente.
 <!-- FIN CA6 -->
 
-> **Nota de lenguaje (fuera del bloque CA6, que no se edita).** SAPI prioriza territorio según las condiciones que favorecen la complejidad y propagación de un incendio (30-30-30); es un sistema complementario de apoyo a la planificación de recursos de cada cuartel. En el Modelo D esas condiciones entran como temperatura, humedad relativa y viento de Rodelillo; la importancia de los indicadores binarios de la regla 30-30-30 en el artefacto desplegado es **dato pendiente**: falta cotejar la identidad del artefacto desplegado, sus variables exactas y el reporte de gain (SAPI-ML, 24-11-2026; ficha del Modelo D en `6b0015b`, §9, que mide el .pkl `ac017bef…` y no el despliegue). La ignición depende de factores humanos que el modelo no observa (limitación declarada, L-01).
+Las tres figuras se incluyen en las rutas relativas que usa el bloque. Sus bytes coinciden con los blobs de `b759990` y con los SHA-256 de la tabla sellada. El cierre de CA6 queda sujeto al dictamen independiente sobre el informe integrado.
+
+> **Nota de lenguaje (fuera del bloque CA6, que no se edita).** SAPI prioriza territorio según las condiciones que favorecen la complejidad y propagación de un incendio (30-30-30); es un sistema complementario de apoyo a la planificación de recursos de cada cuartel. En el Modelo D esas condiciones entran como temperatura, humedad relativa y viento de Rodelillo; la importancia de los indicadores binarios de la regla 30-30-30 en el artefacto desplegado es **dato pendiente**: falta cotejar la identidad del artefacto desplegado, sus variables exactas y el reporte de gain (SAPI-ML, 24-11-2026; ficha del Modelo D en `b4db9ee`, §9, que mide el .pkl `ac017bef…` y no el despliegue). La ignición depende de factores humanos que el modelo no observa (limitación declarada, L-01).
 
 ### 6.3 Modelo D frente al Modelo A (S5, DIR-4)
 
