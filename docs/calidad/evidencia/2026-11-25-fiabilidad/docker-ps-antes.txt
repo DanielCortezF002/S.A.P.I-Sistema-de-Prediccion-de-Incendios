@@ -1,0 +1,8 @@
+sapi-h3-518c0b5-web-v2-1 Up 7 hours
+sapi-h3-518c0b5-backend-1 Up 7 hours (healthy)
+sapi-h3-518c0b5-ml-api-1 Up 7 hours (healthy)
+sapi-h3-518c0b5-db-v2-1 Up 7 hours (healthy)
+sapi-web-v2-1 Up 14 hours
+sapi-backend-1 Up 14 hours (healthy)
+sapi-ml-api-1 Up 14 hours (healthy)
+sapi-db-v2-1 Up 14 hours (healthy)

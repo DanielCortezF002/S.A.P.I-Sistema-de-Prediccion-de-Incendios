@@ -1,0 +1,46 @@
+{
+  "web_health": {
+    "inicio_utc": "2026-11-25T11:17:14.032255+00:00",
+    "estado": 200,
+    "cuerpo": "ok",
+    "ms": 66
+  },
+  "backend_health": {
+    "inicio_utc": "2026-11-25T11:17:14.098316+00:00",
+    "estado": 200,
+    "cuerpo": "{\"status\":\"UP\"}",
+    "ms": 8
+  },
+  "ml_api_health": {
+    "inicio_utc": "2026-11-25T11:17:14.106296+00:00",
+    "estado": 200,
+    "cuerpo": "{\"status\":\"ok\",\"model_version\":\"prototype_model_d_v1\"}",
+    "ms": 6
+  },
+  "ranking": {
+    "inicio_utc": "2026-11-25T11:17:14.112441+00:00",
+    "estado": 200,
+    "ms": 7365,
+    "sha256_cuerpo": "97c295ac44af6a4fd629295f4b3dc1a151ac2d216fd4204469b76e117ad69d09",
+    "n_celdas": 50,
+    "campos_sin_celdas": {
+      "schema_version": "sapi-ranking-v0",
+      "model_version": "prototype_model_d_v1",
+      "forecast_time": "2026-09-01T00:00:00Z",
+      "inputs_fingerprint": "09482d6b3a8b4ab210c32cdddaec352c8eca8be25bbf76592799c1702096c5a3",
+      "score_semantics": "relative_rank",
+      "scientific_model_validation": false,
+      "horizon_hours": 6,
+      "disclaimer": "PROTOTIPO EXPLORATORIO. El score es un ranking relativo de riesgo, NO una probabilidad calibrada de incendio. No usar para decisiones operacionales. Ver docs/auditoria-consistencia-2026-09-06.md para el estado metodológico completo.",
+      "weather_timestamp": "2026-09-01T00:00:00Z",
+      "age_hours": 2051.2872919555552,
+      "freshness": "DATOS HISTÓRICOS / DESACTUALIZADOS",
+      "station_id": "330007",
+      "station_name": "Rodelillo",
+      "firms_origin": "reproducibility",
+      "firms_coverage_end": "2026-08-30",
+      "firms_lag_days": 2,
+      "firms_status": "FIRMS AL DÍA"
+    }
+  }
+}
