@@ -13,6 +13,17 @@ Cierre definitivo de hallazgos Astra:
 8. Salida a carpeta de evidencia designada (artifacts/hito2/d26).
 9. Evidencia discriminante por captura: SHA-256 del PNG y tipo de navegación del
    navegador; RUN-04 no asume `content_verified=True`, exige grilla visible.
+
+SAPI-137 (HU-90.T2) amplía el arnés para medir n muestras por escenario sin
+medir nada por sí mismo: --repetitions, --warmup (registrado aparte y fuera del
+percentil), --order blocks|interleaved, percentil nearest_rank y lineal
+(ambos se calculan siempre), samples.csv escrito fila a fila con cada fallo y
+timeout como fila, --expand-method current|legacy (current mide por evento en
+el navegador sin sleep de Python; legacy usa un intervalo idéntico al de
+f8c5218), columnas timing_source y timing_resolution con la resolución
+declarada de cada escenario, y el chequeo del KPI contra .sapi-card-kpi.
+Los valores por defecto de esas opciones son PROVISIONALES: ver el bloque
+"VALORES POR DEFECTO PROVISIONALES" más abajo.
 """
 
 from __future__ import annotations
@@ -21,6 +32,9 @@ import argparse
 import csv
 import hashlib
 import json
+import math
+import os
+import platform
 import re
 import subprocess
 import sys
@@ -28,17 +42,16 @@ import time
 import urllib.request
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from fractions import Fraction
 from pathlib import Path
 
 try:
     from selenium import webdriver
-    from selenium.webdriver.common.by import By
     from selenium.webdriver.edge.options import Options
     from selenium.webdriver.support import expected_conditions as EC
     from selenium.webdriver.support.ui import WebDriverWait
 except ImportError:
     webdriver = None
-    By = None
     Options = None
     EC = None
     WebDriverWait = None
@@ -271,6 +284,43 @@ def extract_backend_timestamp(driver: webdriver.Edge) -> BackendTimestamp | None
     return parse_backend_timestamp(content)
 
 
+_KPI_CARDS_JS = (
+    "return Array.from(document.querySelectorAll('div.sapi-card-kpi')).map(function (k) {"
+    "  var l = k.querySelector('.sapi-card-kpi__label');"
+    "  var v = k.querySelector('.sapi-card-kpi__val');"
+    "  return [l ? l.textContent.trim() : null, v ? v.textContent.trim() : null];"
+    "});"
+)
+
+KPI_CELLS_LABEL = "Celdas evaluadas"
+
+
+def read_kpi_cards(driver) -> list[tuple[str | None, str | None]]:
+    """Pares (etiqueta, valor) de cada tarjeta ``div.sapi-card-kpi`` del panel.
+
+    El panel actual (``app/components/ranking_backend_view.py``) renderiza la
+    etiqueta en ``.sapi-card-kpi__label`` *antes* del valor ``.sapi-card-kpi__val``.
+    El chequeo anterior buscaba ``div.sapi-v2-kpi`` (ya no existe) o el texto
+    ``"50 Celdas evaluadas"`` (orden que el DOM no tiene).
+    """
+    raw = driver.execute_script(_KPI_CARDS_JS) or []
+    cards = []
+    for item in raw:
+        if isinstance(item, (list, tuple)) and len(item) == 2:
+            cards.append((item[0], item[1]))
+    return cards
+
+
+def kpi_cells_ok(cards, expected: int = 50) -> bool:
+    """True solo si alguna tarjeta tiene exactamente la etiqueta y el valor esperados."""
+    for label, value in cards:
+        if label is None or value is None:
+            continue
+        if label.strip() == KPI_CELLS_LABEL and value.strip() == str(expected):
+            return True
+    return False
+
+
 def verify_50_cells_integrity(
     driver: webdriver.Edge,
     backend_url: str | None = None
@@ -280,7 +330,8 @@ def verify_50_cells_integrity(
     NO utiliza constantes fijas ('return 50') ni asume 50 filas tr en Glide Data Grid.
     Comprueba:
     1. Contrato JSON real del backend (/api/v1/ranking): exactamente 50 celdas.
-    2. KPI strip en el DOM: valor textual '50' con etiqueta 'Celdas evaluadas'.
+    2. Tarjeta KPI ``div.sapi-card-kpi`` con etiqueta 'Celdas evaluadas' y valor '50'
+       (SAPI-137: sustituye el selector obsoleto ``div.sapi-v2-kpi``).
     """
     contract_ok = False
     contract_cells = 0
@@ -295,53 +346,51 @@ def verify_50_cells_integrity(
         except Exception as ex:
             return False, f"Fallo al consultar contrato backend: {ex}"
 
-    kpi_ok = False
     try:
-        kpi_elems = driver.find_elements(By.CSS_SELECTOR, "div.sapi-v2-kpi")
-        for k in kpi_elems:
-            txt = k.text
-            if "Celdas evaluadas" in txt and "50" in txt:
-                kpi_ok = True
-                break
-        if not kpi_ok:
-            body_txt = driver.execute_script("return document.body.textContent || '';")
-            if "50Celdas evaluadas" in body_txt or "50 Celdas evaluadas" in body_txt:
-                kpi_ok = True
+        cards = read_kpi_cards(driver)
     except Exception as ex:
         return False, f"Error comprobando KPI en DOM: {ex}"
+    kpi_ok = kpi_cells_ok(cards)
 
     msg_parts = []
     if backend_url:
         msg_parts.append(f"Contrato JSON: {contract_cells} celdas (PASS={contract_ok})")
-    msg_parts.append(f"KPI strip DOM '50 Celdas evaluadas': PASS={kpi_ok}")
+    msg_parts.append(
+        f"KPI .sapi-card-kpi '{KPI_CELLS_LABEL}'=50: PASS={kpi_ok} (tarjetas={len(cards)})"
+    )
 
     overall = kpi_ok and (contract_ok if backend_url else True)
     return overall, "; ".join(msg_parts)
 
 
-def wait_for_ranking_visible(driver: webdriver.Edge, timeout: float = 35.0) -> tuple[float, str]:
+def wait_for_ranking_visible(
+    driver: webdriver.Edge,
+    timeout: float = 35.0,
+    clock=time.perf_counter,
+    sleep=time.sleep,
+) -> tuple[float, str]:
     """Espera la aparición inicial visible del ranking y componentes clave de v2."""
-    t_start = time.perf_counter()
+    t_start = clock()
     end_time = t_start + timeout
 
-    while time.perf_counter() < end_time:
+    while clock() < end_time:
         try:
-            chips = driver.find_elements(By.CSS_SELECTOR, "span.sapi-v2-chip, div.sapi-v2-panel")
+            chips = driver.find_elements("css selector", "span.sapi-v2-chip, div.sapi-v2-panel")
             for el in chips:
                 if el.is_displayed():
                     txt = el.text
                     if re.search(r"VP-\d{3}", txt, re.IGNORECASE) or "grupo prioritario" in txt.lower() or "celda seleccionada" in txt.lower():
-                        t_visible = time.perf_counter()
+                        t_visible = clock()
                         return (t_visible - t_start) * 1000.0, txt
 
-            els = driver.find_elements(By.XPATH, "//*[contains(text(), 'VP-')]")
+            els = driver.find_elements("xpath", "//*[contains(text(), 'VP-')]")
             for el in els:
                 if el.is_displayed():
-                    t_visible = time.perf_counter()
+                    t_visible = clock()
                     return (t_visible - t_start) * 1000.0, el.text or "VP"
         except Exception:
             pass
-        time.sleep(0.05)
+        sleep(0.05)
 
     raise TimeoutError(f"No se detectó el ranking visible tras {timeout} s")
 
@@ -435,273 +484,1366 @@ def run_negative_test_stale_dom():
         return True
 
 
-def run_benchmark(target_url: str, backend_url: str, artifacts_dir: Path, project_name: str = "sapi-v2"):
+# =====================================================================
+# SAPI-137 (HU-90.T2): repeticiones, percentiles y registro sin descartes
+# =====================================================================
+#
+# VALORES POR DEFECTO PROVISIONALES. Ninguno es una decisión metodológica:
+# las preguntas P-1..P-6 del plan de medición siguen abiertas para el
+# Director. Cada uno es una opción explícita de la línea de comandos y queda
+# escrito en run_manifest.json de cada corrida.
+#   P-1 calentamiento ............ --warmup 0
+#   P-2 fallas en el percentil ... se informan SIEMPRE las dos variantes
+#                                  (fallas como +inf y solo muestras ok);
+#                                  --failure-policy elige cuál es "primaria"
+#                                  y es OBLIGATORIA con --repetitions > 1
+#   P-3 carga en frío ............ navegador nuevo por muestra (única opción
+#                                  implementada; no reinicia web-v2)
+#   P-4 sleep(0.5) de expandir ... --expand-method current (medida por evento en el
+#                                  navegador, sin sleep de Python; legacy = intervalo
+#                                  idéntico a f8c5218)
+#   P-5 orden .................... --order blocks
+#   P-6 n ........................ --repetitions 1
+# --protocol kpi03-h3 reemplaza estos valores provisionales por los del
+# protocolo KPI-03 aprobado (PROTOCOL_PRESETS) y rechaza flags que lo contradigan.
+# Método de percentil: se calculan SIEMPRE nearest-rank y lineal;
+# --percentile-method elige el primario y es OBLIGATORIO con --repetitions > 1.
+
+SCENARIOS = ("cold", "update", "reload", "expand")
+SCENARIO_LABELS = {
+    "cold": "Carga en frío",
+    "update": "Actualizar ranking",
+    "reload": "Recarga",
+    "expand": "Expandir tabla",
+}
+ORDERS = ("blocks", "interleaved")
+PERCENTILE_METHODS = ("nearest_rank", "linear")
+FAILURE_POLICIES = ("as_infinite", "ok_only")
+EXPAND_METHODS = ("current", "legacy")
+# legacy = intervalo idéntico a f8c5218:scripts/measure_browser_e2e_d21.py:617-623
+LEGACY_WAIT_TIMEOUT_S = 5
+SCREENSHOT_MODES = ("first", "all", "none")
+
+STATUS_OK = "ok"
+STATUS_TIMEOUT = "timeout"
+STATUS_ERROR = "error"
+STATUS_UNVERIFIED = "content_unverified"
+STATUSES = (STATUS_OK, STATUS_TIMEOUT, STATUS_ERROR, STATUS_UNVERIFIED)
+
+ROLE_WARMUP = "warmup"
+ROLE_MEASURE = "measure"
+
+LEGACY_EXPAND_SLEEP_S = 0.5
+COLD_TIMEOUT_S = 35.0
+RELOAD_TIMEOUT_S = 30.0
+UPDATE_TIMEOUT_S = 30.0
+EXPAND_TIMEOUT_S = 5.0
+UPDATE_CLOCK_GAP_S = 1.3
+
+SAMPLE_FIELDS = [
+    "seq", "scenario", "role", "iteration", "status", "ui_visible_latency_ms",
+    "start_time_iso", "end_time_iso", "pre_timestamp", "post_timestamp",
+    "content_verified", "element_verified", "action", "browser_navigation_type",
+    "method_detail", "error_type", "error_message", "commit_sha", "tree_sha",
+    "candidate_sha", "screenshot", "screenshot_sha256", "notes",
+    "timing_source", "timing_resolution",
+    # SAPI-137, protocolo KPI-03: SHA del sistema, SHA del arnés y versiones en cada fila
+    "system_sha", "harness_commit_sha", "harness_sha256", "harness_dirty",
+    "python_version", "selenium_version", "platform", "browser_version",
+    "driver_version", "protocol",
+]
+
+IDENTITY_ROW_FIELDS = (
+    "commit_sha", "tree_sha", "candidate_sha", "system_sha", "harness_commit_sha",
+    "harness_sha256", "harness_dirty", "python_version", "selenium_version", "platform",
+    "browser_version", "driver_version", "protocol",
+)
+
+# ---- Protocolo KPI-03 del Hito 3 (sellado en #45, ed8fdaa; aprobado por Daniel 23-11-2026)
+PROTOCOL_KPI03_H3 = "kpi03-h3"
+PROTOCOL_PRESETS = {
+    PROTOCOL_KPI03_H3: {
+        "scenarios": ",".join(SCENARIOS),  # orden fijo: cold, update, reload, expand
+        "repetitions": 30,
+        "warmup": 1,                       # un ciclo completo de calentamiento, aparte
+        "order": "interleaved",            # 30 rondas intercaladas = 120 muestras
+        "percentile": 95.0,
+        "percentile_method": "nearest_rank",  # x_(k), k = ceil(0,95 * n), desde 1
+        "failure_policy": "as_infinite",   # fallos, timeouts y sin evento final = +inf
+        "target_ms": 2000.0,
+        "min_n": 30,
+    },
+}
+# Valores provisionales cuando no se usa --protocol (P-1..P-6 de la preparación)
+PROVISIONAL_DEFAULTS = {
+    "scenarios": ",".join(SCENARIOS),
+    "repetitions": 1,
+    "warmup": 0,
+    "order": "blocks",
+    "percentile": 95.0,
+    "expand_method": "current",
+}
+VERDICT_PASS = "PASS"
+VERDICT_FAIL = "FAIL"
+VERDICT_NO_EVAL = "NO_EVALUABLE"
+
+# Fuente del reloj y resolución declarada de cada escenario (Auditor, Orden 09).
+# Las dos columnas se escriben en cada fila, también en las de falla.
+TIMING_SOURCE_PY = "python_perf_counter"
+TIMING_SOURCE_BROWSER = "browser_performance_now"
+TIMING_INFO = {
+    "cold": (TIMING_SOURCE_PY,
+             "sondeo cada 50 ms (+ costo de find_elements); resolución ±50 ms"),
+    "reload": (TIMING_SOURCE_PY,
+               "sondeo cada 50 ms (+ costo de find_elements); resolución ±50 ms"),
+    "update": (TIMING_SOURCE_PY,
+               "sleep(0.2) fijo y luego sondeo cada 50 ms; resolución ±50 ms"),
+    ("expand", "current"): (
+        TIMING_SOURCE_BROWSER,
+        "evento en el navegador: clic (listener en captura) y MutationObserver o "
+        "requestAnimationFrame; ≤ 1 cuadro (~16,7 ms a 60 Hz); sin sleep en Python",
+    ),
+    ("expand", "legacy"): (
+        TIMING_SOURCE_PY,
+        "sleep(0.5) fijo y luego WebDriverWait(driver, 5) con sondeo cada 0,5 s "
+        "(igual a f8c5218); resolución +0/+500 ms",
+    ),
+}
+
+
+def timing_info(scenario: str, expand_method: str = "current") -> tuple[str, str]:
+    """(timing_source, timing_resolution) declarados para un escenario."""
+    if scenario == "expand":
+        if expand_method not in EXPAND_METHODS:
+            raise ValueError(f"--expand-method desconocido: {expand_method!r}")
+        return TIMING_INFO[("expand", expand_method)]
+    if scenario not in TIMING_INFO:
+        raise ValueError(f"Escenario desconocido: {scenario!r}")
+    return TIMING_INFO[scenario]
+
+
+# ---------------------------------------------------------------- percentiles
+def _validate_percentile_input(values, p: float) -> list[float]:
+    vals = [float(v) for v in values]
+    if not vals:
+        raise ValueError("No hay muestras para calcular el percentil")
+    if any(math.isnan(v) for v in vals):
+        raise ValueError("Las muestras no pueden contener NaN")
+    if not (0 < p <= 100):
+        raise ValueError(f"Percentil fuera de rango (0, 100]: {p}")
+    return sorted(vals)
+
+
+def percentile_nearest_rank(values, p: float) -> float:
+    """Percentil por rango más cercano: x_(k) con k = ceil(p/100 · n), índice desde 1.
+
+    Equivale a ``numpy.percentile(x, p, method="inverted_cdf")``. Con n = 30 y
+    p = 95, k = 29 (la segunda muestra más alta). Se calcula con aritmética
+    exacta (Fraction) para que 0,95 · 20 dé 19 y no 19,000000000000004.
+    """
+    vals = _validate_percentile_input(values, p)
+    k = math.ceil(Fraction(str(p)) * len(vals) / 100)
+    return vals[max(k, 1) - 1]
+
+
+def percentile_linear(values, p: float) -> float:
+    """Percentil lineal (``numpy.percentile`` por omisión, ``method="linear"``).
+
+    h = (n - 1) · p / 100; interpola entre x_floor(h) y x_ceil(h). Admite +inf:
+    si alguno de los dos vecinos que pesan es +inf, el resultado es +inf.
+    """
+    vals = _validate_percentile_input(values, p)
+    h = (len(vals) - 1) * Fraction(str(p)) / 100
+    lo = math.floor(h)
+    frac = float(h - lo)
+    lower = vals[lo]
+    if frac == 0 or lo + 1 >= len(vals):
+        return lower
+    upper = vals[lo + 1]
+    if math.isinf(lower) or math.isinf(upper):
+        return math.inf
+    return lower + frac * (upper - lower)
+
+
+PERCENTILE_FUNCS = {
+    "nearest_rank": percentile_nearest_rank,
+    "linear": percentile_linear,
+}
+
+
+def compute_percentile(values, p: float, method: str) -> float:
+    if method not in PERCENTILE_FUNCS:
+        raise ValueError(f"Método de percentil desconocido: {method!r}")
+    return PERCENTILE_FUNCS[method](values, p)
+
+
+# ---------------------------------------------------------------- calendario
+@dataclass(frozen=True)
+class PlannedSample:
+    scenario: str
+    role: str
+    iteration: int
+
+
+def build_schedule(
+    scenarios, repetitions: int, warmup: int, order: str
+) -> list[PlannedSample]:
+    """Orden de las muestras. Nada se reordena después ni se elimina.
+
+    blocks: por escenario, primero sus ``warmup`` calentamientos y luego sus
+    ``repetitions`` muestras. interleaved: ``warmup`` rondas de calentamiento
+    y luego ``repetitions`` rondas, cada ronda con un intento por escenario.
+    """
+    scenarios = tuple(scenarios)
+    if not scenarios:
+        raise ValueError("Se requiere al menos un escenario")
+    unknown = [s for s in scenarios if s not in SCENARIOS]
+    if unknown:
+        raise ValueError(f"Escenarios desconocidos: {unknown}")
+    if len(set(scenarios)) != len(scenarios):
+        raise ValueError("Escenarios repetidos")
+    if repetitions < 1:
+        raise ValueError("--repetitions debe ser >= 1")
+    if warmup < 0:
+        raise ValueError("--warmup debe ser >= 0")
+    if order not in ORDERS:
+        raise ValueError(f"Orden desconocido: {order!r}")
+
+    plan: list[PlannedSample] = []
+    if order == "blocks":
+        for s in scenarios:
+            plan += [PlannedSample(s, ROLE_WARMUP, i) for i in range(1, warmup + 1)]
+            plan += [PlannedSample(s, ROLE_MEASURE, i) for i in range(1, repetitions + 1)]
+    else:
+        for i in range(1, warmup + 1):
+            plan += [PlannedSample(s, ROLE_WARMUP, i) for s in scenarios]
+        for i in range(1, repetitions + 1):
+            plan += [PlannedSample(s, ROLE_MEASURE, i) for s in scenarios]
+    return plan
+
+
+# ---------------------------------------------------------------- registro crudo
+class IncrementalSampleWriter:
+    """CSV de muestras crudas que se escribe fila a fila (flush + fsync).
+
+    Si un escenario falla o el proceso se interrumpe, las filas ya escritas
+    quedan en disco. Nunca reescribe ni borra filas.
+    """
+
+    def __init__(self, path: Path):
+        self.path = Path(path)
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        if self.path.exists():
+            raise FileExistsError(f"{self.path} ya existe: no se sobrescriben muestras")
+        self._fh = self.path.open("w", newline="", encoding="utf-8")
+        self._writer = csv.DictWriter(self._fh, fieldnames=SAMPLE_FIELDS)
+        self._writer.writeheader()
+        self._sync()
+        self.rows: list[dict] = []
+
+    def _sync(self) -> None:
+        self._fh.flush()
+        try:
+            os.fsync(self._fh.fileno())
+        except OSError:
+            pass
+
+    def write(self, row: dict) -> None:
+        clean = {k: row.get(k, "") for k in SAMPLE_FIELDS}
+        extra = set(row) - set(SAMPLE_FIELDS)
+        if extra:
+            raise ValueError(f"Campos no declarados en la fila: {sorted(extra)}")
+        self._writer.writerow(clean)
+        self._sync()
+        self.rows.append(clean)
+
+    def close(self) -> None:
+        if not self._fh.closed:
+            self._sync()
+            self._fh.close()
+
+
+@dataclass
+class SampleOutcome:
+    """Lo que devuelve un escenario medido. Si hay excepción, no hay outcome."""
+
+    latency_ms: float
+    content_verified: bool
+    element_verified: str = ""
+    action: str = ""
+    browser_navigation_type: str = ""
+    pre_timestamp: str = ""
+    post_timestamp: str = ""
+    method_detail: str = ""
+    screenshot: str = ""
+    screenshot_sha256: str = ""
+    notes: str = ""
+
+
+def _utc_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def classify_exception(ex: BaseException) -> str:
+    """timeout para TimeoutError y para el TimeoutException de Selenium (que no
+    hereda de TimeoutError); error para cualquier otra excepción."""
+    if isinstance(ex, TimeoutError) or type(ex).__name__ == "TimeoutException":
+        return STATUS_TIMEOUT
+    return STATUS_ERROR
+
+
+def execute_schedule(
+    plan,
+    sample_fn,
+    writer: IncrementalSampleWriter,
+    identity: dict | None = None,
+    on_failure=None,
+    log=print,
+    timing_fn=None,
+) -> list[dict]:
+    """Ejecuta cada muestra planificada y escribe una fila por intento.
+
+    ``sample_fn(planned) -> SampleOutcome``. Un ``TimeoutError`` se registra
+    como ``timeout``, cualquier otra ``Exception`` como ``error``; una muestra
+    con latencia pero sin contenido verificado, como ``content_unverified``.
+    Ninguna fila se descarta y un fallo no detiene las muestras siguientes.
+    ``on_failure(planned, ex)`` permite al llamador reiniciar su sesión.
+    ``timing_fn(planned) -> (timing_source, timing_resolution)`` rellena las
+    columnas de resolución en todas las filas, incluidas las de falla.
+    """
+    identity = identity or {}
+    for seq, planned in enumerate(plan, start=1):
+        row = {
+            "seq": seq,
+            "scenario": planned.scenario,
+            "role": planned.role,
+            "iteration": planned.iteration,
+            "start_time_iso": _utc_iso(),
+        }
+        if timing_fn is not None:
+            row["timing_source"], row["timing_resolution"] = timing_fn(planned)
+        try:
+            out = sample_fn(planned)
+        except Exception as ex:  # noqa: BLE001 - toda falla queda como fila
+            row.update({
+                "status": classify_exception(ex),
+                "ui_visible_latency_ms": "",
+                "content_verified": False,
+                "error_type": type(ex).__name__,
+                "error_message": str(ex)[:2000],
+            })
+            row["end_time_iso"] = _utc_iso()
+            _fill_identity(row, identity)
+            writer.write(row)
+            log(f"[{row['status'].upper()}] #{seq} {planned.scenario}/{planned.role}"
+                f"#{planned.iteration}: {type(ex).__name__}: {ex}")
+            if on_failure is not None:
+                on_failure(planned, ex)
+            continue
+
+        row.update({
+            "status": STATUS_OK if out.content_verified else STATUS_UNVERIFIED,
+            "ui_visible_latency_ms": repr(float(out.latency_ms)),
+            "content_verified": bool(out.content_verified),
+            "element_verified": out.element_verified,
+            "action": out.action,
+            "browser_navigation_type": out.browser_navigation_type,
+            "pre_timestamp": out.pre_timestamp,
+            "post_timestamp": out.post_timestamp,
+            "method_detail": out.method_detail,
+            "screenshot": out.screenshot,
+            "screenshot_sha256": out.screenshot_sha256,
+            "notes": out.notes,
+            "error_type": "",
+            "error_message": "",
+        })
+        row["end_time_iso"] = _utc_iso()
+        _fill_identity(row, identity)
+        writer.write(row)
+        log(f"[{row['status'].upper()}] #{seq} {planned.scenario}/{planned.role}"
+            f"#{planned.iteration}: {float(out.latency_ms):.1f} ms")
+    return writer.rows
+
+
+def _fill_identity(row: dict, identity: dict) -> None:
+    """Copia a la fila la identidad vigente: SHA del sistema, del arnés y versiones.
+
+    ``identity`` es un dict compartido: el runner del navegador completa
+    ``browser_version`` y ``driver_version`` cuando abre el primer navegador,
+    por lo que cada fila lleva lo que se sabía al terminar esa muestra.
+    """
+    for key in IDENTITY_ROW_FIELDS:
+        value = identity.get(key, "")
+        row[key] = "" if value is None else value
+
+
+# ---------------------------------------------------------------- resumen
+def _row_latency(row: dict) -> float | None:
+    raw = row.get("ui_visible_latency_ms", "")
+    if raw in ("", None):
+        return None
+    return float(raw)
+
+
+def summarize_rows(rows, percentile: float, primary_method: str | None,
+                   failure_policy: str | None, target_ms: float | None = None,
+                   min_n: int | None = None) -> dict:
+    """Resumen por escenario. Los calentamientos se cuentan aparte y no entran
+    al percentil. Se informan siempre ambos métodos y ambas políticas de fallas.
+    """
+    if primary_method is not None and primary_method not in PERCENTILE_METHODS:
+        raise ValueError(f"Método de percentil desconocido: {primary_method!r}")
+    if failure_policy is not None and failure_policy not in FAILURE_POLICIES:
+        raise ValueError(f"Política de fallas desconocida: {failure_policy!r}")
+
+    out: dict = {
+        "percentile": percentile,
+        "primary_method": primary_method,
+        "failure_policy": failure_policy,
+        "nearest_rank_formula": "x_(k), k = ceil(p/100 * n), índice desde 1",
+        "linear_formula": "numpy linear: h = (n-1)*p/100, interpolación entre vecinos",
+        "failure_policies": {
+            "as_infinite": "timeout, error y content_unverified se ordenan como +inf",
+            "ok_only": "solo muestras con status=ok",
+        },
+        "scenarios": {},
+    }
+    pkey = f"p{percentile:g}"
+    out["percentile_key"] = pkey
+    scenarios = [s for s in SCENARIOS if any(r["scenario"] == s for r in rows)]
+    for s in scenarios:
+        srows = [r for r in rows if r["scenario"] == s]
+        measure = [r for r in srows if r["role"] == ROLE_MEASURE]
+        warm = [r for r in srows if r["role"] == ROLE_WARMUP]
+        counts = {st: sum(1 for r in measure if r["status"] == st) for st in STATUSES}
+        ok_vals = [_row_latency(r) for r in measure if r["status"] == STATUS_OK]
+        inf_vals = ok_vals + [math.inf] * (len(measure) - len(ok_vals))
+
+        def _pcts(vals):
+            return {
+                m: {
+                    "p50": compute_percentile(vals, 50, m) if vals else None,
+                    pkey: compute_percentile(vals, percentile, m) if vals else None,
+                }
+                for m in PERCENTILE_METHODS
+            }
+
+        entry = {
+            "label": SCENARIO_LABELS[s],
+            "n_attempted": len(measure),
+            "n_ok": counts[STATUS_OK],
+            "n_timeout": counts[STATUS_TIMEOUT],
+            "n_error": counts[STATUS_ERROR],
+            "n_content_unverified": counts[STATUS_UNVERIFIED],
+            "n_warmup": len(warm),
+            "warmup_statuses": [r["status"] for r in warm],
+            "warmup_latencies_ms": [_row_latency(r) for r in warm],
+            "min_ok_ms": min(ok_vals) if ok_vals else None,
+            "max_ok_ms": max(ok_vals) if ok_vals else None,
+            "mean_ok_ms": (sum(ok_vals) / len(ok_vals)) if ok_vals else None,
+            "as_infinite": _pcts(inf_vals),
+            "ok_only": _pcts(ok_vals),
+        }
+        n = len(measure)
+        entry["nearest_rank_k"] = (
+            math.ceil(Fraction(str(percentile)) * n / 100) if n else None)
+        if primary_method and failure_policy:
+            entry["primary"] = {
+                "method": primary_method,
+                "failure_policy": failure_policy,
+                **entry[failure_policy][primary_method],
+            }
+        if target_ms is not None:
+            entry["verdict"], entry["verdict_reasons"] = scenario_verdict(
+                entry, pkey, target_ms, min_n)
+        out["scenarios"][s] = entry
+    out["target_ms"] = target_ms
+    out["min_n"] = min_n
+    # M-1 (Auditor, 961c879): un calentamiento distinto de ok ANULA la corrida.
+    # Decisión: el veredicto global y el de CADA escenario pasan a NO_EVALUABLE;
+    # el veredicto que habría salido sin anulación se conserva aparte, solo como
+    # dato («verdict_without_annulment»), nunca como resultado.
+    warm_bad = [{"scenario": r["scenario"], "iteration": r.get("iteration"),
+                 "status": r["status"]}
+                for r in rows if r["role"] == ROLE_WARMUP and r["status"] != STATUS_OK]
+    out["warmup_failures"] = warm_bad
+    out["annulled"] = bool(warm_bad)
+    if warm_bad:
+        reason = "corrida anulada: calentamiento no ok (" + ", ".join(
+            f"{w['scenario']}={w['status']}" for w in warm_bad) + ")"
+        out["annulment_reason"] = reason
+        if target_ms is not None:
+            for entry in out["scenarios"].values():
+                entry["verdict_without_annulment"] = entry.get("verdict")
+                entry["verdict"] = VERDICT_NO_EVAL
+                entry["verdict_reasons"] = [reason] + list(entry.get("verdict_reasons") or [])
+    return out
+
+
+def scenario_verdict(entry: dict, pkey: str, target_ms: float,
+                     min_n: int | None) -> tuple[str, list[str]]:
+    """PASS solo si p95 <= meta Y cero fallos (timeout, error o sin verificar)
+    entre las muestras medidas del escenario. Los calentamientos no cuentan.
+    NO_EVALUABLE si faltan muestras (n < min_n) o no hay percentil primario.
+    """
+    reasons = []
+    n = entry["n_attempted"]
+    if min_n is not None and n < min_n:
+        return VERDICT_NO_EVAL, [f"n={n} < n mínimo {min_n}"]
+    primary = entry.get("primary")
+    if not primary or primary.get(pkey) is None:
+        return VERDICT_NO_EVAL, ["sin percentil primario (método y política obligatorios)"]
+    failures = n - entry["n_ok"]
+    if failures:
+        reasons.append(
+            f"{failures} fallo(s): timeout={entry['n_timeout']}, error={entry['n_error']}, "
+            f"sin verificar={entry['n_content_unverified']}")
+    value = primary[pkey]
+    if not (value <= target_ms):
+        reasons.append(f"{pkey}={value} > {target_ms} ms")
+    return (VERDICT_FAIL, reasons) if reasons else (VERDICT_PASS, [])
+
+
+def overall_verdict(summary: dict, expected_scenarios, planned: int, recorded: int,
+                    interrupted) -> tuple[str, list[str]]:
+    """Veredicto global: PASS solo si cada escenario esperado da PASS por separado.
+
+    NO_EVALUABLE si la corrida quedó incompleta o si quedó anulada porque algún
+    calentamiento no dio ok (M-1).
+    """
+    if summary.get("annulled"):
+        return VERDICT_NO_EVAL, [summary.get("annulment_reason", "corrida anulada")]
+    if interrupted or recorded != planned:
+        return VERDICT_NO_EVAL, [f"corrida incompleta: {recorded}/{planned} ({interrupted})"]
+    verdicts = {s: summary["scenarios"].get(s, {}).get("verdict") for s in expected_scenarios}
+    missing = [s for s, v in verdicts.items() if v is None]
+    if missing:
+        return VERDICT_NO_EVAL, [f"escenarios sin veredicto: {missing}"]
+    if any(v == VERDICT_NO_EVAL for v in verdicts.values()):
+        return VERDICT_NO_EVAL, [f"{s}: {v}" for s, v in verdicts.items() if v != VERDICT_PASS]
+    if all(v == VERDICT_PASS for v in verdicts.values()):
+        return VERDICT_PASS, []
+    return VERDICT_FAIL, [f"{s}: {v}" for s, v in verdicts.items() if v != VERDICT_PASS]
+
+
+def _json_safe(obj):
+    if isinstance(obj, float) and math.isinf(obj):
+        return "Infinity"
+    if isinstance(obj, dict):
+        return {k: _json_safe(v) for k, v in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_json_safe(v) for v in obj]
+    return obj
+
+
+def exit_code_for(rows) -> int:
+    """0 solo si todos los intentos (medición y calentamiento) dieron ok."""
+    if not rows:
+        return 1
+    return 0 if all(r["status"] == STATUS_OK for r in rows) else 1
+
+
+# ---------------------------------------------------------------- escenarios
+_EXPANDER_XPATH = "//summary[contains(., 'Ver ranking completo')]"
+_DETAILS_OPEN_JS = (
+    "var d = arguments[0].closest('details'); return d ? d.open : null;"
+)
+# Criterio de visibilidad de la grilla dentro del expander (Instrumentación B,
+# Edge 158): el contenido de un <details> cerrado CONSERVA su caja de layout
+# (getClientRects y offsetHeight > 0) aunque no se pinta. Se exige details.open y
+# checkVisibility() (que respeta content-visibility, visibility y opacity); si el
+# navegador no tiene checkVisibility, se cae al criterio de caja.
+# Además, Streamlit anima la apertura: el <details> crece de ~48 px a su altura
+# final en ~400 ms con overflow oculto, así que la grilla puede pasar
+# checkVisibility() estando todavía recortada (altura visible 0). Se exige área
+# visible > 0 tras recortar por cada ancestro con overflow distinto de 'visible'
+# hasta el <details> inclusive: es la misma semántica que is_displayed de
+# Selenium (parte visible, sin considerar el scroll de la página), que usan el
+# modo legacy y verify_expanded_grid.
+_GRID_VISIBLE_FN_JS = (
+    "function sapiGridVisible(d, g) {"
+    "  if (!d || !d.open) { return false; }"
+    "  if (typeof g.checkVisibility === 'function') {"
+    "    if (!g.checkVisibility({contentVisibilityAuto: true, opacityProperty: true,"
+    "                            visibilityProperty: true})) { return false; }"
+    "  } else if (!(g.getClientRects().length > 0 && g.offsetHeight > 0)) { return false; }"
+    "  var r = g.getBoundingClientRect();"
+    "  var top = r.top, bottom = r.bottom, left = r.left, right = r.right;"
+    "  for (var e = g.parentElement; e; e = e.parentElement) {"
+    "    var cs = getComputedStyle(e);"
+    "    if (cs.overflowX !== 'visible' || cs.overflowY !== 'visible') {"
+    "      var er = e.getBoundingClientRect();"
+    "      top = Math.max(top, er.top); bottom = Math.min(bottom, er.bottom);"
+    "      left = Math.max(left, er.left); right = Math.min(right, er.right);"
+    "    }"
+    "    if (e === d) { break; }"
+    "  }"
+    "  return bottom - top > 0 && right - left > 0;"
+    "}"
+)
+_GRID_IN_DETAILS_JS = (
+    _GRID_VISIBLE_FN_JS
+    + "var d = arguments[0].closest('details'); if (!d) return null;"
+    "return Array.from(d.querySelectorAll(arguments[1])).some(function (g) {"
+    "  return sapiGridVisible(d, g); });"
+)
+
+
+def _any_grid_visible(driver) -> bool:
+    try:
+        grids = driver.find_elements("css selector", _GRID_SELECTOR)
+    except Exception:
+        return False
+    return any(_is_displayed(g) for g in grids)
+
+
+# --- current: medida por evento en el navegador ------------------------------
+# _EXPAND_ARM_JS se ejecuta ANTES del clic (fuera del intervalo). Registra un
+# listener de clic en fase de captura sobre el <summary> (t_click =
+# performance.now() al recibir el evento real del clic nativo de WebDriver), un
+# MutationObserver sobre el <details> y, desde el clic, un bucle
+# requestAnimationFrame. La primera comprobación que ve una grilla visible
+# DENTRO del <details> fija t_visible = performance.now(). Ambos instantes son
+# del mismo reloj del navegador: no entra la latencia de ida y vuelta de
+# WebDriver ni ningún sleep de Python.
+_EXPAND_ARM_JS = _GRID_VISIBLE_FN_JS + r"""
+var summary = arguments[0], sel = arguments[1], timeoutMs = arguments[2];
+var d = summary && summary.closest ? summary.closest('details') : null;
+if (!d) { return {armed: false, reason: 'sin <details> alrededor del <summary>'}; }
+if (typeof timeoutMs !== 'number' || !(timeoutMs > 0)) {
+  return {armed: false, reason: 'plazo inválido: ' + timeoutMs};
+}
+var st = {t_click: null, t_visible: null, via: null, done: false, cb: null, mo: null,
+          timeout_ms: timeoutMs};
+function visible() {
+  return Array.from(d.querySelectorAll(sel)).some(function (g) {
+    return sapiGridVisible(d, g);
+  });
+}
+function snapshot(timedOut) {
+  // El plazo se fijó al armar: una grilla vista después del plazo es timeout,
+  // aunque la consulta (execute_async_script) llegue tarde (Orden 09, delta 07f814a).
+  var late = st.t_click !== null && st.t_visible !== null &&
+             (st.t_visible - st.t_click) > st.timeout_ms;
+  return {t_click: st.t_click, t_visible: st.t_visible, via: st.via,
+          timed_out: !!timedOut || late || st.t_visible === null,
+          late: late, timeout_ms: st.timeout_ms};
+}
+function finish(via) {
+  if (st.done) { return; }
+  st.t_visible = performance.now();
+  st.via = via;
+  st.done = true;
+  if (st.mo) { st.mo.disconnect(); }
+  if (st.cb) { var cb = st.cb; st.cb = null; cb(snapshot(false)); }
+}
+function check(via) {
+  if (st.t_click !== null && !st.done && visible()) { finish(via); }
+}
+function frame() {
+  if (st.done) { return; }
+  check('raf');
+  if (!st.done) { requestAnimationFrame(frame); }
+}
+st.snapshot = snapshot;
+summary.addEventListener('click', function () {
+  if (st.t_click !== null) { return; }
+  st.t_click = performance.now();
+  requestAnimationFrame(frame);
+}, {capture: true, once: true});
+st.mo = new MutationObserver(function () { check('mutation'); });
+st.mo.observe(d, {subtree: true, childList: true, attributes: true, characterData: true});
+window.__sapiExpand = st;
+return {armed: true};
+"""
+
+# _EXPAND_WAIT_JS (execute_async_script) solo ENTREGA el resultado: los
+# instantes ya quedaron fijados por los eventos. El plazo se cuenta desde el clic.
+_EXPAND_WAIT_JS = r"""
+var timeoutMs = arguments[0], done = arguments[arguments.length - 1];
+var st = window.__sapiExpand;
+if (!st) { done({error: 'medición no armada'}); return; }
+if (st.done) { done(st.snapshot(false)); return; }
+var elapsed = st.t_click === null ? 0 : performance.now() - st.t_click;
+var tid = setTimeout(function () {
+  st.cb = null;
+  st.done = true;
+  if (st.mo) { st.mo.disconnect(); }
+  done(st.snapshot(true));
+}, Math.max(0, st.timeout_ms - elapsed));
+st.cb = function (res) { clearTimeout(tid); done(res); };
+"""
+
+
+def _read_pre_state(driver, summary) -> tuple[object, object, str]:
+    pre_open = driver.execute_script(_DETAILS_OPEN_JS, summary)
+    pre_grid = driver.execute_script(_GRID_IN_DETAILS_JS, summary, _GRID_SELECTOR)
+    return pre_open, pre_grid, f"details.open={pre_open!r}; grilla_visible_previa={pre_grid!r}"
+
+
+def _measure_expand_current(driver, summary, pre_state: str, timeout: float,
+                            clock=time.perf_counter) -> tuple[float, str]:
+    timeout_ms = float(timeout) * 1000.0
+    armed = driver.execute_script(_EXPAND_ARM_JS, summary, _GRID_SELECTOR, timeout_ms)
+    if not isinstance(armed, dict) or not armed.get("armed"):
+        reason = armed.get("reason") if isinstance(armed, dict) else repr(armed)
+        raise RuntimeError(f"No se pudo armar la medición por evento: {reason}")
+    driver.set_script_timeout(timeout + 5.0)
+    t_py0 = clock()
+    summary.click()
+    res = driver.execute_async_script(_EXPAND_WAIT_JS, timeout_ms)
+    wall_ms = (clock() - t_py0) * 1000.0
+    if not isinstance(res, dict) or res.get("error"):
+        detail = res.get("error") if isinstance(res, dict) else repr(res)
+        raise RuntimeError(f"Resultado inválido de la medición por evento: {detail}")
+    t_click, t_visible = res.get("t_click"), res.get("t_visible")
+    if t_click is None:
+        raise RuntimeError("El navegador no registró el clic en el expander "
+                           f"(expand_method=current; {pre_state})")
+    if t_visible is None:
+        raise TimeoutError(f"Grilla no visible dentro del expander tras {timeout} s "
+                           f"(expand_method=current; {pre_state})")
+    latency = float(t_visible) - float(t_click)
+    if latency < 0:
+        raise RuntimeError(f"Marcas incoherentes: t_visible < t_click ({res!r})")
+    # Defensa propia, independiente del JS: una duración mayor que el plazo es
+    # timeout aunque el evento haya llegado. Igual al plazo todavía es válida.
+    if latency > timeout_ms or res.get("timed_out"):
+        raise TimeoutError(
+            f"Grilla vista tras {latency:.3f} ms, fuera del plazo de {timeout_ms:.0f} ms "
+            f"(expand_method=current; via={res.get('via')}; timed_out_js="
+            f"{res.get('timed_out')!r}; {pre_state})")
+    detail = (f"expand_method=current; via={res.get('via')}; "
+              f"t_click={float(t_click):.3f}; t_visible={float(t_visible):.3f} "
+              f"(performance.now); wall_python_ms={wall_ms:.1f}; {pre_state}")
+    return latency, detail
+
+
+def _legacy_wait_factory():
+    if WebDriverWait is None or EC is None:
+        raise RuntimeError("--expand-method legacy requiere Selenium (WebDriverWait)")
+    return WebDriverWait, EC
+
+
+def _measure_expand_legacy(driver, summary, pre_state: str, clock=time.perf_counter,
+                           sleep=time.sleep, wait_factory=None) -> tuple[float, str]:
+    """Intervalo idéntico al del padre f8c5218 (scripts/measure_browser_e2e_d21.py:617-623):
+
+        t0 = perf_counter(); click(); sleep(0.5)
+        WebDriverWait(driver, 5).until(EC.visibility_of_element_located((CSS, grilla)))
+        t = (perf_counter() - t0) * 1000
+
+    Mismo plazo (5 s contados DESPUÉS de la pausa), mismo sondeo por omisión de
+    WebDriverWait (0,5 s), mismo localizador global (primer elemento que
+    coincide, no "cualquiera visible"). El TimeoutException de Selenium se
+    convierte en TimeoutError para clasificarlo como timeout.
+    """
+    wait_cls, ec = (wait_factory or _legacy_wait_factory)()
+    t0 = clock()
+    summary.click()
+    sleep(LEGACY_EXPAND_SLEEP_S)
+    try:
+        wait_cls(driver, LEGACY_WAIT_TIMEOUT_S).until(
+            ec.visibility_of_element_located(("css selector", _GRID_SELECTOR))
+        )
+    except Exception as ex:
+        if type(ex).__name__ == "TimeoutException":
+            raise TimeoutError(
+                f"Grilla no visible (legacy, WebDriverWait {LEGACY_WAIT_TIMEOUT_S} s "
+                f"tras sleep {LEGACY_EXPAND_SLEEP_S} s; {pre_state})"
+            ) from ex
+        raise
+    latency = (clock() - t0) * 1000.0
+    return latency, f"expand_method=legacy (intervalo de f8c5218); {pre_state}"
+
+
+def measure_expand(driver, expand_method: str, timeout: float = EXPAND_TIMEOUT_S,
+                   clock=time.perf_counter, sleep=time.sleep,
+                   wait_factory=None) -> tuple[float, str]:
+    """Mide la apertura del expander «Ver ranking completo».
+
+    current: exige antes del clic el ``<details>`` cerrado y sin grilla visible
+    (si no, la muestra es un error registrado). Mide por evento en el
+    navegador: del clic a la primera grilla visible DENTRO de ese expander,
+    ambos con ``performance.now()``; ningún sleep de Python dentro del intervalo.
+    legacy: intervalo idéntico al arnés padre f8c5218 (ver
+    ``_measure_expand_legacy``). El estado previo se informa, pero no invalida.
+    """
+    if expand_method not in EXPAND_METHODS:
+        raise ValueError(f"--expand-method desconocido: {expand_method!r}")
+    summaries = driver.find_elements("xpath", _EXPANDER_XPATH)
+    if not summaries:
+        raise RuntimeError("No se encontró el expander 'Ver ranking completo'")
+    summary = summaries[0]
+    pre_open, pre_grid, pre_state = _read_pre_state(driver, summary)
+    if expand_method == "current":
+        if pre_open is not False or pre_grid:
+            raise RuntimeError(f"Estado previo inválido del expander ({pre_state})")
+        return _measure_expand_current(driver, summary, pre_state, timeout, clock=clock)
+    return _measure_expand_legacy(driver, summary, pre_state, clock=clock, sleep=sleep,
+                                  wait_factory=wait_factory)
+
+
+_STREAMLIT_RUNNING_JS = (
+    "var w = document.querySelector('[data-testid=\"stStatusWidget\"]');"
+    "if (w && w.innerText && w.innerText.indexOf('Running') >= 0) { return true; }"
+    "return !!document.querySelector('.stSpinner');"
+)
+
+
+def wait_for_expander_ready(driver, timeout: float = RELOAD_TIMEOUT_S,
+                            clock=time.perf_counter, sleep=time.sleep) -> None:
+    """Preparación de «expandir», FUERA del intervalo medido.
+
+    Tras recargar, el primer chip VP- aparece antes de que Streamlit termine de
+    renderizar la página; el expander «Ver ranking completo» llega después
+    (Instrumentación B: «No se encontró el expander» en Edge real). Espera a que
+    exista el <summary> y a que Streamlit no esté en «Running».
+    """
+    end = clock() + timeout
+    while True:
+        found = driver.find_elements("xpath", _EXPANDER_XPATH)
+        running = bool(driver.execute_script(_STREAMLIT_RUNNING_JS))
+        if found and not running:
+            return
+        if clock() >= end:
+            raise TimeoutError(
+                f"Expander 'Ver ranking completo' no listo tras {timeout} s "
+                f"(encontrado={bool(found)}, running={running})")
+        sleep(0.05)
+
+
+class BrowserScenarioRunner:
+    """Ejecuta una muestra de cada escenario contra el panel real.
+
+    cold usa un navegador nuevo por muestra (P-3, provisional). update, reload
+    y expand comparten una sesión que se abre sin medir; si una muestra falla,
+    la sesión se cierra y la siguiente muestra abre otra (queda en notes).
+    """
+
+    def __init__(self, target_url: str, backend_url: str | None, artifacts_dir: Path,
+                 expand_method: str, screenshots: str, driver_factory=None,
+                 clock=time.perf_counter, sleep=time.sleep, wait_factory=None):
+        self.target_url = target_url
+        self.backend_url = backend_url
+        self.artifacts_dir = Path(artifacts_dir)
+        self.expand_method = expand_method
+        self.wait_factory = wait_factory
+        self.screenshots = screenshots
+        self.driver_factory = driver_factory or create_driver
+        self.clock = clock
+        self.sleep = sleep
+        self._session = None
+        self._session_resets = 0
+        self._shot_taken: set[str] = set()
+        self.identity: dict | None = None  # dict compartido con execute_schedule
+        self._cold_sessions: set[str] = set()
+
+    def _record_versions(self, drv) -> None:
+        """Anota en la identidad compartida la versión del navegador y del driver."""
+        if self.identity is None:
+            return
+        caps = getattr(drv, "capabilities", None) or {}
+        if not isinstance(caps, dict):
+            return
+        if caps.get("browserVersion") and not self.identity.get("browser_version"):
+            name = caps.get("browserName", "")
+            self.identity["browser_version"] = f"{name} {caps['browserVersion']}".strip()
+        edge = caps.get("msedge") or {}
+        driver_v = edge.get("msedgedriverVersion") if isinstance(edge, dict) else None
+        if driver_v and not self.identity.get("driver_version"):
+            self.identity["driver_version"] = str(driver_v).split(" ")[0]
+
+    # -- sesión compartida
+    def _get_session(self):
+        if self._session is None:
+            drv = self.driver_factory()
+            self._record_versions(drv)
+            try:
+                drv.get(self.target_url)
+                wait_for_ranking_visible(drv, timeout=COLD_TIMEOUT_S, clock=self.clock,
+                                         sleep=self.sleep)
+            except Exception:
+                self._quit(drv)
+                raise
+            self._session = drv
+        return self._session
+
+    @staticmethod
+    def _quit(drv) -> None:
+        try:
+            drv.quit()
+        except Exception:
+            pass
+
+    def reset_session(self, planned=None, ex=None) -> None:
+        if self._session is not None:
+            self._quit(self._session)
+            self._session = None
+            self._session_resets += 1
+
+    def close(self) -> None:
+        self.reset_session()
+
+    def _screenshot(self, drv, planned) -> tuple[str, str]:
+        if self.screenshots == "none":
+            return "", ""
+        if self.screenshots == "first" and planned.scenario in self._shot_taken:
+            return "", ""
+        if self.screenshots == "first" and planned.role != ROLE_MEASURE:
+            return "", ""
+        name = f"{planned.scenario}_{planned.role}_{planned.iteration:03d}.png"
+        path = self.artifacts_dir / name
+        drv.save_screenshot(str(path))
+        self._shot_taken.add(planned.scenario)
+        return name, sha256_file(path)
+
+    def __call__(self, planned) -> SampleOutcome:
+        handler = {
+            "cold": self._cold,
+            "update": self._update,
+            "reload": self._reload,
+            "expand": self._expand,
+        }[planned.scenario]
+        return handler(planned)
+
+    def _cold(self, planned) -> SampleOutcome:
+        """Carga en frío: restablece la condición inicial en cada muestra.
+
+        Navegador nuevo (perfil temporal propio, sin caché, cookies ni sesión de
+        Streamlit) cuya sesión WebDriver no puede repetirse, y primera navegación
+        de tipo 'navigate'. Una sesión repetida es un error; otro tipo de
+        navegación deja la muestra sin verificar. No vacía la caché del servidor
+        (st.cache_data): eso no forma parte de la condición inicial.
+        """
+        drv = self.driver_factory()
+        self._record_versions(drv)
+        try:
+            session_id = str(getattr(drv, "session_id", "") or f"obj-{id(drv)}")
+            if session_id in self._cold_sessions:
+                raise RuntimeError(f"Sesión de navegador reutilizada en frío: {session_id}")
+            self._cold_sessions.add(session_id)
+            t0 = self.clock()
+            drv.get(self.target_url)
+            wait_for_ranking_visible(drv, timeout=COLD_TIMEOUT_S, clock=self.clock,
+                                     sleep=self.sleep)
+            latency = (self.clock() - t0) * 1000.0
+            kpi_ok, kpi_msg = verify_50_cells_integrity(drv, backend_url=self.backend_url)
+            body = drv.find_element("tag name", "body").text.lower()
+            has_cell = bool(re.search(r"vp-\d{3}", body))
+            has_priority = "grupo prioritario" in body
+            ts = extract_backend_timestamp(drv)
+            nav = get_browser_navigation_type(drv)
+            shot, shot_sha = self._screenshot(drv, planned)
+            return SampleOutcome(
+                latency_ms=latency,
+                content_verified=has_cell and has_priority and kpi_ok and nav == "navigate",
+                element_verified=(
+                    f"Celda VP={has_cell}; Grupo prioritario={has_priority}; {kpi_msg}"
+                ),
+                action="driver.get (navegador nuevo)",
+                browser_navigation_type=nav,
+                post_timestamp=ts.raw if ts else "N/D",
+                method_detail=f"cold=new_browser_per_sample; session={session_id}",
+                screenshot=shot, screenshot_sha256=shot_sha,
+            )
+        finally:
+            self._quit(drv)
+
+    def _update(self, planned) -> SampleOutcome:
+        drv = self._get_session()
+        self.sleep(UPDATE_CLOCK_GAP_S)  # fuera del intervalo: asegura un segundo UTC nuevo
+        pre = extract_backend_timestamp(drv)
+        if not pre:
+            raise RuntimeError("No se pudo obtener timestamp pre-clic en el DOM.")
+        buttons = drv.find_elements("xpath", "//button[contains(., 'Actualizar ranking')]")
+        if not buttons:
+            raise RuntimeError("No se encontró el botón 'Actualizar ranking' en la interfaz.")
+        t_click = time.perf_counter()
+        drv.execute_script("arguments[0].click();", buttons[0])
+        latency, post_raw, detail = wait_for_ranking_update_cycle(
+            drv, pre, t_click, timeout=UPDATE_TIMEOUT_S
+        )
+        kpi_ok, kpi_msg = verify_50_cells_integrity(drv, backend_url=self.backend_url)
+        shot, shot_sha = self._screenshot(drv, planned)
+        return SampleOutcome(
+            latency_ms=latency,
+            content_verified=kpi_ok and post_raw != pre.raw,
+            element_verified=f"{detail}; {kpi_msg}",
+            action="click:Actualizar ranking",
+            browser_navigation_type="n/a (rerun Streamlit, sin navegación)",
+            pre_timestamp=pre.raw, post_timestamp=post_raw,
+            method_detail="update=sleep(0.2) dentro del intervalo (wait_for_ranking_update_cycle)",
+            screenshot=shot, screenshot_sha256=shot_sha,
+            notes=f"session_resets={self._session_resets}",
+        )
+
+    def _reload(self, planned) -> SampleOutcome:
+        drv = self._get_session()
+        pre = extract_backend_timestamp(drv)
+        t0 = self.clock()
+        drv.refresh()
+        wait_for_ranking_visible(drv, timeout=RELOAD_TIMEOUT_S, clock=self.clock,
+                                 sleep=self.sleep)
+        latency = (self.clock() - t0) * 1000.0
+        nav = get_browser_navigation_type(drv)
+        ts = extract_backend_timestamp(drv)
+        kpi_ok, kpi_msg = verify_50_cells_integrity(drv, backend_url=self.backend_url)
+        shot, shot_sha = self._screenshot(drv, planned)
+        return SampleOutcome(
+            latency_ms=latency,
+            content_verified=kpi_ok and nav == "reload",
+            element_verified=kpi_msg,
+            action="driver.refresh",
+            browser_navigation_type=nav,
+            pre_timestamp=pre.raw if pre else "N/D",
+            post_timestamp=ts.raw if ts else "N/D",
+            method_detail="reload=driver.refresh en la sesión compartida",
+            screenshot=shot, screenshot_sha256=shot_sha,
+            notes=f"session_resets={self._session_resets}",
+        )
+
+    def _expand(self, planned) -> SampleOutcome:
+        drv = self._get_session()
+        # Preparación sin medir: recarga para partir del expander cerrado.
+        drv.refresh()
+        wait_for_ranking_visible(drv, timeout=RELOAD_TIMEOUT_S, clock=self.clock,
+                                 sleep=self.sleep)
+        wait_for_expander_ready(drv, timeout=RELOAD_TIMEOUT_S, clock=self.clock,
+                                sleep=self.sleep)
+        latency, detail = measure_expand(drv, self.expand_method, clock=self.clock,
+                                         sleep=self.sleep, wait_factory=self.wait_factory)
+        grid_ok, grid_msg = verify_expanded_grid(drv)
+        kpi_ok, kpi_msg = verify_50_cells_integrity(drv, backend_url=self.backend_url)
+        view_ok, view_msg = scroll_grid_into_view(drv)
+        shot, shot_sha = self._screenshot(drv, planned)
+        return SampleOutcome(
+            latency_ms=latency,
+            content_verified=grid_ok and kpi_ok and view_ok,
+            element_verified=f"stDataFrame ({grid_msg}; {view_msg}); {kpi_msg}",
+            action="click:Ver ranking completo",
+            browser_navigation_type="n/a (expander, sin navegación)",
+            method_detail=detail,
+            screenshot=shot, screenshot_sha256=shot_sha,
+            notes=f"session_resets={self._session_resets}",
+        )
+
+
+# ---------------------------------------------------------------- orquestación
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        description=(
+            "Medición E2E en navegador (CA4 / SAPI-137). Los valores por defecto de "
+            "--repetitions, --warmup, --order y --expand-method son PROVISIONALES "
+            "(preguntas P-1..P-6 abiertas); con --repetitions > 1 son obligatorios "
+            "--percentile-method y --failure-policy."
+        )
+    )
+    parser.add_argument("--url", default="http://127.0.0.1:18509", help="URL de Streamlit")
+    parser.add_argument("--backend-url", default="http://127.0.0.1:18099",
+                        help="URL de backend Spring Boot")
+    parser.add_argument("--artifacts-dir", default=r"artifacts\hito2\d26",
+                        help="Directorio de artefactos (debe no contener samples.csv)")
+    parser.add_argument("--project-name", default="sapi-astra",
+                        help="Nombre del proyecto Docker Compose (solo se registra)")
+    parser.add_argument("--candidate-sha", default="",
+                        help="SHA candidato declarado; se registra y se compara con HEAD")
+    parser.add_argument("--negative-only", action="store_true",
+                        help="Ejecutar únicamente la prueba negativa")
+    parser.add_argument("--protocol", choices=sorted(PROTOCOL_PRESETS), default=None,
+                        help="Fija el protocolo sellado. kpi03-h3: cold,update,reload,expand; "
+                             "1 ciclo de calentamiento; 30 rondas intercaladas (120 muestras); "
+                             "p95 nearest_rank; fallos = +inf; PASS si p95 <= 2000 ms y cero "
+                             "fallos por escenario. Exige --candidate-sha y --expand-method; "
+                             "rechaza flags que lo contradigan")
+    parser.add_argument("--scenarios", default=None,
+                        help="Lista separada por comas: cold,update,reload,expand")
+    parser.add_argument("--repetitions", type=int, default=None,
+                        help="Muestras medidas por escenario (provisional: 1; P-6)")
+    parser.add_argument("--warmup", type=int, default=None,
+                        help="Calentamientos por escenario, registrados y excluidos del "
+                             "percentil (provisional: 0; P-1)")
+    parser.add_argument("--order", choices=ORDERS, default=None,
+                        help="blocks o interleaved (provisional: blocks; P-5)")
+    parser.add_argument("--percentile", type=float, default=None,
+                        help="Percentil a informar además de p50 (por omisión 95)")
+    parser.add_argument("--target-ms", type=float, default=None,
+                        help="Meta en ms: con ella se emite el veredicto PASS/FAIL por "
+                             "escenario (PASS solo si pXX <= meta y cero fallos)")
+    parser.add_argument("--min-n", type=int, default=None,
+                        help="Muestras medidas mínimas por escenario para evaluar el veredicto")
+    parser.add_argument("--percentile-method", choices=PERCENTILE_METHODS, default=None,
+                        help="Método primario: nearest_rank o linear. Se calculan ambos. "
+                             "Obligatorio con --repetitions > 1")
+    parser.add_argument("--failure-policy", choices=FAILURE_POLICIES, default=None,
+                        help="Variante primaria del percentil frente a fallas (P-2). Se "
+                             "calculan ambas. Obligatorio con --repetitions > 1")
+    parser.add_argument("--expand-method", choices=EXPAND_METHODS, default=None,
+                        help="current: medida por evento en el navegador (clic y "
+                             "MutationObserver/requestAnimationFrame con performance.now), "
+                             "sin ningún sleep de Python en el intervalo; grilla dentro del "
+                             "expander. legacy: intervalo idéntico a f8c5218 (sleep(0.5) + "
+                             "WebDriverWait(driver, 5), sondeo 0,5 s). Provisional: current; P-4")
+    parser.add_argument("--screenshots", choices=SCREENSHOT_MODES, default="first",
+                        help="Capturas fuera del intervalo medido: first, all o none")
+    return parser
+
+
+def resolve_args(args) -> list[str]:
+    """Aplica --protocol o los valores provisionales. Devuelve errores de conflicto.
+
+    Con --protocol, cada valor del preset se impone; un flag explícito distinto
+    es un error (nunca se sobrescribe en silencio). --candidate-sha y
+    --expand-method son obligatorios con --protocol (P-4 no está decidido).
+    """
+    errors = []
+    args.protocol = getattr(args, "protocol", None)
+    if args.protocol:
+        preset = PROTOCOL_PRESETS[args.protocol]
+        for key, value in preset.items():
+            current = getattr(args, key, None)
+            if current is None:
+                setattr(args, key, value)
+                continue
+            same = current == value
+            if key == "scenarios":
+                given = [x.strip() for x in str(current).split(",") if x.strip()]
+                same = given == value.split(",")
+            if not same:
+                errors.append(f"--{key.replace('_', '-')}={current} contradice "
+                              f"--protocol {args.protocol} ({value})")
+        if not args.candidate_sha or not re.fullmatch(r"[0-9a-f]{7,40}", args.candidate_sha):
+            errors.append(f"--protocol {args.protocol} exige --candidate-sha (SHA hexadecimal "
+                          "de 7 a 40 caracteres del sistema medido)")
+        if args.expand_method is None:
+            errors.append(f"--protocol {args.protocol} exige --expand-method explícito "
+                          "(current o legacy; P-4 sin decidir)")
+    for key, value in PROVISIONAL_DEFAULTS.items():
+        if getattr(args, key, None) is None:
+            setattr(args, key, value)
+    for key in ("target_ms", "min_n"):
+        if not hasattr(args, key):
+            setattr(args, key, None)
+    return errors
+
+
+def parse_args(argv=None):
+    """parse_args + resolve_args; los conflictos terminan con exit 2."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    errors = resolve_args(args)
+    if errors:
+        parser.error("; ".join(errors))
+    return args
+
+
+def validate_args(args) -> list[str]:
+    """Errores de configuración; lista vacía si la configuración es válida."""
+    errors = []
+    if args.repetitions < 1:
+        errors.append("--repetitions debe ser >= 1")
+    if args.warmup < 0:
+        errors.append("--warmup debe ser >= 0")
+    if not (0 < args.percentile <= 100):
+        errors.append("--percentile debe estar en (0, 100]")
+    scen = [s.strip() for s in args.scenarios.split(",") if s.strip()]
+    if not scen:
+        errors.append("--scenarios vacío")
+    bad = [s for s in scen if s not in SCENARIOS]
+    if bad:
+        errors.append(f"--scenarios desconocidos: {bad}")
+    if len(set(scen)) != len(scen):
+        errors.append("--scenarios repetidos")
+    if args.repetitions > 1 and args.percentile_method is None:
+        errors.append("--percentile-method es obligatorio con --repetitions > 1 "
+                      "(no hay método por omisión)")
+    if args.repetitions > 1 and args.failure_policy is None:
+        errors.append("--failure-policy es obligatorio con --repetitions > 1 "
+                      "(no hay política por omisión)")
+    target = getattr(args, "target_ms", None)
+    if target is not None and not (target > 0):
+        errors.append("--target-ms debe ser > 0")
+    if target is not None and (args.percentile_method is None or args.failure_policy is None):
+        errors.append("--target-ms exige --percentile-method y --failure-policy")
+    min_n = getattr(args, "min_n", None)
+    if min_n is not None and min_n < 1:
+        errors.append("--min-n debe ser >= 1")
+    if min_n is not None and args.repetitions < min_n:
+        errors.append(f"--repetitions={args.repetitions} < --min-n={min_n}")
+    return errors
+
+
+def _tool_versions() -> dict:
+    versions = {"python": sys.version.split()[0], "platform": platform.platform()}
+    try:
+        import selenium  # noqa: F401
+
+        versions["selenium"] = getattr(selenium, "__version__", "unknown")
+    except ImportError:
+        versions["selenium"] = None
+    return versions
+
+
+def run_measurement(args, artifacts_dir: Path, sample_fn=None, log=print) -> int:
+    """Corre el calendario completo y devuelve el código de salida.
+
+    Escribe en ``artifacts_dir``: run_manifest.json (al inicio), samples.csv
+    (fila a fila) y summary.json (al final, también si hubo fallas o una
+    interrupción). ``sample_fn`` se inyecta en las pruebas unitarias; si es
+    None se usa el navegador real.
+    """
+    errors = resolve_args(args) + validate_args(args)
+    if errors:
+        raise ValueError("; ".join(errors))
+
+    if not run_negative_test_stale_dom():
+        raise RuntimeError("La prueba negativa obligatoria de CA4 falló. Abortando.")
+
     repo_root = Path(__file__).resolve().parents[1]
     commit_sha, tree_sha = get_git_identities(repo_root)
-    container_imgs = get_container_identities(project_name)
+    scenarios = [s.strip() for s in args.scenarios.split(",") if s.strip()]
+    plan = build_schedule(scenarios, args.repetitions, args.warmup, args.order)
 
-    print("=================================================================")
-    print("S.A.P.I. - BENCHMARK DE NAVEGADOR E2E REAL (CA4 / DIRECTIVA 26)")
-    print(f"URL frontend:     {target_url}")
-    print(f"URL backend:      {backend_url}")
-    print(f"Directorio art:   {artifacts_dir}")
-    print(f"Commit SHA:       {commit_sha}")
-    print(f"Tree SHA:         {tree_sha}")
-    print(f"Imágenes stack:   {container_imgs}")
-    print("=================================================================\n")
-
-    # 1. Ejecutar primero la prueba negativa obligatoria
-    neg_ok = run_negative_test_stale_dom()
-    if not neg_ok:
-        raise RuntimeError("La prueba negativa obligatoria de CA4 falló. Abortando benchmark.")
-
+    artifacts_dir = Path(artifacts_dir)
     artifacts_dir.mkdir(parents=True, exist_ok=True)
-    records = []
+    tools = _tool_versions()
+    identity = {
+        "commit_sha": commit_sha, "tree_sha": tree_sha,
+        "candidate_sha": args.candidate_sha,
+        "system_sha": args.candidate_sha,
+        "harness_commit_sha": commit_sha,
+        "harness_sha256": sha256_file(Path(__file__).resolve()),
+        "harness_dirty": harness_is_dirty(repo_root),
+        "python_version": tools["python"],
+        "selenium_version": tools["selenium"] or "",
+        "platform": tools["platform"],
+        "browser_version": "", "driver_version": "",
+        "protocol": getattr(args, "protocol", None) or "",
+    }
+    schedule_path = write_schedule(artifacts_dir / "schedule.csv", plan)
+    manifest = {
+        "started_utc": _utc_iso(),
+        "argv": sys.argv,
+        "config": {
+            "url": args.url, "backend_url": args.backend_url,
+            "project_name": args.project_name, "scenarios": scenarios,
+            "repetitions": args.repetitions, "warmup": args.warmup, "order": args.order,
+            "percentile": args.percentile, "percentile_method": args.percentile_method,
+            "failure_policy": args.failure_policy, "expand_method": args.expand_method,
+            "screenshots": args.screenshots, "cold_mode": "new_browser_per_sample",
+            "protocol": getattr(args, "protocol", None),
+            "target_ms": getattr(args, "target_ms", None),
+            "min_n": getattr(args, "min_n", None),
+        },
+        "provisional_defaults_note": (
+            "repetitions=1, warmup=0, order=blocks, expand_method=current y "
+            "cold_mode=new_browser_per_sample son provisionales (P-1..P-6 abiertas)"
+        ),
+        "identity": identity,
+        "candidate_matches_head": (
+            (args.candidate_sha == commit_sha) if args.candidate_sha else None
+        ),
+        "containers": get_container_identities(args.project_name),
+        "tools": tools,
+        "planned_samples": len(plan),
+        "schedule_csv": schedule_path.name,
+        "schedule_sha256": sha256_file(schedule_path),
+        "schedule": [[i, p.scenario, p.role, p.iteration] for i, p in enumerate(plan, 1)],
+    }
+    (artifacts_dir / "run_manifest.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    driver = create_driver()
+    writer = IncrementalSampleWriter(artifacts_dir / "samples.csv")
+    runner = None
+    if sample_fn is None:
+        runner = BrowserScenarioRunner(
+            args.url, args.backend_url, artifacts_dir, args.expand_method, args.screenshots)
+        runner.identity = identity
+        sample_fn = runner
+    rows: list[dict] = []
+    interrupted = None
     try:
-        # -------------------------------------------------------------
-        # RUN 1: Primera Carga (Cold Load / Initial Navigation)
-        # -------------------------------------------------------------
-        print("\n[TEST RUN-01] Navegación inicial (Cold Start)...")
-        t0_cold = time.perf_counter()
-        driver.get(target_url)
-
-        duration_cold, match_cold = wait_for_ranking_visible(driver, timeout=35.0)
-        t_total_cold = (time.perf_counter() - t0_cold) * 1000.0
-
-        kpi_50_ok, kpi_50_msg = verify_50_cells_integrity(driver, backend_url=backend_url)
-        body_text = driver.find_element(By.TAG_NAME, "body").text.lower()
-        has_cell = bool(re.search(r"vp-\d{3}", body_text))
-        has_score = bool(re.search(r"0\.\d{3,}", body_text))
-        has_priority = "grupo prioritario" in body_text
-
-        ts_cold_struct = extract_backend_timestamp(driver)
-        ts_cold = ts_cold_struct.raw if ts_cold_struct else "N/D"
-
-        print(f"[OK RUN-01] Ranking visible en {t_total_cold:.1f} ms")
-        print(f"            - Match inicial: '{match_cold[:60]}...'")
-        print(f"            - Backend timestamp: {ts_cold}")
-        print(f"            - Contenido verificado: Celda VP={has_cell}, score={has_score}, prioridad={has_priority}")
-        print(f"            - Integridad 50 celdas: {kpi_50_msg} (PASS={kpi_50_ok})")
-
-        shot_cold = artifacts_dir / "ca4_browser_cold.png"
-        driver.save_screenshot(str(shot_cold))
-        print(f"            - Captura guardada: {shot_cold}")
-
-        records.append({
-            "run_id": "RUN-01",
-            "scenario": "Primera Carga (Cold Navigation)",
-            "start_time_iso": datetime.now(timezone.utc).isoformat(),
-            "ui_visible_latency_ms": round(t_total_cold, 2),
-            "pre_timestamp": "N/A",
-            "post_timestamp": ts_cold,
-            "element_verified": "Celda VP / Grupo prioritario",
-            "content_verified": has_cell and has_priority and kpi_50_ok,
-            "action": "driver.get",
-            "browser_navigation_type": get_browser_navigation_type(driver),
-            "commit_sha": commit_sha,
-            "tree_sha": tree_sha,
-            "screenshot": shot_cold.name,
-            "screenshot_sha256": sha256_file(shot_cold),
-            "notes": f"Navegación inicial en frío con backend Spring+FastAPI. 50 celdas validadas. Visible: {t_total_cold:.1f} ms."
-        })
-
-        # -------------------------------------------------------------
-        # RUN 2: Actualización (Clic en 'Actualizar ranking' en Sidebar)
-        # -------------------------------------------------------------
-        print("\n[TEST RUN-02] Actualización de ranking (Sidebar Button con detección post-clic)...")
-        # Asegurar avance de reloj para que el segundo UTC cambie
-        time.sleep(1.3)
-        pre_click_ts = extract_backend_timestamp(driver)
-        if not pre_click_ts:
-            raise RuntimeError("No se pudo obtener timestamp pre-clic en el DOM.")
-        print(f"[INFO] Timestamp pre-clic verificado en DOM: '{pre_click_ts.raw}' (precisión={pre_click_ts.precision})")
-
-        update_btn = None
-        btn_candidates = driver.find_elements(By.XPATH, "//button[contains(., 'Actualizar ranking')]")
-        if btn_candidates:
-            update_btn = btn_candidates[0]
-        else:
-            candidates2 = driver.find_elements(By.XPATH, "//button[contains(., 'Actualizar')]")
-            if candidates2:
-                update_btn = candidates2[0]
-
-        if not update_btn:
-            raise RuntimeError("No se encontró el botón 'Actualizar ranking' en la interfaz.")
-
-        # Requisito 1: Iniciar tiempo monotónico inmediatamente ANTES del clic
-        t_click_mono = time.perf_counter()
-        driver.execute_script("arguments[0].click();", update_btn)
-        print("[INFO] Clic despachado. Iniciando medición de ciclo estricta...")
-
-        # Requisito 4/5/6: Esperar ciclo con nuevo timestamp; si timeout, FAIL
-        duration_upd, post_click_ts, update_detail = wait_for_ranking_update_cycle(
-            driver, pre_click_ts, t_click_mono, timeout=30.0
-        )
-        print(f"[OK RUN-02] Ranking actualizado y confirmado en {duration_upd:.1f} ms")
-        print(f"            - Timestamp pre-clic:  {pre_click_ts.raw}")
-        print(f"            - Timestamp post-clic: {post_click_ts}")
-        print(f"            - Detalle: {update_detail}")
-
-        kpi_upd_ok, _ = verify_50_cells_integrity(driver, backend_url=backend_url)
-        shot_upd = artifacts_dir / "ca4_browser_update.png"
-        driver.save_screenshot(str(shot_upd))
-        print(f"            - Captura guardada: {shot_upd}")
-
-        records.append({
-            "run_id": "RUN-02",
-            "scenario": "Actualización (Clic Actualizar ranking)",
-            "start_time_iso": datetime.now(timezone.utc).isoformat(),
-            "ui_visible_latency_ms": round(duration_upd, 2),
-            "pre_timestamp": pre_click_ts.raw,
-            "post_timestamp": post_click_ts,
-            "element_verified": "Celda VP / Grupo prioritario (nuevo timestamp verificado)",
-            "content_verified": kpi_upd_ok and (post_click_ts != pre_click_ts.raw),
-            "action": "click:Actualizar ranking",
-            "browser_navigation_type": "n/a (rerun Streamlit, sin navegación)",
-            "commit_sha": commit_sha,
-            "tree_sha": tree_sha,
-            "screenshot": shot_upd.name,
-            "screenshot_sha256": sha256_file(shot_upd),
-            "notes": f"Re-ejecución tras clic en Actualizar ranking con confirmación de nuevo timestamp ({pre_click_ts.raw} -> {post_click_ts}). Latencia real: {duration_upd:.1f} ms."
-        })
-
-        # -------------------------------------------------------------
-        # RUN 3: Recarga con Caché (Browser Refresh / Warm Cache)
-        # -------------------------------------------------------------
-        print("\n[TEST RUN-03] Recarga de página con caché de Streamlit (Warm Reload)...")
-        time.sleep(1)
-        t0_cached = time.perf_counter()
-        driver.refresh()
-
-        duration_cached, match_cached = wait_for_ranking_visible(driver, timeout=30.0)
-        t_total_cached = (time.perf_counter() - t0_cached) * 1000.0
-        nav_cached = get_browser_navigation_type(driver)
-        if nav_cached != "reload":
-            print(f"[WARN] Tipo de navegación tras refresh: {nav_cached!r} (se esperaba 'reload')")
-        ts_cached_struct = extract_backend_timestamp(driver)
-        ts_cached = ts_cached_struct.raw if ts_cached_struct else "N/D"
-        kpi_cached_ok, _ = verify_50_cells_integrity(driver, backend_url=backend_url)
-        print(f"[OK RUN-03] Ranking visible tras recarga en {t_total_cached:.1f} ms")
-
-        shot_cached = artifacts_dir / "ca4_browser_cached.png"
-        driver.save_screenshot(str(shot_cached))
-        print(f"            - Captura guardada: {shot_cached}")
-
-        records.append({
-            "run_id": "RUN-03",
-            "scenario": "Recarga con Caché (Browser Refresh)",
-            "start_time_iso": datetime.now(timezone.utc).isoformat(),
-            "ui_visible_latency_ms": round(t_total_cached, 2),
-            "pre_timestamp": post_click_ts,
-            "post_timestamp": ts_cached,
-            "element_verified": "Celda VP / Grupo prioritario (caché)",
-            "content_verified": kpi_cached_ok and nav_cached == "reload",
-            "action": "driver.refresh",
-            "browser_navigation_type": nav_cached,
-            "commit_sha": commit_sha,
-            "tree_sha": tree_sha,
-            "screenshot": shot_cached.name,
-            "screenshot_sha256": sha256_file(shot_cached),
-            "notes": f"Recarga completa de navegador con respuesta de backend en caché. Visible: {t_total_cached:.1f} ms."
-        })
-
-        # -------------------------------------------------------------
-        # RUN 4: Expansión de Tabla de Ranking Completa (Glide Data Grid)
-        # -------------------------------------------------------------
-        print("\n[TEST RUN-04] Expansión y visualización de la grilla st.dataframe (Glide Data Grid)...")
-        try:
-            expanders = driver.find_elements(By.XPATH, "//summary[contains(., 'Ver ranking completo')]")
-            if expanders:
-                t0_exp = time.perf_counter()
-                expanders[0].click()
-                time.sleep(0.5)
-                WebDriverWait(driver, 5).until(
-                    EC.visibility_of_element_located((By.CSS_SELECTOR, "div[data-testid='stDataFrame'], [data-testid='stTable']"))
-                )
-                t_exp = (time.perf_counter() - t0_exp) * 1000.0
-                print(f"[OK RUN-04] Grilla st.dataframe visible en {t_exp:.1f} ms")
-                grid_ok, grid_msg = verify_expanded_grid(driver)
-                kpi_exp_ok, kpi_exp_msg = verify_50_cells_integrity(driver, backend_url=backend_url)
-                print(f"            - Grilla visible: {grid_msg} (PASS={grid_ok})")
-                print(f"            - Integridad 50 celdas: {kpi_exp_msg} (PASS={kpi_exp_ok})")
-                print("            - Nota de virtualización: Glide Data Grid renderiza filas bajo demanda en canvas/virtual list")
-                print("            - Total de registros respaldados: 50 celdas (verificadas vía contrato y KPI)")
-
-                view_ok, view_msg = scroll_grid_into_view(driver)
-                print(f"            - Grilla en pantalla al capturar: {view_msg} (PASS={view_ok})")
-
-                shot_exp = artifacts_dir / "ca4_browser_table_expanded.png"
-                driver.save_screenshot(str(shot_exp))
-                print(f"            - Captura guardada: {shot_exp}")
-
-                records.append({
-                    "run_id": "RUN-04",
-                    "scenario": "Expansión Tabla de Ranking (st.dataframe virtualizado)",
-                    "start_time_iso": datetime.now(timezone.utc).isoformat(),
-                    "ui_visible_latency_ms": round(t_exp, 2),
-                    "pre_timestamp": ts_cached,
-                    "post_timestamp": ts_cached,
-                    "element_verified": f"stDataFrame ({grid_msg}; {view_msg})",
-                    "content_verified": grid_ok and kpi_exp_ok and view_ok,
-                    "action": "click:Ver ranking completo",
-                    "browser_navigation_type": "n/a (expander, sin navegación)",
-                    "commit_sha": commit_sha,
-                    "tree_sha": tree_sha,
-                    "screenshot": shot_exp.name,
-                    "screenshot_sha256": sha256_file(shot_exp),
-                    "notes": f"Apertura del expander interactivo y render de Glide Data Grid virtualizado. Visible: {t_exp:.1f} ms."
-                })
-        except Exception as ex:
-            print(f"[WARN] Error al expandir ranking completo: {ex}")
-
-        # Guardar timings_browser.csv
-        csv_path = artifacts_dir / "timings_browser.csv"
-        fieldnames = [
-            "run_id", "scenario", "start_time_iso", "ui_visible_latency_ms",
-            "pre_timestamp", "post_timestamp", "element_verified", "content_verified",
-            "action", "browser_navigation_type",
-            "commit_sha", "tree_sha", "screenshot", "screenshot_sha256", "notes"
-        ]
-        with open(csv_path, "w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            for r in records:
-                writer.writerow(r)
-        print(f"\n[OK] CSV guardado en: {csv_path}")
-
-        print("\n=================================================================")
-        print("RESUMEN DE MEDICIÓN REAL EN NAVEGADOR (CA4 / DIRECTIVA 26):")
-        print(f"{'Run ID':<8} | {'Escenario':<42} | {'Latencia (ms)':<16} | {'Estado':<6}")
-        print("-" * 78)
-        for r in records:
-            status = "PASS" if r["content_verified"] else "FAIL"
-            print(f"{r['run_id']:<8} | {r['scenario']:<42} | {r['ui_visible_latency_ms']:>12.1f} ms | {status}")
-        print("=================================================================\n")
-
+        rows = execute_schedule(
+            plan, sample_fn, writer, identity=identity,
+            on_failure=runner.reset_session if runner else None, log=log,
+            timing_fn=lambda planned: timing_info(planned.scenario, args.expand_method))
+    except BaseException as ex:  # interrupción: se conserva lo escrito
+        interrupted = f"{type(ex).__name__}: {ex}"
+        rows = writer.rows
+        raise
     finally:
-        driver.quit()
+        writer.close()
+        if runner is not None:
+            runner.close()
+        target_ms = getattr(args, "target_ms", None)
+        summary = summarize_rows(rows, args.percentile, args.percentile_method,
+                                 args.failure_policy, target_ms=target_ms,
+                                 min_n=getattr(args, "min_n", None))
+        if target_ms is not None:
+            summary["verdict"], summary["verdict_reasons"] = overall_verdict(
+                summary, scenarios, len(plan), len(rows), interrupted)
+        summary.update({
+            "finished_utc": _utc_iso(),
+            "planned_samples": len(plan),
+            "recorded_samples": len(rows),
+            "interrupted": interrupted,
+            "samples_csv": "samples.csv",
+            "samples_csv_sha256": sha256_file(artifacts_dir / "samples.csv"),
+            "exit_code": 1 if interrupted else exit_code_for(rows),
+        })
+        (artifacts_dir / "summary.json").write_text(
+            json.dumps(_json_safe(summary), ensure_ascii=False, indent=2), encoding="utf-8")
+    if len(rows) != len(plan):
+        return 1
+    if getattr(args, "target_ms", None) is not None:
+        return 0 if summary.get("verdict") == VERDICT_PASS else 1
+    return exit_code_for(rows)
 
 
-def main():
-    parser = argparse.ArgumentParser(description="Medición E2E en navegador CA4 (Directiva 26)")
-    parser.add_argument("--url", default="http://127.0.0.1:18509", help="URL de Streamlit")
-    parser.add_argument("--backend-url", default="http://127.0.0.1:18099", help="URL de backend Spring Boot")
-    parser.add_argument("--artifacts-dir", default=r"artifacts\hito2\d26", help="Directorio de artefactos")
-    parser.add_argument("--project-name", default="sapi-astra", help="Nombre del proyecto Docker Compose")
-    parser.add_argument("--negative-only", action="store_true", help="Ejecutar únicamente la prueba negativa")
-    args = parser.parse_args()
+def write_schedule(path: Path, plan) -> Path:
+    """Registra el orden de las muestras ANTES de medir (no se reescribe)."""
+    path = Path(path)
+    if path.exists():
+        raise FileExistsError(f"{path} ya existe: el calendario no se sobrescribe")
+    with path.open("w", newline="", encoding="utf-8") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["seq", "scenario", "role", "iteration"])
+        for i, p in enumerate(plan, start=1):
+            writer.writerow([i, p.scenario, p.role, p.iteration])
+    return path
+
+
+def harness_is_dirty(repo_root: Path) -> str:
+    """'true' si el script del arnés tiene cambios sin commit; 'unknown' si no hay git."""
+    try:
+        res = subprocess.run(
+            ["git", "status", "--porcelain", "--", "scripts/measure_browser_e2e_d21.py"],
+            cwd=repo_root, capture_output=True, text=True, check=True)
+    except Exception:
+        return "unknown"
+    return "true" if res.stdout.strip() else "false"
+
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    conflicts = resolve_args(args)
+    if conflicts:
+        parser.error("; ".join(conflicts))
 
     if args.negative_only:
         ok = run_negative_test_stale_dom()
         sys.exit(0 if ok else 1)
 
+    errors = validate_args(args)
+    if errors:
+        parser.error("; ".join(errors))
+
     artifacts_path = Path(args.artifacts_dir)
     if not artifacts_path.is_absolute():
         artifacts_path = Path(__file__).resolve().parents[1] / artifacts_path
 
-    run_benchmark(args.url, args.backend_url, artifacts_path, project_name=args.project_name)
+    sys.exit(run_measurement(args, artifacts_path))
 
 
 if __name__ == "__main__":
