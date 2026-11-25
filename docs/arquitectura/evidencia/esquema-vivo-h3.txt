@@ -1,0 +1,37 @@
+COL|celdas_geom|cell_id|text|text|NO
+COL|celdas_geom|geom|USER-DEFINED|geometry|NO
+COL|celdas_geom|created_at|timestamp with time zone|timestamptz|NO
+COL|ejecuciones|id|bigint|int8|NO
+COL|ejecuciones|forecast_time|timestamp with time zone|timestamptz|NO
+COL|ejecuciones|model_version|text|text|NO
+COL|ejecuciones|inputs_fingerprint|character|bpchar|NO
+COL|ejecuciones|schema_version|text|text|NO
+COL|ejecuciones|score_semantics|text|text|NO
+COL|ejecuciones|scientific_model_validation|boolean|bool|NO
+COL|ejecuciones|horizon_hours|integer|int4|YES
+COL|ejecuciones|created_at|timestamp with time zone|timestamptz|NO
+COL|ejecuciones|firms_origin|text|text|YES
+COL|predicciones_celda|ejecucion_id|bigint|int8|NO
+COL|predicciones_celda|forecast_time|timestamp with time zone|timestamptz|NO
+COL|predicciones_celda|cell_id|text|text|NO
+COL|predicciones_celda|score|double precision|float8|NO
+COL|predicciones_celda|rank|integer|int4|NO
+COL|predicciones_celda|display_rank|integer|int4|NO
+COL|predicciones_celda|tie_group_size|integer|int4|NO
+CON|celdas_geom|celdas_geom_pkey|PRIMARY KEY
+CON|ejecuciones|ejecuciones_clave_natural|UNIQUE
+CON|ejecuciones|ejecuciones_id_forecast_time|UNIQUE
+CON|ejecuciones|ejecuciones_pkey|PRIMARY KEY
+CON|predicciones_celda|predicciones_celda_celda_fk|FOREIGN KEY
+CON|predicciones_celda|predicciones_celda_ejecucion_fk|FOREIGN KEY
+CON|predicciones_celda|predicciones_celda_pk|PRIMARY KEY
+CON|predicciones_celda|predicciones_celda_rank_unico|UNIQUE
+FLY|001|enable postgis|-2121393221|t
+FLY|002|create sapi v2 schema|492308973|t
+FLY|003|seed celdas geom|-363463552|t
+FLY|004|add firms origin|-669595832|t
+TAB|celdas_geom
+TAB|ejecuciones
+TAB|flyway_schema_history
+TAB|predicciones_celda
+TAB|spatial_ref_sys
