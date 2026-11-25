@@ -8,6 +8,12 @@ Hubo **1 fallo de 30** (iteración 5, HTTP 503) y el **p95 por rango más cercan
 
 Comprobé estas cifras contra los archivos de la corrida y coinciden con las del Director.
 
+## Estado de cierre (Director, 25-11)
+
+- **Ejecutada.** Una sola corrida. La evidencia está en `4084a0e` (corrida, crudos y este reporte) y `173a5e2` (extractos de logs del 503). Resultado **NO CUMPLE**: 30 muestras, un HTTP 503 y p95 por rango más cercano de 8.604,2 ms. No se repite k6 ni se cambian parámetros.
+- **Es una prueba complementaria de API.** KPI-03 (latencia visible en el navegador) mantiene su estado propio; esta corrida no lo reemplaza.
+- **La causa de la muerte del proceso de uvicorn sigue siendo desconocida.** Los logs acreditan el incidente y la vuelta posterior a respuestas 200. No demuestran la causa raíz.
+
 ## Origen de los parámetros
 
 RNF-03, `docs/requerimientos.md` en `9657bad` (sellado el 23-11-2026), sacado con `git show 9657bad:docs/requerimientos.md`:
@@ -94,7 +100,9 @@ Comando: `docker logs --timestamps --since 2026-11-25T11:54:02Z --until 2026-11-
 
 Según la cabecera (`00-cabecera.txt`), el `docker ps` tomado al iniciar mostraba solo los 4 contenedores de `sapi-h3-518c0b5` y los 4 de `sapi`. No había contenedores de Trivy, de k6 ni de builds. El stack `sapi` estaba arriba, sin tráfico declarado. Esto es **histórico**: lo registró el worker anterior a las 11:54:02 UTC.
 
-Los procesos del host (navegador, builds fuera de Docker) no quedaron registrados en la cabecera, así que la ausencia de otra carga en el host está **pendiente**: no se puede verificar después de la corrida.
+Registro previo a la corrida: el mensaje de Orca `msg_aa7fe01c40e6`, enviado al coordinador antes del inicio (anuncia el lanzamiento para las 11:54 UTC). Dice, textual: «Verificado 11:51 UTC: solo los 8 contenedores de sapi y sapi-h3 en marcha, sin Trivy, builds, pruebas ni recorridos». La salida de esa revisión de contenedores y procesos **no se archivó** en el repositorio: el mensaje declara el resultado, pero no lo prueba.
+
+**Limitación que se mantiene:** fuera de lo que muestra el `docker ps` de la cabecera, la ausencia de otra carga en el host no tiene evidencia archivada. No se reconstruye después de la corrida.
 
 ## Archivos
 
