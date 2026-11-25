@@ -1,0 +1,13 @@
+src/inference/prototype_service.py
+    F 418:0 score_current_grid - C (11)
+src/ingesta/firms_schema.py
+    F 65:0 _values - D (27)
+    F 139:0 project_frame - C (14)
+src/procesamiento/firms_source.py
+    F 166:0 validate_pointer_dict - D (25)
+tools/n8n_bridge/contract.py
+    F 80:0 _cell_violations - D (23)
+    F 157:0 validate_grid_result - C (16)
+
+6 blocks (classes, functions, methods) analyzed.
+Average complexity: C (19.333333333333332)
