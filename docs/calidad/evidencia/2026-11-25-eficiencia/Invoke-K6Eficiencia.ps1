@@ -1,4 +1,4 @@
-<#
+﻿<#
 .SYNOPSIS
   C4 · Eficiencia. Una corrida: calentamiento (excluido) y luego medición, contra sapi-h3-518c0b5.
 .DESCRIPTION

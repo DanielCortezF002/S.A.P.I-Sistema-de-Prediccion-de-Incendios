@@ -12,3 +12,12 @@ Rama `DanielCortezF002/plan-25-11-c4-c5` (commits locales, sin push). Stack medi
 | 1c. Mantenibilidad (radon) | **No cumple** (3 funciones CC rango D) | [mantenibilidad-radon-2026-11-25.md](mantenibilidad-radon-2026-11-25.md) | Verificado hoy |
 
 pytest: no se corrió ninguna suite para este criterio.
+
+## Después del criterio 4
+
+| Punto | Estado | Evidencia |
+|---|---|---|
+| 2. Fiabilidad | Meteorología faltante observada en el stack; ml-api, backend y base caídos y punto de quiebre NO_EVALUABLE | [fiabilidad-modo-degradado-2026-11-25.md](fiabilidad-modo-degradado-2026-11-25.md) |
+| 3. Criterio 5 | C4 y ERD generados y cotejados | [../arquitectura/c5-cotejo-2026-11-25.md](../arquitectura/c5-cotejo-2026-11-25.md) |
+
+Nota: `Invoke-K6Eficiencia.ps1` se guardó de nuevo con BOM UTF-8 después de la declaración (`1e4f26f`), para que Windows PowerShell 5.1 lea bien las tildes de la cabecera. No cambian N, duración, calentamiento ni criterio; `k6_ranking.js` no cambió.
