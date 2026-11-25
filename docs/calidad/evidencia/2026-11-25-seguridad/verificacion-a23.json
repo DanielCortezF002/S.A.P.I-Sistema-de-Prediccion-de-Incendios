@@ -1,0 +1,10 @@
+{
+  "inicio_utc": "2026-11-25T11:07:36.982505+00:00",
+  "sha256_por_ruta": {
+    "/": "b7c55a7413de9835973c277b2ae0d580ad8a5fc97cf14d33983231eca5efaf68",
+    "/.env": "b7c55a7413de9835973c277b2ae0d580ad8a5fc97cf14d33983231eca5efaf68",
+    "/cualquier-ruta-inexistente": "b7c55a7413de9835973c277b2ae0d580ad8a5fc97cf14d33983231eca5efaf68"
+  },
+  "A23_sha256": "b7c55a7413de9835973c277b2ae0d580ad8a5fc97cf14d33983231eca5efaf68",
+  "A23_igual_a_raiz": true
+}
