@@ -167,7 +167,7 @@ Plataforma documentó el recorrido local del 25-11 en Compose `sapi-h3-518c0b5`,
 
 El PASS histórico de lectura de 50 filas en Edge corresponde al candidato `a3d08ee`, mediante sonda de solo lectura (50/50 identidades frente al GET, cero discrepancias), según `0e8ae8c:docs/sprint3/evidencia/matriz-recorrido-hito3.md` y el CSV de cotejo de A4. Ese hallazgo pertenece al ítem 40.
 
-Evidencia de Plataforma: `3407602:reports/orden-25-11-h3/INFORME.md` y `3407602:reports/orden-25-11-h3/recorrido-edge/MATRIZ.md`. La incorporación de resultados de k6 requiere un dictamen verificable de Plataforma para este candidato. KPI-03 mantiene la variante NO GO (sección 10).
+Evidencia de Plataforma: `3407602:reports/orden-25-11-h3/INFORME.md` y `3407602:reports/orden-25-11-h3/recorrido-edge/MATRIZ.md`. La evidencia k6 de RNF-03 tiene GO del Auditor en `4084a0e` + `173a5e2` (head final `173a5e2`). Resultado: NO CUMPLE (1 fallo 503 de 30 por muerte de un worker uvicorn del ml-api, causa raíz no determinada; p95 8604 ms > 2000 ms). KPI-03 mantiene la variante NO GO (sección 10).
 
 ### 6.2 HU-83 CA6 — Lectura de las figuras del Modelo D
 
