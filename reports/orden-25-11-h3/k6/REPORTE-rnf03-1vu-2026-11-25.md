@@ -71,10 +71,19 @@ Las horas siguientes están en UTC:
 | 11:54:45.149 | ml-api | `Started server process [5663]` … `Application startup complete.` |
 | 11:54:46.002 | ml-api | `POST /predict` 200 (iteración 6, 7.543,8 ms; el backend registró `ml_latency_ms=7523`) |
 
+Los extractos de log quedan commiteados junto a la corrida. Se sacaron el 25-11 a las 16:12:55 UTC (ml-api) y 16:12:57 UTC (backend), en solo lectura y de los mismos contenedores que corrieron la prueba: ambos se crearon a las 04:07:26 UTC y no se han recreado. Cada archivo lleva en su cabecera el comando exacto, el nombre y el ID del contenedor y la hora de extracción. El SHA-256 es el del blob en git (LF).
+
+| Archivo | Contenedor | SHA-256 | Líneas que sostienen la atribución |
+|---|---|---|---|
+| [logs-503-ml-api.txt](corrida-rnf03-1vu-20261125T115402Z/logs-503-ml-api.txt) | `sapi-h3-518c0b5-ml-api-1` (`48aefe903df8`) | `9640caccba01ba89d82a35143e240f3840333fac168c6ab6f27271cd151ef7cc` | 15 (último `/predict` 200 antes del fallo), 17 (`Waiting for child process [8]`), 18 (`Child process [8] died`), 19 (`Started server process [5663]`), 23 (primer `/predict` 200 después) |
+| [logs-503-backend.txt](corrida-rnf03-1vu-20261125T115402Z/logs-503-backend.txt) | `sapi-h3-518c0b5-backend-1` (`1b3e510e8083`) | `4da560973080a415fa6f16ea05dc403884b034d1c5f1373da636df6076210e6e` | 12 (iteración 4, 200), **13** (`ml_responded=false … outcome=upstream_unavailable backend_http_status=503`), 14 (iteración 6, 200) |
+
+Comando: `docker logs --timestamps --since 2026-11-25T11:54:02Z --until 2026-11-25T11:56:40Z <contenedor> 2>&1`.
+
 | Afirmación | Clasificación |
 |---|---|
-| Quien respondió el 503 fue el **backend**, con `outcome=upstream_unavailable`, porque el ml-api no respondió (`ml_responded=false`). No hay gateway entre k6 y el backend | **Verificado hoy** (log del backend) |
-| Mientras corría esa petición murió un **proceso hijo de uvicorn del ml-api** (PID 8, uno de los 2 workers). El supervisor levantó otro (PID 5663) y desde la iteración 6 todo volvió a 200 | **Verificado hoy** (log del ml-api) |
+| Quien respondió el 503 fue el **backend**, con `outcome=upstream_unavailable`, porque el ml-api no respondió (`ml_responded=false`). No hay gateway entre k6 y el backend | **Verificado hoy** ([logs-503-backend.txt](corrida-rnf03-1vu-20261125T115402Z/logs-503-backend.txt), línea 13) |
+| Mientras corría esa petición murió un **proceso hijo de uvicorn del ml-api** (PID 8, uno de los 2 workers). El supervisor levantó otro (PID 5663) y desde la iteración 6 todo volvió a 200 | **Verificado hoy** ([logs-503-ml-api.txt](corrida-rnf03-1vu-20261125T115402Z/logs-503-ml-api.txt), líneas 17–19 y 23) |
 | El contenedor no se reinició: `RestartCount=0`, `OOMKilled=false`, sin límite de memoria (`Memory=0`), y `docker ps` lo sigue mostrando Up y healthy. Su comando es `uvicorn services.ml_api.main:app --host 0.0.0.0 --port 8000 --workers 2` | **Verificado hoy** (`docker inspect`, `docker ps`) |
 | En las ~8 h de log del ml-api, desde que arrancó a las 04:07:38 UTC, esta es la única muerte de un hijo | **Verificado hoy** (grep del log completo) |
 | El log no explica **por qué** murió el hijo: no hay traceback, `MemoryError` ni `Killed`. Una hipótesis: el supervisor multiproceso de uvicorn reinicia un hijo que no contesta su chequeo de vida a tiempo, y aquí el hijo estaba ocupado con un `/predict` de más de 6 s. No se comprobó | **Pendiente.** Con lo disponible no se puede saber |
