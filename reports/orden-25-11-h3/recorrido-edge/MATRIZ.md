@@ -30,3 +30,13 @@
 - **Verificado hoy:** todo lo de la tabla, con hora UTC en cada `.txt`.
 - **Histórico:** las dos observaciones de defectos ya registradas el 24-11 en el ítem 40.
 - **Pendiente:** captura final del paso 5, paso 6b en UI y resiliencia ml-api.
+
+## Corrección del Auditor B-3 (2026-11-25): pasos 3 y 4 con la misma captura
+
+`03-seleccionar.png` y `04-datos.png` son la misma imagen: ambos archivos tienen el mismo blob git `6f8f64dc4462b30fbb7c485a0ddfe9a27a0e6dec` (verificado con `git ls-files -s`). Motivo, según el guion [recorrido_edge_h3.py](recorrido_edge_h3.py):
+
+- `record()` captura solo el viewport (`page.screenshot` sin `full_page`).
+- En el paso 4, `scroll_into_view_if_needed()` sobre `.sapi-selected-cell-id` no desplazó la página, porque la ficha ya estaba visible tras el paso 3.
+- La página no cambió entre ambas capturas: `03-seleccionar.txt` y `04-datos.txt` difieren solo en la marca de hora (04:29:28.73 vs 04:29:28.98 UTC).
+
+Consecuencia: el paso 4 no tiene una captura propia; su evidencia es la misma del paso 3 más el texto de `04-datos.txt`. La nota del paso 1 («en la captura del paso 4 ya está pintado») vale igual para la del paso 3. El recorrido no se repitió.
