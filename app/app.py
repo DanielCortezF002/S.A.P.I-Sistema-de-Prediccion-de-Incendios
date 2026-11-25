@@ -207,7 +207,7 @@ class SapiDashboard:
         recall_val = xgb.get("recall")
         auc_val = xgb.get("auc_roc")
         lines = [
-            "S.A.P.I. - Reporte de Riesgo de Ignición",
+            "S.A.P.I. - Reporte de prioridad territorial",
             f"Fecha consultada: {fecha.isoformat()}",
             f"Build: {APP_BUILD} · Query: {QUERY_ENGINE_VERSION}",
             f"Celdas analizadas: {len(gdf)}",
@@ -227,7 +227,7 @@ class SapiDashboard:
                     f"Riesgo bajo: {bajo}",
                     f"Riesgo medio: {medio}",
                     f"Riesgo alto: {alto}",
-                    f"Probabilidad máxima: {gdf['probabilidad'].max():.2%}",
+                    f"Índice relativo de prioridad máximo: {gdf['probabilidad'].max() * 100:.0f}/100 (no es una probabilidad)",
                     f"Regla 30-30-30 activa: {regla} celda(s)",
                     "",
                     "Nota: seed zonal demo (no alerta oficial CONAF/SENAPRED).",

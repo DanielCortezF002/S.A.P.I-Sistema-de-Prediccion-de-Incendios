@@ -88,6 +88,14 @@ def test_build_risk_legend_html_covers_the_three_levels():
     assert "Foco real" not in html
 
 
+def test_legend_speaks_of_territorial_priority_not_ignition_probability():
+    """Regla de lenguaje Hito 3: la leyenda no presenta el nivel como probabilidad."""
+    html = build_risk_legend_html()
+    assert "Prioridad territorial" in html
+    assert "no es una probabilidad" in html
+    assert "Probabilidad de ignición" not in html
+
+
 def test_legend_is_a_leaflet_control_not_a_floating_div():
     """La leyenda se ancla al mapa, no a la ventana.
 

@@ -29,7 +29,7 @@ _LEGEND_COPY = {
     ),
     "alto": (
         "Alto",
-        "Tres condiciones o probabilidad ≥66 %. Prioridad operativa inmediata.",
+        "Tres condiciones o índice relativo de prioridad ≥66/100. Prioridad operativa inmediata.",
     ),
     "sin_dato": (
         "Sin dato",
@@ -150,7 +150,7 @@ def render_mayor_riesgo_block(top: Optional[dict[str, Any]], gdf: gpd.GeoDataFra
     if hits == 3:
         desc_text = (
             "Las tres condiciones de la regla 30-30-30 se cumplen a la vez. "
-            "Ignición probable ante una fuente de calor y propagación rápida por pendiente."
+            "Condiciones que favorecen la complejidad y propagación por pendiente; la ignición depende de factores humanos que el modelo no observa."
         )
     elif hits == 2:
         desc_text = (
@@ -459,7 +459,7 @@ def render_ops_detail_panel(
     if hits == 3:
         rule_desc = (
             "Las tres condiciones de la regla 30-30-30 se cumplen a la vez. "
-            "Ignición probable ante una fuente de calor y propagación rápida por pendiente."
+            "Condiciones que favorecen la complejidad y propagación por pendiente; la ignición depende de factores humanos que el modelo no observa."
         )
     elif hits == 2:
         rule_desc = (
@@ -584,7 +584,7 @@ def render_operational_verification_footer() -> None:
             <div class="sapi-audit-col">
                 <div class="sapi-audit-title">SIMULADO EN ESTA VISTA</div>
                 <p>La grilla muestra un escenario sembrado (demo_seed), no una corrida de inferencia en producción. 
-                La regla 30-30-30 opera como proxy de ignición mientras no haya modelo entrenado.</p>
+                La regla 30-30-30 ordena la prioridad territorial según condiciones de propagación; no es una probabilidad ni un proxy de ignición.</p>
             </div>
             <div class="sapi-audit-col sapi-audit-col--alert">
                 <div class="sapi-audit-title">RIESGO ABIERTO · R-ETIQUETA-01</div>

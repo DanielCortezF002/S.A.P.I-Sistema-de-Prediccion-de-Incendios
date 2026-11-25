@@ -139,7 +139,8 @@ def build_risk_legend_html() -> str:
         f'border-radius:{theme.RADIUS_PX["card"]}px;padding:8px 10px;'
         f"font-size:{micro.size_px}px;line-height:1.35;"
         f'color:{theme.TEXT_PRIMARY};box-shadow:0 1px 4px rgba(0,0,0,0.16);">'
-        '<div style="font-weight:700;margin-bottom:4px;">Probabilidad de ignición</div>'
+        '<div style="font-weight:700;margin-bottom:4px;">Prioridad territorial</div>'
+        '<div style="opacity:0.7;margin-bottom:4px;">Índice relativo según 30-30-30; no es una probabilidad.</div>'
         f"{filas}"
         "</div>"
     )
@@ -253,7 +254,7 @@ def render_folium_map(
         popup_html = (
             f"<b>Celda:</b> {cell_id or 'N/A'}<br>"
             f"<b>Zona climática:</b> {zona}<br>"
-            f"<b>Probabilidad:</b> {prob:.2%}<br>"
+            f"<b>Índice relativo de prioridad:</b> {prob * 100:.0f}/100 (no es una probabilidad)<br>"
             f"<b>Nivel:</b> {nivel}<br>"
             f"<b>Temperatura:</b> {row.get('temperatura', 'N/A')} °C<br>"
             f"<b>Humedad:</b> {row.get('humedad_relativa', 'N/A')} %<br>"

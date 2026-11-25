@@ -33,7 +33,7 @@ def render_day_alerts(
         return None
 
     st.caption(
-        f"{len(altos)} celda(s) en riesgo alto · Probabilidad × 100 (escenario sembrado)"
+        f"{len(altos)} celda(s) en riesgo alto · índice relativo de prioridad 0-100 (escenario sembrado, no es una probabilidad)"
     )
     chosen: Optional[str] = None
     for _, row in altos.iterrows():
